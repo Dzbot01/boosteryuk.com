@@ -2,36 +2,36 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { MusicProvider } from './context/MusicContext';
-import HomePage from './pages/HomePage';
-import CekStatusPage from './pages/CekStatusPage';
+import HomePage from './screens/HomePage';
+import CekStatusPage from './screens/CekStatusPage';
 // DISEMBUNYIKAN DARI UI (atas permintaan): fitur "Order Nomor" tidak ditampilkan.
 // File halaman & datanya SENGAJA TIDAK DIHAPUS; aktifkan lagi dengan meng-uncomment
 // import + route di bawah bila ingin ditampilkan kembali.
-// import OrderNomorGuidePage from './pages/OrderNomorGuidePage';
-// import OrderNomorPage from './pages/OrderNomorPage';
-import RiwayatPage from './pages/RiwayatPage';
-import HubungiPage from './pages/HubungiPage';
-import AboutPage from './pages/AboutPage';
-import PlusPage from './pages/PlusPage';
-import UpgradePlusPage from './pages/UpgradePlusPage';
-import SupportPage from './pages/SupportPage';
-import PaymentPage from './pages/PaymentPage';
-import TermsPage from './pages/TermsPage';
-import ManualDepositPage from './pages/ManualDepositPage';
-import StrukPage from './pages/StrukPage';
-import StrukSuksesPage from './pages/StrukSuksesPage';
-import PrivacyPage from './pages/PrivacyPage';
-import LayananPage from './pages/LayananPage';
-import LayananDetailPage from './pages/LayananDetailPage';
-import OrderVpsPage from './pages/OrderVpsPage';
-import PengaturanAkunPage from './pages/PengaturanAkunPage';
-import DepositPage from './pages/DepositPage';
-import DepositMethodPage from './pages/DepositMethodPage';
-import AdminHomePage from './pages/admin/AdminHomePage';
-import AdminWebsitePage from './pages/admin/AdminWebsitePage';
-import AdminServerPage from './pages/admin/AdminServerPage';
-import AdminProfitPage from './pages/admin/AdminProfitPage';
-import AdminBroadcastPage from './pages/admin/AdminBroadcastPage';
+// import OrderNomorGuidePage from './screens/OrderNomorGuidePage';
+// import OrderNomorPage from './screens/OrderNomorPage';
+import RiwayatPage from './screens/RiwayatPage';
+import HubungiPage from './screens/HubungiPage';
+import AboutPage from './screens/AboutPage';
+import PlusPage from './screens/PlusPage';
+import UpgradePlusPage from './screens/UpgradePlusPage';
+import SupportPage from './screens/SupportPage';
+import PaymentPage from './screens/PaymentPage';
+import TermsPage from './screens/TermsPage';
+import ManualDepositPage from './screens/ManualDepositPage';
+import StrukPage from './screens/StrukPage';
+import StrukSuksesPage from './screens/StrukSuksesPage';
+import PrivacyPage from './screens/PrivacyPage';
+import LayananPage from './screens/LayananPage';
+import LayananDetailPage from './screens/LayananDetailPage';
+import OrderVpsPage from './screens/OrderVpsPage';
+import PengaturanAkunPage from './screens/PengaturanAkunPage';
+import DepositPage from './screens/DepositPage';
+import DepositMethodPage from './screens/DepositMethodPage';
+import AdminHomePage from './screens/admin/AdminHomePage';
+import AdminWebsitePage from './screens/admin/AdminWebsitePage';
+import AdminServerPage from './screens/admin/AdminServerPage';
+import AdminProfitPage from './screens/admin/AdminProfitPage';
+import AdminBroadcastPage from './screens/admin/AdminBroadcastPage';
 
 export default function App() {
   return (

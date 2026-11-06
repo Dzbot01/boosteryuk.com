@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://boosteryuk.com/api';
+// Endpoint auth kini ke API route Next.js (server-side Supabase), bukan PHP lagi.
+const API_URL = '/api';
 
 type User = {
   id: number;
@@ -54,7 +55,7 @@ const refresh = async () => {
   }
   
   try{
-    const res = await fetch(`${API_URL}/me.php?token=${token}`, {
+    const res = await fetch(`${API_URL}/me?token=${token}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -79,7 +80,7 @@ const refresh = async () => {
 
   const login = async (username: string, password: string) => {
     try{
-      const res = await fetch(`${API_URL}/login.php`, {
+      const res = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({email: username, password})
@@ -97,7 +98,7 @@ const refresh = async () => {
 
   const register = async (username: string, email: string, password: string) => {
     try{
-      const res = await fetch(`${API_URL}/register.php`, {
+      const res = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({username, email, password})
@@ -125,7 +126,7 @@ const refresh = async () => {
     const token = localStorage.getItem('token');
     if(!token) return {ok: false, message: 'Belum login'};
     try{
-      const res = await fetch(`${API_URL}/update_user.php`, {
+      const res = await fetch(`${API_URL}/update_user`, {
         method: 'POST',
         headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${token}`},
         body: JSON.stringify(data)

@@ -1,19 +1,21 @@
 {
-  "name": "react-vite-tailwind",
+  "name": "boosteryuk",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.109.0",
+    "@supabase/supabase-js": "^2.49.4",
+    "bcryptjs": "^2.4.3",
     "chart.js": "^4.5.1",
     "clsx": "2.1.1",
     "firebase": "^13.0.0",
     "lucide-react": "^1.33.0",
+    "next": "15.1.6",
     "ogl": "^1.0.11",
     "react": "19.2.6",
     "react-dom": "19.2.6",
@@ -21,13 +23,12 @@
     "tailwind-merge": "3.4.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "4.1.17",
+    "@tailwindcss/postcss": "4.1.17",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "22.19.17",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.1",
     "tailwindcss": "4.1.17",
-    "typescript": "5.9.3",
-    "vite": "7.3.2"
+    "typescript": "5.9.3"
   }
 }
