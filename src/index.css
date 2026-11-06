@@ -777,4 +777,4 @@ body {
 }
 
 /* Peta dunia hero — ditanam sebagai data-URI agar tidak pernah 404. */
-.hero-map{background-image:url('/hero-world.webp');background-size:cover;background-position:center;opacity:.60;filter:grayscale(.55) brightness(.92) contrast(1.05);}
+.hero-map{background-image:url('/world.png');background-size:cover;background-position:center;opacity:.60;filter:grayscale(.55) brightness(.92) contrast(1.05);}
