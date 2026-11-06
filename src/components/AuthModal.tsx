@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { sendOtpEmail, genOtp, isValidEmail } from '../services/otp';
 
 const API_URL = 'https://boosteryuk.com/api';
 type Mode = 'register' | 'login' | 'recover' | 'otp';
@@ -12,12 +13,6 @@ interface Props {
   initialMode?: Mode;
 }
 
-function randCaptcha(): { a: number; b: number } {
-  const a = Math.floor(Math.random() * 9) + 1;
-  const b = Math.floor(Math.random() * Math.max(1, 20 - a));
-  return { a, b };
-}
-
 export default function AuthModal({ open, onClose, onSuccess, initialMode = 'login' }: Props) {
   const { login } = useAuth();
 
@@ -27,9 +22,13 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPw, setShowPw] = useState(false);
-  const [captcha, setCaptcha] = useState(randCaptcha);
-  const [captchaAnswer, setCaptchaAnswer] = useState('');
-  const [captchaError, setCaptchaError] = useState('');
+  // OTP email (menggantikan captcha "verifikasi human") untuk register.
+  const [regOtp, setRegOtp] = useState('');
+  const sentCode = useRef<string | null>(null);
+  const sentAt = useRef<number>(0);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpMsg, setOtpMsg] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [otp, setOtp] = useState('');
@@ -46,9 +45,10 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
     setPassword('');
     setConfirm('');
     setShowPw(false);
-    setCaptcha(randCaptcha());
-    setCaptchaAnswer('');
-    setCaptchaError('');
+    setRegOtp('');
+    setOtpSent(false);
+    setOtpMsg('');
+    sentCode.current = null;
     setError('');
     setOtp('');
     setSentOtp(false);
@@ -75,30 +75,40 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
     };
   }, [open, onClose]);
 
-  const captchaValid = useMemo(
-    () => Number(captchaAnswer) === captcha.a + captcha.b,
-    [captchaAnswer, captcha],
-  );
-
   if (!open) return null;
 
   const gotoMode = (next: Mode) => {
     setError('');
-    setCaptchaError('');
+    setOtpMsg('');
     setMode(next);
   };
 
   // LOGIC DARI KODE 2
+  // Minta OTP: generate kode, kirim via worker Resend ke email user, verifikasi di sisi klien.
+  const requestOtp = async () => {
+    setError(''); setOtpMsg('');
+    if (!isValidEmail(email)) { setError('Isi email yang valid dulu untuk minta OTP.'); return; }
+    setOtpSending(true);
+    const code = genOtp();
+    const r = await sendOtpEmail(email.trim(), code);
+    setOtpSending(false);
+    if (r.ok) {
+      sentCode.current = code; sentAt.current = Date.now();
+      setOtpSent(true); setOtpMsg('Kode OTP dikirim ke email kamu.');
+    } else {
+      setError(r.error || 'Gagal mengirim OTP.');
+    }
+  };
+
   const submitRegister = async () => {
     setError('');
     if (!username.trim()) return setError('Username wajib diisi.');
-    if (!email.trim()) return setError('Email wajib diisi.');
+    if (!isValidEmail(email)) return setError('Masukkan email yang valid.');
     if (password.length < 6) return setError('Password minimal 6 karakter.');
     if (password!== confirm) return setError('Konfirmasi password tidak cocok.');
-    if (!captchaValid) {
-      setCaptchaError('Jawaban captcha salah.');
-      return;
-    }
+    if (!regOtp.trim()) return setError('Masukkan kode OTP yang dikirim ke email.');
+    if (!sentCode.current || regOtp.trim() !== sentCode.current) return setError('Kode OTP salah.');
+    if (Date.now() - sentAt.current > 10 * 60_000) return setError('Kode OTP kedaluwarsa, minta ulang.');
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/register.php`, {
@@ -132,6 +142,7 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
   const submitLogin = async () => {
     setError('');
     if (!email.trim() ||!password) return setError('Email dan password wajib diisi.');
+    if (!isValidEmail(email)) return setError('Masukkan email yang valid.');
     setLoading(true);
     try {
       const res = await login(email, password);
@@ -150,7 +161,7 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
 
   const submitRecover = () => {
     setError('');
-    if (!email.trim()) return setError('Email wajib diisi.');
+    if (!isValidEmail(email)) return setError('Masukkan email yang valid.');
     setSentOtp(true);
     setMode('otp');
   };
@@ -294,14 +305,13 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
 
                     <div className="authflip-captcha">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="authflip-captcha-label">Verifikasi</span>
-                        <button type="button" onClick={() => { setCaptcha(randCaptcha()); setCaptchaAnswer(''); setCaptchaError(''); }} className="authflip-mini-btn">⟳</button>
+                        <span className="authflip-captcha-label">Verifikasi OTP</span>
+                        <button type="button" onClick={requestOtp} disabled={otpSending} className="authflip-mini-btn">{otpSending ? '...' : otpSent ? 'Kirim ulang' : 'Minta OTP'}</button>
                       </div>
                       <div className="mt-2 flex items-center gap-2">
-                        <span className="authflip-captcha-q">{captcha.a} + {captcha.b} =?</span>
-                        <input value={captchaAnswer} onChange={(e) => { setCaptchaAnswer(e.target.value.replace(/\D/g, '')); setCaptchaError(''); }} inputMode="numeric" placeholder="Jawaban" className="authflip-flip-card__input authflip-captcha-a" />
+                        <input value={regOtp} onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder="Kode OTP dari email" className="authflip-flip-card__input authflip-captcha-a" style={{ fontFamily: 'monospace' }} />
                       </div>
-                      {captchaError && <p className="authflip-captcha-err">{captchaError}</p>}
+                      {otpMsg && <p className="authflip-info" style={{ marginTop: 4 }}>{otpMsg}</p>}
                     </div>
 
                     <button type="submit" disabled={loading} className="authflip-flip-card__btn">

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { sendOtpEmail, genOtp } from '../services/otp';
 import {
   ArrowLeft,
   User,
@@ -36,6 +37,22 @@ export default function PengaturanAkunPage() {
   const [otp, setOtp] = useState('');
   const [verifSuccess, setVerifSuccess] = useState(false);
   const [verifError, setVerifError] = useState('');
+  const [otpSending, setOtpSending] = useState(false);
+  const sentCode = useRef<string | null>(null);
+  const sentAt = useRef<number>(0);
+
+  // Minta OTP verifikasi email ke email user yang terdaftar (via worker Resend).
+  const requestEmailOtp = async () => {
+    setVerifError('');
+    if (!user?.email) { setVerifError('Email tidak ditemukan.'); return; }
+    setOtpSending(true);
+    const code = genOtp();
+    const r = await sendOtpEmail(user.email, code);
+    setOtpSending(false);
+    setShowOtp(true);
+    if (r.ok) { sentCode.current = code; sentAt.current = Date.now(); }
+    else { setVerifError(r.error || 'Gagal mengirim OTP.'); }
+  };
 
   // Sync form dengan data user dari context/API
   useEffect(() => {
@@ -103,11 +120,14 @@ export default function PengaturanAkunPage() {
       setVerifError('Masukkan kode OTP yang dikirim ke email Anda.');
       return;
     }
-    if (otp.trim().length < 4) {
-      setVerifError('Kode OTP tidak valid.');
+    if (!sentCode.current || otp.trim() !== sentCode.current) {
+      setVerifError('Kode OTP salah.');
       return;
     }
-    // TODO: panggil API verify-otp di sini
+    if (Date.now() - sentAt.current > 10 * 60_000) {
+      setVerifError('Kode OTP kedaluwarsa, minta ulang.');
+      return;
+    }
     setVerifSuccess(true);
     setEmailVerified(true);
     setShowOtp(false);
@@ -236,10 +256,11 @@ export default function PengaturanAkunPage() {
                 </span>
               ) : (
                 <button
-                  onClick={() => setShowOtp((v) =>!v)}
-                  className="shrink-0 rounded-lg bg-cyan-600 px-3 py-2 text-[12px] font-bold text-white transition-all hover:bg-cyan-700 active:scale-95"
+                  onClick={requestEmailOtp}
+                  disabled={otpSending}
+                  className="shrink-0 rounded-lg bg-cyan-600 px-3 py-2 text-[12px] font-bold text-white transition-all hover:bg-cyan-700 active:scale-95 disabled:opacity-60"
                 >
-                  Verifikasi
+                  {otpSending ? 'Mengirim...' : 'Verifikasi'}
                 </button>
               )}
             </div>

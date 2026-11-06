@@ -14,7 +14,7 @@ export default function BottomNavbar() {
   const { playing, toggle, showTooltip } = useMusic();
   const [showFAQ, setShowFAQ] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const profileActive = pathname === '/profil';
+  const profileActive = pathname === '/pengaturan-akun';
 
   const items = [
     {
@@ -100,7 +100,7 @@ export default function BottomNavbar() {
             <>
               <span className="mx-0.5 h-7 w-px bg-slate-200 dark:bg-slate-700" />
               <button
-                onClick={() => navigate('/profil')}
+                onClick={() => navigate('/pengaturan-akun')}
                 aria-label="Profil"
                 title="Profil"
                 className={`group relative flex h-10 w-10 items-center justify-center rounded-full font-display text-[12px] font-extrabold transition-all duration-250 active:scale-90 ${
