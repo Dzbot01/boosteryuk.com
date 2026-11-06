@@ -1,3 +1,4 @@
+import Seo from '../components/Seo';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Zap, DollarSign, CheckCircle2 } from 'lucide-react';
 import Reveal from '../components/Reveal';
@@ -11,6 +12,7 @@ export default function PlusPage() {
 
   return (
     <div className="page-align-left mx-auto max-w-3xl px-4 pb-32 pt-8 sm:px-6">
+      <Seo title="Boosteryuk Plus" description="Upgrade ke Boosteryuk Plus untuk harga lebih murah, prioritas pesanan, dan benefit premium lainnya." />
       <Reveal>
         <button
           onClick={() => navigate('/')}

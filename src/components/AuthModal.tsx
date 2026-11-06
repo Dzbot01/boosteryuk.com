@@ -2,12 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const API_URL = '/api';
-
-// Validasi email wajib (format valid) untuk login & register.
-function isValidEmail(v: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || '').trim());
-}
+const API_URL = 'https://boosteryuk.com/api';
 type Mode = 'register' | 'login' | 'recover' | 'otp';
 
 interface Props {
@@ -38,11 +33,6 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [otp, setOtp] = useState('');
-  // OTP khusus pendaftaran (verifikasi email) + status pengiriman.
-  const [regOtp, setRegOtp] = useState('');
-  const [otpSending, setOtpSending] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpMsg, setOtpMsg] = useState('');
   const [sentOtp, setSentOtp] = useState(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -61,9 +51,6 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
     setCaptchaError('');
     setError('');
     setOtp('');
-    setRegOtp('');
-    setOtpSent(false);
-    setOtpMsg('');
     setSentOtp(false);
   }, [open, initialMode]);
 
@@ -101,44 +88,23 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
     setMode(next);
   };
 
-  // Kirim OTP ke email pendaftaran lewat worker JobGmail (via API route).
-  const requestOtp = async () => {
-    setOtpMsg('');
-    if (!isValidEmail(email)) { setError('Isi email yang valid dulu untuk minta OTP.'); return; }
-    setOtpSending(true);
-    try {
-      const res = await fetch(`${API_URL}/otp/request`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
-      });
-      const data = await res.json();
-      if (data.ok) { setOtpSent(true); setOtpMsg(data.message || 'Kode OTP dikirim ke email.'); }
-      else setError(data.message || 'Gagal mengirim OTP.');
-    } catch {
-      setError('Gagal mengirim OTP. Coba lagi.');
-    } finally {
-      setOtpSending(false);
-    }
-  };
-
   // LOGIC DARI KODE 2
   const submitRegister = async () => {
     setError('');
     if (!username.trim()) return setError('Username wajib diisi.');
-    if (!isValidEmail(email)) return setError('Masukkan email yang valid.');
+    if (!email.trim()) return setError('Email wajib diisi.');
     if (password.length < 6) return setError('Password minimal 6 karakter.');
     if (password!== confirm) return setError('Konfirmasi password tidak cocok.');
-    if (!regOtp.trim()) return setError('Masukkan kode OTP yang dikirim ke email.');
     if (!captchaValid) {
       setCaptchaError('Jawaban captcha salah.');
       return;
     }
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/register`, {
+      const res = await fetch(`${API_URL}/register.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, otp: regOtp.trim() }),
+        body: JSON.stringify({ username, email, password }),
       });
       // register.php membalas status 400 untuk error validasi,
       // jadi baca dulu body-nya supaya pesan asli dari server tampil
@@ -166,7 +132,6 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
   const submitLogin = async () => {
     setError('');
     if (!email.trim() ||!password) return setError('Email dan password wajib diisi.');
-    if (!isValidEmail(email)) return setError('Masukkan email yang valid.');
     setLoading(true);
     try {
       const res = await login(email, password);
@@ -185,7 +150,7 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
 
   const submitRecover = () => {
     setError('');
-    if (!isValidEmail(email)) return setError('Masukkan email yang valid.');
+    if (!email.trim()) return setError('Email wajib diisi.');
     setSentOtp(true);
     setMode('otp');
   };
@@ -302,27 +267,6 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
                       autoComplete="email"
                       className="authflip-flip-card__input"
                     />
-                    {/* OTP wajib: input + tombol kecil "Minta OTP" (kirim kode ke email via worker). */}
-                    <div className="flex items-stretch gap-2">
-                      <input
-                        value={regOtp}
-                        onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Kode OTP"
-                        inputMode="numeric"
-                        autoComplete="one-time-code"
-                        className="authflip-flip-card__input"
-                        style={{ flex: 1, fontFamily: 'monospace' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={requestOtp}
-                        disabled={otpSending}
-                        className="shrink-0 rounded-xl bg-cyan-600 px-3 text-[11px] font-bold text-white transition-colors hover:bg-cyan-700 disabled:opacity-60"
-                      >
-                        {otpSending ? '...' : otpSent ? 'Kirim ulang' : 'Minta OTP'}
-                      </button>
-                    </div>
-                    {otpMsg && <p className="authflip-info" style={{ marginTop: 2 }}>{otpMsg}</p>}
                     <div className="flex justify-center py-0.5">
                       <span className="eye-loader" aria-hidden />
                     </div>

@@ -1,3 +1,4 @@
+import Seo from './Seo';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -85,5 +86,10 @@ export default function ProtectedRoute({
   ) {
     return <Navigate to="/admin" replace />;
   }
-  return <>{children}</>;
+  return (
+    <>
+      <Seo noindex />
+      {children}
+    </>
+  );
 }

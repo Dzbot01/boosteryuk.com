@@ -81,7 +81,7 @@ type ApiResponse = SingleResponse & MassResponse;
 /* ------------------------------------------------------------------ */
 
 const MAX_IDS = 50;
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://boosteryuk.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://cekidku.my.id/api';
 
 function toNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;

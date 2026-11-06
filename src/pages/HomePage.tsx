@@ -1,3 +1,5 @@
+import Seo from '../components/Seo';
+import { SITE_URL } from '../seo/config';
 import { useNavigate } from 'react-router-dom';
 // FIX: hapus import ikon yang tidak dipakai (ShieldCheck, Rocket, Gauge) agar lolos typecheck.
 import {
@@ -24,6 +26,14 @@ import ReviewsSection from '../components/ReviewsSection';
 
 
 
+const HOME_JSONLD = [
+  { '@context': 'https://schema.org', '@type': 'Organization', name: 'Boosteryuk', url: SITE_URL, logo: SITE_URL + '/favicon.png' },
+  {
+    '@context': 'https://schema.org', '@type': 'WebSite', name: 'Boosteryuk', url: SITE_URL,
+    potentialAction: { '@type': 'SearchAction', target: SITE_URL + '/cek-status?q={search_term_string}', 'query-input': 'required name=search_term_string' },
+  },
+];
+
 export default function HomePage() {
   const { isDark } = useTheme();
   const { settings } = useSiteSettings();
@@ -37,6 +47,7 @@ export default function HomePage() {
 
   return (
     <>
+      <Seo bareOnHome jsonLd={HOME_JSONLD} />
       {/* ================= HERO LAYER ================= */}
       <section className="relative isolate -mt-[60px] overflow-hidden">
         {/* Hero background — tema abu-abu + art peta dunia. Gambar DITANAM sebagai data-URI

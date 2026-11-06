@@ -1,0 +1,18 @@
+# robots.txt — Boosteryuk
+User-agent: *
+Allow: /
+
+# Halaman privat/transaksional: jangan diindeks
+Disallow: /admin
+Disallow: /deposit
+Disallow: /payment
+Disallow: /pengaturan-akun
+Disallow: /ordervps
+Disallow: /profil
+Disallow: /riwayat-pesanan
+Disallow: /struk
+Disallow: /upgrade-plus
+Disallow: /s/
+Disallow: /otp-service
+
+Sitemap: https://boosteryuk.com/sitemap.xml

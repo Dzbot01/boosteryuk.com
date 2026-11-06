@@ -1,41 +1,43 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { MusicProvider } from './context/MusicContext';
-import HomePage from './screens/HomePage';
-import CekStatusPage from './screens/CekStatusPage';
+const HomePage = lazy(() => import('./pages/HomePage'));
+const CekStatusPage = lazy(() => import('./pages/CekStatusPage'));
 // DISEMBUNYIKAN DARI UI (atas permintaan): fitur "Order Nomor" tidak ditampilkan.
 // File halaman & datanya SENGAJA TIDAK DIHAPUS; aktifkan lagi dengan meng-uncomment
 // import + route di bawah bila ingin ditampilkan kembali.
-// import OrderNomorGuidePage from './screens/OrderNomorGuidePage';
-// import OrderNomorPage from './screens/OrderNomorPage';
-import RiwayatPage from './screens/RiwayatPage';
-import HubungiPage from './screens/HubungiPage';
-import AboutPage from './screens/AboutPage';
-import PlusPage from './screens/PlusPage';
-import UpgradePlusPage from './screens/UpgradePlusPage';
-import SupportPage from './screens/SupportPage';
-import PaymentPage from './screens/PaymentPage';
-import TermsPage from './screens/TermsPage';
-import ManualDepositPage from './screens/ManualDepositPage';
-import StrukPage from './screens/StrukPage';
-import StrukSuksesPage from './screens/StrukSuksesPage';
-import PrivacyPage from './screens/PrivacyPage';
-import LayananPage from './screens/LayananPage';
-import LayananDetailPage from './screens/LayananDetailPage';
-import OrderVpsPage from './screens/OrderVpsPage';
-import PengaturanAkunPage from './screens/PengaturanAkunPage';
-import DepositPage from './screens/DepositPage';
-import DepositMethodPage from './screens/DepositMethodPage';
-import AdminHomePage from './screens/admin/AdminHomePage';
-import AdminWebsitePage from './screens/admin/AdminWebsitePage';
-import AdminServerPage from './screens/admin/AdminServerPage';
-import AdminProfitPage from './screens/admin/AdminProfitPage';
-import AdminBroadcastPage from './screens/admin/AdminBroadcastPage';
+// const OrderNomorGuidePage = lazy(() => import('./pages/OrderNomorGuidePage'));
+// const OrderNomorPage = lazy(() => import('./pages/OrderNomorPage'));
+const RiwayatPage = lazy(() => import('./pages/RiwayatPage'));
+const HubungiPage = lazy(() => import('./pages/HubungiPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const PlusPage = lazy(() => import('./pages/PlusPage'));
+const UpgradePlusPage = lazy(() => import('./pages/UpgradePlusPage'));
+const SupportPage = lazy(() => import('./pages/SupportPage'));
+const PaymentPage = lazy(() => import('./pages/PaymentPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const ManualDepositPage = lazy(() => import('./pages/ManualDepositPage'));
+const StrukPage = lazy(() => import('./pages/StrukPage'));
+const StrukSuksesPage = lazy(() => import('./pages/StrukSuksesPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const LayananPage = lazy(() => import('./pages/LayananPage'));
+const LayananDetailPage = lazy(() => import('./pages/LayananDetailPage'));
+const OrderVpsPage = lazy(() => import('./pages/OrderVpsPage'));
+const PengaturanAkunPage = lazy(() => import('./pages/PengaturanAkunPage'));
+const DepositPage = lazy(() => import('./pages/DepositPage'));
+const DepositMethodPage = lazy(() => import('./pages/DepositMethodPage'));
+const AdminHomePage = lazy(() => import('./pages/admin/AdminHomePage'));
+const AdminWebsitePage = lazy(() => import('./pages/admin/AdminWebsitePage'));
+const AdminServerPage = lazy(() => import('./pages/admin/AdminServerPage'));
+const AdminProfitPage = lazy(() => import('./pages/admin/AdminProfitPage'));
+const AdminBroadcastPage = lazy(() => import('./pages/admin/AdminBroadcastPage'));
 
 export default function App() {
   return (
     <MusicProvider>
+      <Suspense fallback={null}>
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
@@ -78,6 +80,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+      </Suspense>
     </MusicProvider>
   );
 }

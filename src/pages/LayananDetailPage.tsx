@@ -1,3 +1,5 @@
+import Seo from '../components/Seo';
+import { SITE_URL } from '../seo/config';
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -72,6 +74,18 @@ export default function LayananDetailPage() {
 
   return (
     <div className="page-align-left mx-auto max-w-4xl px-4 pb-32 pt-8 sm:px-6">
+      <Seo
+        title={`Layanan ${category.name}`}
+        description={`Beli layanan ${category.name} di Boosteryuk — followers, likes, views & engagement ${category.name}. Harga transparan, proses cepat, support 24/7.`}
+        jsonLd={[
+          { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Beranda', item: SITE_URL + '/' },
+            { '@type': 'ListItem', position: 2, name: 'Layanan', item: SITE_URL + '/layanan' },
+            { '@type': 'ListItem', position: 3, name: category.name, item: SITE_URL + '/layanan/' + category.slug },
+          ] },
+          { '@context': 'https://schema.org', '@type': 'Service', name: `Layanan ${category.name}`, serviceType: `SMM ${category.name}`, areaServed: 'ID', provider: { '@type': 'Organization', name: 'Boosteryuk', url: SITE_URL } },
+        ]}
+      />
       <Reveal>
         <button
           onClick={() => navigate('/layanan')}

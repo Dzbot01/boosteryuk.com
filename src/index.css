@@ -1,0 +1,780 @@
+@import "tailwindcss";
+
+/* Class-based dark mode: `dark:` applies only when .dark is on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Existing blue/indigo/sky utilities now use the teal brand palette. */
+  --color-blue-50: #ecfeff;
+  --color-blue-100: #cffafe;
+  --color-blue-200: #a5f3fc;
+  --color-blue-300: #67e8f9;
+  --color-blue-400: #22d3ee;
+  --color-blue-500: #06b6d4;
+  --color-blue-600: #0891b2;
+  --color-blue-700: #0e7490;
+  --color-blue-800: #155e75;
+  --color-blue-900: #164e63;
+  --color-blue-950: #083344;
+  --color-indigo-50: #ecfeff;
+  --color-indigo-100: #cffafe;
+  --color-indigo-200: #a5f3fc;
+  --color-indigo-300: #67e8f9;
+  --color-indigo-400: #22d3ee;
+  --color-indigo-500: #06b6d4;
+  --color-indigo-600: #0891b2;
+  --color-indigo-700: #0e7490;
+  --color-indigo-800: #155e75;
+  --color-indigo-900: #164e63;
+  --color-indigo-950: #083344;
+  --color-sky-50: #ecfeff;
+  --color-sky-100: #cffafe;
+  --color-sky-200: #a5f3fc;
+  --color-sky-300: #67e8f9;
+  --color-sky-400: #22d3ee;
+  --color-sky-500: #06b6d4;
+  --color-sky-600: #0891b2;
+  --color-sky-700: #0e7490;
+  --color-sky-800: #155e75;
+  --color-sky-900: #164e63;
+  --color-sky-950: #083344;
+}
+
+/* UI: token warna untuk komponen yang memakai style inline (BuatPesananCard, OrderVpsPage).
+   Nilai terang = warna lama; nilai .dark menjaga teks tetap terbaca di tema gelap. */
+:root {
+  --by-primary: #48c6e5;
+  --by-ink: #172033;
+  --by-ink-2: #667085;
+  --by-line: #e5e7eb;
+  --by-surface: #ffffff;
+  --by-muted: #f8fafc;
+  --by-placeholder: #98a2b3;
+  --by-active: #f0f9fd;
+}
+.dark {
+  /* Mode gelap = netral/hitam (bukan biru tua). */
+  --by-primary: #5fd3ef;
+  --by-ink: #f4f4f5;
+  --by-ink-2: #a6a6ac;
+  --by-line: #2a2a2e;
+  --by-surface: #141416;
+  --by-muted: #1b1b1f;
+  --by-placeholder: #86868c;
+  --by-active: rgba(34, 211, 238, 0.12);
+}
+/* Latar dasar mode gelap = hampir hitam netral (hindari flash & nuansa biru). */
+.dark body { background-color: #0a0a0b; }
+
+/* UI Desktop (>= lg): kolom halaman sempit dibuat rata kiri sejajar tepi kiri kontainer
+   header (max-w-6xl = 72rem), bukan di tengah layar. Lebar kolom tetap; mobile tak berubah. */
+@media (min-width: 64rem) {
+  .page-align-left {
+    margin-left: max(0px, calc((100% - 72rem) / 2));
+    margin-right: auto;
+  }
+}
+
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- keyframes ---------- */
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes slide-down {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes modal-pop-in {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes modal-pop-out {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.97) translateY(6px); }
+}
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes float-y-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-16px); }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes marquee-reverse {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+@keyframes drive {
+  0% { left: 2%; }
+  100% { left: 92%; }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  70% { transform: scale(1.9); opacity: 0; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* ---------- utilities ---------- */
+.animate-slide-up { animation: slide-up 0.38s cubic-bezier(0.22, 1, 0.36, 1); }
+.animate-slide-down { animation: slide-down 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.animate-slide-in-right { animation: slide-in-right 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+.animate-fade-in { animation: fade-in 0.3s ease-out; }
+.animate-fade-out { animation: fade-out 0.18s ease-in forwards; }
+.animate-modal-pop-in { animation: modal-pop-in 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.animate-modal-pop-out { animation: modal-pop-out 0.18s cubic-bezier(0.4, 0, 1, 1) forwards; }
+.animate-float { animation: float-y 4.5s ease-in-out infinite; }
+.animate-float-slow { animation: float-y-slow 7s ease-in-out infinite; }
+.animate-marquee { animation: marquee 26s linear infinite; }
+.animate-marquee-reverse { animation: marquee-reverse 22s linear infinite; }
+.animate-drive { animation: drive 5s ease-in-out infinite alternate; }
+.pulse-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: shimmer 1.8s infinite;
+}
+
+/* dotted + grid backdrops */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(8, 145, 178, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(8, 145, 178, 0.055) 1px, transparent 1px);
+  background-size: 46px 46px;
+}
+:is(.dark) .bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(100, 130, 200, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(100, 130, 200, 0.06) 1px, transparent 1px);
+}
+.bg-dots {
+  background-image: radial-gradient(rgba(8, 145, 178, 0.16) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* ---------- receipt ---------- */
+.receipt-torn {
+  --torn: 9px;
+  mask-image:
+    radial-gradient(circle at var(--torn) 0, transparent var(--torn), #000 calc(var(--torn) + 0.5px)),
+    radial-gradient(circle at var(--torn) 100%, transparent var(--torn), #000 calc(var(--torn) + 0.5px));
+  mask-size: calc(var(--torn) * 2) 100%;
+  mask-repeat: repeat-x;
+}
+
+.receipt-zigzag::before,
+.receipt-zigzag::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background:
+    linear-gradient(45deg, transparent 33.333%, currentColor 33.333%, currentColor 66.667%, transparent 66.667%),
+    linear-gradient(-45deg, transparent 33.333%, currentColor 33.333%, currentColor 66.667%, transparent 66.667%);
+  background-size: 12px 20px;
+}
+.receipt-zigzag::before { top: -9px; }
+.receipt-zigzag::after { bottom: -9px; }
+
+@keyframes stamp-in {
+  0% { transform: scale(1.7) rotate(-24deg); opacity: 0; }
+  60% { transform: scale(0.94) rotate(-14deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-16deg); opacity: 1; }
+}
+.animate-stamp { animation: stamp-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ---------- print ---------- */
+@media print {
+  body * { visibility: hidden; }
+  #struk-print, #struk-print * { visibility: visible; }
+  #struk-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    box-shadow: none !important;
+  }
+}
+
+/* Neon glow effect for Boosteryuk Plus menu */
+@keyframes neon-border {
+  0% {
+    box-shadow:
+      0 0 5px rgba(0, 255, 255, 0.3),
+      0 0 10px rgba(0, 255, 255, 0.2),
+      inset 0 0 5px rgba(0, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 10px rgba(255, 0, 255, 0.4),
+      0 0 20px rgba(255, 0, 255, 0.3),
+      inset 0 0 10px rgba(255, 0, 255, 0.2);
+  }
+  100% {
+    box-shadow:
+      0 0 5px rgba(0, 255, 255, 0.3),
+      0 0 10px rgba(0, 255, 255, 0.2),
+      inset 0 0 5px rgba(0, 255, 255, 0.1);
+  }
+}
+
+.neon-menu-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.neon-menu-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent);
+  animation: neon-sweep 2s infinite;
+}
+
+@keyframes neon-sweep {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.neon-menu-item.active {
+  animation: neon-border 2s infinite;
+}
+
+/* Lightfall (ogl) canvas container */
+.lightfall-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ---------- eye loader (small, used above the password field) ---------- */
+.eye-loader {
+  position: relative;
+  width: 76px;
+  display: flex;
+  justify-content: space-between;
+}
+.eye-loader::after,
+.eye-loader::before {
+  content: "";
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  background-color: #fff;
+  background-image: radial-gradient(circle 10px, #0d161b 100%, transparent 0);
+  background-repeat: no-repeat;
+  border-radius: 50%;
+  animation: eyeMove 10s infinite, blink 10s infinite;
+}
+.dark .eye-loader::after,
+.dark .eye-loader::before {
+  background-color: #1e293b;
+}
+@keyframes eyeMove {
+  0%, 10% { background-position: 0px 0px; }
+  13%, 40% { background-position: -10px 0px; }
+  43%, 70% { background-position: 10px 0px; }
+  73%, 90% { background-position: 0px 10px; }
+  93%, 100% { background-position: 0px 0px; }
+}
+@keyframes blink {
+  0%, 10%, 12%, 20%, 22%, 40%, 42%, 60%, 62%, 70%, 72%, 90%, 92%, 98%, 100% { height: 32px; }
+  11%, 21%, 41%, 61%, 71%, 91%, 99% { height: 12px; }
+}
+
+/* ---------- auth flip card (neo-brutalist login/register) ---------- */
+.authflip-wrapper {
+  --authflip-focus: #2d8cf0;
+  --authflip-font: #323232;
+  --authflip-sub: #666;
+  --authflip-bg: #fff;
+  --authflip-main: #323232;
+  position: relative;
+  width: min(360px, calc(100vw - 2rem));
+  max-height: 94vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px 16px;
+}
+.authflip-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: 2px solid var(--authflip-main);
+  background: var(--authflip-bg);
+  box-shadow: 3px 3px var(--authflip-main);
+  color: var(--authflip-font);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.authflip-close:active {
+  box-shadow: 0 0 var(--authflip-main);
+  transform: translate(3px, 3px);
+}
+.authflip-card-switch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.authflip-switch {
+  position: relative;
+  width: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+}
+.authflip-card-side::before {
+  position: absolute;
+  content: 'Masuk';
+  left: -80px;
+  top: 1px;
+  width: 70px;
+  text-align: right;
+  font-size: 13px;
+  color: var(--authflip-font);
+  font-weight: 600;
+}
+.authflip-card-side::after {
+  position: absolute;
+  content: 'Daftar';
+  left: 58px;
+  top: 1px;
+  width: 70px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--authflip-font);
+  font-weight: 600;
+}
+.authflip-card-side {
+  height: 0;
+}
+.authflip-toggle {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.authflip-slider {
+  box-sizing: border-box;
+  border-radius: 5px;
+  border: 2px solid var(--authflip-main);
+  box-shadow: 4px 4px var(--authflip-main);
+  position: relative;
+  cursor: pointer;
+  width: 50px;
+  height: 20px;
+  flex: none;
+  background-color: var(--authflip-bg);
+  transition: 0.3s;
+  display: block;
+}
+.authflip-slider::before {
+  box-sizing: border-box;
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  border: 2px solid var(--authflip-main);
+  border-radius: 5px;
+  left: -2px;
+  bottom: 2px;
+  background-color: var(--authflip-bg);
+  box-shadow: 0 3px 0 var(--authflip-main);
+  transition: 0.3s;
+}
+.authflip-toggle:checked + .authflip-slider {
+  background-color: var(--authflip-focus);
+}
+.authflip-toggle:checked + .authflip-slider::before {
+  transform: translateX(30px);
+}
+.authflip-toggle:checked ~ .authflip-card-side::before {
+  text-decoration: none;
+}
+.authflip-toggle:not(:checked) ~ .authflip-card-side::before {
+  text-decoration: underline;
+}
+.authflip-toggle:checked ~ .authflip-card-side::after {
+  text-decoration: underline;
+}
+.authflip-toggle:not(:checked) ~ .authflip-card-side::after {
+  text-decoration: none;
+}
+.authflip-toggle:focus-visible + .authflip-slider {
+  outline: 2px solid var(--authflip-focus);
+  outline-offset: 3px;
+}
+.authflip-flip-card__inner {
+  width: min(330px, calc(100vw - 3rem));
+  height: min(600px, 76vh);
+  position: relative;
+  perspective: 1000px;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+.authflip-toggle:checked ~ .authflip-flip-card__inner {
+  transform: rotateY(180deg);
+}
+.authflip-flip-card__front,
+.authflip-flip-card__back {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 22px 20px;
+  overflow-y: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  background: lightgrey;
+  border-radius: 5px;
+  border: 2px solid var(--authflip-main);
+  box-shadow: 4px 4px var(--authflip-main);
+}
+.authflip-flip-card__back {
+  transform: rotateY(180deg);
+}
+.authflip-title {
+  margin: 2px 0 4px 0;
+  font-size: 22px;
+  font-weight: 900;
+  text-align: center;
+  color: var(--authflip-main);
+}
+.authflip-flip-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.authflip-flip-card__input {
+  width: 100%;
+  height: 42px;
+  border-radius: 5px;
+  border: 2px solid var(--authflip-main);
+  background-color: var(--authflip-bg);
+  box-shadow: 4px 4px var(--authflip-main);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--authflip-font);
+  padding: 5px 10px;
+  outline: none;
+}
+.authflip-flip-card__input::placeholder {
+  color: var(--authflip-sub);
+  opacity: 0.8;
+}
+.authflip-flip-card__input:focus {
+  border: 2px solid var(--authflip-focus);
+}
+.authflip-password-wrap {
+  position: relative;
+}
+.authflip-password-wrap .authflip-flip-card__input {
+  padding-right: 38px;
+}
+.authflip-eye-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--authflip-sub);
+  display: flex;
+  padding: 4px;
+}
+.authflip-eye-btn:hover {
+  color: var(--authflip-font);
+}
+.authflip-flip-card__btn {
+  width: 100%;
+  height: 42px;
+  border-radius: 5px;
+  border: 2px solid var(--authflip-main);
+  background-color: var(--authflip-bg);
+  box-shadow: 4px 4px var(--authflip-main);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--authflip-font);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.authflip-flip-card__btn:active:not(:disabled) {
+  box-shadow: 0 0 var(--authflip-main);
+  transform: translate(3px, 3px);
+}
+.authflip-flip-card__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.authflip-footnote {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--authflip-sub);
+  font-weight: 500;
+}
+.authflip-link {
+  font-weight: 700;
+  color: var(--authflip-focus);
+}
+.authflip-link:hover {
+  text-decoration: underline;
+}
+.authflip-error {
+  border-radius: 5px;
+  border: 2px solid #dc2626;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 10px;
+}
+.authflip-captcha {
+  border-radius: 5px;
+  border: 2px solid var(--authflip-main);
+  background: var(--authflip-bg);
+  box-shadow: 4px 4px var(--authflip-main);
+  padding: 10px;
+}
+.authflip-captcha-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--authflip-sub);
+}
+.authflip-captcha-q {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 5px;
+  border: 2px solid var(--authflip-main);
+  background: #f4f4f5;
+  font-family: monospace;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--authflip-font);
+  white-space: nowrap;
+}
+.authflip-captcha-a {
+  height: 42px !important;
+}
+.authflip-mini-btn {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 5px;
+  border: 2px solid var(--authflip-main);
+  background: var(--authflip-bg);
+  box-shadow: 3px 3px var(--authflip-main);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--authflip-font);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.authflip-mini-btn:active {
+  box-shadow: 0 0 var(--authflip-main);
+  transform: translate(2px, 2px);
+}
+.authflip-captcha-err {
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #b91c1c;
+}
+.authflip-info {
+  border-radius: 5px;
+  border: 2px solid var(--authflip-main);
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 10px;
+}
+.authflip-static {
+  width: min(330px, calc(100vw - 3rem));
+  background: lightgrey;
+  border-radius: 5px;
+  border: 2px solid var(--authflip-main);
+  box-shadow: 4px 4px var(--authflip-main);
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 78vh;
+  overflow-y: auto;
+}
+.authflip-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  border: 2px solid rgba(50, 50, 50, 0.25);
+  border-top-color: var(--authflip-font);
+  animation: authflip-spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes authflip-spin {
+  to { transform: rotate(360deg); }
+}
+/* keep eye loader eyes white inside the light brutalist card, even in dark mode */
+.dark .authflip-flip-card__front .eye-loader::before,
+.dark .authflip-flip-card__front .eye-loader::after,
+.dark .authflip-flip-card__back .eye-loader::before,
+.dark .authflip-flip-card__back .eye-loader::after {
+  background-color: #fff;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+/* hidden scrollbar for drag sliders */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* disable native snap-fighting while dragging with a mouse */
+.drag-live {
+  scroll-snap-type: none;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fadeUp 0.6s ease-out both;
+}
+
+@keyframes sheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-sheet-up {
+  animation: sheetUp 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+.animate-pulse-dot {
+  animation: pulseDot 1.6s ease-in-out infinite;
+}
+
+/* ======================================================================
+   Aksesibilitas: hormati prefers-reduced-motion.
+   Nonaktifkan animasi berjalan (marquee, pulse, float, shimmer, dll).
+   ====================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-marquee,
+  .animate-marquee-reverse { animation: none !important; }
+}
+
+/* Peta dunia hero — ditanam sebagai data-URI agar tidak pernah 404. */
+.hero-map{background-image:url('/hero-world.webp');background-size:cover;background-position:center;opacity:.60;filter:grayscale(.55) brightness(.92) contrast(1.05);}

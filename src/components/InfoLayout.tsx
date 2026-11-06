@@ -1,3 +1,4 @@
+import Seo from './Seo';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Info } from 'lucide-react';
@@ -22,6 +23,7 @@ export function InfoLayout({
 
   return (
     <main className="page-align-left mx-auto max-w-3xl px-4 pb-24 pt-8 sm:px-6">
+      <Seo title={title} description={intro} />
       <Reveal>
         <button
           type="button"

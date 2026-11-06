@@ -1,3 +1,4 @@
+import Seo from '../components/Seo';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -26,6 +27,7 @@ export default function LayananPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-32 pt-8 sm:px-6">
+      <Seo title="Buat Pesanan" description="Buat pesanan layanan SMM Boosteryuk: followers, likes, views & engagement untuk semua platform. Harga transparan, proses cepat." />
       <Reveal>
         <button
           onClick={() => navigate('/')}

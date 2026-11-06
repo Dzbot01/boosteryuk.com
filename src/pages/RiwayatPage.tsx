@@ -64,7 +64,7 @@ export default function RiwayatPage() {
 
   useEffect(() => {
   if(!user?.token) { setLoading(false); return; }
-  fetch('/api/riwayat_pesanan?token=' + user.token)
+  fetch('https://cekidku.my.id/api/riwayat_pesanan.php?token=' + user.token)
  .then(res => res.json())
  .then(data => {
       setOrders(data.orders || []);
