@@ -9,3 +9,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// URL file musik ber-nama unik per build (di-inject plugin di vite.config.ts).
+declare const __MUSIC_URL__: string;

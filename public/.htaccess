@@ -1,0 +1,22 @@
+# Boosteryuk — SPA + penyajian file statis (termasuk musik/asset) secara langsung.
+<IfModule mod_mime.c>
+  AddType audio/mpeg .mp3
+  AddType image/webp .webp
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Jangan rewrite file/direktori yang benar-benar ada (mp3, png, js, css, dll).
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  # Sisanya diarahkan ke SPA.
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# File musik ber-nama unik per build boleh di-cache lama (immutable).
+<IfModule mod_headers.c>
+  <FilesMatch "^music\.[a-z0-9]+\.mp3$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>

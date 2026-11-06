@@ -1,4 +1,5 @@
 import path from "path";
+import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -24,9 +25,44 @@ function siteUrlPlugin(): Plugin {
   };
 }
 
+
+/**
+ * Musik: emit file audio dengan NAMA UNIK setiap build (anti-cache & agar tidak tertimpa
+ * rewrite SPA). URL-nya di-inject sebagai konstanta global __MUSIC_URL__.
+ * Sumber: src/assets/music.mp3 (tidak disajikan mentah dari /public).
+ */
+function musicAssetPlugin(): Plugin {
+  const unique = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const fileName = `music.${unique}.mp3`;
+  const url = "/" + fileName;
+  const srcPath = path.resolve(__dirname, "src/assets/music.mp3");
+  let buf: Buffer | null = null;
+  const read = () => (buf ??= readFileSync(srcPath));
+  return {
+    name: "music-asset",
+    config() {
+      return { define: { __MUSIC_URL__: JSON.stringify(url) } };
+    },
+    buildStart() {
+      this.emitFile({ type: "asset", fileName, source: read() });
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url && req.url.split("?")[0] === url) {
+          res.setHeader("Content-Type", "audio/mpeg");
+          res.setHeader("Accept-Ranges", "bytes");
+          res.end(read());
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), siteUrlPlugin()],
+  plugins: [react(), tailwindcss(), siteUrlPlugin(), musicAssetPlugin()],
   build: {
     // Pisahkan vendor besar agar caching lebih baik & initial chunk lebih kecil.
     rollupOptions: {

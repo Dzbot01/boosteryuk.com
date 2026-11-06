@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 const TOOLTIP_DELAY = 3000;
-const MUSIC_SRC = '/tes.mp3';
+const MUSIC_SRC = __MUSIC_URL__; // nama file musik unik tiap build (anti-cache & anti-rewrite SPA)
 
 interface MusicCtx {
   /** Whether the track is currently playing. */

@@ -83,7 +83,7 @@ const DEFAULTS: SiteSettings = {
   brandName: 'Booster',
   brandSuffix: 'yuk',
   footerText: '© 2025 Boosteryuk · Cek status booster media sosial',
-  musicUrl: '/musik.mp3',
+  musicUrl: __MUSIC_URL__,
   infoItems: DEFAULT_INFO,
 };
 
@@ -116,7 +116,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       const toSave = {
         ...settings,
         logoUrl: settings.logoUrl.startsWith('blob:') ? DEFAULT_LOGO : settings.logoUrl,
-        musicUrl: settings.musicUrl.startsWith('blob:') ? '/tes.mp3' : settings.musicUrl,
+        musicUrl: settings.musicUrl.startsWith('blob:') ? __MUSIC_URL__ : settings.musicUrl,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
     } catch {
@@ -142,7 +142,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     setSettings((s) => ({ ...s, logoUrl: url }));
   };
 
-  const resetMusic = () => setSettings((s) => ({ ...s, musicUrl: '/tes.mp3' }));
+  const resetMusic = () => setSettings((s) => ({ ...s, musicUrl: __MUSIC_URL__ }));
   const resetLogo = () => setSettings((s) => ({ ...s, logoUrl: DEFAULT_LOGO }));
 
   return (
