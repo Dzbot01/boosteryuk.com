@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { sendOtpEmail, genOtp, isValidEmail } from '../services/otp';
+import { useNavigate } from 'react-router-dom';
+import { sendOtpEmail, genOtp, isValidEmail, otpRateCheck, otpRateRecord } from '../services/otp';
+import welcomeSound from '../assets/login-welcome.mp3';
 
 const API_URL = 'https://boosteryuk.com/api';
 type Mode = 'register' | 'login' | 'recover' | 'otp';
@@ -15,6 +17,7 @@ interface Props {
 
 export default function AuthModal({ open, onClose, onSuccess, initialMode = 'login' }: Props) {
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const [mode, setMode] = useState<Mode>(initialMode);
   const [username, setUsername] = useState('');
@@ -88,11 +91,14 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
   const requestOtp = async () => {
     setError(''); setOtpMsg('');
     if (!isValidEmail(email)) { setError('Isi email yang valid dulu untuk minta OTP.'); return; }
+    const rc = otpRateCheck(email);
+    if (!rc.allowed) { setError(rc.message || 'Terlalu banyak permintaan OTP.'); return; }
     setOtpSending(true);
     const code = genOtp();
     const r = await sendOtpEmail(email.trim(), code);
     setOtpSending(false);
     if (r.ok) {
+      otpRateRecord(email);
       sentCode.current = code; sentAt.current = Date.now();
       setOtpSent(true); setOtpMsg('Kode OTP dikirim ke email kamu.');
     } else {
@@ -147,8 +153,11 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
     try {
       const res = await login(email, password);
       if (res.ok) {
+        // Auto-play sound sambutan (masih dalam konteks gesture klik login -> autoplay diizinkan).
+        try { const a = new Audio(welcomeSound); a.volume = 1; void a.play().catch(() => {}); } catch { /* abaikan */ }
         onSuccess?.();
         onClose();
+        navigate('/layanan'); // redirect setelah login -> Buat Pesanan
       } else {
         setError(res.message || 'Login gagal');
       }

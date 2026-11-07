@@ -41,3 +41,46 @@ export async function sendOtpEmail(to: string, code: string): Promise<{ ok: bool
     return { ok: false, error: 'Gagal terhubung ke server OTP.' };
   }
 }
+
+/* ---------------- Rate limit minta OTP (register) ----------------
+   Aturan: 2 permintaan pertama diizinkan; setelah ke-2 cooldown 10 menit;
+   setelah ke-3 cooldown 24 jam. Disimpan per-email di localStorage. */
+type RL = { attempts: number; blockedUntil: number };
+const RL_KEY = (email: string) => `by_otp_rl:${email.trim().toLowerCase()}`;
+
+function readRL(email: string): RL {
+  try {
+    const r = JSON.parse(localStorage.getItem(RL_KEY(email)) || '');
+    if (r && typeof r.attempts === 'number' && typeof r.blockedUntil === 'number') return r;
+  } catch { /* abaikan */ }
+  return { attempts: 0, blockedUntil: 0 };
+}
+function writeRL(email: string, rl: RL) {
+  try { localStorage.setItem(RL_KEY(email), JSON.stringify(rl)); } catch { /* abaikan */ }
+}
+function fmtWait(ms: number): string {
+  const menit = Math.ceil(ms / 60000);
+  return menit >= 60 ? `${Math.ceil(menit / 60)} jam` : `${menit} menit`;
+}
+
+/** Cek apakah boleh minta OTP sekarang. */
+export function otpRateCheck(email: string): { allowed: boolean; message?: string } {
+  const now = Date.now();
+  let rl = readRL(email);
+  if (rl.attempts >= 3 && now >= rl.blockedUntil) rl = { attempts: 0, blockedUntil: 0 }; // siklus 24 jam selesai
+  if (now < rl.blockedUntil) {
+    return { allowed: false, message: `Terlalu banyak permintaan OTP. Coba lagi dalam ${fmtWait(rl.blockedUntil - now)}.` };
+  }
+  return { allowed: true };
+}
+
+/** Catat 1 permintaan OTP sukses & terapkan cooldown sesuai aturan. */
+export function otpRateRecord(email: string): void {
+  const now = Date.now();
+  let rl = readRL(email);
+  if (rl.attempts >= 3 && now >= rl.blockedUntil) rl = { attempts: 0, blockedUntil: 0 };
+  rl.attempts += 1;
+  if (rl.attempts >= 3) rl.blockedUntil = now + 24 * 60 * 60 * 1000;      // ke-3: 24 jam
+  else if (rl.attempts === 2) rl.blockedUntil = now + 10 * 60 * 1000;     // ke-2: 10 menit
+  writeRL(email, rl);
+}
