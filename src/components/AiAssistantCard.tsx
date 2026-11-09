@@ -213,7 +213,7 @@ export default function AiAssistantCard({
   const typing = current !== '' && displayed.length < current.length;
 
   return (
-    <div className="mx-auto mb-4 w-full max-w-[360px] rounded-[18px] border border-cyan-100 bg-white px-4 py-3.5 shadow-[0_10px_30px_-14px_rgba(23,32,51,.16)] dark:border-slate-700 dark:bg-slate-900">
+    <div className="mb-4 w-full rounded-[18px] border border-cyan-100 bg-white px-4 py-3.5 shadow-[0_14px_36px_-18px_rgba(23,32,51,.22)] dark:border-slate-700 dark:bg-slate-900">
       <div className="flex items-center gap-2.5">
         <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-600/25">
           <Bot className="h-[18px] w-[18px]" strokeWidth={2.2} />

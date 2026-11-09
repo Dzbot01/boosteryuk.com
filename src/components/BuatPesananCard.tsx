@@ -424,7 +424,7 @@ if(!tokenFromStorage) {
         ordering={ordering}
         orderNotice={orderNotice}
       />
-    <div className="mx-auto w-full max-w-[360px] rounded-[18px] px-4 py-5 sm:px-5" style={{ background: COLOR.surface, boxShadow: '0 22px 48px -22px rgba(23,32,51,.32), 0 6px 16px -10px rgba(23,32,51,.14)' }}>
+    <div className="w-full rounded-[18px] px-4 py-5 sm:px-6 lg:px-7" style={{ background: COLOR.surface, boxShadow: '0 22px 48px -22px rgba(23,32,51,.32), 0 6px 16px -10px rgba(23,32,51,.14)' }}>
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -504,7 +504,9 @@ if(!tokenFromStorage) {
   </div>
 )}
 
-      <div className="space-y-5">
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start lg:gap-8">
+        {/* ============ KIRI: input pesanan ============ */}
+        <div className="space-y-5">
          {/* 1. Kategori */}
         <FormSection label="Kategori">
           <CustomSelect
@@ -537,68 +539,6 @@ if(!tokenFromStorage) {
           />
         </FormSection>
         
-        {/* 3. Deskripsi Layanan Card — placed between Layanan and Target with exact layout format */}
-        <div>
-          {selected ? (
-            <div
-              id="buat-pesanan-deskripsi"
-              className="w-full rounded-xl border p-3.5 text-[12.5px] leading-relaxed"
-              style={{ borderColor: COLOR.border, background: COLOR.surface, color: COLOR.secondary }}
-            >
-              <p className="font-bold text-[13.5px] text-slate-900 dark:text-white leading-snug">
-                {selected.name}
-              </p>
-
-              <p className="mt-2 text-[12.5px] font-bold text-slate-800 dark:text-slate-200">
-                Harga: {formatRate(selected.rate, user?.plusActive)}/K
-              </p>
-
-              <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
-
-              <p className="font-bold text-[12.5px] text-slate-900 dark:text-white">Deskripsi:</p>
-              {description?.deskripsi ? (
-                <div className="mt-1 space-y-1 text-slate-600 dark:text-slate-300">
-                  {description.deskripsi.split(/(?=- )|\n/).map((line, idx) => {
-                    const l = line.trim();
-                    if (!l) return null;
-                    return <p key={idx}>{l}</p>;
-                  })}
-                </div>
-              ) : (
-                <p className="mt-1 text-slate-500 dark:text-slate-400">-</p>
-              )}
-
-              {description?.catatan && description.catatan.length > 0 && (
-                <>
-                  {/* Enter spacing before Catatan */}
-                  <div className="h-3" />
-                  <p className="font-bold text-[12.5px] text-slate-900 dark:text-white">Catatan :</p>
-                  <ul className="mt-1.5 space-y-1.5 text-slate-600 dark:text-slate-300">
-                    {description.catatan.map((item, index) => (
-                      <li key={index} className="flex items-start gap-1.5">
-                        <span className="shrink-0 font-bold">•</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-
-              <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
-
-              <p className="font-bold text-[12.5px] text-slate-900 dark:text-white">Waktu Rata-Rata:</p>
-              <p className="mt-0.5 text-slate-600 dark:text-slate-300">37 menit 19 detik</p>
-            </div>
-          ) : (
-            <div
-              className="flex min-h-[90px] w-full items-center justify-center rounded-xl border p-3.5 text-[12.5px]"
-              style={{ borderColor: COLOR.border, color: 'var(--by-placeholder)', background: COLOR.muted }}
-            >
-              {loading ? 'Memuat layanan…' : 'Pilih layanan untuk melihat deskripsi'}
-            </div>
-          )}
-        </div>
-
         {/* 4. Target */}
         <FormSection label="Target (URL atau Username)">
           <input
@@ -738,6 +678,69 @@ if(!tokenFromStorage) {
             <span className="font-semibold">{orderNotice.message}</span>
           </div>
         )}
+        </div>
+
+        {/* ============ KANAN: deskripsi layanan (sticky di desktop) ============ */}
+        <div className="mt-6 lg:mt-0 lg:sticky lg:top-24">
+          {selected ? (
+            <div
+              id="buat-pesanan-deskripsi"
+              className="w-full rounded-xl border p-3.5 text-[12.5px] leading-relaxed"
+              style={{ borderColor: COLOR.border, background: COLOR.surface, color: COLOR.secondary }}
+            >
+              <p className="font-bold text-[13.5px] text-slate-900 dark:text-white leading-snug">
+                {selected.name}
+              </p>
+
+              <p className="mt-2 text-[12.5px] font-bold text-slate-800 dark:text-slate-200">
+                Harga: {formatRate(selected.rate, user?.plusActive)}/K
+              </p>
+
+              <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
+
+              <p className="font-bold text-[12.5px] text-slate-900 dark:text-white">Deskripsi:</p>
+              {description?.deskripsi ? (
+                <div className="mt-1 space-y-1 text-slate-600 dark:text-slate-300">
+                  {description.deskripsi.split(/(?=- )|\n/).map((line, idx) => {
+                    const l = line.trim();
+                    if (!l) return null;
+                    return <p key={idx}>{l}</p>;
+                  })}
+                </div>
+              ) : (
+                <p className="mt-1 text-slate-500 dark:text-slate-400">-</p>
+              )}
+
+              {description?.catatan && description.catatan.length > 0 && (
+                <>
+                  {/* Enter spacing before Catatan */}
+                  <div className="h-3" />
+                  <p className="font-bold text-[12.5px] text-slate-900 dark:text-white">Catatan :</p>
+                  <ul className="mt-1.5 space-y-1.5 text-slate-600 dark:text-slate-300">
+                    {description.catatan.map((item, index) => (
+                      <li key={index} className="flex items-start gap-1.5">
+                        <span className="shrink-0 font-bold">•</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
+
+              <p className="font-bold text-[12.5px] text-slate-900 dark:text-white">Waktu Rata-Rata:</p>
+              <p className="mt-0.5 text-slate-600 dark:text-slate-300">37 menit 19 detik</p>
+            </div>
+          ) : (
+            <div
+              className="flex min-h-[90px] w-full items-center justify-center rounded-xl border p-3.5 text-[12.5px]"
+              style={{ borderColor: COLOR.border, color: 'var(--by-placeholder)', background: COLOR.muted }}
+            >
+              {loading ? 'Memuat layanan…' : 'Pilih layanan untuk melihat deskripsi'}
+            </div>
+          )}
+        </div>
       </div>
     </div>
     </>

@@ -38,12 +38,10 @@ export default function LayananPage() {
         </button>
       </Reveal>
 
-      {/* ================= GRID DESKTOP: form kiri + slider kanan (lebih kecil) ================= */}
-      <div className="lg:grid lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:items-start lg:gap-10">
-      {/* ================= SLIDER ================= */}
-      <Reveal delay={40} className="lg:order-2 lg:sticky lg:top-24">
+      {/* ================= SLIDER (atas, ukuran lebih kecil) ================= */}
+      <Reveal delay={40}>
         <div
-          className="relative aspect-[16/9] w-full overflow-hidden rounded-[28px] border border-slate-200 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.5)] dark:border-slate-700/60 sm:aspect-[21/9] lg:!aspect-[16/10]"
+          className="relative mx-auto aspect-[16/9] w-full max-w-2xl overflow-hidden rounded-[22px] border border-slate-200 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.5)] dark:border-slate-700/60 sm:aspect-[21/8] lg:!aspect-[21/7]"
           onMouseEnter={() => (paused.current = true)}
           onMouseLeave={() => (paused.current = false)}
         >
@@ -87,11 +85,10 @@ export default function LayananPage() {
         </div>
       </Reveal>
 
-      {/* ================= BUAT PESANAN CARD (kiri di desktop) ================= */}
-      <Reveal delay={120} className="mt-8 lg:order-1 lg:mt-0">
+      {/* ================= BUAT PESANAN CARD (lebar penuh di bawah slider) ================= */}
+      <Reveal delay={120} className="mt-8">
         <BuatPesananCard />
       </Reveal>
-      </div>
     </div>
   );
 }
