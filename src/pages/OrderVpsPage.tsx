@@ -303,7 +303,7 @@ export default function App() {
         <Reveal delay={100}>
           <div
             className="mt-8 w-full rounded-[22px] px-4 py-5 sm:px-6 sm:py-6"
-            style={{ background: COLOR.surface, boxShadow: '0 16px 44px -26px rgba(15,23,42,.35)' }}
+            style={{ background: COLOR.surface, boxShadow: '0 22px 48px -22px rgba(23,32,51,.32), 0 6px 16px -10px rgba(23,32,51,.14)' }}
           >
             {/* Header modal form */}
             <div className="flex items-center justify-between gap-3">

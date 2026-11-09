@@ -301,7 +301,7 @@ export default function OrderNomorPage() {
       <Reveal delay={110}>
         <div
           className="mt-5 w-full rounded-[18px] px-4 py-5 sm:px-5"
-          style={{ background: COLOR.surface, boxShadow: '0 10px 30px -14px rgba(23,32,51,.16)' }}
+          style={{ background: COLOR.surface, boxShadow: '0 22px 48px -22px rgba(23,32,51,.32), 0 6px 16px -10px rgba(23,32,51,.14)' }}
         >
           {/* Header card + label biru */}
           <div className="flex items-center justify-between gap-3">

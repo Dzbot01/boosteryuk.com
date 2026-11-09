@@ -415,6 +415,7 @@ if(!tokenFromStorage) {
   <>
    <AiAssistantCard
         userName={firstName}
+        voiceKey={user ? (user.email || user.username || 'user') : undefined}
         category={category}
         serviceName={selected?.name ?? null}
         servicePriceText={selected ? formatRupiah(rate) : undefined}
@@ -424,7 +425,7 @@ if(!tokenFromStorage) {
         ordering={ordering}
         orderNotice={orderNotice}
       />
-    <div className="mx-auto w-full max-w-[360px] rounded-[18px] px-4 py-5 sm:px-5" style={{ background: COLOR.surface, boxShadow: '0 10px 30px -14px rgba(23,32,51,.16)' }}>
+    <div className="mx-auto w-full max-w-[360px] rounded-[18px] px-4 py-5 sm:px-5" style={{ background: COLOR.surface, boxShadow: '0 22px 48px -22px rgba(23,32,51,.32), 0 6px 16px -10px rgba(23,32,51,.14)' }}>
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">

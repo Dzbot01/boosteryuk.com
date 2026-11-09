@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bot, Sparkles } from 'lucide-react';
+import { Bot, Sparkles, Volume2, Square } from 'lucide-react';
+import { BOOSTY_SEQUENCE, type BoostyVoice } from '../data/boostyVoices';
 
 interface AiAssistantProps {
   /** Display name used in the greeting, e.g. first name. */
   userName?: string;
+  /** Kunci unik user (mis. email). Jika ada & belum pernah, suara sapaan diputar 1x. */
+  voiceKey?: string;
   /** Currently selected category label (empty string when none). */
   category: string;
   /** Currently selected service name (null when none). */
@@ -43,6 +46,7 @@ function truncate(text: string, max = 30): string {
 
 export default function AiAssistantCard({
   userName,
+  voiceKey,
   category,
   serviceName,
   servicePriceText,
@@ -57,6 +61,67 @@ export default function AiAssistantCard({
   const [displayed, setDisplayed] = useState('');
   const [thinking, setThinking] = useState(false);
   const [version, setVersion] = useState(0);
+
+  // ====== Suara + subtitle Boosty (ElevenLabs) ======
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playRef = useRef<(index: number) => void>(() => {});
+  const [activeVoice, setActiveVoice] = useState<BoostyVoice | null>(null);
+  const [subtitle, setSubtitle] = useState('');
+  const [voiceBlocked, setVoiceBlocked] = useState(false);
+
+  // Pemutar berurutan: sapaan -> info reseller. Subtitle tersinkron via timeupdate.
+  useEffect(() => {
+    playRef.current = (index: number) => {
+      const prev = audioRef.current;
+      if (prev) { prev.pause(); prev.onended = null; prev.ontimeupdate = null; }
+      const voice = BOOSTY_SEQUENCE[index];
+      if (!voice) { audioRef.current = null; setActiveVoice(null); setSubtitle(''); return; }
+      setActiveVoice(voice);
+      setSubtitle(voice.cues[0]?.text ?? '');
+      const audio = new Audio(voice.src);
+      audio.volume = 1;
+      audioRef.current = audio;
+      audio.ontimeupdate = () => {
+        const t = audio.currentTime;
+        const cue = voice.cues.find((c) => t >= c.start && t < c.end);
+        if (cue) setSubtitle(cue.text);
+      };
+      audio.onended = () => {
+        if (index + 1 < BOOSTY_SEQUENCE.length) playRef.current(index + 1);
+        else { audioRef.current = null; setActiveVoice(null); setSubtitle(''); }
+      };
+      audio.play().then(() => setVoiceBlocked(false)).catch(() => setVoiceBlocked(true));
+    };
+  });
+
+  // Auto-play 1x saat user login. Flag disimpan sebelum play -> refresh TIDAK mengulang.
+  useEffect(() => {
+    if (!voiceKey) return;
+    const flag = `by_boosty_voice:${voiceKey}`;
+    let done = false;
+    try { done = localStorage.getItem(flag) === '1'; } catch { /* abaikan */ }
+    if (done) return;
+    try { localStorage.setItem(flag, '1'); } catch { /* abaikan */ }
+    const t = window.setTimeout(() => playRef.current(0), 650);
+    return () => window.clearTimeout(t);
+  }, [voiceKey]);
+
+  // Hentikan audio saat komponen dilepas.
+  useEffect(() => () => { audioRef.current?.pause(); }, []);
+
+  const toggleVoice = () => {
+    if (activeVoice) {
+      const a = audioRef.current;
+      if (a) { a.pause(); a.onended = null; a.ontimeupdate = null; }
+      audioRef.current = null;
+      setActiveVoice(null);
+      setSubtitle('');
+      setVoiceBlocked(false);
+    } else {
+      setVoiceBlocked(false);
+      playRef.current(0);
+    }
+  };
 
   const prevRef = useRef({
     category: '',
@@ -211,12 +276,46 @@ export default function AiAssistantCard({
             Boosty AI
             <span className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-200 dark:bg-cyan-900/25 dark:text-cyan-400 dark:ring-cyan-800/50">
               <Sparkles className="h-2.5 w-2.5" strokeWidth={2.4} />
-              Online
+              {activeVoice ? activeVoice.label : 'Online'}
             </span>
           </p>
         </div>
+
+        {/* Tombol suara: putar/ulang sapaan + info reseller, atau hentikan. */}
+        <button
+          type="button"
+          onClick={toggleVoice}
+          aria-label={activeVoice ? 'Hentikan suara' : 'Putar sapaan Boosty'}
+          title={activeVoice ? 'Hentikan suara' : 'Dengar sapaan Boosty'}
+          className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
+            activeVoice
+              ? 'border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'
+              : 'border-slate-200 text-slate-500 hover:border-cyan-300 hover:text-cyan-600 dark:border-slate-700 dark:text-slate-400 dark:hover:text-cyan-400'
+          } ${voiceBlocked ? 'animate-pulse ring-2 ring-cyan-400/50' : ''}`}
+        >
+          {activeVoice ? <Square className="h-3.5 w-3.5 fill-current" strokeWidth={2.4} /> : <Volume2 className="h-4 w-4" strokeWidth={2.2} />}
+        </button>
       </div>
 
+      {activeVoice ? (
+        <div className="mt-2.5 min-h-[2.7em]" aria-live="polite">
+          <div className="flex items-center gap-1.5 text-[9.5px] font-bold uppercase tracking-wide text-cyan-600 dark:text-cyan-400">
+            <span className="flex items-end gap-[2px]" aria-hidden>
+              {[0, 1, 2, 3].map((d) => (
+                <span
+                  key={d}
+                  className="w-[2.5px] animate-pulse rounded-full bg-cyan-500"
+                  style={{ height: `${6 + (d % 2 ? 5 : 9)}px`, animationDelay: `${d * 120}ms` }}
+                />
+              ))}
+            </span>
+            Sedang berbicara…
+          </div>
+          <p className="mt-1.5 text-[13px] font-medium leading-relaxed text-slate-700 dark:text-slate-200">
+            {subtitle || ' '}
+          </p>
+        </div>
+      ) : (
       <div
         className="mt-2.5 min-h-[2.7em] text-[13px] leading-relaxed text-slate-600 dark:text-slate-300"
         style={{
@@ -244,6 +343,7 @@ export default function AiAssistantCard({
           </>
         )}
       </div>
+      )}
     </div>
   );
 }
