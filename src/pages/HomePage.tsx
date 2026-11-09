@@ -42,6 +42,8 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  // Gurita: default hanya kepala; klik/tarik kepala -> tampil penuh (tanpa animasi).
+  const [octoOpen, setOctoOpen] = useState(false);
 
   const marquee = [...SOCIAL_BRANDS,...SOCIAL_BRANDS];
   const reverseMarquee = [...SECONDARY_SOCIAL_BRANDS,...SECONDARY_SOCIAL_BRANDS];
@@ -197,17 +199,31 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Gurita tepat di garis perbatasan hero -> body (kepala membelakangi hero).
-          Mobile: margin kecil agar tidak menutupi teks/tombol hero. Desktop: beranimasi. */}
-      <div className="relative z-10 -mt-6 flex justify-center px-4 sm:-mt-24 lg:-mt-44">
-        {/* Glow biru + hitam di belakang gurita — HANYA tema terang (dark sudah gelap). */}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[75%] w-[90%] max-w-4xl -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.5),rgba(8,14,36,0.6)_52%,transparent_78%)] blur-2xl dark:hidden" />
-        <img
-          src={octopus}
-          alt="Boosteryuk"
-          className="octo-float pointer-events-none w-full max-w-5xl select-none object-contain drop-shadow-[0_28px_70px_rgba(37,99,235,0.4)]"
-          loading="lazy"
-        />
+      {/* Gurita di garis perbatasan hero -> body. HANYA tema gelap. Tanpa animasi.
+          Container pointer-events-none agar TIDAK menutupi tombol hero (Masuk/Daftar/Cek Status).
+          Default: hanya kepala terlihat; klik/tarik kepala -> gurita penuh. */}
+      <div className="pointer-events-none relative z-10 -mt-6 hidden justify-center px-4 dark:flex sm:-mt-24 lg:-mt-44">
+        <div className="relative w-full max-w-5xl">
+          {/* Wrapper clip: tinggi kecil = hanya kepala; penuh saat octoOpen. */}
+          <div
+            className="overflow-hidden transition-[max-height] duration-500 ease-out"
+            style={{ maxHeight: octoOpen ? 680 : 128 }}
+          >
+            <img
+              src={octopus}
+              alt="Boosteryuk"
+              className="pointer-events-none w-full select-none object-contain object-top drop-shadow-[0_28px_70px_rgba(37,99,235,0.4)]"
+              loading="lazy"
+            />
+          </div>
+          {/* Zona klik kepala — di tengah & sempit, tidak menimpa tombol hero (kiri). */}
+          <button
+            type="button"
+            onClick={() => setOctoOpen((v) => !v)}
+            aria-label={octoOpen ? 'Sembunyikan gurita' : 'Lihat gurita penuh'}
+            className="pointer-events-auto absolute left-1/2 top-0 h-[128px] w-[34%] max-w-[280px] -translate-x-1/2 cursor-pointer rounded-b-full"
+          />
+        </div>
       </div>
 
         {/* ================= BODY LAYER ================= */}

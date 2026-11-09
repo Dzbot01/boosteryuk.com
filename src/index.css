@@ -778,12 +778,3 @@ body {
 
 /* Peta dunia hero — ditanam sebagai data-URI agar tidak pernah 404. */
 .hero-map{background-image:url('/world.png');background-size:cover;background-position:center;opacity:.60;filter:grayscale(.55) brightness(.92) contrast(1.05);}
-
-/* Animasi gurita (hero -> body). Hanya aktif di desktop (>= 64rem). */
-@keyframes octo-float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-16px) rotate(-0.6deg); }
-}
-@media (min-width: 64rem) {
-  .octo-float { animation: octo-float 7s ease-in-out infinite; transform-origin: 50% 40%; }
-}
