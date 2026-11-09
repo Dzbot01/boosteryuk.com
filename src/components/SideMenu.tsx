@@ -252,14 +252,8 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
                         } ${item.neon? 'neon-menu-item active' : ''}`}
                       >
-                        <span
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
-                            isActive
-                             ? 'bg-white/20'
-                              : 'bg-slate-100 group-hover:bg-white dark:bg-slate-800 dark:group-hover:bg-slate-700'
-                          }`}
-                        >
-                          <Icon className="h-[17px] w-[17px]" strokeWidth={1.9} />
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center">
+                          <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-2">
@@ -322,8 +316,8 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
               }}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-semibold text-rose-600 transition-all duration-200 hover:bg-rose-50 active:scale-[0.98] dark:text-rose-400 dark:hover:bg-rose-900/20"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-900/20">
-                <LogOut className="h-[17px] w-[17px]" strokeWidth={1.9} />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center">
+                <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
               </span>
               <span className="min-w-0">
                 <span className="block truncate leading-tight">Keluar</span>

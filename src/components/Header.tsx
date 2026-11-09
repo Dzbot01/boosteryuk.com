@@ -99,8 +99,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 aria-label="Profil"
                 className={`group relative flex h-11 w-11 items-center justify-center rounded-full font-display text-[13px] font-extrabold text-white transition-all hover:scale-105 active:scale-95 ${
                   user?.plusActive
-                   ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 shadow-md shadow-amber-500/30 ring-2 ring-amber-300 dark:ring-amber-400'
-                    : 'bg-gradient-to-br from-cyan-500 to-cyan-700 shadow-md shadow-cyan-600/25'
+                   ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 ring-2 ring-amber-300 dark:ring-amber-400'
+                    : 'bg-gradient-to-br from-cyan-500 to-cyan-700'
                 }`}
               >
                 {user?.initials?? 'U'}
@@ -137,8 +137,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
                   {/* Saldo — no TopUp button */}
                   <div className="flex items-center gap-2.5 border-b border-slate-100 px-3.5 py-3 dark:border-slate-800">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400">
-                      <Wallet className="h-4 w-4" strokeWidth={2.2} />
+                    <span className="flex h-8 w-8 items-center justify-center text-cyan-600 dark:text-cyan-400">
+                      <Wallet className="h-5 w-5" strokeWidth={2.2} />
                     </span>
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">
@@ -184,10 +184,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <button
             onClick={onMenuClick}
             aria-label="Buka menu"
-            className={`group relative flex h-11 w-11 items-center justify-center rounded-2xl border shadow-sm transition-all duration-200 hover:border-blue-300 hover:text-blue-700 hover:shadow-md active:scale-95 ${onHeroTop ? 'border-slate-200 bg-white text-slate-700' : 'border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-blue-600 dark:hover:text-blue-400'}`}
+            className={`group relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 hover:text-blue-600 active:scale-95 ${onHeroTop ? 'text-white' : 'text-slate-700 dark:text-slate-200 dark:hover:text-blue-400'}`}
           >
-            <Menu className="h-5 w-5" strokeWidth={2.2} />
-            {/* FIX/UI: titik indikator biru pada tombol menu dihapus */}
+            <Menu className="h-6 w-6" strokeWidth={2.2} />
+            {/* FIX/UI: ikon menu tanpa card (border/bg/shadow dihapus) */}
           </button>
         </div>
       </div>

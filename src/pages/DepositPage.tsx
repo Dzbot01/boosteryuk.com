@@ -75,7 +75,7 @@ export default function DepositPage() {
   }, [channels, query]);
 
   return (
-    <div className="page-align-left mx-auto max-w-2xl px-4 pb-32 pt-8 sm:px-6">
+    <div className="page-align-left mx-auto max-w-2xl px-4 pb-32 pt-8 sm:px-6 lg:max-w-5xl">
       {/* Tombol kembali */}
       <Reveal>
         <button
@@ -229,12 +229,13 @@ export default function DepositPage() {
                 <span className="h-px flex-1 bg-slate-200" />
               </div>
 
-              {/* Kartu channel */}
+              {/* Kartu channel — grid card di desktop */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {list.map((channel, index) => (
-                <Reveal key={channel.code} delay={groupIndex * 40 + index * 30}>
+                <Reveal key={channel.code} delay={groupIndex * 40 + index * 30} className="h-full">
                   <button
                     onClick={() => navigate(`/deposit/${channel.code}`)}
-                    className="group flex w-full items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-lg dark:bg-slate-900 dark:border-slate-700"
+                    className="group flex h-full w-full items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-lg dark:bg-slate-900 dark:border-slate-700"
                   >
                     <ChannelIcon src={channel.icon_url} code={channel.code} />
                     <div className="min-w-0 flex-1">
@@ -259,6 +260,7 @@ export default function DepositPage() {
                   </button>
                 </Reveal>
               ))}
+              </div>
             </div>
           ))}
         </div>

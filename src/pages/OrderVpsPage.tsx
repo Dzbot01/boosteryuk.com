@@ -251,7 +251,7 @@ export default function App() {
       {/* ================= SLIDER ================= */}
       <Reveal delay={40}>
         <div
-          className="relative aspect-[16/9] w-full overflow-hidden rounded-[28px] border border-slate-200 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.5)] dark:border-slate-700/60 sm:aspect-[21/9] lg:max-w-[720px] lg:!aspect-[16/10]"
+          className="relative mx-auto aspect-[16/9] w-full max-w-2xl overflow-hidden rounded-[22px] border border-slate-200 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.5)] dark:border-slate-700/60 sm:aspect-[21/8] lg:!aspect-[21/7]"
           onMouseEnter={() => (paused.current = true)}
           onMouseLeave={() => (paused.current = false)}
         >
