@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import Reveal from '../components/Reveal';
+import octopus from '../assets/octopus.png';
 import AuthModal from '../components/AuthModal';
 
 import {
@@ -196,7 +197,18 @@ export default function HomePage() {
         </div>
       </section>
 
-  
+      {/* Transisi hero -> body: ilustrasi gurita (tanpa background), ukuran besar. */}
+      <Reveal>
+        <div className="relative z-10 -mt-4 mb-2 flex justify-center px-4 sm:-mt-10 lg:-mt-16">
+          <img
+            src={octopus}
+            alt="Boosteryuk"
+            className="pointer-events-none w-full max-w-5xl select-none object-contain drop-shadow-[0_28px_70px_rgba(37,99,235,0.35)]"
+            loading="lazy"
+          />
+        </div>
+      </Reveal>
+
         {/* ================= BODY LAYER ================= */}
       <main className="mx-auto max-w-6xl px-4 pb-32 sm:px-6">
         {/* ================= WHY ================= */}
