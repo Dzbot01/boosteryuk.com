@@ -3,7 +3,7 @@ import { X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { sendOtpEmail, genOtp, isValidEmail, otpRateCheck, otpRateRecord } from '../services/otp';
-import welcomeSound from '../assets/login-welcome.mp3';
+import { boostyVoice } from '../services/boostyVoice';
 
 const API_URL = 'https://boosteryuk.com/api';
 type Mode = 'register' | 'login' | 'recover' | 'otp';
@@ -153,8 +153,15 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
     try {
       const res = await login(email, password);
       if (res.ok) {
-        // Auto-play sound sambutan (masih dalam konteks gesture klik login -> autoplay diizinkan).
-        try { const a = new Audio(welcomeSound); a.volume = 1; void a.play().catch(() => {}); } catch { /* abaikan */ }
+        // Auto-play suara Guri Booster 1x per user. Dimulai DI SINI (masih dalam gesture klik
+        // login) agar autoplay diizinkan browser. Flag disetel dulu -> refresh TIDAK mengulang.
+        try {
+          const vkey = `by_boosty_voice:${email.trim().toLowerCase()}`;
+          if (localStorage.getItem(vkey) !== '1') {
+            localStorage.setItem(vkey, '1');
+            boostyVoice.start();
+          }
+        } catch { /* abaikan */ }
         onSuccess?.();
         onClose();
         navigate('/layanan'); // redirect setelah login -> Buat Pesanan

@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Bot, Sparkles, Volume2, Square } from 'lucide-react';
-import { BOOSTY_SEQUENCE, type BoostyVoice } from '../data/boostyVoices';
+import { boostyVoice } from '../services/boostyVoice';
 
 interface AiAssistantProps {
   /** Display name used in the greeting, e.g. first name. */
   userName?: string;
-  /** Kunci unik user (mis. email). Jika ada & belum pernah, suara sapaan diputar 1x. */
-  voiceKey?: string;
   /** Currently selected category label (empty string when none). */
   category: string;
   /** Currently selected service name (null when none). */
@@ -46,7 +44,6 @@ function truncate(text: string, max = 30): string {
 
 export default function AiAssistantCard({
   userName,
-  voiceKey,
   category,
   serviceName,
   servicePriceText,
@@ -62,65 +59,16 @@ export default function AiAssistantCard({
   const [thinking, setThinking] = useState(false);
   const [version, setVersion] = useState(0);
 
-  // ====== Suara + subtitle Boosty (ElevenLabs) ======
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const playRef = useRef<(index: number) => void>(() => {});
-  const [activeVoice, setActiveVoice] = useState<BoostyVoice | null>(null);
-  const [subtitle, setSubtitle] = useState('');
-  const [voiceBlocked, setVoiceBlocked] = useState(false);
-
-  // Pemutar berurutan: sapaan -> info reseller. Subtitle tersinkron via timeupdate.
-  useEffect(() => {
-    playRef.current = (index: number) => {
-      const prev = audioRef.current;
-      if (prev) { prev.pause(); prev.onended = null; prev.ontimeupdate = null; }
-      const voice = BOOSTY_SEQUENCE[index];
-      if (!voice) { audioRef.current = null; setActiveVoice(null); setSubtitle(''); return; }
-      setActiveVoice(voice);
-      setSubtitle(voice.cues[0]?.text ?? '');
-      const audio = new Audio(voice.src);
-      audio.volume = 1;
-      audioRef.current = audio;
-      audio.ontimeupdate = () => {
-        const t = audio.currentTime;
-        const cue = voice.cues.find((c) => t >= c.start && t < c.end);
-        if (cue) setSubtitle(cue.text);
-      };
-      audio.onended = () => {
-        if (index + 1 < BOOSTY_SEQUENCE.length) playRef.current(index + 1);
-        else { audioRef.current = null; setActiveVoice(null); setSubtitle(''); }
-      };
-      audio.play().then(() => setVoiceBlocked(false)).catch(() => setVoiceBlocked(true));
-    };
-  });
-
-  // Auto-play 1x saat user login. Flag disimpan sebelum play -> refresh TIDAK mengulang.
-  useEffect(() => {
-    if (!voiceKey) return;
-    const flag = `by_boosty_voice:${voiceKey}`;
-    let done = false;
-    try { done = localStorage.getItem(flag) === '1'; } catch { /* abaikan */ }
-    if (done) return;
-    try { localStorage.setItem(flag, '1'); } catch { /* abaikan */ }
-    const t = window.setTimeout(() => playRef.current(0), 650);
-    return () => window.clearTimeout(t);
-  }, [voiceKey]);
-
-  // Hentikan audio saat komponen dilepas.
-  useEffect(() => () => { audioRef.current?.pause(); }, []);
+  // ====== Suara + subtitle "Guri Booster" ======
+  // Berlangganan controller global (dimulai dari gesture login agar autoplay lolos).
+  const voiceState = useSyncExternalStore(boostyVoice.subscribe, boostyVoice.getState);
+  const activeVoice = voiceState.voice;
+  const subtitle = voiceState.subtitle;
+  const voiceBlocked = voiceState.blocked;
 
   const toggleVoice = () => {
-    if (activeVoice) {
-      const a = audioRef.current;
-      if (a) { a.pause(); a.onended = null; a.ontimeupdate = null; }
-      audioRef.current = null;
-      setActiveVoice(null);
-      setSubtitle('');
-      setVoiceBlocked(false);
-    } else {
-      setVoiceBlocked(false);
-      playRef.current(0);
-    }
+    if (activeVoice) boostyVoice.stop();
+    else boostyVoice.start();
   };
 
   const prevRef = useRef({
@@ -273,7 +221,7 @@ export default function AiAssistantCard({
         </span>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 font-display text-[13.5px] font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Boosty AI
+            Guri Booster
             <span className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-200 dark:bg-cyan-900/25 dark:text-cyan-400 dark:ring-cyan-800/50">
               <Sparkles className="h-2.5 w-2.5" strokeWidth={2.4} />
               {activeVoice ? activeVoice.label : 'Online'}
@@ -285,8 +233,8 @@ export default function AiAssistantCard({
         <button
           type="button"
           onClick={toggleVoice}
-          aria-label={activeVoice ? 'Hentikan suara' : 'Putar sapaan Boosty'}
-          title={activeVoice ? 'Hentikan suara' : 'Dengar sapaan Boosty'}
+          aria-label={activeVoice ? 'Hentikan suara' : 'Putar sapaan Guri Booster'}
+          title={activeVoice ? 'Hentikan suara' : 'Dengar sapaan Guri Booster'}
           className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
             activeVoice
               ? 'border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'

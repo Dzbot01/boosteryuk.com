@@ -415,7 +415,6 @@ if(!tokenFromStorage) {
   <>
    <AiAssistantCard
         userName={firstName}
-        voiceKey={user ? (user.email || user.username || 'user') : undefined}
         category={category}
         serviceName={selected?.name ?? null}
         servicePriceText={selected ? formatRupiah(rate) : undefined}

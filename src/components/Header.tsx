@@ -104,16 +104,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 }`}
               >
                 {user?.initials?? 'U'}
-                {user?.plusActive? (
+                {user?.plusActive && (
                   <span className="absolute -right-1 -top-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-slate-900 p-0.5 text-amber-400 shadow ring-1 ring-amber-400">
                     <Crown className="h-3 w-3 fill-amber-400" />
                   </span>
-                ) : (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-70 pulse-ring text-emerald-400" />
-                    <span className="relative h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900" />
-                  </span>
                 )}
+                {/* FIX/UI: indikator titik hijau pada ikon profil dihapus */}
               </button>
 
               {/* Popover — compact */}
