@@ -197,17 +197,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Transisi hero -> body: ilustrasi gurita (tanpa background), ukuran besar. */}
-      <Reveal>
-        <div className="relative z-10 -mt-4 mb-2 flex justify-center px-4 sm:-mt-10 lg:-mt-16">
-          <img
-            src={octopus}
-            alt="Boosteryuk"
-            className="pointer-events-none w-full max-w-5xl select-none object-contain drop-shadow-[0_28px_70px_rgba(37,99,235,0.35)]"
-            loading="lazy"
-          />
-        </div>
-      </Reveal>
+      {/* Gurita tepat di garis perbatasan hero -> body (kepala membelakangi hero).
+          Mobile: margin kecil agar tidak menutupi teks/tombol hero. Desktop: beranimasi. */}
+      <div className="relative z-10 -mt-6 flex justify-center px-4 sm:-mt-24 lg:-mt-44">
+        {/* Glow biru + hitam di belakang gurita — HANYA tema terang (dark sudah gelap). */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[75%] w-[90%] max-w-4xl -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.5),rgba(8,14,36,0.6)_52%,transparent_78%)] blur-2xl dark:hidden" />
+        <img
+          src={octopus}
+          alt="Boosteryuk"
+          className="octo-float pointer-events-none w-full max-w-5xl select-none object-contain drop-shadow-[0_28px_70px_rgba(37,99,235,0.4)]"
+          loading="lazy"
+        />
+      </div>
 
         {/* ================= BODY LAYER ================= */}
       <main className="mx-auto max-w-6xl px-4 pb-32 sm:px-6">
