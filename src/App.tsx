@@ -25,6 +25,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const LayananPage = lazy(() => import('./pages/LayananPage'));
 const LayananDetailPage = lazy(() => import('./pages/LayananDetailPage'));
 const OrderVpsPage = lazy(() => import('./pages/OrderVpsPage'));
+const PlaygroundPage = lazy(() => import('./pages/PlaygroundPage'));
 const PengaturanAkunPage = lazy(() => import('./pages/PengaturanAkunPage'));
 const DepositPage = lazy(() => import('./pages/DepositPage'));
 const DepositMethodPage = lazy(() => import('./pages/DepositMethodPage'));
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="privacy" element={<PrivacyPage />} />
           <Route path="struk" element={<StrukPage />} />
           <Route path="layanan" element={<LayananPage />} />
+          <Route path="playground" element={<PlaygroundPage />} />
           <Route path="layanan/:platform" element={<LayananDetailPage />} />
           <Route path="plus" element={<PlusPage />} />
 

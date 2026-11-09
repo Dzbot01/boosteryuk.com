@@ -49,6 +49,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
   // Di homepage, saat belum scroll, header melayang di atas HERO GELAP -> paksa teks terang
   // (walau mode terang) agar tetap terbaca.
   const onHeroTop = pathname === '/' && !scrolled;
+  // Halaman Playground: tema header hijau (perilaku scroll-reveal tetap sama).
+  const isPlayground = pathname === '/playground';
 
   // Close popover on outside click
   useEffect(() => {
@@ -66,7 +68,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
     <header
       className={`fixed left-0 right-0 top-0 z-30 w-full border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out ${
         scrolled
-          ? 'border-slate-200/70 bg-white/55 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] backdrop-blur-xl backdrop-saturate-150 dark:border-slate-700/50 dark:bg-slate-900/55'
+          ? isPlayground
+            ? 'border-emerald-300/50 bg-emerald-500/20 shadow-[0_8px_24px_-16px_rgba(5,120,80,0.45)] backdrop-blur-xl backdrop-saturate-150 dark:border-emerald-700/50 dark:bg-emerald-900/35'
+            : 'border-slate-200/70 bg-white/55 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] backdrop-blur-xl backdrop-saturate-150 dark:border-slate-700/50 dark:bg-slate-900/55'
           : 'border-transparent bg-transparent shadow-none'
       }`}
     >
@@ -91,6 +95,21 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
+          {/* Playground — tombol teks tanpa card, di samping ikon profil */}
+          <button
+            onClick={() => navigate('/playground')}
+            aria-label="Playground"
+            className={`mr-0.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[13px] font-extrabold tracking-tight transition-colors active:scale-95 ${
+              isPlayground
+                ? 'text-emerald-500'
+                : onHeroTop
+                  ? 'text-emerald-300 hover:text-emerald-200'
+                  : 'text-emerald-600 hover:text-emerald-500 dark:text-emerald-400'
+            }`}
+          >
+            Playground
+          </button>
+
           {/* User profile icon — only for regular users */}
           {showUserIcon && (
             <div className="relative" ref={popRef}>
