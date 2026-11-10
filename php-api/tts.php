@@ -4,154 +4,188 @@
  *
  * Upload ke: https://boosteryuk.com/api/tts.php
  * API key TIDAK boleh di browser. Set di server (jangan di-commit):
- *   - Env var:  ELEVENLABS_API_KEY=...    (disarankan)
- *   - atau buat file api/tts_config.php berisi: <?php return ['key' => 'xi-...'];
+ *   - Env var:  ELEVENLABS_API_KEY=...    (disarankan), atau
+ *   - file api/tts_config.php berisi:  <?php return ['key' => 'sk_xxxx'];
  *
- * Aksi (query ?action=):
- *   - models  : GET daftar model TTS         -> { ok, models:[{model_id,name,languages:[...] }] }
- *   - voices  : GET daftar suara user         -> { ok, voices:[{voice_id,name,labels}] }
- *   - tts     : POST hasilkan audio (mp3)     -> audio/mpeg (binary)
+ * Aksi (?action=):
+ *   - models  : daftar model TTS   -> { ok, models:[{model_id,name,languages:[...]}] }
+ *   - voices  : daftar suara        -> { ok, voices:[{voice_id,name,labels,preview}] }
+ *   - tts     : hasilkan audio mp3  -> audio/mpeg (binary)
  *               body JSON: { text, voice_id, model_id, language_code?,
  *                            stability?, similarity_boost?, style? }
+ *   - debug   : cek lingkungan      -> { ok, php, curl, key_source }
  */
 
-function send_json($data, $status = 200) {
-    header('Content-Type: application/json; charset=utf-8');
-    http_response_code($status);
-    echo json_encode($data);
-    exit;
-}
-
+ob_start();
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+
+/** Keluarkan JSON lalu berhenti (buang output buffer dulu). */
+function out($data, $status = 200) {
+    while (ob_get_level()) ob_end_clean();
+    if (!headers_sent()) {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode($data);
     exit;
 }
 
-// ---- Ambil API key dari server (bukan dari client) ----
+// Tangkap fatal/parse error -> kirim sebagai JSON agar bukan "blank 500".
+register_shutdown_function(function () {
+    $e = error_get_last();
+    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        while (ob_get_level()) ob_end_clean();
+        if (!headers_sent()) {
+            http_response_code(200);
+            header('Content-Type: application/json; charset=utf-8');
+        }
+        echo json_encode(['ok' => false, 'message' => 'PHP error: ' . $e['message']]);
+    }
+});
+set_exception_handler(function ($ex) {
+    out(['ok' => false, 'message' => 'Exception: ' . $ex->getMessage()]);
+});
+
+/** Request HTTP memakai curl bila ada, kalau tidak pakai file_get_contents. */
+function http_req($url, $headers = [], $method = 'GET', $body = null) {
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        $opts = [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 60,
+            CURLOPT_SSL_VERIFYPEER => false, // beberapa shared host tak punya CA bundle
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTPHEADER     => $headers,
+        ];
+        if ($method === 'POST') { $opts[CURLOPT_POST] = true; $opts[CURLOPT_POSTFIELDS] = $body; }
+        curl_setopt_array($ch, $opts);
+        $resp  = curl_exec($ch);
+        $code  = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $ctype = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        $err   = curl_error($ch);
+        curl_close($ch);
+        if ($resp === false) return [0, '', '', $err];
+        return [$code, $resp, $ctype, ''];
+    }
+    // Fallback tanpa curl
+    $opts = ['http' => [
+        'method'        => $method,
+        'header'        => implode("\r\n", $headers),
+        'timeout'       => 60,
+        'ignore_errors' => true,
+    ], 'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]];
+    if ($body !== null) $opts['http']['content'] = $body;
+    $ctx  = stream_context_create($opts);
+    $resp = @file_get_contents($url, false, $ctx);
+    $code = 0; $ctype = '';
+    if (isset($http_response_header) && is_array($http_response_header)) {
+        foreach ($http_response_header as $h) {
+            if (preg_match('#^HTTP/\S+\s+(\d+)#', $h, $m)) $code = (int)$m[1];
+            if (stripos($h, 'content-type:') === 0) $ctype = trim(substr($h, 13));
+        }
+    }
+    if ($resp === false) return [0, '', '', 'file_get_contents gagal (allow_url_fopen off?)'];
+    return [$code, $resp, $ctype, ''];
+}
+
+// ---- Ambil API key dari server ----
 $API_KEY = getenv('ELEVENLABS_API_KEY');
+$keySource = $API_KEY ? 'env' : 'none';
 if (!$API_KEY && is_file(__DIR__ . '/tts_config.php')) {
     $cfg = include __DIR__ . '/tts_config.php';
-    if (is_array($cfg) && !empty($cfg['key'])) $API_KEY = $cfg['key'];
+    if (is_array($cfg) && !empty($cfg['key'])) { $API_KEY = trim($cfg['key']); $keySource = 'tts_config.php'; }
 }
+
+$action = isset($_GET['action']) ? $_GET['action'] : 'models';
+
+if ($action === 'debug') {
+    out(['ok' => true, 'php' => PHP_VERSION, 'curl' => function_exists('curl_init'),
+         'allow_url_fopen' => (bool)ini_get('allow_url_fopen'), 'key_source' => $keySource,
+         'key_len' => $API_KEY ? strlen($API_KEY) : 0]);
+}
+
 if (!$API_KEY) {
-    send_json(['ok' => false, 'message' => 'ELEVENLABS_API_KEY belum diset di server.'], 500);
+    out(['ok' => false, 'message' => 'API key belum terbaca. Isi "key" di tts_config.php (format: <?php return ["key"=>"sk_..."];) atau set env ELEVENLABS_API_KEY.']);
 }
 
 $BASE = 'https://api.elevenlabs.io/v1';
-$action = isset($_GET['action']) ? $_GET['action'] : 'models';
-
-/** Panggil ElevenLabs. Mengembalikan [httpCode, body, contentType]. */
-function el_call($url, $apiKey, $method = 'GET', $jsonBody = null) {
-    $ch = curl_init($url);
-    $headers = ['xi-api-key: ' . $apiKey, 'Accept: application/json'];
-    $opts = [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 60,
-        CURLOPT_SSL_VERIFYPEER => true,
-    ];
-    if ($method === 'POST') {
-        $opts[CURLOPT_POST] = true;
-        $opts[CURLOPT_POSTFIELDS] = json_encode($jsonBody);
-        $headers[] = 'Content-Type: application/json';
-        $headers[] = 'Accept: audio/mpeg';
-    }
-    $opts[CURLOPT_HTTPHEADER] = $headers;
-    curl_setopt_array($ch, $opts);
-    $body = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $ctype = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-    curl_close($ch);
-    return [$code, $body, $ctype];
-}
+$jsonHeaders = ['xi-api-key: ' . $API_KEY, 'Accept: application/json'];
 
 if ($action === 'models') {
-    list($code, $body) = el_call("$BASE/models", $API_KEY);
+    list($code, $body, , $err) = http_req("$BASE/models", $jsonHeaders);
+    if ($code === 0) out(['ok' => false, 'message' => 'Gagal menghubungi ElevenLabs: ' . $err]);
     $json = json_decode($body, true);
+    if ($code < 200 || $code >= 300) {
+        $msg = is_array($json) && isset($json['detail']['message']) ? $json['detail']['message'] : "ElevenLabs HTTP $code";
+        out(['ok' => false, 'message' => "Model gagal: $msg"]);
+    }
     $models = [];
     if (is_array($json)) {
         foreach ($json as $m) {
             if (empty($m['model_id'])) continue;
-            // hanya model yang bisa text-to-speech
             if (isset($m['can_do_text_to_speech']) && !$m['can_do_text_to_speech']) continue;
             $langs = [];
             if (!empty($m['languages']) && is_array($m['languages'])) {
-                foreach ($m['languages'] as $l) {
-                    $langs[] = ['id' => $l['language_id'] ?? '', 'name' => $l['name'] ?? ''];
-                }
+                foreach ($m['languages'] as $l) $langs[] = ['id' => $l['language_id'] ?? '', 'name' => $l['name'] ?? ''];
             }
-            $models[] = [
-                'model_id'  => $m['model_id'],
-                'name'      => $m['name'] ?? $m['model_id'],
-                'languages' => $langs,
-            ];
+            $models[] = ['model_id' => $m['model_id'], 'name' => $m['name'] ?? $m['model_id'], 'languages' => $langs];
         }
     }
-    send_json(['ok' => $code >= 200 && $code < 300, 'models' => $models, 'code' => $code]);
+    out(['ok' => true, 'models' => $models]);
 }
 
 if ($action === 'voices') {
-    list($code, $body) = el_call("$BASE/voices", $API_KEY);
+    list($code, $body) = http_req("$BASE/voices", $jsonHeaders);
     $json = json_decode($body, true);
     $voices = [];
     if (!empty($json['voices']) && is_array($json['voices'])) {
         foreach ($json['voices'] as $v) {
-            $voices[] = [
-                'voice_id' => $v['voice_id'] ?? '',
-                'name'     => $v['name'] ?? '',
-                'labels'   => $v['labels'] ?? new stdClass(),
-                'preview'  => $v['preview_url'] ?? '',
-            ];
+            $voices[] = ['voice_id' => $v['voice_id'] ?? '', 'name' => $v['name'] ?? '',
+                         'labels' => $v['labels'] ?? (object)[], 'preview' => $v['preview_url'] ?? ''];
         }
     }
-    send_json(['ok' => $code >= 200 && $code < 300, 'voices' => $voices, 'code' => $code]);
+    out(['ok' => $code >= 200 && $code < 300, 'voices' => $voices]);
 }
 
 if ($action === 'tts') {
-    $raw = file_get_contents('php://input');
-    $in = json_decode($raw, true);
+    $in = json_decode(file_get_contents('php://input'), true);
     if (!is_array($in)) $in = [];
-    $text = isset($in['text']) ? trim((string)$in['text']) : '';
+    $text    = isset($in['text']) ? trim((string)$in['text']) : '';
     $voiceId = isset($in['voice_id']) ? (string)$in['voice_id'] : '';
     $modelId = isset($in['model_id']) ? (string)$in['model_id'] : 'eleven_multilingual_v2';
-    if ($text === '' || $voiceId === '') {
-        send_json(['ok' => false, 'message' => 'text & voice_id wajib diisi.'], 400);
-    }
-    // batasi panjang agar hemat kuota
-    if (mb_strlen($text) > 1200) $text = mb_substr($text, 0, 1200);
+    if ($text === '' || $voiceId === '') out(['ok' => false, 'message' => 'text & voice_id wajib diisi.'], 400);
+    if (function_exists('mb_strlen') && mb_strlen($text) > 1200) $text = mb_substr($text, 0, 1200);
 
-    $voiceSettings = [
-        'stability'         => isset($in['stability']) ? (float)$in['stability'] : 0.5,
-        'similarity_boost'  => isset($in['similarity_boost']) ? (float)$in['similarity_boost'] : 0.75,
-        'style'             => isset($in['style']) ? (float)$in['style'] : 0.0,
-        'use_speaker_boost' => true,
-    ];
-    $payload = [
+    $payload = json_encode([
         'text'           => $text,
         'model_id'       => $modelId,
-        'voice_settings' => $voiceSettings,
-    ];
-    if (!empty($in['language_code'])) $payload['language_code'] = (string)$in['language_code'];
+        'voice_settings' => [
+            'stability'         => isset($in['stability']) ? (float)$in['stability'] : 0.5,
+            'similarity_boost'  => isset($in['similarity_boost']) ? (float)$in['similarity_boost'] : 0.75,
+            'style'             => isset($in['style']) ? (float)$in['style'] : 0.0,
+            'use_speaker_boost' => true,
+        ],
+    ] + (!empty($in['language_code']) ? ['language_code' => (string)$in['language_code']] : []));
 
+    $postHeaders = ['xi-api-key: ' . $API_KEY, 'Content-Type: application/json', 'Accept: audio/mpeg'];
     $url = "$BASE/text-to-speech/" . rawurlencode($voiceId) . '?output_format=mp3_44100_128';
-    list($code, $body, $ctype) = el_call($url, $API_KEY, 'POST', $payload);
+    list($code, $body, $ctype, $err) = http_req($url, $postHeaders, 'POST', $payload);
 
-    if ($code >= 200 && $code < 300 && $body !== false && strpos((string)$ctype, 'audio') !== false) {
+    if ($code >= 200 && $code < 300 && $body !== '' && stripos((string)$ctype, 'audio') !== false) {
+        while (ob_get_level()) ob_end_clean();
         header('Content-Type: audio/mpeg');
         header('Content-Length: ' . strlen($body));
         header('Cache-Control: no-store');
         echo $body;
         exit;
     }
-    // error -> teruskan pesan
-    $msg = 'Gagal membuat audio.';
     $j = json_decode((string)$body, true);
-    if (isset($j['detail']['message'])) $msg = $j['detail']['message'];
-    elseif (isset($j['detail']) && is_string($j['detail'])) $msg = $j['detail'];
-    send_json(['ok' => false, 'message' => $msg, 'code' => $code], 400);
+    $msg = $err ?: (isset($j['detail']['message']) ? $j['detail']['message'] : (isset($j['detail']) && is_string($j['detail']) ? $j['detail'] : "Gagal membuat audio (HTTP $code)."));
+    out(['ok' => false, 'message' => $msg], 400);
 }
 
-send_json(['ok' => false, 'message' => 'Aksi tidak dikenal.'], 400);
+out(['ok' => false, 'message' => 'Aksi tidak dikenal.'], 400);

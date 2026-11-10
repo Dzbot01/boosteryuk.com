@@ -16,7 +16,7 @@ export default function Layout() {
   }, [pathname]);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-white text-slate-900 transition-colors duration-300 dark:bg-[#0a0a0b] dark:text-slate-100">
+    <div className="relative min-h-screen overflow-x-clip bg-white text-slate-900 transition-colors duration-300 dark:bg-[#0a0a0b] dark:text-slate-100">
       {/* ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-grid dark:opacity-40" />

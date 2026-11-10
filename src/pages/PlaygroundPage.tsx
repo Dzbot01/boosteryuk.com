@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Sparkles,
   Captions,
@@ -38,9 +39,16 @@ const MENUS: { id: Menu; label: string; icon: typeof Sparkles; desc: string }[] 
 ];
 
 export default function PlaygroundPage() {
-  const [menu, setMenu] = useState<Menu>('overview');
+  // Menu disimpan di URL (?m=) agar refresh tidak kembali ke Overview.
+  const [params, setParams] = useSearchParams();
+  const raw = params.get('m') || 'overview';
+  const menu = (['overview', 'hook', 'caption', 'tts'].includes(raw) ? raw : 'overview') as Menu;
+  const setMenu = (m: Menu) => setParams(m === 'overview' ? {} : { m }, { replace: false });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const active = MENUS.find((m) => m.id === menu)!;
+
+  // Scroll ke atas tiap ganti menu.
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [menu]);
 
   return (
     <>
@@ -160,13 +168,13 @@ function OverviewHero({ onOpenMenu }: { onOpenMenu: () => void }) {
         title="Welcome To"
         scrollHint="Scroll ke bawah"
         useWindowScroll
-        startWidth={42}
-        startHeight={58}
+        startWidth={46}
+        startHeight={60}
         startRadius={24}
         endRadius={0}
-        mediaZoom={1.35}
-        scrollDistance={1.1}
-        holdDistance={0.3}
+        mediaZoom={1.3}
+        scrollDistance={0.6}
+        holdDistance={0}
         smoothing={0.1}
         overlayScrim={0.45}
         enabled

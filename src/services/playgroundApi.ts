@@ -59,14 +59,15 @@ export async function fetchTtsMeta(): Promise<{ models: TtsModel[]; voices: TtsV
   }
   let mj: any = null;
   try { mj = await mr.json(); } catch { /* bukan JSON */ }
-  if (!mr.ok) {
-    return { models: [], voices: [], error: `Server membalas HTTP ${mr.status} untuk tts.php. Cek apakah file sudah ter-upload di folder /api.` };
+  // Utamakan pesan dari server (berlaku walau status 4xx/5xx).
+  if (mj && mj.ok === false) {
+    return { models: [], voices: [], error: mj.message || 'tts.php menolak permintaan model (cek ELEVENLABS_API_KEY di server).' };
   }
   if (!mj) {
-    return { models: [], voices: [], error: 'Respons tts.php bukan JSON (mungkin error PHP). Cek log server / isi file.' };
+    return { models: [], voices: [], error: `Respons tts.php tidak valid (HTTP ${mr.status}). Kemungkinan error PHP atau file belum ter-upload di /api.` };
   }
-  if (mj.ok === false) {
-    return { models: [], voices: [], error: mj.message || 'tts.php menolak permintaan model (cek ELEVENLABS_API_KEY di server).' };
+  if (!mr.ok) {
+    return { models: [], voices: [], error: `Server membalas HTTP ${mr.status} untuk tts.php.` };
   }
   const models: TtsModel[] = Array.isArray(mj.models) ? mj.models : [];
 
