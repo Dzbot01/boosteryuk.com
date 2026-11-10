@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Sparkles,
   Captions,
   AudioLines,
-  TerminalSquare,
   Copy,
   Check,
   Download,
   Lock,
   LoaderCircle,
-  Play,
   X,
   Wand2,
+  Menu as MenuIcon,
+  ChevronRight,
 } from 'lucide-react';
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
@@ -24,79 +24,50 @@ import {
   readTtsQuota,
   consumeTtsQuota,
   TTS_WEEKLY_LIMIT,
-  WEBSSH_URL,
   type TtsModel,
   type TtsVoice,
 } from '../services/playgroundApi';
 
-type Tab = 'hook' | 'caption' | 'tts' | 'vps';
+type Menu = 'hook' | 'caption' | 'tts';
 
-const TABS: { id: Tab; label: string; icon: typeof Sparkles; desc: string }[] = [
+const MENUS: { id: Menu; label: string; icon: typeof Sparkles; desc: string }[] = [
   { id: 'hook', label: 'Hook Generator', icon: Sparkles, desc: 'Bikin hook pembuka konten yang nendang' },
   { id: 'caption', label: 'Auto Caption', icon: Captions, desc: 'Caption otomatis dari deskripsi konten' },
-  { id: 'tts', label: 'Teks To Speech', icon: AudioLines, desc: 'Ubah teks jadi suara (ElevenLabs)' },
-  { id: 'vps', label: 'Coba VPS', icon: TerminalSquare, desc: 'Terminal VPS langsung di browser' },
+  { id: 'tts', label: 'Teks To Speech', icon: AudioLines, desc: 'Ubah teks jadi suara berkualitas' },
 ];
 
 export default function PlaygroundPage() {
-  const [tab, setTab] = useState<Tab>('hook');
+  const [menu, setMenu] = useState<Menu>('hook');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const active = MENUS.find((m) => m.id === menu)!;
 
   return (
     <div className="mx-auto max-w-5xl px-4 pb-32 pt-24 sm:px-6">
-      <Seo title="Playground" description="Playground Boosteryuk: Hook Generator, Auto Caption, Teks To Speech, dan Coba VPS." noindex />
+      <Seo title="Playground" description="Playground Boosteryuk: Hook Generator, Auto Caption, dan Teks To Speech." noindex />
 
-      <Reveal>
-        <div className="mb-6">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400">
+      {/* Bar atas: judul menu aktif + tombol ikon menu (pojok kanan) */}
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-sky-600 ring-1 ring-sky-500/20 dark:text-sky-400">
             <Wand2 className="h-3 w-3" strokeWidth={2.6} />
             Playground
           </span>
-          <h1 className="mt-3 font-display text-3xl font-black tracking-tight text-slate-900 sm:text-4xl dark:text-white">
-            Alat kreator <span className="text-emerald-500">Boosteryuk</span>
+          <h1 className="mt-2 font-display text-2xl font-black tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+            {active.label}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[15px] dark:text-slate-300">
-            Kumpulan tools AI untuk bikin konten makin gampang — dari hook, caption, suara, sampai nyobain VPS.
-          </p>
         </div>
-      </Reveal>
+        <button
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Menu Playground"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sky-200 bg-sky-50 text-sky-600 shadow-sm transition-all hover:bg-sky-100 active:scale-95 dark:border-sky-800/60 dark:bg-sky-950/40 dark:text-sky-400"
+        >
+          <MenuIcon className="h-5 w-5" strokeWidth={2.2} />
+        </button>
+      </div>
 
-      {/* Tab menu */}
-      <Reveal delay={40}>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const active = t.id === tab;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`flex flex-col items-start gap-2 rounded-2xl border p-3.5 text-left transition-all active:scale-[0.98] ${
-                  active
-                    ? 'border-emerald-400 bg-emerald-50 shadow-[0_14px_34px_-20px_rgba(16,185,129,0.8)] dark:border-emerald-600 dark:bg-emerald-950/40'
-                    : 'border-slate-200 bg-white hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900'
-                }`}
-              >
-                <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-xl ${
-                    active ? 'bg-emerald-500 text-white' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                  }`}
-                >
-                  <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
-                </span>
-                <span>
-                  <span className={`block text-[13px] font-extrabold ${active ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-900 dark:text-white'}`}>
-                    {t.label}
-                  </span>
-                  <span className="mt-0.5 block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{t.desc}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </Reveal>
-
-      <div className="mt-6">
-        {tab === 'hook' && (
+      {/* Konten menu aktif saja (bukan semua sekaligus) */}
+      <div>
+        {menu === 'hook' && (
           <AiPanel
             key="hook"
             title="Hook Generator"
@@ -105,7 +76,7 @@ export default function PlaygroundPage() {
             cta="Buatkan Hook"
           />
         )}
-        {tab === 'caption' && (
+        {menu === 'caption' && (
           <AiPanel
             key="caption"
             title="Auto Caption"
@@ -114,9 +85,49 @@ export default function PlaygroundPage() {
             cta="Buatkan Caption"
           />
         )}
-        {tab === 'tts' && <TtsPanel />}
-        {tab === 'vps' && <VpsPanel />}
+        {menu === 'tts' && <TtsPanel />}
       </div>
+
+      {/* Side menu / drawer */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-[60] flex" role="dialog" aria-modal="true">
+          <div className="flex-1 bg-slate-900/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
+          <aside className="h-full w-72 max-w-[82vw] animate-slide-in-right overflow-y-auto border-l border-sky-200 bg-white p-4 shadow-2xl dark:border-sky-900/50 dark:bg-slate-900">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="font-display text-[15px] font-extrabold tracking-tight text-slate-900 dark:text-white">Menu Playground</p>
+              <button onClick={() => setDrawerOpen(false)} aria-label="Tutup" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800">
+                <X className="h-5 w-5" strokeWidth={2.2} />
+              </button>
+            </div>
+            <nav className="space-y-2">
+              {MENUS.map((m) => {
+                const Icon = m.icon;
+                const on = m.id === menu;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => { setMenu(m.id); setDrawerOpen(false); }}
+                    className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all active:scale-[0.98] ${
+                      on
+                        ? 'border-sky-400 bg-sky-50 dark:border-sky-600 dark:bg-sky-950/40'
+                        : 'border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 dark:border-slate-700 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-sky-500 text-white' : 'bg-sky-500/10 text-sky-600 dark:text-sky-400'}`}>
+                      <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-[13.5px] font-extrabold ${on ? 'text-sky-700 dark:text-sky-300' : 'text-slate-900 dark:text-white'}`}>{m.label}</span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{m.desc}</span>
+                    </span>
+                    <ChevronRight className={`h-4 w-4 shrink-0 ${on ? 'text-sky-500' : 'text-slate-300'}`} />
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }
@@ -168,12 +179,12 @@ function AiPanel({
           onChange={(e) => setInput(e.target.value)}
           placeholder={placeholder}
           rows={4}
-          className="mt-3 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-slate-800 outline-none transition-colors focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          className="mt-3 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-slate-800 outline-none transition-colors focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
         />
         <button
           onClick={run}
           disabled={!input.trim() || loading}
-          className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-[14px] font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-6"
+          className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 text-[14px] font-bold text-white shadow-lg shadow-sky-600/25 transition-all hover:bg-sky-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-6"
         >
           {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" strokeWidth={2.4} />}
           {loading ? 'Membuat…' : cta}
@@ -186,12 +197,12 @@ function AiPanel({
         )}
 
         {result && (
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-800/50 dark:bg-emerald-950/30">
+          <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-800/50 dark:bg-sky-950/30">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Hasil</span>
+              <span className="text-[11px] font-bold uppercase tracking-wide text-sky-600 dark:text-sky-400">Hasil</span>
               <button
                 onClick={copy}
-                className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-700 transition-colors hover:bg-emerald-500/20 dark:text-emerald-300"
+                className="inline-flex items-center gap-1 rounded-lg bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-700 transition-colors hover:bg-sky-500/20 dark:text-sky-300"
               >
                 {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                 {copied ? 'Tersalin' : 'Salin'}
@@ -206,7 +217,7 @@ function AiPanel({
 }
 
 /* =========================================================
-   Panel Teks To Speech (ElevenLabs)
+   Panel Teks To Speech (UI ala studio TTS)
    ========================================================= */
 function TtsPanel() {
   const { user } = useAuth();
@@ -225,9 +236,11 @@ function TtsPanel() {
   const [busy, setBusy] = useState(false);
   const [audioUrl, setAudioUrl] = useState('');
   const [error, setError] = useState('');
+  const [quotaTick, setQuotaTick] = useState(0);
 
   const userKey = user ? user.email || user.username || 'user' : '';
-  const quota = useMemo(() => (user ? readTtsQuota(userKey) : null), [user, userKey, audioUrl]);
+  const quota = useMemo(() => (user ? readTtsQuota(userKey) : null), [user, userKey, quotaTick]);
+  const voiceName = voices.find((v) => v.voice_id === voiceId)?.name || 'Pilih suara';
 
   useEffect(() => {
     let alive = true;
@@ -239,9 +252,7 @@ function TtsPanel() {
       if (v[0]) setVoiceId(v[0].voice_id);
       setLoadingMeta(false);
     });
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
   const currentModel = models.find((m) => m.model_id === modelId);
@@ -267,10 +278,8 @@ function TtsPanel() {
   };
 
   const canDownload = !!user && (quota?.remaining ?? 0) > 0;
-
   const download = () => {
-    if (!audioUrl || !user) return;
-    if ((quota?.remaining ?? 0) <= 0) return;
+    if (!audioUrl || !canDownload) return;
     consumeTtsQuota(userKey);
     const a = document.createElement('a');
     a.href = audioUrl;
@@ -278,180 +287,104 @@ function TtsPanel() {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    // paksa re-render kuota
-    setAudioUrl((u) => u);
-    setError('');
+    setQuotaTick((t) => t + 1);
   };
 
   return (
     <Reveal>
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.4)] dark:border-slate-700 dark:bg-slate-900 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[16px] font-extrabold tracking-tight text-slate-900 dark:text-white">Teks To Speech</h2>
-          <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400">
-            Powered by ElevenLabs
-          </span>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* ============ KIRI: editor ============ */}
+        <div className="flex min-h-[420px] flex-col rounded-2xl border border-slate-200 bg-white shadow-[0_18px_44px_-28px_rgba(15,23,42,0.4)] dark:border-slate-700 dark:bg-slate-900">
+          <div className="border-b border-slate-100 px-5 pt-5 dark:border-slate-800">
+            <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-1.5 text-[12.5px] font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200">
+              <span className="h-4 w-4 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500" />
+              {voiceName}
+            </span>
+          </div>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={1200}
+            placeholder="Apa yang sedang kamu butuhkan? Tulis teks yang ingin diubah jadi suara…"
+            className="flex-1 resize-none bg-transparent px-5 py-4 text-[15px] leading-relaxed text-slate-800 outline-none placeholder:text-slate-400 dark:text-white"
+          />
+          {/* Toolbar bawah */}
+          <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 dark:border-slate-800">
+            <span className="text-[12px] font-semibold text-slate-400">{text.length} / 1200</span>
+            <button
+              onClick={generate}
+              disabled={!text.trim() || !voiceId || busy}
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-5 text-[13.5px] font-bold text-white transition-all hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-sky-600 dark:hover:bg-sky-700"
+            >
+              {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <AudioLines className="h-4 w-4" strokeWidth={2.4} />}
+              {busy ? 'Membuat…' : 'Generate speech'}
+            </button>
+          </div>
+
+          {error && (
+            <p className="mx-5 mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[12.5px] font-semibold text-rose-700 dark:border-rose-800/60 dark:bg-rose-950/40">
+              {error}
+            </p>
+          )}
+
+          {/* Player bawah */}
+          {audioUrl && (
+            <div className="mx-5 mb-5 rounded-xl border border-sky-200 bg-sky-50/60 p-3.5 dark:border-sky-800/50 dark:bg-sky-950/30">
+              <audio src={audioUrl} controls controlsList="nodownload" className="w-full" />
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={download}
+                  disabled={!canDownload}
+                  className={`inline-flex h-9 items-center gap-2 rounded-lg px-3.5 text-[12.5px] font-bold transition-all active:scale-95 ${
+                    canDownload
+                      ? 'bg-sky-600 text-white shadow-md shadow-sky-600/25 hover:bg-sky-700'
+                      : 'cursor-not-allowed bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  }`}
+                >
+                  {canDownload ? <Download className="h-4 w-4" strokeWidth={2.4} /> : <Lock className="h-4 w-4" strokeWidth={2.4} />}
+                  Download
+                </button>
+                {!user ? (
+                  <span className="text-[11.5px] font-semibold text-amber-600 dark:text-amber-400">Daftar dulu untuk bisa download hasilnya.</span>
+                ) : (
+                  <span className="text-[11.5px] font-semibold text-slate-500 dark:text-slate-400">
+                    Sisa kuota minggu ini: {quota?.remaining ?? 0}/{TTS_WEEKLY_LIMIT}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        {loadingMeta ? (
-          <p className="mt-4 flex items-center gap-2 text-[13px] font-semibold text-slate-500 dark:text-slate-400">
-            <LoaderCircle className="h-4 w-4 animate-spin" /> Memuat model & suara…
+        {/* ============ KANAN: settings ============ */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.4)] dark:border-slate-700 dark:bg-slate-900">
+          <p className="mb-4 border-b border-slate-100 pb-3 text-[14px] font-extrabold tracking-tight text-slate-900 dark:border-slate-800 dark:text-white">
+            Settings
           </p>
-        ) : (
-          <>
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+
+          {loadingMeta ? (
+            <p className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 dark:text-slate-400">
+              <LoaderCircle className="h-4 w-4 animate-spin" /> Memuat suara…
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <Field label="Suara">
+                <Select value={voiceId} onChange={setVoiceId} options={voices.map((v) => ({ value: v.voice_id, label: v.name }))} />
+              </Field>
               <Field label="Model">
-                <Select value={modelId} onChange={(v) => { setModelId(v); setLanguageCode(''); }}
-                  options={models.map((m) => ({ value: m.model_id, label: m.name }))} />
+                <Select value={modelId} onChange={(v) => { setModelId(v); setLanguageCode(''); }} options={models.map((m) => ({ value: m.model_id, label: m.name }))} />
               </Field>
               <Field label="Bahasa">
-                <Select value={languageCode} onChange={setLanguageCode}
-                  options={[{ value: '', label: 'Otomatis' }, ...languages.map((l) => ({ value: l.id, label: l.name }))]} />
+                <Select value={languageCode} onChange={setLanguageCode} options={[{ value: '', label: 'Otomatis' }, ...languages.map((l) => ({ value: l.id, label: l.name }))]} />
               </Field>
-              <Field label="Suara">
-                <Select value={voiceId} onChange={setVoiceId}
-                  options={voices.map((v) => ({ value: v.voice_id, label: v.name }))} />
-              </Field>
-            </div>
-
-            {/* Intonasi suara */}
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
               <Slider label="Kestabilan" value={stability} onChange={setStability} />
               <Slider label="Kemiripan" value={similarity} onChange={setSimilarity} />
               <Slider label="Gaya / intonasi" value={style} onChange={setStyle} />
             </div>
-
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Tulis teks yang ingin diubah menjadi suara…"
-              rows={4}
-              maxLength={1200}
-              className="mt-4 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-slate-800 outline-none transition-colors focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-            />
-            <p className="mt-1 text-right text-[10.5px] text-slate-400">{text.length}/1200</p>
-
-            <button
-              onClick={generate}
-              disabled={!text.trim() || !voiceId || busy}
-              className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-[14px] font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-6"
-            >
-              {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" strokeWidth={2.4} />}
-              {busy ? 'Membuat suara…' : 'Buat Suara'}
-            </button>
-
-            {error && (
-              <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[12.5px] font-semibold text-rose-700 dark:border-rose-800/60 dark:bg-rose-950/40">
-                {error}
-              </p>
-            )}
-
-            {audioUrl && (
-              <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-800/50 dark:bg-emerald-950/30">
-                <audio src={audioUrl} controls className="w-full" />
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={download}
-                    disabled={!canDownload}
-                    className={`inline-flex h-10 items-center gap-2 rounded-xl px-4 text-[13px] font-bold transition-all active:scale-95 ${
-                      canDownload
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 hover:bg-emerald-700'
-                        : 'cursor-not-allowed bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                    }`}
-                  >
-                    {canDownload ? <Download className="h-4 w-4" strokeWidth={2.4} /> : <Lock className="h-4 w-4" strokeWidth={2.4} />}
-                    Download
-                  </button>
-                  {!user ? (
-                    <span className="text-[11.5px] font-semibold text-amber-600 dark:text-amber-400">
-                      Daftar dulu untuk bisa download hasilnya.
-                    </span>
-                  ) : (
-                    <span className="text-[11.5px] font-semibold text-slate-500 dark:text-slate-400">
-                      Sisa kuota minggu ini: {quota?.remaining ?? 0}/{TTS_WEEKLY_LIMIT}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </Reveal>
-  );
-}
-
-/* =========================================================
-   Panel Coba VPS (web-SSH)
-   ========================================================= */
-function VpsPanel() {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Reveal>
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.4)] dark:border-slate-700 dark:bg-slate-900 sm:p-6">
-        <h2 className="text-[16px] font-extrabold tracking-tight text-slate-900 dark:text-white">Coba VPS</h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
-          Buka terminal VPS langsung di browser. Sesi sudah tersambung otomatis ke server demo.
-        </p>
-        <button
-          onClick={() => setOpen(true)}
-          className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-slate-900 px-5 text-[14px] font-bold text-white shadow-lg transition-all hover:bg-slate-800 active:scale-[0.99] dark:bg-emerald-600 dark:hover:bg-emerald-700"
-        >
-          <TerminalSquare className="h-4 w-4" strokeWidth={2.4} />
-          Buka Terminal
-        </button>
-      </div>
-
-      {open && <TerminalModal onClose={() => setOpen(false)} />}
-    </Reveal>
-  );
-}
-
-function TerminalModal({ onClose }: { onClose: () => void }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    closeRef.current?.focus();
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    document.addEventListener('keydown', esc);
-    return () => document.removeEventListener('keydown', esc);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm" onMouseDown={onClose}>
-      <div
-        className="flex h-[78vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-700 bg-[#0b0f17] shadow-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        {/* Titlebar */}
-        <div className="flex items-center justify-between border-b border-slate-800 bg-[#11161f] px-4 py-2.5">
-          <div className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full bg-rose-500" />
-            <span className="h-3 w-3 rounded-full bg-amber-400" />
-            <span className="h-3 w-3 rounded-full bg-emerald-500" />
-            <span className="ml-2 font-mono text-[12px] font-semibold text-slate-300">root@boosteryuk-vps</span>
-          </div>
-          <button ref={closeRef} onClick={onClose} aria-label="Tutup terminal" className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">
-            <X className="h-4 w-4" strokeWidth={2.4} />
-          </button>
+          )}
         </div>
-
-        {/* Isi */}
-        {WEBSSH_URL ? (
-          <iframe title="Terminal VPS" src={WEBSSH_URL} className="h-full w-full flex-1 border-0 bg-black" allow="clipboard-read; clipboard-write" />
-        ) : (
-          <div className="flex-1 overflow-auto bg-[#0b0f17] p-5 font-mono text-[12.5px] leading-relaxed text-emerald-300">
-            <p className="text-slate-400">Connecting to server…</p>
-            <p className="mt-2 text-amber-300">[!] Terminal belum tersambung.</p>
-            <p className="mt-1 text-slate-300">
-              Endpoint web-SSH belum dikonfigurasi. Isi <span className="text-emerald-300">WEBSSH_URL</span> di
-              <span className="text-emerald-300"> src/services/playgroundApi.ts</span> dengan URL layanan web-SSH
-              (mis. ttyd/wetty) yang berjalan di VPS.
-            </p>
-          </div>
-        )}
       </div>
-    </div>
+    </Reveal>
   );
 }
 
@@ -470,7 +403,7 @@ function Select({ value, onChange, options }: { value: string; onChange: (v: str
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-800 outline-none transition-colors focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-800 outline-none transition-colors focus:border-sky-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
@@ -484,7 +417,7 @@ function Slider({ label, value, onChange }: { label: string; value: number; onCh
     <label className="block">
       <span className="mb-1.5 flex items-center justify-between text-[12px] font-semibold text-slate-600 dark:text-slate-300">
         {label}
-        <span className="font-mono text-emerald-600 dark:text-emerald-400">{value.toFixed(2)}</span>
+        <span className="font-mono text-sky-600 dark:text-sky-400">{value.toFixed(2)}</span>
       </span>
       <input
         type="range"
@@ -493,7 +426,7 @@ function Slider({ label, value, onChange }: { label: string; value: number; onCh
         step={0.05}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-emerald-500 dark:bg-slate-700"
+        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-sky-500 dark:bg-slate-700"
       />
     </label>
   );

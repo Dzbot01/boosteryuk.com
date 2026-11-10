@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import Reveal from '../components/Reveal';
-import octopus from '../assets/octopus.png';
 import AuthModal from '../components/AuthModal';
 
 import {
@@ -42,8 +41,6 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  // Gurita: default hanya kepala; klik/tarik kepala -> tampil penuh (tanpa animasi).
-  const [octoOpen, setOctoOpen] = useState(false);
 
   const marquee = [...SOCIAL_BRANDS,...SOCIAL_BRANDS];
   const reverseMarquee = [...SECONDARY_SOCIAL_BRANDS,...SECONDARY_SOCIAL_BRANDS];
@@ -199,32 +196,26 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Gurita di garis perbatasan hero -> body. HANYA tema gelap. Tanpa animasi.
-          Container pointer-events-none agar TIDAK menutupi tombol hero (Masuk/Daftar/Cek Status).
-          Default: hanya kepala terlihat; klik/tarik kepala -> gurita penuh. */}
-      <div className="pointer-events-none relative z-10 -mt-6 hidden justify-center px-4 dark:flex sm:-mt-24 lg:-mt-44">
-        <div className="relative w-full max-w-5xl">
-          {/* Wrapper clip: tinggi kecil = hanya kepala; penuh saat octoOpen. */}
-          <div
-            className="overflow-hidden transition-[max-height] duration-500 ease-out"
-            style={{ maxHeight: octoOpen ? 680 : 128 }}
-          >
-            <img
-              src={octopus}
-              alt="Boosteryuk"
-              className="pointer-events-none w-full select-none object-contain object-top drop-shadow-[0_28px_70px_rgba(37,99,235,0.4)]"
-              loading="lazy"
-            />
-          </div>
-          {/* Zona klik kepala — di tengah & sempit, tidak menimpa tombol hero (kiri). */}
-          <button
-            type="button"
-            onClick={() => setOctoOpen((v) => !v)}
-            aria-label={octoOpen ? 'Sembunyikan gurita' : 'Lihat gurita penuh'}
-            className="pointer-events-auto absolute left-1/2 top-0 h-[128px] w-[34%] max-w-[280px] -translate-x-1/2 cursor-pointer rounded-b-full"
+      {/* ================= VIDEO PLAYER (antara hero & body) =================
+          File boosteryuk.mp4 diletakkan di root web (sejajar index.html).
+          Tidak dapat diunduh: controlsList=nodownload + klik-kanan dinonaktifkan. */}
+      <section className="mx-auto -mt-8 max-w-5xl px-4 sm:px-6">
+        <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-black shadow-[0_26px_60px_-30px_rgba(15,23,42,0.6)] dark:border-slate-700/60">
+          <video
+            src="/boosteryuk.mp4"
+            className="aspect-video w-full"
+            controls
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            controlsList="nodownload noplaybackrate noremoteplayback"
+            disablePictureInPicture
+            onContextMenu={(e) => e.preventDefault()}
           />
         </div>
-      </div>
+      </section>
 
         {/* ================= BODY LAYER ================= */}
       <main className="mx-auto max-w-6xl px-4 pb-32 sm:px-6">

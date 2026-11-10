@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Bot, Sparkles, Volume2, Square } from 'lucide-react';
+import { Bot, Sparkles } from 'lucide-react';
 import { boostyVoice } from '../services/boostyVoice';
 
 interface AiAssistantProps {
@@ -64,12 +64,6 @@ export default function AiAssistantCard({
   const voiceState = useSyncExternalStore(boostyVoice.subscribe, boostyVoice.getState);
   const activeVoice = voiceState.voice;
   const subtitle = voiceState.subtitle;
-  const voiceBlocked = voiceState.blocked;
-
-  const toggleVoice = () => {
-    if (activeVoice) boostyVoice.stop();
-    else boostyVoice.start();
-  };
 
   const prevRef = useRef({
     category: '',
@@ -228,21 +222,6 @@ export default function AiAssistantCard({
             </span>
           </p>
         </div>
-
-        {/* Tombol suara: putar/ulang sapaan + info reseller, atau hentikan. */}
-        <button
-          type="button"
-          onClick={toggleVoice}
-          aria-label={activeVoice ? 'Hentikan suara' : 'Putar sapaan Guri Booster'}
-          title={activeVoice ? 'Hentikan suara' : 'Dengar sapaan Guri Booster'}
-          className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
-            activeVoice
-              ? 'border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'
-              : 'border-slate-200 text-slate-500 hover:border-cyan-300 hover:text-cyan-600 dark:border-slate-700 dark:text-slate-400 dark:hover:text-cyan-400'
-          } ${voiceBlocked ? 'animate-pulse ring-2 ring-cyan-400/50' : ''}`}
-        >
-          {activeVoice ? <Square className="h-3.5 w-3.5 fill-current" strokeWidth={2.4} /> : <Volume2 className="h-4 w-4" strokeWidth={2.2} />}
-        </button>
       </div>
 
       {activeVoice ? (

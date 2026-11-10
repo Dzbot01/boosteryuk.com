@@ -115,6 +115,18 @@ function parseDescription(value: string): ParsedDesc {
   };
 }
 
+/** Estimasi waktu rata-rata yang DINAMIS per layanan (stabil per service, < 1 jam).
+ *  Pakai nilai dari deskripsi bila ada; jika tidak, hitung dari id/nama layanan. */
+function avgTimeLabel(service: ServiceItem | null, parsedWaktu?: string | null): string {
+  if (parsedWaktu && parsedWaktu.trim()) return parsedWaktu.trim();
+  const key = service ? (service.id || service.name || '') : '';
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const minutes = 3 + (h % 56); // 3..58 menit (selalu < 1 jam)
+  const seconds = (h >> 5) % 60; // 0..59 detik
+  return `${minutes} menit ${seconds} detik`;
+}
+
 function formatRupiah(value: number): string {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
@@ -730,7 +742,7 @@ if(!tokenFromStorage) {
               <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
 
               <p className="font-bold text-[12.5px] text-slate-900 dark:text-white">Waktu Rata-Rata:</p>
-              <p className="mt-0.5 text-slate-600 dark:text-slate-300">37 menit 19 detik</p>
+              <p className="mt-0.5 text-slate-600 dark:text-slate-300">{avgTimeLabel(selected, description?.waktu)}</p>
             </div>
           ) : (
             <div
