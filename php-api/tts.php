@@ -92,24 +92,47 @@ function http_req($url, $headers = [], $method = 'GET', $body = null) {
     return [$code, $resp, $ctype, ''];
 }
 
-// ---- Ambil API key dari server ----
-$API_KEY = getenv('ELEVENLABS_API_KEY');
-$keySource = $API_KEY ? 'env' : 'none';
-if (!$API_KEY && is_file(__DIR__ . '/tts_config.php')) {
-    $cfg = include __DIR__ . '/tts_config.php';
-    if (is_array($cfg) && !empty($cfg['key'])) { $API_KEY = trim($cfg['key']); $keySource = 'tts_config.php'; }
+// ---- Ambil API key dari server (fleksibel: beberapa format didukung) ----
+function read_api_key() {
+    $dir = __DIR__;
+    $env = getenv('ELEVENLABS_API_KEY');
+    if ($env && trim($env) !== '') return [trim($env), 'env'];
+    // Paling gampang: file teks berisi key saja -> tts_key.txt
+    if (is_file("$dir/tts_key.txt")) {
+        $t = trim((string)file_get_contents("$dir/tts_key.txt"));
+        if ($t !== '') return [$t, 'tts_key.txt'];
+    }
+    // tts_config.php: return array / return string / define / $variabel
+    if (is_file("$dir/tts_config.php")) {
+        $cfg = include "$dir/tts_config.php";
+        if (is_array($cfg)) {
+            foreach (['key', 'api_key', 'apikey', 'ELEVENLABS_API_KEY'] as $f) {
+                if (!empty($cfg[$f]) && trim($cfg[$f]) !== '') return [trim($cfg[$f]), 'tts_config.php'];
+            }
+        } elseif (is_string($cfg) && trim($cfg) !== '') {
+            return [trim($cfg), 'tts_config.php(string)'];
+        }
+        if (defined('ELEVENLABS_API_KEY') && trim((string)ELEVENLABS_API_KEY) !== '') return [trim((string)ELEVENLABS_API_KEY), 'const'];
+        foreach (['ELEVENLABS_API_KEY', 'key', 'apiKey', 'api_key'] as $v) {
+            if (!empty($GLOBALS[$v]) && trim((string)$GLOBALS[$v]) !== '') return [trim((string)$GLOBALS[$v]), "\$$v"];
+        }
+    }
+    return ['', 'none'];
 }
+list($API_KEY, $keySource) = read_api_key();
 
 $action = isset($_GET['action']) ? $_GET['action'] : 'models';
 
 if ($action === 'debug') {
     out(['ok' => true, 'php' => PHP_VERSION, 'curl' => function_exists('curl_init'),
-         'allow_url_fopen' => (bool)ini_get('allow_url_fopen'), 'key_source' => $keySource,
-         'key_len' => $API_KEY ? strlen($API_KEY) : 0]);
+         'allow_url_fopen' => (bool)ini_get('allow_url_fopen'),
+         'has_tts_config' => is_file(__DIR__ . '/tts_config.php'),
+         'has_tts_key_txt' => is_file(__DIR__ . '/tts_key.txt'),
+         'key_source' => $keySource, 'key_len' => $API_KEY ? strlen($API_KEY) : 0]);
 }
 
 if (!$API_KEY) {
-    out(['ok' => false, 'message' => 'API key belum terbaca. Isi "key" di tts_config.php (format: <?php return ["key"=>"sk_..."];) atau set env ELEVENLABS_API_KEY.']);
+    out(['ok' => false, 'message' => 'API key belum terbaca (key_source=' . $keySource . '). Buka ?action=debug untuk detail. Cara paling gampang: buat file tts_key.txt di folder /api berisi KEY saja. Atau di tts_config.php: <?php return ["key"=>"sk_xxxx"]; (pastikan benar-benar terisi & tersimpan).']);
 }
 
 $BASE = 'https://api.elevenlabs.io/v1';

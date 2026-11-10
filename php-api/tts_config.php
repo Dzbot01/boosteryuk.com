@@ -12,6 +12,12 @@
  */
 
 return [
-    // Tempel API key di sini, contoh: 'sk_xxxxxxxxxxxxxxxxxxxxxxxx'
+    // ====================================================================
+    // GANTI string kosong di bawah dengan API key ElevenLabs Anda.
+    // WAJIB di dalam tanda kutip. Contoh:
+    //     'key' => 'sk_1234567890abcdef...',
+    // Cara tercepat kalau ragu: buat saja file baru "tts_key.txt" di folder
+    // yang sama, isinya CUKUP key-nya saja (tanpa kutip/kode apa pun).
+    // ====================================================================
     'key' => '',
 ];
