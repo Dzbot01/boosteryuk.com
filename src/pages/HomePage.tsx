@@ -202,8 +202,8 @@ export default function HomePage() {
       <section className="mx-auto -mt-8 max-w-xl px-4 sm:px-6">
         <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-black shadow-[0_26px_60px_-30px_rgba(15,23,42,0.6)] dark:border-slate-700/60">
           <video
-            src="/boosteryuk.mp4"
-            poster="/boosteryuk-thumb.webp"
+            src="/video/boosteryuk.mp4"
+            poster="/boosteryuk-thumb.png"
             className="aspect-video w-full"
             controls
             autoPlay
