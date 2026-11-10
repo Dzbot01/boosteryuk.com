@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Bot, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { boostyVoice } from '../services/boostyVoice';
+import guri from '../assets/guri.webp';
 
 interface AiAssistantProps {
   /** Display name used in the greeting, e.g. first name. */
@@ -209,10 +210,7 @@ export default function AiAssistantCard({
   return (
     <div className="mb-4 w-full rounded-[18px] border border-cyan-100 bg-white px-4 py-3.5 shadow-[0_14px_36px_-18px_rgba(23,32,51,.22)] dark:border-slate-700 dark:bg-slate-900">
       <div className="flex items-center gap-2.5">
-        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-600/25">
-          <Bot className="h-[18px] w-[18px]" strokeWidth={2.2} />
-          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900" />
-        </span>
+        <img src={guri} alt="Guri Booster" className="h-11 w-11 shrink-0 select-none object-contain" draggable={false} />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 font-display text-[13.5px] font-extrabold tracking-tight text-slate-900 dark:text-white">
             Guri Booster

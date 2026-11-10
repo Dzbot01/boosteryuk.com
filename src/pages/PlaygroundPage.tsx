@@ -11,7 +11,6 @@ import {
   X,
   Wand2,
   Menu as MenuIcon,
-  ChevronRight,
 } from 'lucide-react';
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
@@ -45,24 +44,25 @@ export default function PlaygroundPage() {
     <div className="mx-auto max-w-5xl px-4 pb-32 pt-24 sm:px-6">
       <Seo title="Playground" description="Playground Boosteryuk: Hook Generator, Auto Caption, dan Teks To Speech." noindex />
 
-      {/* Bar atas: judul menu aktif + tombol ikon menu (pojok kanan) */}
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-sky-600 ring-1 ring-sky-500/20 dark:text-sky-400">
-            <Wand2 className="h-3 w-3" strokeWidth={2.6} />
-            Playground
-          </span>
-          <h1 className="mt-2 font-display text-2xl font-black tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-            {active.label}
-          </h1>
-        </div>
-        <button
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Menu Playground"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sky-200 bg-sky-50 text-sky-600 shadow-sm transition-all hover:bg-sky-100 active:scale-95 dark:border-sky-800/60 dark:bg-sky-950/40 dark:text-sky-400"
-        >
-          <MenuIcon className="h-5 w-5" strokeWidth={2.2} />
-        </button>
+      {/* Tombol menu terpisah — pojok KIRI atas, di bawah header (ikon polos tanpa card) */}
+      <button
+        onClick={() => setDrawerOpen(true)}
+        aria-label="Menu Playground"
+        className="mb-4 inline-flex items-center gap-2 text-emerald-600 transition-colors hover:text-emerald-700 active:scale-95 dark:text-emerald-400"
+      >
+        <MenuIcon className="h-6 w-6" strokeWidth={2.2} />
+        <span className="text-[13px] font-bold">Menu</span>
+      </button>
+
+      {/* Judul menu aktif */}
+      <div className="mb-5">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400">
+          <Wand2 className="h-3 w-3" strokeWidth={2.6} />
+          Playground
+        </span>
+        <h1 className="mt-2 font-display text-2xl font-black tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+          {active.label}
+        </h1>
       </div>
 
       {/* Konten menu aktif saja (bukan semua sekaligus) */}
@@ -88,18 +88,17 @@ export default function PlaygroundPage() {
         {menu === 'tts' && <TtsPanel />}
       </div>
 
-      {/* Side menu / drawer */}
+      {/* Side menu / drawer — dari KIRI, simpel (tanpa deskripsi, ikon tanpa card) */}
       {drawerOpen && (
         <div className="fixed inset-0 z-[60] flex" role="dialog" aria-modal="true">
-          <div className="flex-1 bg-slate-900/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
-          <aside className="h-full w-72 max-w-[82vw] animate-slide-in-right overflow-y-auto border-l border-sky-200 bg-white p-4 shadow-2xl dark:border-sky-900/50 dark:bg-slate-900">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="font-display text-[15px] font-extrabold tracking-tight text-slate-900 dark:text-white">Menu Playground</p>
+          <aside className="h-full w-64 max-w-[78vw] animate-slide-in-left overflow-y-auto border-r border-emerald-200 bg-white p-4 shadow-2xl dark:border-emerald-900/50 dark:bg-slate-900">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="font-display text-[15px] font-extrabold tracking-tight text-slate-900 dark:text-white">Menu</p>
               <button onClick={() => setDrawerOpen(false)} aria-label="Tutup" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800">
                 <X className="h-5 w-5" strokeWidth={2.2} />
               </button>
             </div>
-            <nav className="space-y-2">
+            <nav className="space-y-1">
               {MENUS.map((m) => {
                 const Icon = m.icon;
                 const on = m.id === menu;
@@ -107,25 +106,20 @@ export default function PlaygroundPage() {
                   <button
                     key={m.id}
                     onClick={() => { setMenu(m.id); setDrawerOpen(false); }}
-                    className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all active:scale-[0.98] ${
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
                       on
-                        ? 'border-sky-400 bg-sky-50 dark:border-sky-600 dark:bg-sky-950/40'
-                        : 'border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 dark:border-slate-700 dark:hover:bg-slate-800'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
                     }`}
                   >
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-sky-500 text-white' : 'bg-sky-500/10 text-sky-600 dark:text-sky-400'}`}>
-                      <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={`block text-[13.5px] font-extrabold ${on ? 'text-sky-700 dark:text-sky-300' : 'text-slate-900 dark:text-white'}`}>{m.label}</span>
-                      <span className="mt-0.5 block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{m.desc}</span>
-                    </span>
-                    <ChevronRight className={`h-4 w-4 shrink-0 ${on ? 'text-sky-500' : 'text-slate-300'}`} />
+                    <Icon className={`h-5 w-5 shrink-0 ${on ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-400'}`} strokeWidth={2.2} />
+                    <span className="text-[14px] font-bold">{m.label}</span>
                   </button>
                 );
               })}
             </nav>
           </aside>
+          <div className="flex-1 bg-slate-900/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
         </div>
       )}
     </div>
@@ -179,12 +173,12 @@ function AiPanel({
           onChange={(e) => setInput(e.target.value)}
           placeholder={placeholder}
           rows={4}
-          className="mt-3 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-slate-800 outline-none transition-colors focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          className="mt-3 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-slate-800 outline-none transition-colors focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
         />
         <button
           onClick={run}
           disabled={!input.trim() || loading}
-          className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 text-[14px] font-bold text-white shadow-lg shadow-sky-600/25 transition-all hover:bg-sky-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-6"
+          className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-[14px] font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-6"
         >
           {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" strokeWidth={2.4} />}
           {loading ? 'Membuat…' : cta}
@@ -197,12 +191,12 @@ function AiPanel({
         )}
 
         {result && (
-          <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-800/50 dark:bg-sky-950/30">
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-800/50 dark:bg-emerald-950/30">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-sky-600 dark:text-sky-400">Hasil</span>
+              <span className="text-[11px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Hasil</span>
               <button
                 onClick={copy}
-                className="inline-flex items-center gap-1 rounded-lg bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-700 transition-colors hover:bg-sky-500/20 dark:text-sky-300"
+                className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-700 transition-colors hover:bg-emerald-500/20 dark:text-emerald-300"
               >
                 {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                 {copied ? 'Tersalin' : 'Salin'}
@@ -297,7 +291,7 @@ function TtsPanel() {
         <div className="flex min-h-[420px] flex-col rounded-2xl border border-slate-200 bg-white shadow-[0_18px_44px_-28px_rgba(15,23,42,0.4)] dark:border-slate-700 dark:bg-slate-900">
           <div className="border-b border-slate-100 px-5 pt-5 dark:border-slate-800">
             <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-1.5 text-[12.5px] font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200">
-              <span className="h-4 w-4 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500" />
+              <span className="h-4 w-4 rounded-full bg-gradient-to-br from-emerald-400 to-indigo-500" />
               {voiceName}
             </span>
           </div>
@@ -314,7 +308,7 @@ function TtsPanel() {
             <button
               onClick={generate}
               disabled={!text.trim() || !voiceId || busy}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-5 text-[13.5px] font-bold text-white transition-all hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-sky-600 dark:hover:bg-sky-700"
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-5 text-[13.5px] font-bold text-white transition-all hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-600 dark:hover:bg-emerald-700"
             >
               {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <AudioLines className="h-4 w-4" strokeWidth={2.4} />}
               {busy ? 'Membuat…' : 'Generate speech'}
@@ -329,7 +323,7 @@ function TtsPanel() {
 
           {/* Player bawah */}
           {audioUrl && (
-            <div className="mx-5 mb-5 rounded-xl border border-sky-200 bg-sky-50/60 p-3.5 dark:border-sky-800/50 dark:bg-sky-950/30">
+            <div className="mx-5 mb-5 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 dark:border-emerald-800/50 dark:bg-emerald-950/30">
               <audio src={audioUrl} controls controlsList="nodownload" className="w-full" />
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <button
@@ -337,7 +331,7 @@ function TtsPanel() {
                   disabled={!canDownload}
                   className={`inline-flex h-9 items-center gap-2 rounded-lg px-3.5 text-[12.5px] font-bold transition-all active:scale-95 ${
                     canDownload
-                      ? 'bg-sky-600 text-white shadow-md shadow-sky-600/25 hover:bg-sky-700'
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 hover:bg-emerald-700'
                       : 'cursor-not-allowed bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
                   }`}
                 >
@@ -403,7 +397,7 @@ function Select({ value, onChange, options }: { value: string; onChange: (v: str
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-800 outline-none transition-colors focus:border-sky-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-800 outline-none transition-colors focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
@@ -417,7 +411,7 @@ function Slider({ label, value, onChange }: { label: string; value: number; onCh
     <label className="block">
       <span className="mb-1.5 flex items-center justify-between text-[12px] font-semibold text-slate-600 dark:text-slate-300">
         {label}
-        <span className="font-mono text-sky-600 dark:text-sky-400">{value.toFixed(2)}</span>
+        <span className="font-mono text-emerald-600 dark:text-emerald-400">{value.toFixed(2)}</span>
       </span>
       <input
         type="range"
@@ -426,7 +420,7 @@ function Slider({ label, value, onChange }: { label: string; value: number; onCh
         step={0.05}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-sky-500 dark:bg-slate-700"
+        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-emerald-500 dark:bg-slate-700"
       />
     </label>
   );

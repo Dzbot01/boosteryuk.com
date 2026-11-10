@@ -199,10 +199,11 @@ export default function HomePage() {
       {/* ================= VIDEO PLAYER (antara hero & body) =================
           File boosteryuk.mp4 diletakkan di root web (sejajar index.html).
           Tidak dapat diunduh: controlsList=nodownload + klik-kanan dinonaktifkan. */}
-      <section className="mx-auto -mt-8 max-w-5xl px-4 sm:px-6">
-        <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-black shadow-[0_26px_60px_-30px_rgba(15,23,42,0.6)] dark:border-slate-700/60">
+      <section className="mx-auto -mt-8 max-w-xl px-4 sm:px-6">
+        <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-black shadow-[0_26px_60px_-30px_rgba(15,23,42,0.6)] dark:border-slate-700/60">
           <video
             src="/boosteryuk.mp4"
+            poster="/boosteryuk-thumb.webp"
             className="aspect-video w-full"
             controls
             autoPlay

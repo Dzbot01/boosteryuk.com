@@ -69,7 +69,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       className={`fixed left-0 right-0 top-0 z-30 w-full border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out ${
         scrolled
           ? isPlayground
-            ? 'border-sky-300/50 bg-sky-400/25 shadow-[0_8px_24px_-16px_rgba(14,120,200,0.45)] backdrop-blur-xl backdrop-saturate-150 dark:border-sky-700/50 dark:bg-sky-900/35'
+            ? 'border-emerald-300/50 bg-emerald-500/20 shadow-[0_8px_24px_-16px_rgba(5,120,80,0.45)] backdrop-blur-xl backdrop-saturate-150 dark:border-emerald-700/50 dark:bg-emerald-900/35'
             : 'border-slate-200/70 bg-white/55 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] backdrop-blur-xl backdrop-saturate-150 dark:border-slate-700/50 dark:bg-slate-900/55'
           : 'border-transparent bg-transparent shadow-none'
       }`}
@@ -101,10 +101,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
             aria-label="Playground"
             className={`mr-0.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[13px] font-extrabold tracking-tight transition-colors active:scale-95 ${
               isPlayground
-                ? 'text-sky-500'
+                ? 'text-emerald-500'
                 : onHeroTop
-                  ? 'text-sky-300 hover:text-sky-200'
-                  : 'text-sky-600 hover:text-sky-500 dark:text-sky-400'
+                  ? 'text-emerald-300 hover:text-emerald-200'
+                  : 'text-emerald-600 hover:text-emerald-500 dark:text-emerald-400'
             }`}
           >
             Playground
