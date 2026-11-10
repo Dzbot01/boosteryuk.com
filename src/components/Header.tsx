@@ -99,15 +99,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <button
             onClick={() => navigate('/playground')}
             aria-label="Playground"
-            className={`mr-0.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[13px] font-extrabold tracking-tight transition-colors active:scale-95 ${
-              isPlayground
-                ? 'text-emerald-500'
-                : onHeroTop
-                  ? 'text-emerald-300 hover:text-emerald-200'
-                  : 'text-emerald-600 hover:text-emerald-500 dark:text-emerald-400'
-            }`}
+            className="mr-0.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[13px] font-extrabold tracking-tight transition-transform active:scale-95"
           >
-            Playground
+            <span className="text-silver-shine">Playground</span>
           </button>
 
           {/* User profile icon — only for regular users */}

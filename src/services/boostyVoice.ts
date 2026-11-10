@@ -11,7 +11,10 @@ export interface BoostyVoiceState {
 
 let state: BoostyVoiceState = { voice: null, subtitle: '', blocked: false };
 let audio: HTMLAudioElement | null = null;
+let gestureCleanup: (() => void) | null = null;
 const subs = new Set<() => void>();
+
+const GESTURE_EVENTS = ['pointerdown', 'keydown', 'touchstart', 'click'];
 
 function emit() {
   subs.forEach((fn) => fn());
@@ -22,13 +25,34 @@ function set(patch: Partial<BoostyVoiceState>) {
   emit();
 }
 
+function removeGestureRetry() {
+  if (gestureCleanup) {
+    gestureCleanup();
+    gestureCleanup = null;
+  }
+}
+
 function clearAudio() {
+  removeGestureRetry();
   if (audio) {
     audio.pause();
     audio.onended = null;
     audio.ontimeupdate = null;
     audio = null;
   }
+}
+
+/** Jika autoplay diblokir browser, coba putar lagi pada gesture user berikutnya. */
+function retryOnGesture(a: HTMLAudioElement) {
+  removeGestureRetry();
+  const retry = () => {
+    a.play().then(() => {
+      set({ blocked: false });
+      removeGestureRetry();
+    }).catch(() => { /* masih diblokir, tunggu gesture lain */ });
+  };
+  GESTURE_EVENTS.forEach((ev) => window.addEventListener(ev, retry, { passive: true }));
+  gestureCleanup = () => GESTURE_EVENTS.forEach((ev) => window.removeEventListener(ev, retry));
 }
 
 function playAt(index: number) {
@@ -54,7 +78,10 @@ function playAt(index: number) {
       set({ voice: null, subtitle: '' });
     }
   };
-  a.play().then(() => set({ blocked: false })).catch(() => set({ blocked: true }));
+  a.play().then(() => set({ blocked: false })).catch(() => {
+    set({ blocked: true });
+    retryOnGesture(a);
+  });
 }
 
 export const boostyVoice = {

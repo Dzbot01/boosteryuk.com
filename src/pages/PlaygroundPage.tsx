@@ -11,9 +11,12 @@ import {
   X,
   Wand2,
   Menu as MenuIcon,
+  LayoutGrid,
+  ChevronRight,
 } from 'lucide-react';
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
+import ScrollExpand from '../components/ScrollExpand';
 import { useAuth } from '../context/AuthContext';
 import {
   askAi,
@@ -27,16 +30,17 @@ import {
   type TtsVoice,
 } from '../services/playgroundApi';
 
-type Menu = 'hook' | 'caption' | 'tts';
+type Menu = 'overview' | 'hook' | 'caption' | 'tts';
 
 const MENUS: { id: Menu; label: string; icon: typeof Sparkles; desc: string }[] = [
+  { id: 'overview', label: 'Overview', icon: LayoutGrid, desc: 'Halaman utama Playground' },
   { id: 'hook', label: 'Hook Generator', icon: Sparkles, desc: 'Bikin hook pembuka konten yang nendang' },
   { id: 'caption', label: 'Auto Caption', icon: Captions, desc: 'Caption otomatis dari deskripsi konten' },
   { id: 'tts', label: 'Teks To Speech', icon: AudioLines, desc: 'Ubah teks jadi suara berkualitas' },
 ];
 
 export default function PlaygroundPage() {
-  const [menu, setMenu] = useState<Menu>('hook');
+  const [menu, setMenu] = useState<Menu>('overview');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const active = MENUS.find((m) => m.id === menu)!;
 
@@ -56,9 +60,9 @@ export default function PlaygroundPage() {
 
       {/* Judul menu aktif */}
       <div className="mb-5">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400">
-          <Wand2 className="h-3 w-3" strokeWidth={2.6} />
-          Playground
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ring-1 ring-slate-600/40 dark:bg-slate-800">
+          <Wand2 className="h-3 w-3 text-slate-300" strokeWidth={2.6} />
+          <span className="text-silver-shine">Playground</span>
         </span>
         <h1 className="mt-2 font-display text-2xl font-black tracking-tight text-slate-900 sm:text-3xl dark:text-white">
           {active.label}
@@ -67,6 +71,7 @@ export default function PlaygroundPage() {
 
       {/* Konten menu aktif saja (bukan semua sekaligus) */}
       <div>
+        {menu === 'overview' && <OverviewPanel onPick={setMenu} />}
         {menu === 'hook' && (
           <AiPanel
             key="hook"
@@ -123,6 +128,64 @@ export default function PlaygroundPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/* =========================================================
+   Panel Overview (halaman utama) — hero ScrollExpand
+   ========================================================= */
+function OverviewPanel({ onPick }: { onPick: (m: Menu) => void }) {
+  const quick = MENUS.filter((m) => m.id !== 'overview');
+  return (
+    <Reveal>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.4)] dark:border-slate-700">
+        <div style={{ height: 520 }}>
+          <ScrollExpand
+            src="/playground-hero.png"
+            title="Welcome To"
+            scrollHint="Scroll di dalam frame"
+            startWidth={42}
+            startHeight={58}
+            startRadius={24}
+            endRadius={0}
+            mediaZoom={1.35}
+            scrollDistance={1.2}
+            holdDistance={0.35}
+            smoothing={0.1}
+            overlayScrim={0.45}
+            enabled
+          >
+            <h2 className="font-display text-3xl font-black tracking-tight text-white sm:text-5xl">Playground Boosteryuk</h2>
+            <p className="mt-3 max-w-md text-[14px] leading-relaxed text-white/85">
+              Semua alat kreator dalam satu tempat — hook, caption, dan suara AI.
+            </p>
+          </ScrollExpand>
+        </div>
+      </div>
+
+      {/* Akses cepat ke tiap tool */}
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {quick.map((m) => {
+          const Icon = m.icon;
+          return (
+            <button
+              key={m.id}
+              onClick={() => onPick(m.id)}
+              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-lg active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <Icon className="h-5 w-5" strokeWidth={2.2} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13.5px] font-extrabold text-slate-900 dark:text-white">{m.label}</span>
+                <span className="block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{m.desc}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
+            </button>
+          );
+        })}
+      </div>
+    </Reveal>
   );
 }
 
