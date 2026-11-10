@@ -12,7 +12,6 @@ import {
   Wand2,
   Menu as MenuIcon,
   LayoutGrid,
-  ChevronRight,
 } from 'lucide-react';
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
@@ -20,8 +19,7 @@ import ScrollExpand from '../components/ScrollExpand';
 import { useAuth } from '../context/AuthContext';
 import {
   askAi,
-  fetchTtsModels,
-  fetchTtsVoices,
+  fetchTtsMeta,
   synthTts,
   readTtsQuota,
   consumeTtsQuota,
@@ -45,33 +43,41 @@ export default function PlaygroundPage() {
   const active = MENUS.find((m) => m.id === menu)!;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pb-32 pt-24 sm:px-6">
+    <>
       <Seo title="Playground" description="Playground Boosteryuk: Hook Generator, Auto Caption, dan Teks To Speech." noindex />
 
-      {/* Tombol menu terpisah — pojok KIRI atas, di bawah header (ikon polos tanpa card) */}
-      <button
-        onClick={() => setDrawerOpen(true)}
-        aria-label="Menu Playground"
-        className="mb-4 inline-flex items-center gap-2 text-emerald-600 transition-colors hover:text-emerald-700 active:scale-95 dark:text-emerald-400"
-      >
-        <MenuIcon className="h-6 w-6" strokeWidth={2.2} />
-        <span className="text-[13px] font-bold">Menu</span>
-      </button>
+      {menu === 'overview' ? (
+        <>
+          <OverviewHero onOpenMenu={() => setDrawerOpen(true)} />
+          <div className="mx-auto max-w-5xl px-4 pb-32 sm:px-6">
+            <OverviewDesc />
+          </div>
+        </>
+      ) : (
+      <div className="mx-auto max-w-5xl px-4 pb-32 pt-24 sm:px-6">
+        {/* Tombol menu terpisah — pojok KIRI atas, di bawah header (ikon polos tanpa card) */}
+        <button
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Menu Playground"
+          className="mb-4 inline-flex items-center gap-2 text-emerald-600 transition-colors hover:text-emerald-700 active:scale-95 dark:text-emerald-400"
+        >
+          <MenuIcon className="h-6 w-6" strokeWidth={2.2} />
+          <span className="text-[13px] font-bold">Menu</span>
+        </button>
 
-      {/* Judul menu aktif */}
-      <div className="mb-5">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ring-1 ring-slate-600/40 dark:bg-slate-800">
-          <Wand2 className="h-3 w-3 text-slate-300" strokeWidth={2.6} />
-          <span className="text-silver-shine">Playground</span>
-        </span>
-        <h1 className="mt-2 font-display text-2xl font-black tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-          {active.label}
-        </h1>
-      </div>
+        {/* Judul menu aktif */}
+        <div className="mb-5">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ring-1 ring-slate-600/40 dark:bg-slate-800">
+            <Wand2 className="h-3 w-3 text-slate-300" strokeWidth={2.6} />
+            <span className="text-silver-shine">Playground</span>
+          </span>
+          <h1 className="mt-2 font-display text-2xl font-black tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+            {active.label}
+          </h1>
+        </div>
 
-      {/* Konten menu aktif saja (bukan semua sekaligus) */}
-      <div>
-        {menu === 'overview' && <OverviewPanel onPick={setMenu} />}
+        {/* Konten menu aktif saja (bukan semua sekaligus) */}
+        <div>
         {menu === 'hook' && (
           <AiPanel
             key="hook"
@@ -91,7 +97,9 @@ export default function PlaygroundPage() {
           />
         )}
         {menu === 'tts' && <TtsPanel />}
+        </div>
       </div>
+      )}
 
       {/* Side menu / drawer — dari KIRI, simpel (tanpa deskripsi, ikon tanpa card) */}
       {drawerOpen && (
@@ -127,63 +135,79 @@ export default function PlaygroundPage() {
           <div className="flex-1 bg-slate-900/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
         </div>
       )}
-    </div>
+    </>
   );
 }
 
 /* =========================================================
-   Panel Overview (halaman utama) — hero ScrollExpand
+   Overview — hero ScrollExpand FULL-BLEED (window scroll)
    ========================================================= */
-function OverviewPanel({ onPick }: { onPick: (m: Menu) => void }) {
-  const quick = MENUS.filter((m) => m.id !== 'overview');
+function OverviewHero({ onOpenMenu }: { onOpenMenu: () => void }) {
+  return (
+    <section className="relative -mt-[60px] w-full">
+      {/* Tombol menu mengambang di atas animasi (di bawah header) */}
+      <button
+        onClick={onOpenMenu}
+        aria-label="Menu Playground"
+        className="absolute left-4 top-[72px] z-10 inline-flex items-center gap-2 text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform hover:scale-105 active:scale-95 sm:left-6"
+      >
+        <MenuIcon className="h-6 w-6" strokeWidth={2.4} />
+        <span className="text-[13px] font-bold">Menu</span>
+      </button>
+
+      <ScrollExpand
+        src="/playground-hero.png"
+        title="Welcome To"
+        scrollHint="Scroll ke bawah"
+        useWindowScroll
+        startWidth={42}
+        startHeight={58}
+        startRadius={24}
+        endRadius={0}
+        mediaZoom={1.35}
+        scrollDistance={1.1}
+        holdDistance={0.3}
+        smoothing={0.1}
+        overlayScrim={0.45}
+        enabled
+      >
+        <h2 className="font-display text-3xl font-black tracking-tight text-white sm:text-5xl">Playground Boosteryuk</h2>
+        <p className="mt-3 max-w-md text-[14px] leading-relaxed text-white/85">
+          Semua alat kreator dalam satu tempat — hook, caption, dan suara AI.
+        </p>
+      </ScrollExpand>
+    </section>
+  );
+}
+
+/* Kartu deskripsi (rata kiri di desktop) — kegunaan fitur bagi kreator */
+function OverviewDesc() {
   return (
     <Reveal>
-      <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.4)] dark:border-slate-700">
-        <div style={{ height: 520 }}>
-          <ScrollExpand
-            src="/playground-hero.png"
-            title="Welcome To"
-            scrollHint="Scroll di dalam frame"
-            startWidth={42}
-            startHeight={58}
-            startRadius={24}
-            endRadius={0}
-            mediaZoom={1.35}
-            scrollDistance={1.2}
-            holdDistance={0.35}
-            smoothing={0.1}
-            overlayScrim={0.45}
-            enabled
-          >
-            <h2 className="font-display text-3xl font-black tracking-tight text-white sm:text-5xl">Playground Boosteryuk</h2>
-            <p className="mt-3 max-w-md text-[14px] leading-relaxed text-white/85">
-              Semua alat kreator dalam satu tempat — hook, caption, dan suara AI.
-            </p>
-          </ScrollExpand>
-        </div>
-      </div>
-
-      {/* Akses cepat ke tiap tool */}
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        {quick.map((m) => {
-          const Icon = m.icon;
-          return (
-            <button
-              key={m.id}
-              onClick={() => onPick(m.id)}
-              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-lg active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900"
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <Icon className="h-5 w-5" strokeWidth={2.2} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[13.5px] font-extrabold text-slate-900 dark:text-white">{m.label}</span>
-                <span className="block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{m.desc}</span>
-              </span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
-            </button>
-          );
-        })}
+      <div className="mt-10 max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.4)] dark:border-slate-700 dark:bg-slate-900">
+        <h3 className="font-display text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          Dibuat untuk kreator
+        </h3>
+        <p className="mt-2 text-[14px] leading-relaxed text-slate-600 dark:text-slate-300">
+          Playground Boosteryuk mengumpulkan alat AI yang bikin produksi konten makin cepat dan gampang:
+        </p>
+        <ul className="mt-4 space-y-3 text-[13.5px] leading-relaxed text-slate-600 dark:text-slate-300">
+          <li className="flex gap-2.5">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" strokeWidth={2.4} />
+            <span><b className="text-slate-900 dark:text-white">Hook Generator</b> — bikin kalimat pembuka yang bikin orang berhenti scroll di detik pertama.</span>
+          </li>
+          <li className="flex gap-2.5">
+            <Captions className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" strokeWidth={2.4} />
+            <span><b className="text-slate-900 dark:text-white">Auto Caption</b> — caption menarik lengkap dengan hashtag, otomatis dari deskripsi kontenmu.</span>
+          </li>
+          <li className="flex gap-2.5">
+            <AudioLines className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" strokeWidth={2.4} />
+            <span><b className="text-slate-900 dark:text-white">Teks To Speech</b> — ubah naskah jadi voice-over berkualitas untuk reels, TikTok, atau YouTube.</span>
+          </li>
+        </ul>
+        <p className="mt-5 text-[13px] font-semibold text-emerald-600 dark:text-emerald-400">
+          Buka menu di kiri atas untuk mulai berkarya →
+        </p>
       </div>
     </Reveal>
   );
@@ -281,6 +305,7 @@ function TtsPanel() {
   const [models, setModels] = useState<TtsModel[]>([]);
   const [voices, setVoices] = useState<TtsVoice[]>([]);
   const [loadingMeta, setLoadingMeta] = useState(true);
+  const [metaError, setMetaError] = useState('');
 
   const [modelId, setModelId] = useState('');
   const [languageCode, setLanguageCode] = useState('');
@@ -301,12 +326,13 @@ function TtsPanel() {
 
   useEffect(() => {
     let alive = true;
-    Promise.all([fetchTtsModels(), fetchTtsVoices()]).then(([m, v]) => {
+    fetchTtsMeta().then(({ models: m, voices: v, error: err }) => {
       if (!alive) return;
       setModels(m);
       setVoices(v);
       if (m[0]) setModelId(m[0].model_id);
       if (v[0]) setVoiceId(v[0].voice_id);
+      if (err) setMetaError(err);
       setLoadingMeta(false);
     });
     return () => { alive = false; };
@@ -423,6 +449,11 @@ function TtsPanel() {
             <p className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 dark:text-slate-400">
               <LoaderCircle className="h-4 w-4 animate-spin" /> Memuat suara…
             </p>
+          ) : metaError ? (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-[12.5px] leading-relaxed text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-300">
+              <p className="font-bold">Daftar suara/model belum bisa dimuat</p>
+              <p className="mt-1">{metaError}</p>
+            </div>
           ) : (
             <div className="space-y-4">
               <Field label="Suara">

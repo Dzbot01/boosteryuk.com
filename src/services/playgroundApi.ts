@@ -45,6 +45,44 @@ export async function fetchTtsVoices(): Promise<TtsVoice[]> {
   }
 }
 
+/** Ambil model + suara sekaligus, DAN surface pesan error agar mudah didiagnosa. */
+export async function fetchTtsMeta(): Promise<{ models: TtsModel[]; voices: TtsVoice[]; error?: string }> {
+  let mr: Response;
+  try {
+    mr = await fetch(`${API_BASE}/tts.php?action=models`);
+  } catch {
+    return {
+      models: [],
+      voices: [],
+      error: `Tidak bisa menghubungi ${API_BASE}/tts.php. Pastikan file tts.php sudah di-upload ke server & CORS mengizinkan domain ini.`,
+    };
+  }
+  let mj: any = null;
+  try { mj = await mr.json(); } catch { /* bukan JSON */ }
+  if (!mr.ok) {
+    return { models: [], voices: [], error: `Server membalas HTTP ${mr.status} untuk tts.php. Cek apakah file sudah ter-upload di folder /api.` };
+  }
+  if (!mj) {
+    return { models: [], voices: [], error: 'Respons tts.php bukan JSON (mungkin error PHP). Cek log server / isi file.' };
+  }
+  if (mj.ok === false) {
+    return { models: [], voices: [], error: mj.message || 'tts.php menolak permintaan model (cek ELEVENLABS_API_KEY di server).' };
+  }
+  const models: TtsModel[] = Array.isArray(mj.models) ? mj.models : [];
+
+  let voices: TtsVoice[] = [];
+  try {
+    const vr = await fetch(`${API_BASE}/tts.php?action=voices`);
+    const vj = await vr.json();
+    voices = Array.isArray(vj.voices) ? vj.voices : [];
+  } catch { /* abaikan; model tetap jalan */ }
+
+  if (models.length === 0) {
+    return { models, voices, error: 'Model kosong dari ElevenLabs. Biasanya API key salah/kedaluwarsa atau belum terisi di tts_config.php.' };
+  }
+  return { models, voices };
+}
+
 export interface TtsRequest {
   text: string;
   voice_id: string;
