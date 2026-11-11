@@ -46,6 +46,17 @@ if ((!$TOKEN || !$ORIGIN) && is_file(__DIR__ . '/agent_config.php')) {
 if (!$ORIGIN) $ORIGIN = 'https://wa-origin.boosteryuk.com';
 if (!$TOKEN) out(['ok' => false, 'message' => 'AGENT_TOKEN belum diset di server (agent_config.php / env).']);
 
+/** Ubah balasan VPS jadi JSON; beri petunjuk jelas untuk error Cloudflare/tunnel. */
+function relay($code, $body) {
+    $j = json_decode($body, true);
+    if (is_array($j)) return $j;
+    $hint = '';
+    if ($code == 530 || $code == 1033) $hint = ' — Cloudflare 530: tunnel "wa-origin" belum aktif. Jalankan cloudflared di VPS & buat route DNS.';
+    elseif ($code == 502 || $code == 504) $hint = ' — tunnel aktif tapi server.js (port 8080) tidak merespons. Cek pm2/status server agen.';
+    elseif ($code >= 500) $hint = ' — origin/VPS tidak terjangkau.';
+    return ['ok' => false, 'message' => "VPS HTTP $code$hint"];
+}
+
 function vps($method, $pathUrl, $token, $json = null) {
     $url = rtrim($pathUrl, '/');
     $headers = ['x-agent-token: ' . $token, 'Accept: application/json'];
@@ -79,7 +90,7 @@ if ($action === 'create') {
     ];
     list($code, $body, $err) = vps('POST', "$ORIGIN/session", $TOKEN, $payload);
     if ($code === 0) out(['ok' => false, 'message' => 'Tidak bisa menghubungi VPS: ' . $err]);
-    out(json_decode($body, true) ?: ['ok' => false, 'message' => "VPS HTTP $code"]);
+    out(relay($code, $body));
 }
 
 if ($action === 'resend') {
@@ -88,7 +99,7 @@ if ($action === 'resend') {
     if (!$orderId) out(['ok' => false, 'message' => 'orderId wajib.'], 400);
     list($code, $body, $err) = vps('POST', "$ORIGIN/session/$orderId/resend", $TOKEN, []);
     if ($code === 0) out(['ok' => false, 'message' => 'Tidak bisa menghubungi VPS: ' . $err]);
-    out(json_decode($body, true) ?: ['ok' => false, 'message' => "VPS HTTP $code"]);
+    out(relay($code, $body));
 }
 
 if ($action === 'status') {
@@ -96,7 +107,7 @@ if ($action === 'status') {
     if (!$orderId) out(['ok' => false, 'message' => 'id wajib.'], 400);
     list($code, $body, $err) = vps('GET', "$ORIGIN/session/$orderId", $TOKEN);
     if ($code === 0) out(['ok' => false, 'message' => 'Tidak bisa menghubungi VPS: ' . $err]);
-    out(json_decode($body, true) ?: ['ok' => false, 'message' => "VPS HTTP $code"]);
+    out(relay($code, $body));
 }
 
 out(['ok' => false, 'message' => 'Aksi tidak dikenal.'], 400);
