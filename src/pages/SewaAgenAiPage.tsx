@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, X, LoaderCircle, CheckCircle2, AlertCircle, Mail, Bot } from 'lucide-react';
+import { ArrowLeft, Check, X, LoaderCircle, CheckCircle2, AlertCircle, Smartphone, Bot } from 'lucide-react';
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
 import AiAssistantCard from '../components/AiAssistantCard';
 import { SERVICE_SLIDES, socialIconUrl } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { useOrderHistory } from '../context/OrderHistoryContext';
-import { sendOtpEmail, genOtp, isValidEmail } from '../services/otp';
+import { isValidEmail } from '../services/otp';
+import { createAgent, resendAgentCode, getAgentStatus } from '../services/agentApi';
 
 const SLIDE_INTERVAL = 4500;
 
@@ -67,7 +68,7 @@ const PROCESS_STEPS = [
   'Mengirim kode verifikasi ke email…',
 ];
 
-type Phase = 'select' | 'beam' | 'packages' | 'form' | 'processing' | 'verify' | 'done';
+type Phase = 'select' | 'beam' | 'packages' | 'form' | 'processing' | 'pairing' | 'done';
 
 export default function SewaAgenAiPage() {
   const navigate = useNavigate();
@@ -96,13 +97,14 @@ export default function SewaAgenAiPage() {
   const [toko, setToko] = useState('');
   const [durasi, setDurasi] = useState('1');
 
-  // processing / verify
+  // processing / pairing
   const [stepIdx, setStepIdx] = useState(0);
   const [notice, setNotice] = useState<{ ok: boolean; msg: string } | null>(null);
-  const sentCode = useRef<{ code: string; at: number } | null>(null);
-  const [codeInput, setCodeInput] = useState('');
   const [resending, setResending] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<{ name: string; total: number; due: number } | null>(null);
+  const orderIdRef = useRef<string>('');
+  const [waStatus, setWaStatus] = useState<'starting' | 'pairing' | 'linked' | 'closed'>('starting');
+  const finishedRef = useRef(false);
 
   const firstName = user?.username?.split(' ')[0] || user?.email?.split('@')[0] || 'Bos';
 
@@ -126,63 +128,81 @@ export default function SewaAgenAiPage() {
     setNotice(null);
   };
 
-  const runProcessing = async () => {
-    if (!tier) return;
-    if (!user) { setNotice({ ok: false, msg: 'Silakan login dulu untuk memesan.' }); return; }
-    if (!namaAi.trim() || !nomor.trim()) { setNotice({ ok: false, msg: 'Nama AI & nomor pemilik wajib diisi.' }); return; }
-    if (!ewallet.trim() || !toko.trim()) { setNotice({ ok: false, msg: 'Alamat e-wallet & nama toko wajib diisi (fitur Store).' }); return; }
-    if (user.balance < total) { setNotice({ ok: false, msg: `Saldo tidak cukup. Butuh ${formatRupiah(total)}.` }); return; }
-    if (!isValidEmail(user.email || '')) { setNotice({ ok: false, msg: 'Email akun tidak valid untuk kirim kode.' }); return; }
-
-    setNotice(null);
-    setPhase('processing');
-    setStepIdx(0);
-    // animasi step-by-step
-    for (let i = 0; i < PROCESS_STEPS.length; i++) {
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((r) => setTimeout(r, 850));
-      setStepIdx(i + 1);
-    }
-    // kirim kode verifikasi via email (Resend worker) — VPS dikonfigurasi menyusul
-    const code = genOtp();
-    sentCode.current = { code, at: Date.now() };
-    const due = Date.now() + months * 30 * 24 * 3600 * 1000;
-    setPendingOrder({ name: `Agen AI ${platformName()} ${tier.name}`, total, due });
-    await sendOtpEmail(user.email, code);
-    setPhase('verify');
-  };
-
   const platformName = () => PLATFORMS.find((p) => p.id === platform)?.name ?? 'WhatsApp';
 
-  const resendCode = async () => {
-    if (!user) return;
-    setResending(true);
-    const code = genOtp();
-    sentCode.current = { code, at: Date.now() };
-    await sendOtpEmail(user.email, code);
-    setResending(false);
-    setNotice({ ok: true, msg: 'Kode verifikasi baru sudah dikirim ke email.' });
-  };
-
-  const activate = () => {
-    const s = sentCode.current;
-    if (!s) return;
-    if (Date.now() - s.at > 10 * 60 * 1000) { setNotice({ ok: false, msg: 'Kode kedaluwarsa. Tekan kirim ulang kode.' }); return; }
-    if (codeInput.trim() !== s.code) { setNotice({ ok: false, msg: 'Kode tidak valid. Coba lagi atau kirim ulang.' }); return; }
-    if (!pendingOrder) return;
-
-    // Potong saldo + simpan ke riwayat
+  const finishOrder = useCallback(() => {
+    if (finishedRef.current || !pendingOrder) return;
+    finishedRef.current = true;
     topUp(-pendingOrder.total);
     const dueStr = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(pendingOrder.due);
     addOrder({
       serviceName: `${pendingOrder.name} · Jatuh tempo ${dueStr}`,
-      orderId: 'AI-' + String(Math.floor(100000 + Math.random() * 900000)),
+      orderId: orderIdRef.current || 'AI-' + String(Math.floor(100000 + Math.random() * 900000)),
       quantity: months,
       price: pendingOrder.total,
       createdAt: Date.now(),
       status: 'selesai',
     });
     setPhase('done');
+  }, [pendingOrder, months, topUp, addOrder]);
+
+  const runProcessing = async () => {
+    if (!tier) return;
+    if (!user) { setNotice({ ok: false, msg: 'Silakan login dulu untuk memesan.' }); return; }
+    if (!namaAi.trim() || !nomor.trim()) { setNotice({ ok: false, msg: 'Nama AI & nomor pemilik wajib diisi.' }); return; }
+    if (!ewallet.trim() || !toko.trim()) { setNotice({ ok: false, msg: 'Alamat e-wallet & nama toko wajib diisi (fitur Store).' }); return; }
+    if (user.balance < total) { setNotice({ ok: false, msg: `Saldo tidak cukup. Butuh ${formatRupiah(total)}.` }); return; }
+    if (!isValidEmail(user.email || '')) { setNotice({ ok: false, msg: 'Email akun tidak valid untuk kirim kode pairing.' }); return; }
+
+    setNotice(null);
+    finishedRef.current = false;
+    setPhase('processing');
+    setStepIdx(0);
+    for (let i = 0; i < PROCESS_STEPS.length; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, 850));
+      setStepIdx(i + 1);
+    }
+    // Panggil VPS (via PHP proxy -> tunnel): spawn bot + kirim kode pairing ke email
+    const orderId = 'AI' + Date.now();
+    orderIdRef.current = orderId;
+    const due = Date.now() + months * 30 * 24 * 3600 * 1000;
+    setPendingOrder({ name: `Agen AI ${platformName()} ${tier.name}`, total, due });
+    const res = await createAgent({
+      orderId,
+      phone: nomor.replace(/\D/g, ''),
+      email: user.email,
+      nama: namaAi.trim(),
+      paket: `${platformName()} ${tier.name}`,
+    });
+    if (!res?.ok) {
+      setNotice({ ok: false, msg: res?.message || 'Gagal memulai agen di server. Coba lagi.' });
+      setPhase('form');
+      return;
+    }
+    setWaStatus(res.status || 'pairing');
+    setPhase('pairing');
+  };
+
+  // Polling status agen saat fase pairing -> kalau WA sudah tertaut, selesaikan pesanan.
+  useEffect(() => {
+    if (phase !== 'pairing' || !orderIdRef.current) return;
+    const t = window.setInterval(async () => {
+      const r = await getAgentStatus(orderIdRef.current);
+      if (r.ok && r.status) {
+        setWaStatus(r.status);
+        if (r.status === 'linked') { window.clearInterval(t); finishOrder(); }
+      }
+    }, 4000);
+    return () => window.clearInterval(t);
+  }, [phase, finishOrder]);
+
+  const resendCode = async () => {
+    if (!orderIdRef.current) return;
+    setResending(true);
+    const r = await resendAgentCode(orderIdRef.current);
+    setResending(false);
+    setNotice(r?.ok ? { ok: true, msg: 'Kode pairing baru sudah dikirim ke email.' } : { ok: false, msg: r?.message || 'Gagal kirim ulang kode.' });
   };
 
   return (
@@ -305,14 +325,14 @@ export default function SewaAgenAiPage() {
           <ProcessingCard steps={PROCESS_STEPS} active={stepIdx} />
         )}
 
-        {phase === 'verify' && (
-          <VerifyCard
+        {phase === 'pairing' && (
+          <PairingCard
             email={user?.email || ''}
-            code={codeInput}
-            setCode={setCodeInput}
-            onActivate={activate}
+            phone={nomor}
+            status={waStatus}
             onResend={resendCode}
             resending={resending}
+            onConfirm={finishOrder}
             notice={notice}
           />
         )}
@@ -472,28 +492,40 @@ function ProcessingCard({ steps, active }: { steps: string[]; active: number }) 
   );
 }
 
-function VerifyCard(props: {
-  email: string; code: string; setCode: (v: string) => void;
-  onActivate: () => void; onResend: () => void; resending: boolean;
+function PairingCard(props: {
+  email: string; phone: string;
+  status: 'starting' | 'pairing' | 'linked' | 'closed';
+  onResend: () => void; resending: boolean; onConfirm: () => void;
   notice: { ok: boolean; msg: string } | null;
 }) {
+  const waiting = props.status !== 'linked';
   return (
     <Reveal>
       <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-[0_18px_44px_-26px_rgba(15,23,42,0.4)] dark:border-slate-700 dark:bg-slate-900">
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-          <Mail className="h-6 w-6" strokeWidth={2.2} />
+          <Smartphone className="h-6 w-6" strokeWidth={2.2} />
         </span>
-        <h3 className="mt-3 font-display text-[17px] font-extrabold text-slate-900 dark:text-white">Kode verifikasi telah dikirim</h3>
-        <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Cek email <b className="text-slate-700 dark:text-slate-200">{props.email}</b> lalu masukkan kodenya untuk mengaktifkan Agen AI.</p>
-        <input value={props.code} onChange={(e) => props.setCode(e.target.value)} placeholder="Masukkan kode" inputMode="numeric" className="mt-4 h-12 w-full rounded-xl border border-slate-200 bg-white text-center font-mono text-[18px] tracking-[0.3em] text-slate-900 outline-none focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+        <h3 className="mt-3 font-display text-[17px] font-extrabold text-slate-900 dark:text-white">Kode pairing dikirim ke email</h3>
+        <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
+          Cek email <b className="text-slate-700 dark:text-slate-200">{props.email}</b>, lalu tautkan WhatsApp nomor <b className="text-slate-700 dark:text-slate-200">{props.phone}</b>.
+        </p>
+        <ol className="mx-auto mt-4 max-w-xs space-y-1.5 text-left text-[12.5px] text-slate-600 dark:text-slate-300">
+          <li>1. Buka <b>WhatsApp</b> di HP kamu</li>
+          <li>2. Menu <b>Perangkat tertaut → Tautkan perangkat</b></li>
+          <li>3. Pilih <b>Tautkan dengan nomor telepon</b></li>
+          <li>4. Masukkan <b>kode pairing</b> dari email</li>
+        </ol>
+
+        <div className={`mt-5 flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-[12.5px] font-bold ${waiting ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700/50 dark:bg-emerald-950/40 dark:text-emerald-300'}`}>
+          {waiting ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Menunggu WhatsApp tertaut…</> : <><CheckCircle2 className="h-4 w-4" /> WhatsApp tertaut!</>}
+        </div>
+
         {props.notice && (
           <p className={`mt-3 text-[12px] font-semibold ${props.notice.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{props.notice.msg}</p>
         )}
-        <button onClick={props.onActivate} className="mt-4 h-12 w-full rounded-xl bg-emerald-600 text-[14px] font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 active:scale-[0.99]">
-          Aktivasi
-        </button>
-        <button onClick={props.onResend} disabled={props.resending} className="mt-3 text-[12.5px] font-bold text-emerald-600 hover:underline disabled:opacity-60 dark:text-emerald-400">
-          {props.resending ? 'Mengirim…' : 'Kirim ulang kode'}
+
+        <button onClick={props.onResend} disabled={props.resending} className="mt-4 h-11 w-full rounded-xl border border-emerald-300 text-[13px] font-bold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
+          {props.resending ? 'Mengirim…' : 'Kirim ulang kode pairing'}
         </button>
       </div>
     </Reveal>
