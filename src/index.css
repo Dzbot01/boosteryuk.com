@@ -368,6 +368,39 @@ body {
   .text-silver-shine { animation: none; }
 }
 
+/* ---------- Sewa Agen AI: neon beam diamond + swipe ---------- */
+@keyframes beam-draw {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+.beam-seg {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  stroke-linecap: round;
+}
+.beam-run .beam-seg {
+  animation: beam-draw 0.62s ease-in-out forwards;
+  filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 9px currentColor);
+}
+.beam-run .beam-seg-1 { animation-delay: 0s; }
+.beam-run .beam-seg-2 { animation-delay: 0.62s; }
+.beam-run .beam-seg-3 { animation-delay: 1.24s; }
+.beam-run .beam-seg-4 { animation-delay: 1.86s; }
+
+/* horizontal swipe tanpa tombol (scroll-snap, scrollbar disembunyikan) */
+.swipe-row {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-padding: 0 1rem;
+}
+.swipe-row::-webkit-scrollbar { display: none; }
+.swipe-item { scroll-snap-align: center; flex: 0 0 auto; }
+
 /* ---------- auth flip card (neo-brutalist login/register) ---------- */
 .authflip-wrapper {
   --authflip-focus: #2d8cf0;
