@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
 import {
-  ArrowLeft,
   ArrowDownLeft,
   ArrowUpRight,
   Wallet,
@@ -206,13 +205,6 @@ export default function PaymentPage() {
   return (
     <div className="page-align-left mx-auto max-w-2xl px-4 py-10 sm:px-6">
       <div className="flex items-center justify-between gap-3">
-        <button
-          onClick={() => navigate('/profil')}
-          className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13.5px] font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
-        >
-          <ArrowLeft className="h-4 w-4" strokeWidth={2.4} />
-          Kembali
-        </button>
 
         <button
           onClick={() => setShowInfo(true)}

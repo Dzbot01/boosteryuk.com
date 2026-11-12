@@ -28,6 +28,8 @@ export interface SiteSettings {
   overviewTitle: string;
   overviewSubtitle: string;
   overviewMessage: string;
+  /** Favicon tab browser (URL atau data URL). Default: /favicon.png */
+  faviconUrl: string;
 }
 
 interface SiteCtx {
@@ -38,47 +40,48 @@ interface SiteCtx {
   setLogoFile: (file: File | null) => void;
   resetMusic: () => void;
   resetLogo: () => void;
+  setFaviconFile: (file: File | null) => void;
+  resetFavicon: () => void;
 }
 
 const STORAGE_KEY = 'boosteryuk-site-settings';
+const DEFAULT_FAVICON = '/favicon.png';
 
 const DEFAULT_INFO: InfoItem[] = [
   {
     id: 0,
-    tag: 'Fitur',
-    title: 'Halaman Layanan resmi dirilis',
-    desc: 'Kini Anda bisa melihat katalog booster per platform — TikTok, Instagram, YouTube, Shopee, dan lainnya — lengkap dengan harga, min/max, serta filter kategori.',
-    time: 'Baru saja',
+    tag: 'Pengumuman',
+    title: 'Deposit QRIS Sudah Normal',
+    desc: 'Deposit metode QRIS sudah normal, bisa dari mana saja untuk melakukan pembayaran (termasuk DANA, GoPay, OVO, dll).\n\nButuh bantuan? Hubungi admin Boosteryuk lewat menu Contact Support.',
+    time: '26 September 2026 01:27',
   },
   {
     id: 1,
-    tag: 'Update',
-    title: 'Update website v1.2',
-    desc: 'Tampilan Payment, Struk Digital, dan halaman Hubungi Admin telah diperbarui agar lebih cepat di perangkat mobile.',
-    time: 'Hari ini · 09:20',
+    tag: 'Pengumuman',
+    title: 'Informasi Penting: Instagram Followers Saat Ini',
+    desc: 'Saat ini gunakanlah layanan Instagram Followers Indonesia, jangan Instagram Followers Luar, karena ada update dari pihak platform Instagram itu sendiri yang berefek ke Instagram Followers Luar.\n\nJadi sebelum kami informasikan ada yang lancar Instagram Followers Luar (Bule), harap gunakan Instagram Followers Indonesia terlebih dahulu karena masih sangat lancar.\n\nPercayalah, hal ini terjadi bukan hanya di Boosteryuk saja. Terima kasih atas pengertiannya 🙏',
+    time: '03 September 2026 01:34',
   },
   {
     id: 2,
-    tag: 'Garansi',
-    title: 'Garansi Refill 30 Hari',
-    desc: 'Layanan berlabel Refill dilindungi garansi isi ulang selama 30 hari penuh tanpa biaya tambahan. Ajukan refill jika jumlah berkurang.',
-    time: 'Garansi',
-    image:
-      'https://cdn.phototourl.com/member/2026-08-30-a53810bf-485c-4844-8b4b-1f44b32f18ac.jpg',
+    tag: 'Pengumuman',
+    title: 'Info Penting !!',
+    desc: 'Ada update dari pihak platform Instagram di luar kendali kami, sehingga beberapa hari ini layanan Instagram Followers sangat lambat. Kami akan segera menginformasikan layanan terbaru yang lancar dan menonaktifkan layanan yang tidak berjalan.\n\nSebelum layanan baru dikeluarkan, gunakan layanan Instagram Followers Indonesia terlebih dahulu.',
+    time: '02 September 2026 19:12',
   },
   {
     id: 3,
-    tag: 'Layanan',
-    title: 'Layanan TikTok Views kembali normal',
-    desc: 'Antrian views TikTok sudah stabil. Pesanan baru diproses sesuai kecepatan paket yang dipilih.',
-    time: '2 hari lalu',
+    tag: 'Pengumuman',
+    title: 'Informasi',
+    desc: 'Beberapa layanan TikTok Likes kami nonaktifkan karena efek update dari pihak platform TikTok secara global, sehingga ada perlambatan di TikTok Likes.\n\nKami melarang keras user yang menggunakan layanan Boosteryuk untuk aktivitas merugikan seperti judol dll. Jika ketahuan, kami berhak suspensi akun Boosteryuk Anda tanpa refund dan tidak ada pengembalian sisa saldo.',
+    time: '08 Juni 2026 22:52',
   },
   {
     id: 4,
-    tag: 'Maintenance',
-    title: 'Pemeliharaan server terjadwal',
-    desc: 'Sistem akan maintenance singkat pada pukul 02.00–03.00 WIB. Cek status pesanan tetap bisa dilakukan setelahnya.',
-    time: '3 hari lalu',
+    tag: 'Info',
+    title: 'Informasi',
+    desc: 'Pantau terus halaman Overview ini agar tidak ketinggalan informasi terbaru seputar layanan Boosteryuk.',
+    time: '14 Mei 2026 08:54',
   },
 ];
 
@@ -93,6 +96,7 @@ const DEFAULTS: SiteSettings = {
   overviewSubtitle: 'Panel SMM, VPS, dan Agen AI dalam satu tempat',
   overviewMessage:
     'Pantau semua pesanan boostermu, kelola VPS, dan jalankan Agen AI WhatsApp dari satu dashboard. Butuh bantuan? Hubungi admin lewat menu Contact Support kapan saja — kami standby 24/7.',
+  faviconUrl: DEFAULT_FAVICON,
 };
 
 function load(): SiteSettings {
@@ -113,6 +117,8 @@ const SiteContext = createContext<SiteCtx>({
   setLogoFile: () => {},
   resetMusic: () => {},
   resetLogo: () => {},
+  setFaviconFile: () => {},
+  resetFavicon: () => {},
 });
 
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
@@ -132,6 +138,20 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [settings]);
 
+  // Terapkan favicon ke <link rel="icon"> secara langsung.
+  useEffect(() => {
+    const href = settings.faviconUrl || DEFAULT_FAVICON;
+    let link = document.getElementById('app-favicon') as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'app-favicon';
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.type = href.startsWith('data:image/svg') || href.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+    link.href = href;
+  }, [settings.faviconUrl]);
+
   const updateSettings = (patch: Partial<SiteSettings>) =>
     setSettings((s) => ({ ...s, ...patch }));
 
@@ -150,6 +170,24 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     setSettings((s) => ({ ...s, logoUrl: url }));
   };
 
+  // Favicon disimpan sebagai data URL agar tetap ada setelah reload (maks ~300 KB).
+  const setFaviconFile = (file: File | null) => {
+    if (!file) return;
+    if (file.size > 300 * 1024) {
+      alert('Ukuran favicon maksimal 300 KB. Gunakan PNG persegi transparan (mis. 192x192).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        const url = reader.result;
+        setSettings((s) => ({ ...s, faviconUrl: url }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  const resetFavicon = () => setSettings((s) => ({ ...s, faviconUrl: DEFAULT_FAVICON }));
+
   const resetMusic = () => setSettings((s) => ({ ...s, musicUrl: __MUSIC_URL__ }));
   const resetLogo = () => setSettings((s) => ({ ...s, logoUrl: DEFAULT_LOGO }));
 
@@ -163,6 +201,8 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         setLogoFile,
         resetMusic,
         resetLogo,
+        setFaviconFile,
+        resetFavicon,
       }}
     >
       {children}

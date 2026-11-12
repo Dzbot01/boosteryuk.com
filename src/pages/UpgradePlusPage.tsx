@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'; // <-- tambah useEffect
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Sparkles,
   Zap,
   DollarSign,
@@ -75,15 +74,6 @@ export default function UpgradePlusPage() {
   return (
     <div className="page-align-left mx-auto max-w-lg px-4 pb-32 pt-8 sm:px-6">
       {success && <LogoRain />}
-      <Reveal>
-        <button
-          onClick={() => navigate('/plus')}
-          className="mb-6 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13.5px] font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
-        >
-          <ArrowLeft className="h-4 w-4" strokeWidth={2.4} />
-          Kembali
-        </button>
-      </Reveal>
 
       {user.plusActive && (
         <Reveal delay={30}>

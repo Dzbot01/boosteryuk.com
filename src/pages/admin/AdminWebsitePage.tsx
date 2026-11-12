@@ -35,6 +35,8 @@ export default function AdminWebsitePage() {
     setLogoFile,
     resetMusic,
     resetLogo,
+    setFaviconFile,
+    resetFavicon,
   } = useSiteSettings();
 
   const [brandName, setBrandName] = useState(settings.brandName);
@@ -48,6 +50,7 @@ export default function AdminWebsitePage() {
   const [musicName, setMusicName] = useState('');
 
   const logoInput = useRef<HTMLInputElement>(null);
+  const faviconInput = useRef<HTMLInputElement>(null);
   const musicInput = useRef<HTMLInputElement>(null);
   const infoImageInput = useRef<HTMLInputElement>(null);
   const [uploadTargetId, setUploadTargetId] = useState<number | null>(null);
@@ -159,6 +162,50 @@ export default function AdminWebsitePage() {
                 const f = e.target.files?.[0];
                 if (f) {
                   setLogoFile(f);
+                  flash();
+                }
+              }}
+            />
+          </div>
+        </Card>
+      </Reveal>
+
+      {/* Favicon */}
+      <Reveal delay={75}>
+        <Card title="Favicon (ikon tab browser)" icon={ImageIcon}>
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-[conic-gradient(#e5e7eb_25%,#fff_0_50%,#e5e7eb_0_75%,#fff_0)] bg-[length:12px_12px] dark:border-slate-700">
+              <img src={settings.faviconUrl} alt="Favicon" className="h-11 w-11 object-contain" />
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => faviconInput.current?.click()}
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-[12.5px] font-bold text-white shadow-sm transition-all hover:bg-cyan-700 active:scale-95"
+              >
+                <Upload className="h-3.5 w-3.5" strokeWidth={2.4} />
+                Upload Favicon
+              </button>
+              <button
+                onClick={() => {
+                  resetFavicon();
+                  flash();
+                }}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12.5px] font-bold text-slate-600 transition-all hover:bg-slate-50 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.4} />
+                Default
+              </button>
+            </div>
+            <p className="w-full text-[11.5px] text-slate-400">PNG persegi berlatar transparan, mis. 192×192, maks 300 KB.</p>
+            <input
+              ref={faviconInput}
+              type="file"
+              accept="image/png,image/svg+xml,image/x-icon,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  setFaviconFile(f);
                   flash();
                 }
               }}
@@ -298,7 +345,7 @@ export default function AdminWebsitePage() {
 
       {/* Papan Informasi */}
       <Reveal delay={150}>
-        <Card title="Papan Informasi" icon={Megaphone}>
+        <Card title="Berita (Halaman Overview)" icon={Megaphone}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[12.5px] leading-relaxed text-slate-500 dark:text-slate-400">
               Semua konten modal informasi floating pada POV user dapat diedit di sini, termasuk

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronDown, Layers, Server, Sparkles, Tag } from 'lucide-react';
+import { ChevronDown, Layers, Server, Sparkles, Tag } from 'lucide-react';
 import { SERVICE_SLIDES } from '../constants';
 import DragScroller from '../components/DragScroller';
 import OrderDetailSheet, { type OrderDetail } from '../components/OrderDetailSheet';
@@ -225,12 +225,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#f0f9ff,_#ffffff_42%,_#f8fafc_100%)] pb-40 text-slate-900">
       <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
-        <Reveal>
-          <button className="mb-6 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13.5px] font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
-            <ArrowLeft className="h-4 w-4" strokeWidth={2.4} />
-            Kembali
-          </button>
-        </Reveal>
 
         <Reveal delay={30}>
           <div className="mb-6">

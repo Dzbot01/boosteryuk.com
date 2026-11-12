@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, X, LoaderCircle, CheckCircle2, AlertCircle, Smartphone, Bot } from 'lucide-react';
+import { Check, X, LoaderCircle, CheckCircle2, AlertCircle, Smartphone, Bot } from 'lucide-react';
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
 import AiAssistantCard from '../components/AiAssistantCard';
@@ -221,11 +221,6 @@ export default function SewaAgenAiPage() {
     <div className="mx-auto max-w-5xl px-4 pb-32 pt-8 sm:px-6">
       <Seo title="Sewa Agen AI" description="Sewa Agen AI WhatsApp, Telegram, Facebook & Discord dari Boosteryuk. Pilih paket, atur fitur, langsung aktif." noindex />
 
-      <Reveal>
-        <button onClick={() => navigate(-1)} className="mb-6 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13.5px] font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
-          <ArrowLeft className="h-4 w-4" strokeWidth={2.4} /> Kembali
-        </button>
-      </Reveal>
 
       {/* Slider (sama seperti halaman Buat Pesanan) */}
       <Reveal delay={40}>

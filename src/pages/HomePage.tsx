@@ -62,7 +62,7 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#0e0f12]/85 via-[#0e0f12]/40 to-transparent" />
           <div className="absolute inset-0 bg-[radial-gradient(55%_45%_at_50%_-8%,rgba(255,255,255,0.05),transparent_70%)]" />
           {/* lebur ke body */}
-          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-white dark:to-[#0a0a0b]" />
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-[#eef1f5] dark:to-[#0a0a0b]" />
         </div>
 
         <div className="mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:pb-24 lg:pt-32">

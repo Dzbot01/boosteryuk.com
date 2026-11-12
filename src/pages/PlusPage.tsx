@@ -1,6 +1,6 @@
 import Seo from '../components/Seo';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Zap, DollarSign, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Zap, DollarSign, CheckCircle2 } from 'lucide-react';
 import Reveal from '../components/Reveal';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,15 +13,6 @@ export default function PlusPage() {
   return (
     <div className="page-align-left mx-auto max-w-3xl px-4 pb-32 pt-8 sm:px-6">
       <Seo title="Boosteryuk Plus" description="Upgrade ke Boosteryuk Plus untuk harga lebih murah, prioritas pesanan, dan benefit premium lainnya." />
-      <Reveal>
-        <button
-          onClick={() => navigate(-1)}
-          className="mb-6 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13.5px] font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
-        >
-          <ArrowLeft className="h-4 w-4" strokeWidth={2.4} />
-          Kembali
-        </button>
-      </Reveal>
 
       {user?.plusActive && (
         <Reveal delay={35}>

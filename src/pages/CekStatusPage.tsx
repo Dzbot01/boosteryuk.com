@@ -1,12 +1,11 @@
 import Seo from '../components/Seo';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import {
   Search,
   Clock,
   ShieldCheck,
   ArrowRight,
-  ArrowLeft,
   Hash,
   Layers,
 } from 'lucide-react';
@@ -23,7 +22,6 @@ import {
 } from '../services/orderApi';
 
 export default function CekStatusPage() {
-  const navigate = useNavigate();
 
   const [orderId, setOrderId] = useState('');
   const [orders, setOrders] = useState<OrderData[]>([]);
@@ -129,15 +127,6 @@ export default function CekStatusPage() {
   return (
     <main className="page-align-left mx-auto max-w-4xl px-4 pb-32 pt-8 sm:px-6">
       <Seo title="Cek Status Pesanan" description="Cek status pesanan Boosteryuk dengan mudah dan cepat. Masukkan ID pesanan untuk melacak progres layanan SMM kamu." />
-      <Reveal>
-        <button
-          onClick={() => navigate(-1)}
-          className="mb-6 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13.5px] font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
-        >
-          <ArrowLeft className="h-4 w-4" strokeWidth={2.4} />
-          Kembali
-        </button>
-      </Reveal>
 
       {/* ================= SEARCH ================= */}
       <Reveal delay={30}>

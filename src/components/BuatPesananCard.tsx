@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   Tag,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useOrderHistory } from '../context/OrderHistoryContext';
 import AiAssistantCard from './AiAssistantCard';
@@ -62,57 +63,75 @@ const COLOR = {
 
 interface Option { value: string; label: string }
 
+/** Ubah HTML deskripsi jadi teks polos TANPA menghilangkan baris baru. */
 function stripHtml(value: string): string {
   if (!value) return '';
-  const doc = new DOMParser().parseFromString(value, 'text/html');
-  return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+  const html = value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ');
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return (doc.body.textContent || '')
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((l) => l.replace(/[ \t\u00a0]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 interface ParsedDesc {
-  deskripsi: string;
+  deskripsi: string[];
   catatan: string[];
   waktu: string | null;
 }
 
+const BULLET_RE = /^\s*(?:[•·▪●◦➤►\-*]|\d+[.)])\s+/;
+
+/** Pecah teks berisi bullet (•, -, *, 1.) menjadi butir-butir terpisah. */
+function splitBullets(text: string): string[] {
+  return text
+    .replace(/\s*[•·▪●◦➤►]\s*/g, '\n• ') // bullet inline -> baris baru
+    .split('\n')
+    .map((l) => l.replace(BULLET_RE, '').trim())
+    .filter(Boolean);
+}
+
+/** Pisahkan Deskripsi dan Catatan (format: "Catatan :" lalu daftar bullet). */
 function parseDescription(value: string): ParsedDesc {
-  const clean = stripHtml(value);
-  if (!clean) return { deskripsi: '', catatan: [], waktu: null };
+  let text = stripHtml(value);
+  if (!text) return { deskripsi: [], catatan: [], waktu: null };
 
-  let text = clean;
   let waktu: string | null = null;
-
-  // Extract Waktu Rata-Rata if present
-  const waktuMatch = text.match(/\b(?:Waktu\s*Rata-Rata|Waktu\s*Rata\s*Rata|Average\s*Time)\s*:\s*([\s\S]*?)$/i);
-  if (waktuMatch) {
-    waktu = waktuMatch[1].trim();
-    text = text.substring(0, waktuMatch.index).trim();
+  const waktuMatch = text.match(/(?:^|\n|\s)(?:Waktu\s*Rata[-\s]*Rata|Average\s*Time)\s*:\s*([^\n]*)/i);
+  if (waktuMatch && waktuMatch.index !== undefined) {
+    waktu = waktuMatch[1].trim() || null;
+    text = (text.slice(0, waktuMatch.index) + text.slice(waktuMatch.index + waktuMatch[0].length)).trim();
   }
 
-  // Look for "Catatan :" or "Catatan:"
-  const catatanMatch = text.match(/\bCatatan\s*:\s*([\s\S]*)$/i);
-  if (catatanMatch) {
-    let beforeCatatan = text.substring(0, catatanMatch.index).trim();
-    beforeCatatan = beforeCatatan.replace(/^Deskripsi\s*:\s*/i, '').trim();
-
-    const catatanBody = catatanMatch[1].trim();
-    const items = catatanBody
-      .split(/(?:^|\n)\s*[•\-*]\s*|\s*•\s*/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    return {
-      deskripsi: beforeCatatan,
-      catatan: items.length > 0 ? items : [catatanBody],
-      waktu,
-    };
+  let descPart = text;
+  let notePart = '';
+  const noteMatch = text.match(/(?:^|\n|\s)(?:Catatan|Notes?|Keterangan)\s*:/i);
+  if (noteMatch && noteMatch.index !== undefined) {
+    descPart = text.slice(0, noteMatch.index);
+    notePart = text.slice(noteMatch.index + noteMatch[0].length);
+  } else {
+    // Tanpa label "Catatan": anggap butir bullet sebagai catatan.
+    const firstBullet = text.search(/(?:^|\n)\s*[•·▪●◦➤►]|\s[•·▪●◦➤►]\s/);
+    if (firstBullet > 0) {
+      descPart = text.slice(0, firstBullet);
+      notePart = text.slice(firstBullet);
+    }
   }
 
-  const cleanDeskripsi = text.replace(/^Deskripsi\s*:\s*/i, '').trim();
-  return {
-    deskripsi: cleanDeskripsi,
-    catatan: [],
-    waktu,
-  };
+  descPart = descPart.replace(/^\s*Deskripsi\s*:\s*/i, '').trim();
+  const deskripsi = descPart
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const catatan = notePart ? splitBullets(notePart) : [];
+
+  return { deskripsi, catatan, waktu };
 }
 
 /** Estimasi waktu rata-rata yang DINAMIS per layanan (stabil per service, < 1 jam).
@@ -301,12 +320,22 @@ export default function BuatPesananCard() {
   const [ordering, setOrdering] = useState(false);
   const [orderNotice, setOrderNotice] = useState<{ ok: boolean; message: string } | null>(null);
   const [successInfo, setSuccessInfo] = useState<SuccessInfo | null>(null);
+  const [searchParams] = useSearchParams();
+  const preselectId = searchParams.get('service') || '';
 
   useEffect(() => {
     let alive = true;
     fetchServices().then((result) => {
       if (!alive) return;
-      if (result.ok) setServices(result.services);
+      if (result.ok) {
+        setServices(result.services);
+        // Pilih otomatis layanan dari ?service=ID (mis. dari tombol keranjang di Overview)
+        const pre = preselectId ? result.services.find((x) => x.id === preselectId) : undefined;
+        if (pre) {
+          setCategory(pre.category.trim());
+          setServiceId(pre.id);
+        }
+      }
       setLoading(false);
     });
     return () => { alive = false; };
@@ -710,33 +739,29 @@ if(!tokenFromStorage) {
 
               <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
 
-              <p className="font-bold text-[12.5px] text-slate-900 dark:text-white">Deskripsi:</p>
-              {description?.deskripsi ? (
+              <p className="font-bold text-[12.5px] text-slate-900 dark:text-white">Deskripsi :</p>
+              {description && description.deskripsi.length > 0 ? (
                 <div className="mt-1 space-y-1 text-slate-600 dark:text-slate-300">
-                  {description.deskripsi.split(/(?=- )|\n/).map((line, idx) => {
-                    const l = line.trim();
-                    if (!l) return null;
-                    return <p key={idx}>{l}</p>;
-                  })}
+                  {description.deskripsi.map((line, idx) => (
+                    <p key={idx}>{line}</p>
+                  ))}
                 </div>
               ) : (
                 <p className="mt-1 text-slate-500 dark:text-slate-400">-</p>
               )}
 
-              {description?.catatan && description.catatan.length > 0 && (
-                <>
-                  {/* Enter spacing before Catatan */}
-                  <div className="h-3" />
-                  <p className="font-bold text-[12.5px] text-slate-900 dark:text-white">Catatan :</p>
-                  <ul className="mt-1.5 space-y-1.5 text-slate-600 dark:text-slate-300">
+              {description && description.catatan.length > 0 && (
+                <div className="mt-4 text-slate-600 dark:text-slate-300">
+                  <p className="text-[12.5px] text-slate-700 dark:text-slate-200">Catatan :</p>
+                  <ul className="mt-0.5 space-y-0.5">
                     {description.catatan.map((item, index) => (
-                      <li key={index} className="flex items-start gap-1.5">
-                        <span className="shrink-0 font-bold">•</span>
+                      <li key={index} className="flex items-start gap-1.5 leading-relaxed">
+                        <span className="shrink-0">•</span>
                         <span>{item}</span>
                       </li>
                     ))}
                   </ul>
-                </>
+                </div>
               )}
 
               <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
