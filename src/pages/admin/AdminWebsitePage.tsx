@@ -25,6 +25,14 @@ import {
 import Reveal from '../../components/Reveal';
 import { useSiteSettings, type InfoItem } from '../../context/SiteSettingsContext';
 
+const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+/** Waktu upload berita otomatis dari new Date(), mis. "12 November 2026 14:05". */
+function nowStamp(d: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())} ${BULAN[d.getMonth()]} ${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 export default function AdminWebsitePage() {
   const navigate = useNavigate();
   const {
@@ -75,7 +83,12 @@ export default function AdminWebsitePage() {
   };
 
   const saveInfo = () => {
-    setInfoItems(infoItems);
+    // Berita lama yang masih "Baru saja"/kosong diberi stempel waktu sekarang.
+    const stamped = infoItems.map((it) =>
+      !it.time || it.time.trim().toLowerCase() === 'baru saja' ? { ...it, time: nowStamp() } : it,
+    );
+    setLocalInfo(stamped);
+    setInfoItems(stamped);
     flash();
   };
 
@@ -86,7 +99,7 @@ export default function AdminWebsitePage() {
         tag: 'Update',
         title: 'Judul baru',
         desc: 'Isi deskripsi informasi di sini.',
-        time: 'Baru saja',
+        time: nowStamp(), // otomatis: waktu upload berita
       },
       ...items,
     ]);
@@ -388,12 +401,23 @@ export default function AdminWebsitePage() {
                     className="admin-input !pl-3 text-[12px] font-bold"
                     placeholder="Tag"
                   />
-                  <input
-                    value={item.time}
-                    onChange={(e) => updateInfo(item.id, { time: e.target.value })}
-                    className="admin-input !pl-3 text-[12px]"
-                    placeholder="Waktu"
-                  />
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="flex h-[42px] flex-1 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-[12px] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
+                      title="Waktu upload diisi otomatis"
+                    >
+                      <Clock3 className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+                      {item.time && item.time.toLowerCase() !== 'baru saja' ? item.time : 'Otomatis saat disimpan'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updateInfo(item.id, { time: nowStamp() })}
+                      className="h-[42px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-[11.5px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                      title="Ganti ke waktu sekarang"
+                    >
+                      Sekarang
+                    </button>
+                  </div>
                 </div>
                 <input
                   value={item.title}

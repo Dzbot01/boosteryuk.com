@@ -6,9 +6,8 @@ import Reveal from '../components/Reveal';
 import AiAssistantCard from '../components/AiAssistantCard';
 import { SERVICE_SLIDES, socialIconUrl } from '../constants';
 import { useAuth } from '../context/AuthContext';
-import { useOrderHistory } from '../context/OrderHistoryContext';
 import { isValidEmail } from '../services/otp';
-import { createAgent, resendAgentCode, getAgentStatus } from '../services/agentApi';
+import { orderAgent, resendAgentCode, getAgentStatus } from '../services/agentApi';
 
 const SLIDE_INTERVAL = 4500;
 
@@ -72,8 +71,7 @@ type Phase = 'select' | 'beam' | 'packages' | 'form' | 'processing' | 'pairing' 
 
 export default function SewaAgenAiPage() {
   const navigate = useNavigate();
-  const { user, topUp } = useAuth();
-  const { addOrder } = useOrderHistory();
+  const { user, topUp, refresh } = useAuth();
 
   // slider
   const [index, setIndex] = useState(0);
@@ -120,7 +118,7 @@ export default function SewaAgenAiPage() {
     window.setTimeout(() => setPhase('packages'), 2600);
   };
 
-  const months = Math.max(1, Number(durasi) || 1);
+  const months = Math.min(12, Math.max(1, Number(durasi) || 1)); // sama dgn batas server (1–12)
   const tier = tierIdx != null ? WA_TIERS[tierIdx] : null;
   const total = tier ? tier.price * months : 0;
 
@@ -160,34 +158,31 @@ export default function SewaAgenAiPage() {
       await new Promise((r) => setTimeout(r, 850));
       setStepIdx(i + 1);
     }
-    // Panggil VPS (via PHP proxy -> tunnel): spawn bot + kirim kode pairing ke email
-    const orderId = 'AI' + Date.now();
-    orderIdRef.current = orderId;
-    const due = Date.now() + months * 30 * 24 * 3600 * 1000;
-    setPendingOrder({ name: `Agen AI ${platformName()} ${tier.name}`, total, due });
-    const res = await createAgent({
-      orderId,
+    // Pesan ke server: saldo dipotong DI DATABASE (agent_order.php, format seperti order.php),
+    // riwayat_pesanan tersimpan, lalu server meminta VPS menyiapkan agen + kirim kode pairing.
+    const res = await orderAgent({
+      tier: tier.id,
+      months,
       phone: nomor.replace(/\D/g, ''),
-      email: user.email,
       nama: namaAi.trim(),
-      paket: `${platformName()} ${tier.name}`,
+      platform: platform || 'whatsapp',
     });
-    if (!res?.ok) {
-      setNotice({ ok: false, msg: res?.message || 'Gagal memulai agen di server. Coba lagi.' });
+    if (!res.ok || !res.orderId) {
+      setNotice({ ok: false, msg: res.message || 'Gagal membuat pesanan. Coba lagi.' });
       setPhase('form');
+      // Jika server sempat memotong lalu mengembalikan saldo, sinkronkan tampilan saldo.
+      if (res.refunded) void refresh();
       return;
     }
-    // Potong saldo & simpan ke Riwayat Pesanan SAAT pesan dibuat (seperti order Layanan).
-    topUp(-total);
-    const dueStr = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(due);
-    addOrder({
-      serviceName: `Agen AI ${platformName()} ${tier.name} · Jatuh tempo ${dueStr}`,
-      orderId,
-      quantity: months,
-      price: total,
-      createdAt: Date.now(),
-      status: 'proses',
-    });
+    orderIdRef.current = res.orderId;
+    const due = Date.now() + months * 30 * 24 * 3600 * 1000;
+    setPendingOrder({ name: res.serviceName?.split(' - ')[0] || `Agen AI ${platformName()} ${tier.name}`, total: res.price ?? total, due });
+    // Saldo di UI disamakan dengan saldo TERBARU dari database (bukan sekadar dikurangi di UI).
+    if (typeof res.new_balance === 'number') {
+      void topUp(res.new_balance - user.balance); // topUp juga memanggil refresh() dari me.php
+    } else {
+      void refresh();
+    }
     setWaStatus(res.status || 'pairing');
     setWaPhone(nomor);
     setWaLog([]);
@@ -449,7 +444,7 @@ function OrderForm(props: {
           </L>
 
           <L label="Durasi Sewa (bulan)">
-            <input type="number" min={1} value={props.durasi} onChange={(e) => props.setDurasi(e.target.value)} className={inp} />
+            <input type="number" min={1} max={12} value={props.durasi} onChange={(e) => props.setDurasi(e.target.value)} className={inp} />
           </L>
 
           <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50/60 p-3.5 dark:bg-emerald-950/30">

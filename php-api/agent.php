@@ -8,9 +8,9 @@
  *   - atau file api/agent_config.php :  <?php return ['token'=>'...','origin'=>'https://wa-origin.boosteryuk.com'];
  *
  * Aksi (?action=):
- *   - create  POST {phone,email,nama?,paket?,orderId?} -> mulai sesi + kirim kode pairing ke email
- *   - resend  POST {orderId}                           -> kirim kode pairing baru
- *   - status  GET  ?id=<orderId>                       -> { status, hasCode }
+ *   - resend  POST {token, orderId}      -> kirim kode pairing baru (hanya pemilik order)
+ *   - status  GET  ?id=<orderId>&token=  -> { status, hasCode, phone, log } (hanya pemilik order)
+ *   (create dinonaktifkan — pemesanan + potong saldo lewat agent_order.php)
  */
 
 ob_start();
@@ -77,26 +77,39 @@ function vps($method, $pathUrl, $token, $json = null) {
 
 $action = $_GET['action'] ?? '';
 
+/**
+ * Pastikan order milik user yang login (token -> sessions -> riwayat_pesanan).
+ * Mencegah orang lain melihat log / mengirim ulang kode pairing order milik user lain.
+ */
+function require_owner($token, $orderId) {
+    if (!is_file(__DIR__ . '/configdb.php')) out(['ok' => false, 'message' => 'configdb.php tidak ditemukan.']);
+    require_once __DIR__ . '/configdb.php';
+    // configdb.php di-include dari dalam fungsi -> $conn masih lokal; jadikan global
+    // agar getUserIdByToken() (yang memakai `global $conn`) bisa memakainya.
+    if (isset($conn) && !isset($GLOBALS['conn'])) $GLOBALS['conn'] = $conn;
+    $conn = $GLOBALS['conn'] ?? null;
+    if (!$conn) out(['ok' => false, 'message' => 'Koneksi database tidak tersedia.']);
+    $token = trim((string)$token);
+    $uid = ($token !== '' && function_exists('getUserIdByToken')) ? getUserIdByToken($token) : null;
+    if (!$uid) out(['ok' => false, 'message' => 'Sesi tidak valid. Silakan login ulang.'], 401);
+    $st = $conn->prepare("SELECT id FROM riwayat_pesanan WHERE order_id = ? AND user_id = ? LIMIT 1");
+    $st->bind_param("si", $orderId, $uid);
+    $st->execute();
+    $row = $st->get_result()->fetch_assoc();
+    $st->close();
+    if (!$row) out(['ok' => false, 'message' => 'Order tidak ditemukan untuk akun ini.'], 403);
+}
+
 if ($action === 'create') {
-    $in = json_decode(file_get_contents('php://input'), true);
-    if (!is_array($in)) $in = [];
-    $phone = preg_replace('/\D/', '', $in['phone'] ?? '');
-    $email = trim($in['email'] ?? '');
-    if (!$phone || !$email) out(['ok' => false, 'message' => 'phone & email wajib.'], 400);
-    $payload = [
-        'orderId' => preg_replace('/[^a-zA-Z0-9_-]/', '', $in['orderId'] ?? ('AI' . time())),
-        'phone' => $phone, 'email' => $email,
-        'nama' => $in['nama'] ?? '', 'paket' => $in['paket'] ?? '',
-    ];
-    list($code, $body, $err) = vps('POST', "$ORIGIN/session", $TOKEN, $payload);
-    if ($code === 0) out(['ok' => false, 'message' => 'Tidak bisa menghubungi VPS: ' . $err]);
-    out(relay($code, $body));
+    // Dinonaktifkan: pembuatan agen WAJIB lewat agent_order.php (saldo dipotong di database dulu).
+    out(['ok' => false, 'message' => 'Gunakan agent_order.php untuk memesan Agen AI.'], 410);
 }
 
 if ($action === 'resend') {
     $in = json_decode(file_get_contents('php://input'), true);
     $orderId = preg_replace('/[^a-zA-Z0-9_-]/', '', $in['orderId'] ?? '');
     if (!$orderId) out(['ok' => false, 'message' => 'orderId wajib.'], 400);
+    require_owner($in['token'] ?? '', $orderId);
     list($code, $body, $err) = vps('POST', "$ORIGIN/session/$orderId/resend", $TOKEN, []);
     if ($code === 0) out(['ok' => false, 'message' => 'Tidak bisa menghubungi VPS: ' . $err]);
     out(relay($code, $body));
@@ -105,6 +118,7 @@ if ($action === 'resend') {
 if ($action === 'status') {
     $orderId = preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['id'] ?? '');
     if (!$orderId) out(['ok' => false, 'message' => 'id wajib.'], 400);
+    require_owner($_GET['token'] ?? '', $orderId);
     list($code, $body, $err) = vps('GET', "$ORIGIN/session/$orderId", $TOKEN);
     if ($code === 0) out(['ok' => false, 'message' => 'Tidak bisa menghubungi VPS: ' . $err]);
     out(relay($code, $body));

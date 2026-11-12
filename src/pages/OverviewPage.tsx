@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ThumbsUp, ChevronUp, ShoppingCart, Wallet, Newspaper } from 'lucide-react';
+import { ThumbsUp, ChevronUp, ShoppingCart, Wallet, Newspaper, Server, Bot } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
 import { useOrderHistory } from '../context/OrderHistoryContext';
@@ -17,6 +17,31 @@ const PLATFORMS: { key: string; test: RegExp }[] = [
   { key: 'instagram', test: /insta\s*gram/i },
 ];
 const PER_PLATFORM = 5;
+/** Sumber riwayat yang sama dengan halaman Riwayat Pesanan. */
+const RIWAYAT_API = 'https://cekidku.my.id/api/riwayat_pesanan.php';
+
+interface RiwayatRow {
+  order_id: string;
+  service_name: string;
+  quantity: number | string;
+  price: number | string;
+  status: 'pending' | 'proses' | 'selesai' | 'batal' | string;
+  created_at: number | string;
+}
+
+const BULAN_PENDEK: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, may: 4, jun: 5, jul: 6,
+  agu: 7, agt: 7, aug: 7, sep: 8, okt: 9, oct: 9, nov: 10, des: 11, dec: 11,
+};
+
+/** Ambil tanggal "Jatuh tempo 12 Des 2026" dari nama layanan (null bila tidak ada). */
+function dueDateOf(name: string): Date | null {
+  const m = name.match(/Jatuh\s*tempo\s+(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{4})/i);
+  if (!m) return null;
+  const mon = BULAN_PENDEK[m[2].slice(0, 3).toLowerCase()];
+  if (mon === undefined) return null;
+  return new Date(Number(m[3]), mon, Number(m[1]), 23, 59, 59);
+}
 const NEWS_INITIAL = 5;
 
 /** Ubah URL di teks berita jadi tautan yang bisa diklik. */
@@ -41,6 +66,7 @@ export default function OverviewPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { orders } = useOrderHistory();
+  const [riwayat, setRiwayat] = useState<RiwayatRow[] | null>(null);
   const { settings } = useSiteSettings();
 
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -62,6 +88,23 @@ export default function OverviewPage() {
     };
   }, []);
 
+  // Riwayat pesanan dari database (sama dengan halaman Riwayat Pesanan).
+  useEffect(() => {
+    if (!user?.token) return;
+    let alive = true;
+    fetch(`${RIWAYAT_API}?token=${encodeURIComponent(user.token)}&t=${Date.now()}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => {
+        if (alive && j?.ok && Array.isArray(j.orders)) setRiwayat(j.orders as RiwayatRow[]);
+      })
+      .catch(() => {
+        /* fallback ke riwayat lokal */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [user?.token]);
+
   const rekomendasi = useMemo(() => {
     const out: ServiceItem[] = [];
     for (const p of PLATFORMS) {
@@ -71,15 +114,32 @@ export default function OverviewPage() {
     return out;
   }, [services]);
 
-  const pesananBulanIni = useMemo(() => {
+  const stats = useMemo(() => {
     const now = new Date();
-    return orders
-      .filter((o) => {
-        const d = new Date(o.createdAt);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && o.status !== 'batal';
-      })
-      .reduce((sum, o) => sum + (o.price || 0), 0);
-  }, [orders]);
+    const sameMonth = (ms: number) => {
+      const d = new Date(ms);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    };
+    // Utamakan data database; bila gagal dimuat, pakai riwayat lokal.
+    const rows = riwayat
+      ? riwayat.map((r) => ({ name: r.service_name || '', status: String(r.status), price: Number(r.price) || 0, at: Number(r.created_at) || 0 }))
+      : orders.map((o) => ({ name: o.serviceName || '', status: o.status || 'proses', price: o.price || 0, at: o.createdAt }));
+    let bulanIni = 0;
+    let vps = 0;
+    let agen = 0;
+    for (const r of rows) {
+      if (r.status === 'batal') continue;
+      if (sameMonth(r.at)) bulanIni += r.price;
+      const n = r.name.toLowerCase();
+      if (n.includes('agen ai') || n.includes('ai agent')) {
+        const due = dueDateOf(r.name);
+        if (!due || due.getTime() >= now.getTime()) agen += 1; // belum jatuh tempo
+      } else if (/\bvps\b|server vps/.test(n)) {
+        vps += 1;
+      }
+    }
+    return { bulanIni, vps, agen };
+  }, [riwayat, orders]);
 
   // Berita: kartu info Overview (diatur admin) disematkan paling atas + berita admin lainnya.
   const news: InfoItem[] = useMemo(() => {
@@ -109,7 +169,9 @@ export default function OverviewPage() {
         <div className="grid grid-cols-2 gap-4 lg:col-start-2 lg:row-start-1">
           {[
             { label: 'Sisa Saldo Anda', value: rupiah(user?.balance ?? 0), icon: Wallet },
-            { label: 'Pesanan Anda Bulan Ini', value: rupiah(pesananBulanIni), icon: ShoppingCart },
+            { label: 'Pesanan Anda Bulan Ini', value: rupiah(stats.bulanIni), icon: ShoppingCart },
+            { label: 'Server VPS Aktif', value: `${stats.vps} Server`, icon: Server },
+            { label: 'AI Agent Aktif', value: `${stats.agen} Agent`, icon: Bot },
           ].map((s) => {
             const Icon = s.icon;
             return (

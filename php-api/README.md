@@ -63,3 +63,19 @@ Disimpan di MySQL agar sama untuk **semua pengunjung** (bukan lagi localStorage 
 
 Simpan (POST) hanya untuk **admin**: token dicek di tabel `sessions` (pakai
 `getUserIdByToken()` dari configdb.php) lalu `users.role = 'admin'`.
+
+## Order Sewa Agen AI — `agent_order.php`
+
+Saldo user dipotong **di database** (bukan hanya di UI), pola sama seperti `order.php`.
+
+1. Upload `agent_order.php` + `agent.php` (versi terbaru) ke `/api`. `order.php` tidak diubah.
+2. Alur: token → `users` → harga dihitung server (`starter` 10.000, `medium` 35.000,
+   `bisnis` 75.000 × bulan 1–12; harga dari klien diabaikan) →
+   `UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?` (atomik) →
+   insert `riwayat_pesanan` (`AI<timestamp>`, "Agen AI WhatsApp <Paket> - Jatuh tempo ...") →
+   panggil VPS `/session`. Jika VPS gagal → saldo **dikembalikan** & riwayat `batal`.
+3. Respon: `{ok, orderId, new_balance, ...}` — UI memakai `new_balance` dari server.
+4. `agent.php?action=create` kini ditolak (410); `status`/`resend` wajib token pemilik order.
+
+Kartu Overview "Server VPS Aktif" & "AI Agent Aktif" dihitung dari `riwayat_pesanan.php`
+(status ≠ batal, agen yang lewat jatuh tempo tidak dihitung).
