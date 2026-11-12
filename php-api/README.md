@@ -50,3 +50,16 @@ export const WEBSSH_URL = 'https://vps.domain/terminal';
 Dibatasi **7×/minggu per user** (hanya user terdaftar yang bisa download).
 Saat ini dihitung di sisi klien (localStorage). Untuk anti-manipulasi, pindahkan
 perhitungan kuota ke server (mis. tabel `tts_quota` di DB) pada iterasi berikutnya.
+
+## Pengaturan website (Berita Overview, Favicon, teks Brand/Overview) — `site_settings.php`
+
+Disimpan di MySQL agar sama untuk **semua pengunjung** (bukan lagi localStorage per-browser).
+
+1. Upload `site_settings.php` ke folder `/api` (satu folder dengan `configdb.php`).
+   Koneksi diambil otomatis dari `configdb.php` (`$conn`). Tidak perlu `me.php`.
+2. Buat tabel: jalankan `site_settings.sql` di phpMyAdmin (opsional — tabel juga dibuat
+   otomatis saat endpoint pertama kali diakses).
+3. Tes: buka `https://boosteryuk.com/api/site_settings.php` → `{"ok":true,"settings":{...}}`.
+
+Simpan (POST) hanya untuk **admin**: token dicek di tabel `sessions` (pakai
+`getUserIdByToken()` dari configdb.php) lalu `users.role = 'admin'`.

@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -42,10 +43,43 @@ interface SiteCtx {
   resetLogo: () => void;
   setFaviconFile: (file: File | null) => void;
   resetFavicon: () => void;
+  /** Status sinkron ke database (khusus admin saat menyimpan). */
+  sync: SyncState;
+}
+
+export interface SyncState {
+  status: 'idle' | 'saving' | 'saved' | 'error';
+  message: string;
 }
 
 const STORAGE_KEY = 'boosteryuk-site-settings';
 const DEFAULT_FAVICON = '/favicon.png';
+/** Endpoint PHP (folder /api) yang menyimpan pengaturan ke tabel MySQL site_settings. */
+const SETTINGS_API = 'https://boosteryuk.com/api/site_settings.php';
+/** Field yang dibagikan ke semua pengunjung lewat database. */
+const SHARED_KEYS = [
+  'infoItems',
+  'faviconUrl',
+  'overviewTitle',
+  'overviewSubtitle',
+  'overviewMessage',
+  'brandName',
+  'brandSuffix',
+  'footerText',
+] as const;
+type SharedKey = (typeof SHARED_KEYS)[number];
+
+function pickShared(src: Partial<SiteSettings>): Partial<SiteSettings> {
+  const out: Record<string, unknown> = {};
+  for (const k of SHARED_KEYS) if (src[k] !== undefined) out[k] = src[k];
+  // blob: hanya hidup di browser admin — jangan dikirim ke server
+  if (Array.isArray(out.infoItems)) {
+    out.infoItems = (out.infoItems as InfoItem[]).map((it) =>
+      it.image && it.image.startsWith('blob:') ? { ...it, image: undefined } : it,
+    );
+  }
+  return out as Partial<SiteSettings>;
+}
 
 const DEFAULT_INFO: InfoItem[] = [
   {
@@ -119,10 +153,72 @@ const SiteContext = createContext<SiteCtx>({
   resetLogo: () => {},
   setFaviconFile: () => {},
   resetFavicon: () => {},
+  sync: { status: 'idle', message: '' },
 });
 
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<SiteSettings>(load);
+  const [sync, setSync] = useState<SyncState>({ status: 'idle', message: '' });
+  // Kunci yang diubah admin & belum dikirim ke server.
+  const dirtyKeys = useRef<Set<SharedKey>>(new Set());
+
+  const markDirty = (keys: string[]) => {
+    for (const k of keys) if ((SHARED_KEYS as readonly string[]).includes(k)) dirtyKeys.current.add(k as SharedKey);
+  };
+
+  // 1) Ambil pengaturan terbaru dari database untuk SEMUA pengunjung (tanpa cache).
+  useEffect(() => {
+    let alive = true;
+    fetch(`${SETTINGS_API}?t=${Date.now()}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!alive || !j?.ok || !j.settings || typeof j.settings !== 'object') return;
+        const remote = pickShared(j.settings as Partial<SiteSettings>);
+        // buang field kosong agar default tetap dipakai
+        for (const k of Object.keys(remote) as SharedKey[]) {
+          const v = remote[k];
+          if (v === '' || v === null || (Array.isArray(v) && k !== 'infoItems' && v.length === 0)) delete remote[k];
+        }
+        if (Object.keys(remote).length) setSettings((s) => ({ ...s, ...remote }));
+      })
+      .catch(() => {
+        /* offline / API belum di-upload: pakai cache lokal */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 2) Setiap perubahan admin pada field bersama -> simpan ke database.
+  useEffect(() => {
+    if (dirtyKeys.current.size === 0) return;
+    const keys = Array.from(dirtyKeys.current);
+    dirtyKeys.current.clear();
+    const patch: Partial<SiteSettings> = {};
+    for (const k of keys) (patch as Record<string, unknown>)[k] = settings[k];
+    const token = (() => {
+      try {
+        return localStorage.getItem('token') || '';
+      } catch {
+        return '';
+      }
+    })();
+    setSync({ status: 'saving', message: 'Menyimpan ke database…' });
+    fetch(SETTINGS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, settings: pickShared(patch) }),
+    })
+      .then((r) => r.json())
+      .then((j) =>
+        setSync(
+          j?.ok
+            ? { status: 'saved', message: 'Tersimpan ke database — tampil untuk semua pengunjung.' }
+            : { status: 'error', message: j?.message || 'Gagal menyimpan ke database.' },
+        ),
+      )
+      .catch(() => setSync({ status: 'error', message: 'Tidak bisa menghubungi server (site_settings.php).' }));
+  }, [settings]);
 
   useEffect(() => {
     try {
@@ -152,11 +248,15 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     link.href = href;
   }, [settings.faviconUrl]);
 
-  const updateSettings = (patch: Partial<SiteSettings>) =>
+  const updateSettings = (patch: Partial<SiteSettings>) => {
+    markDirty(Object.keys(patch));
     setSettings((s) => ({ ...s, ...patch }));
+  };
 
-  const setInfoItems = (items: InfoItem[]) =>
+  const setInfoItems = (items: InfoItem[]) => {
+    markDirty(['infoItems']);
     setSettings((s) => ({ ...s, infoItems: items }));
+  };
 
   const setMusicFile = (file: File | null) => {
     if (!file) return;
@@ -181,12 +281,16 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         const url = reader.result;
+        markDirty(['faviconUrl']);
         setSettings((s) => ({ ...s, faviconUrl: url }));
       }
     };
     reader.readAsDataURL(file);
   };
-  const resetFavicon = () => setSettings((s) => ({ ...s, faviconUrl: DEFAULT_FAVICON }));
+  const resetFavicon = () => {
+    markDirty(['faviconUrl']);
+    setSettings((s) => ({ ...s, faviconUrl: DEFAULT_FAVICON }));
+  };
 
   const resetMusic = () => setSettings((s) => ({ ...s, musicUrl: __MUSIC_URL__ }));
   const resetLogo = () => setSettings((s) => ({ ...s, logoUrl: DEFAULT_LOGO }));
@@ -203,6 +307,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         resetLogo,
         setFaviconFile,
         resetFavicon,
+        sync,
       }}
     >
       {children}

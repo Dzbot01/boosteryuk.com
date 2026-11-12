@@ -20,3 +20,20 @@
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
 </IfModule>
+
+# ===== Anti cache lama =====
+# HTML & file kontrol versi: selalu cek ke server (tidak pernah pakai cache basi).
+# Asset hasil build (/assets/*) bernama hash -> aman di-cache lama (immutable).
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+  <FilesMatch "^(version\.json|firebase-messaging-sw\.js|favicon\.(png|ico)|apple-touch-icon\.png)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  <If "%{REQUEST_URI} =~ m#^/assets/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+</IfModule>

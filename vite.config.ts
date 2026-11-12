@@ -60,9 +60,24 @@ function musicAssetPlugin(): Plugin {
   };
 }
 
+// Versi build unik -> /version.json + __BUILD_ID__. Dipakai app untuk mendeteksi
+// deploy baru dan memuat ulang otomatis (menghindari tampilan cache lama).
+function buildVersionPlugin(): Plugin {
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  return {
+    name: "build-version",
+    config() {
+      return { define: { __BUILD_ID__: JSON.stringify(id) } };
+    },
+    generateBundle() {
+      this.emitFile({ type: "asset", fileName: "version.json", source: JSON.stringify({ build: id, at: new Date().toISOString() }) });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), siteUrlPlugin(), musicAssetPlugin()],
+  plugins: [react(), tailwindcss(), siteUrlPlugin(), musicAssetPlugin(), buildVersionPlugin()],
   build: {
     // Pisahkan vendor besar agar caching lebih baik & initial chunk lebih kecil.
     rollupOptions: {

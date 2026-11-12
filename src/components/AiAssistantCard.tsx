@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Sparkles } from 'lucide-react';
 import { boostyVoice } from '../services/boostyVoice';
 import guri from '../assets/guri.webp';
 
@@ -214,10 +213,6 @@ export default function AiAssistantCard({
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 font-display text-[13.5px] font-extrabold tracking-tight text-slate-900 dark:text-white">
             Guri Booster
-            <span className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-200 dark:bg-cyan-900/25 dark:text-cyan-400 dark:ring-cyan-800/50">
-              <Sparkles className="h-2.5 w-2.5" strokeWidth={2.4} />
-              {activeVoice ? activeVoice.label : 'Online'}
-            </span>
           </p>
         </div>
       </div>

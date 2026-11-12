@@ -37,6 +37,7 @@ export default function AdminWebsitePage() {
     resetLogo,
     setFaviconFile,
     resetFavicon,
+    sync,
   } = useSiteSettings();
 
   const [brandName, setBrandName] = useState(settings.brandName);
@@ -124,6 +125,20 @@ export default function AdminWebsitePage() {
         <div className="mt-5 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-[12.5px] font-bold text-emerald-700 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400">
           <Check className="h-4 w-4" strokeWidth={2.6} />
           Perubahan disimpan
+        </div>
+      )}
+
+      {sync.status !== 'idle' && (
+        <div
+          className={`mt-3 rounded-xl border px-3.5 py-2.5 text-[12.5px] font-semibold ${
+            sync.status === 'error'
+              ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800/40 dark:bg-rose-900/20 dark:text-rose-400'
+              : sync.status === 'saving'
+                ? 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                : 'border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-800/40 dark:bg-cyan-900/20 dark:text-cyan-400'
+          }`}
+        >
+          {sync.message}
         </div>
       )}
 

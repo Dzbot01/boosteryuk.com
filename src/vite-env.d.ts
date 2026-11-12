@@ -12,3 +12,4 @@ interface ImportMeta {
 
 // URL file musik ber-nama unik per build (di-inject plugin di vite.config.ts).
 declare const __MUSIC_URL__: string;
+declare const __BUILD_ID__: string;

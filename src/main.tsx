@@ -9,6 +9,10 @@ import { DepositProvider } from './context/DepositContext';
 import { OrderHistoryProvider } from './context/OrderHistoryContext';
 import { LanguageProvider } from './i18n'; // i18n ID/EN (penerjemah DOM)
 import './index.css';
+import { startAppUpdateWatcher } from './lib/appUpdate';
+
+// Muat ulang otomatis saat ada deploy baru (hindari cache lama).
+startAppUpdateWatcher();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
