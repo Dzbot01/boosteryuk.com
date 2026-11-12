@@ -36,7 +36,7 @@ export function resendAgentCode(orderId: string) {
 }
 
 /** Cek status sesi (starting | pairing | linked | closed). */
-export async function getAgentStatus(orderId: string): Promise<{ ok: boolean; status?: AgentStatus; hasCode?: boolean; message?: string }> {
+export async function getAgentStatus(orderId: string): Promise<{ ok: boolean; status?: AgentStatus; hasCode?: boolean; phone?: string; log?: string[]; message?: string }> {
   try {
     const r = await fetch(`${API_BASE}/agent.php?action=status&id=${encodeURIComponent(orderId)}`);
     return await r.json();

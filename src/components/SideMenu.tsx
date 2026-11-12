@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Megaphone,
   Bot,
+  LayoutGrid,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -42,6 +43,7 @@ export type PageId =
   | 'support'
   | 'privacy'
   | 'deposit'
+  | 'overview'
   | 'sewa-agen'
   | 'plus';
 
@@ -56,6 +58,7 @@ const ROUTE_PATH: Record<PageId, string> = {
   struk: '/struk',
   layanan: '/layanan',
   ordervps: '/ordervps',
+  overview: '/overview',
   'sewa-agen': '/sewa-agen-ai',
   deposit: '/deposit',
   plus: '/plus',
@@ -82,9 +85,10 @@ const baseMenu: {
   neon?: boolean;
 }[] = [
   { id: 'home', icon: Home, label: 'Dashboard', desc: 'Beranda utama' },
+  { id: 'overview', icon: LayoutGrid, label: 'Overview', desc: 'Ringkasan akun & statistik' },
   { id: 'layanan', icon: ShoppingCart, label: 'Buat Pesanan', desc: 'Katalog & order layanan' },
   { id: 'ordervps', icon: Server, label: 'Order Vps', desc: 'Layanan Virtual Private Server' },
-  { id: 'sewa-agen', icon: Bot, label: 'Sewa Agen AI', desc: 'Agen AI WhatsApp, Telegram, dll', tag: 'Baru' },
+  { id: 'sewa-agen', icon: Bot, label: 'Sewa Agen AI', desc: 'Agen AI WhatsApp, Telegram, dll' },
   { id: 'riwayat', icon: History, label: 'Riwayat Pesanan', desc: 'Tabel riwayat pesanan' },
   { id: 'cek-status', icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan' },
   { id: 'about', icon: Info, label: 'Tentang Kami', desc: 'Tentang Kami' },
@@ -119,7 +123,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
   const location = useLocation();
   const pathname = location?.pathname || "/";
 
-  const AUTH_REQUIRED = ['layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'nokos', 'plus'];
+  const AUTH_REQUIRED = ['layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
 
   const combined = user
    ? [baseMenu[0], baseMenu[1], baseMenu[2],...authMenu,...baseMenu.slice(3)]

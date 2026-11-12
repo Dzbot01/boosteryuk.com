@@ -164,7 +164,7 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
         } catch { /* abaikan */ }
         onSuccess?.();
         onClose();
-        navigate('/layanan'); // redirect setelah login -> Buat Pesanan
+        navigate('/overview'); // redirect setelah login -> Overview
       } else {
         setError(res.message || 'Login gagal');
       }

@@ -104,6 +104,8 @@ export default function SewaAgenAiPage() {
   const [pendingOrder, setPendingOrder] = useState<{ name: string; total: number; due: number } | null>(null);
   const orderIdRef = useRef<string>('');
   const [waStatus, setWaStatus] = useState<'starting' | 'pairing' | 'linked' | 'closed'>('starting');
+  const [waLog, setWaLog] = useState<string[]>([]);
+  const [waPhone, setWaPhone] = useState('');
   const finishedRef = useRef(false);
 
   const firstName = user?.username?.split(' ')[0] || user?.email?.split('@')[0] || 'Bos';
@@ -122,6 +124,11 @@ export default function SewaAgenAiPage() {
   const tier = tierIdx != null ? WA_TIERS[tierIdx] : null;
   const total = tier ? tier.price * months : 0;
 
+  // Sinar keluar dari ikon yang DIPILIH, lalu lanjut searah siklus (WA->Discord->Telegram->Facebook).
+  // Segmen i mulai dari sudut i; delay diputar agar segmen dari ikon terpilih animasi duluan.
+  const selIdx = Math.max(0, PLATFORMS.findIndex((p) => p.id === platform));
+  const beamDelay = (i: number) => `${((i - selIdx + 4) % 4) * 0.62}s`;
+
   const chooseTier = (i: number) => {
     setTierIdx(i);
     setPhase('form');
@@ -130,21 +137,11 @@ export default function SewaAgenAiPage() {
 
   const platformName = () => PLATFORMS.find((p) => p.id === platform)?.name ?? 'WhatsApp';
 
+  // Saldo sudah dipotong & pesanan disimpan saat klik Pesan (lihat runProcessing).
+  // Saat WA tertaut, cukup tampilkan layar selesai.
   const finishOrder = useCallback(() => {
-    if (finishedRef.current || !pendingOrder) return;
-    finishedRef.current = true;
-    topUp(-pendingOrder.total);
-    const dueStr = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(pendingOrder.due);
-    addOrder({
-      serviceName: `${pendingOrder.name} · Jatuh tempo ${dueStr}`,
-      orderId: orderIdRef.current || 'AI-' + String(Math.floor(100000 + Math.random() * 900000)),
-      quantity: months,
-      price: pendingOrder.total,
-      createdAt: Date.now(),
-      status: 'selesai',
-    });
     setPhase('done');
-  }, [pendingOrder, months, topUp, addOrder]);
+  }, []);
 
   const runProcessing = async () => {
     if (!tier) return;
@@ -180,7 +177,20 @@ export default function SewaAgenAiPage() {
       setPhase('form');
       return;
     }
+    // Potong saldo & simpan ke Riwayat Pesanan SAAT pesan dibuat (seperti order Layanan).
+    topUp(-total);
+    const dueStr = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(due);
+    addOrder({
+      serviceName: `Agen AI ${platformName()} ${tier.name} · Jatuh tempo ${dueStr}`,
+      orderId,
+      quantity: months,
+      price: total,
+      createdAt: Date.now(),
+      status: 'proses',
+    });
     setWaStatus(res.status || 'pairing');
+    setWaPhone(nomor);
+    setWaLog([]);
     setPhase('pairing');
   };
 
@@ -191,6 +201,8 @@ export default function SewaAgenAiPage() {
       const r = await getAgentStatus(orderIdRef.current);
       if (r.ok && r.status) {
         setWaStatus(r.status);
+        if (Array.isArray(r.log)) setWaLog(r.log);
+        if (r.phone) setWaPhone(r.phone);
         if (r.status === 'linked') { window.clearInterval(t); finishOrder(); }
       }
     }, 4000);
@@ -257,10 +269,10 @@ export default function SewaAgenAiPage() {
             {/* garis dasar belah ketupat */}
             <polygon points="150,24 276,150 150,276 24,150" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-300 dark:text-slate-700" />
             {/* 4 segmen sinar neon (WA->Discord->Telegram->Facebook->WA) */}
-            <path d="M24,150 L150,24" pathLength={100} fill="none" strokeWidth="3.5" className="beam-seg beam-seg-1" style={{ stroke: '#25D366', color: '#25D366' }} />
-            <path d="M150,24 L276,150" pathLength={100} fill="none" strokeWidth="3.5" className="beam-seg beam-seg-2" style={{ stroke: '#5865F2', color: '#5865F2' }} />
-            <path d="M276,150 L150,276" pathLength={100} fill="none" strokeWidth="3.5" className="beam-seg beam-seg-3" style={{ stroke: '#229ED9', color: '#229ED9' }} />
-            <path d="M150,276 L24,150" pathLength={100} fill="none" strokeWidth="3.5" className="beam-seg beam-seg-4" style={{ stroke: '#1877F2', color: '#1877F2' }} />
+            <path d="M24,150 L150,24" pathLength={100} fill="none" strokeWidth="3.5" className="beam-seg" style={{ stroke: '#25D366', color: '#25D366', animationDelay: beamDelay(0) }} />
+            <path d="M150,24 L276,150" pathLength={100} fill="none" strokeWidth="3.5" className="beam-seg" style={{ stroke: '#5865F2', color: '#5865F2', animationDelay: beamDelay(1) }} />
+            <path d="M276,150 L150,276" pathLength={100} fill="none" strokeWidth="3.5" className="beam-seg" style={{ stroke: '#229ED9', color: '#229ED9', animationDelay: beamDelay(2) }} />
+            <path d="M150,276 L24,150" pathLength={100} fill="none" strokeWidth="3.5" className="beam-seg" style={{ stroke: '#1877F2', color: '#1877F2', animationDelay: beamDelay(3) }} />
           </svg>
 
           {/* ikon di tiap sudut */}
@@ -328,11 +340,11 @@ export default function SewaAgenAiPage() {
         {phase === 'pairing' && (
           <PairingCard
             email={user?.email || ''}
-            phone={nomor}
+            phone={waPhone || nomor}
             status={waStatus}
+            log={waLog}
             onResend={resendCode}
             resending={resending}
-            onConfirm={finishOrder}
             notice={notice}
           />
         )}
@@ -495,7 +507,8 @@ function ProcessingCard({ steps, active }: { steps: string[]; active: number }) 
 function PairingCard(props: {
   email: string; phone: string;
   status: 'starting' | 'pairing' | 'linked' | 'closed';
-  onResend: () => void; resending: boolean; onConfirm: () => void;
+  log: string[];
+  onResend: () => void; resending: boolean;
   notice: { ok: boolean; msg: string } | null;
 }) {
   const waiting = props.status !== 'linked';
@@ -520,11 +533,21 @@ function PairingCard(props: {
           {waiting ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Menunggu WhatsApp tertaut…</> : <><CheckCircle2 className="h-4 w-4" /> WhatsApp tertaut!</>}
         </div>
 
+        {/* Log dari bot di VPS (nomor yang dipakai + progres) */}
+        {props.log.length > 0 && (
+          <div className="mt-4 max-h-40 overflow-y-auto rounded-xl bg-slate-900 p-3 text-left font-mono text-[11px] leading-relaxed text-emerald-300 dark:bg-black">
+            {props.log.map((l, i) => (
+              <p key={i} className="whitespace-pre-wrap"><span className="text-slate-500">›</span> {l}</p>
+            ))}
+          </div>
+        )}
+
         {props.notice && (
           <p className={`mt-3 text-[12px] font-semibold ${props.notice.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{props.notice.msg}</p>
         )}
 
-        <button onClick={props.onResend} disabled={props.resending} className="mt-4 h-11 w-full rounded-xl border border-emerald-300 text-[13px] font-bold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
+        <p className="mt-3 text-[11px] text-slate-400">Kode kedaluwarsa? Tekan kirim ulang — sesi lama dihapus & dibuat kode pairing baru.</p>
+        <button onClick={props.onResend} disabled={props.resending} className="mt-2 h-11 w-full rounded-xl border border-emerald-300 text-[13px] font-bold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
           {props.resending ? 'Mengirim…' : 'Kirim ulang kode pairing'}
         </button>
       </div>

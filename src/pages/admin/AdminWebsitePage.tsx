@@ -40,6 +40,9 @@ export default function AdminWebsitePage() {
   const [brandName, setBrandName] = useState(settings.brandName);
   const [brandSuffix, setBrandSuffix] = useState(settings.brandSuffix);
   const [footerText, setFooterText] = useState(settings.footerText);
+  const [ovTitle, setOvTitle] = useState(settings.overviewTitle);
+  const [ovSubtitle, setOvSubtitle] = useState(settings.overviewSubtitle);
+  const [ovMessage, setOvMessage] = useState(settings.overviewMessage);
   const [infoItems, setLocalInfo] = useState<InfoItem[]>(settings.infoItems);
   const [saved, setSaved] = useState(false);
   const [musicName, setMusicName] = useState('');
@@ -60,6 +63,9 @@ export default function AdminWebsitePage() {
       brandName: brandName.trim() || 'Booster',
       brandSuffix: brandSuffix.trim() || 'yuk',
       footerText: footerText.trim() || settings.footerText,
+      overviewTitle: ovTitle.trim() || settings.overviewTitle,
+      overviewSubtitle: ovSubtitle.trim() || settings.overviewSubtitle,
+      overviewMessage: ovMessage.trim() || settings.overviewMessage,
     });
     flash();
   };
@@ -207,6 +213,23 @@ export default function AdminWebsitePage() {
               <span className="text-slate-900 dark:text-white">{brandSuffix || 'yuk'}</span>
             </p>
             <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">{footerText}</p>
+          </div>
+
+          {/* ===== Kartu Informasi halaman Overview ===== */}
+          <div className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Kartu Informasi (Halaman Overview)</p>
+            <label className="block">
+              <span className="mb-1.5 block text-[10.5px] font-bold uppercase tracking-wider text-slate-400">Judul</span>
+              <input value={ovTitle} onChange={(e) => setOvTitle(e.target.value)} className="admin-input" placeholder="Selamat datang di Boosteryuk" />
+            </label>
+            <label className="mt-3 block">
+              <span className="mb-1.5 block text-[10.5px] font-bold uppercase tracking-wider text-slate-400">Sub Judul</span>
+              <input value={ovSubtitle} onChange={(e) => setOvSubtitle(e.target.value)} className="admin-input" placeholder="Panel SMM, VPS, dan Agen AI dalam satu tempat" />
+            </label>
+            <label className="mt-3 block">
+              <span className="mb-1.5 block text-[10.5px] font-bold uppercase tracking-wider text-slate-400">Isi Pesan</span>
+              <textarea value={ovMessage} onChange={(e) => setOvMessage(e.target.value)} rows={4} className="admin-input" placeholder="Informasi website untuk user…" />
+            </label>
           </div>
           <button
             onClick={saveBrand}

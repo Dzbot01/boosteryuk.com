@@ -24,6 +24,10 @@ export interface SiteSettings {
   footerText: string;
   musicUrl: string;
   infoItems: InfoItem[];
+  // Kartu informasi di halaman Overview (teks diatur admin di Pengaturan Website)
+  overviewTitle: string;
+  overviewSubtitle: string;
+  overviewMessage: string;
 }
 
 interface SiteCtx {
@@ -85,6 +89,10 @@ const DEFAULTS: SiteSettings = {
   footerText: '© 2025 Boosteryuk · Cek status booster media sosial',
   musicUrl: __MUSIC_URL__,
   infoItems: DEFAULT_INFO,
+  overviewTitle: 'Selamat datang di Boosteryuk',
+  overviewSubtitle: 'Panel SMM, VPS, dan Agen AI dalam satu tempat',
+  overviewMessage:
+    'Pantau semua pesanan boostermu, kelola VPS, dan jalankan Agen AI WhatsApp dari satu dashboard. Butuh bantuan? Hubungi admin lewat menu Contact Support kapan saja — kami standby 24/7.',
 };
 
 function load(): SiteSettings {
