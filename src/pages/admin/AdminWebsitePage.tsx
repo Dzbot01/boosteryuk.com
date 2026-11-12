@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -21,6 +21,8 @@ import {
   ShieldCheck,
   LayoutGrid,
   Clock3,
+  Loader2,
+  CircleAlert,
 } from 'lucide-react';
 import Reveal from '../../components/Reveal';
 import { useSiteSettings, type InfoItem } from '../../context/SiteSettingsContext';
@@ -64,6 +66,31 @@ export default function AdminWebsitePage() {
   const infoImageInput = useRef<HTMLInputElement>(null);
   const [uploadTargetId, setUploadTargetId] = useState<number | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  // Simpan Informasi: loading sampai server (site_settings.php) membalas, lalu alert.
+  const [infoSaving, setInfoSaving] = useState(false);
+  const [infoAlert, setInfoAlert] = useState<{ ok: boolean; msg: string } | null>(null);
+  const infoStart = useRef(0);
+
+  useEffect(() => {
+    if (!infoSaving || (sync.status !== 'saved' && sync.status !== 'error')) return;
+    // tampilkan spinner minimal 600ms agar terlihat
+    const wait = Math.max(0, 600 - (Date.now() - infoStart.current));
+    const t = window.setTimeout(() => {
+      setInfoSaving(false);
+      setInfoAlert(
+        sync.status === 'saved'
+          ? { ok: true, msg: 'Informasi berhasil disimpan dan sudah tampil untuk semua user.' }
+          : { ok: false, msg: sync.message || 'Gagal menyimpan informasi.' },
+      );
+    }, wait);
+    return () => window.clearTimeout(t);
+  }, [sync, infoSaving]);
+
+  useEffect(() => {
+    if (!infoAlert) return;
+    const t = window.setTimeout(() => setInfoAlert(null), infoAlert.ok ? 3000 : 6000);
+    return () => window.clearTimeout(t);
+  }, [infoAlert]);
 
   const flash = () => {
     setSaved(true);
@@ -83,13 +110,16 @@ export default function AdminWebsitePage() {
   };
 
   const saveInfo = () => {
+    if (infoSaving) return;
+    infoStart.current = Date.now();
+    setInfoAlert(null);
+    setInfoSaving(true);
     // Berita lama yang masih "Baru saja"/kosong diberi stempel waktu sekarang.
     const stamped = infoItems.map((it) =>
       !it.time || it.time.trim().toLowerCase() === 'baru saja' ? { ...it, time: nowStamp() } : it,
     );
     setLocalInfo(stamped);
     setInfoItems(stamped);
-    flash();
   };
 
   const addInfo = () => {
@@ -480,10 +510,16 @@ export default function AdminWebsitePage() {
             </button>
             <button
               onClick={saveInfo}
-              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-[12.5px] font-bold text-white shadow-sm transition-all hover:bg-cyan-700 active:scale-95"
+              disabled={infoSaving}
+              aria-busy={infoSaving}
+              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-[12.5px] font-bold text-white shadow-sm transition-all hover:bg-cyan-700 active:scale-95 disabled:cursor-wait disabled:opacity-80 disabled:active:scale-100"
             >
-              <Save className="h-3.5 w-3.5" strokeWidth={2.4} />
-              Simpan Informasi
+              {infoSaving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.6} />
+              ) : (
+                <Save className="h-3.5 w-3.5" strokeWidth={2.4} />
+              )}
+              {infoSaving ? 'Menyimpan…' : 'Simpan Informasi'}
             </button>
           </div>
 
@@ -504,6 +540,26 @@ export default function AdminWebsitePage() {
       </Reveal>
 
       {/* Preview modal — visual of the user-facing floating info modal */}
+      {infoAlert && (
+        <div
+          role="alert"
+          className="fixed inset-x-4 top-5 z-[80] mx-auto flex max-w-sm items-start gap-2.5 rounded-xl border bg-white px-4 py-3 text-[13px] shadow-lg dark:bg-slate-800 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 border-slate-200 dark:border-slate-700"
+        >
+          {infoAlert.ok ? (
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" strokeWidth={2.8} />
+          ) : (
+            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" strokeWidth={2.4} />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-slate-900 dark:text-white">{infoAlert.ok ? 'Berhasil disimpan' : 'Gagal menyimpan'}</p>
+            <p className="mt-0.5 text-slate-500 dark:text-slate-400">{infoAlert.msg}</p>
+          </div>
+          <button onClick={() => setInfoAlert(null)} aria-label="Tutup" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {showPreview && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60" onClick={() => setShowPreview(false)} />

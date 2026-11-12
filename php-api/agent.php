@@ -121,7 +121,13 @@ if ($action === 'status') {
     require_owner($_GET['token'] ?? '', $orderId);
     list($code, $body, $err) = vps('GET', "$ORIGIN/session/$orderId", $TOKEN);
     if ($code === 0) out(['ok' => false, 'message' => 'Tidak bisa menghubungi VPS: ' . $err]);
-    out(relay($code, $body));
+    $res = relay($code, $body);
+    // WhatsApp sudah tertaut -> pesanan agen aktif: status riwayat 'proses' -> 'selesai'
+    if (!empty($res['ok']) && ($res['status'] ?? '') === 'linked' && !empty($GLOBALS['conn'])) {
+        $st = $GLOBALS['conn']->prepare("UPDATE riwayat_pesanan SET status = 'selesai' WHERE order_id = ? AND status IN ('pending','proses')");
+        if ($st) { $st->bind_param("s", $orderId); $st->execute(); $st->close(); }
+    }
+    out($res);
 }
 
 out(['ok' => false, 'message' => 'Aksi tidak dikenal.'], 400);

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { ThumbsUp, ChevronUp, ShoppingCart, Wallet, Newspaper, Server, Bot } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
-import { useOrderHistory } from '../context/OrderHistoryContext';
 import { useSiteSettings, type InfoItem } from '../context/SiteSettingsContext';
 import { fetchServices, type ServiceItem } from '../services/servicesApi';
 
@@ -17,8 +16,16 @@ const PLATFORMS: { key: string; test: RegExp }[] = [
   { key: 'instagram', test: /insta\s*gram/i },
 ];
 const PER_PLATFORM = 5;
-/** Sumber riwayat yang sama dengan halaman Riwayat Pesanan. */
+/** Statistik per user dihitung server dari tabel riwayat_pesanan (kolom jatuh_tempo dll). */
+const STATS_API = 'https://boosteryuk.com/api/order_stats.php';
+/** Cadangan: sumber riwayat yang sama dengan halaman Riwayat Pesanan. */
 const RIWAYAT_API = 'https://cekidku.my.id/api/riwayat_pesanan.php';
+
+interface OverviewStats {
+  bulanIni: number;
+  vps: number;
+  agen: number;
+}
 
 interface RiwayatRow {
   order_id: string;
@@ -42,6 +49,28 @@ function dueDateOf(name: string): Date | null {
   if (mon === undefined) return null;
   return new Date(Number(m[3]), mon, Number(m[1]), 23, 59, 59);
 }
+/** Hitung statistik dari baris riwayat_pesanan (cadangan bila order_stats.php belum ada). */
+function statsFromRows(rows: RiwayatRow[]): OverviewStats {
+  const now = new Date();
+  let bulanIni = 0;
+  let vps = 0;
+  let agen = 0;
+  for (const r of rows) {
+    if (String(r.status) === 'batal') continue;
+    const at = new Date(Number(r.created_at) || 0);
+    if (at.getMonth() === now.getMonth() && at.getFullYear() === now.getFullYear()) bulanIni += Number(r.price) || 0;
+    const n = (r.service_name || '').toLowerCase();
+    const due = dueDateOf(r.service_name || '');
+    const aktif = !due || due.getTime() >= now.getTime();
+    if (n.includes('agen ai') || n.includes('ai agent')) {
+      if (aktif) agen += 1;
+    } else if (/\bvps\b|server vps/.test(n) && aktif) {
+      vps += 1;
+    }
+  }
+  return { bulanIni, vps, agen };
+}
+
 const NEWS_INITIAL = 5;
 
 /** Ubah URL di teks berita jadi tautan yang bisa diklik. */
@@ -65,8 +94,8 @@ function Linkify({ text }: { text: string }) {
 export default function OverviewPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { orders } = useOrderHistory();
-  const [riwayat, setRiwayat] = useState<RiwayatRow[] | null>(null);
+  // null = sedang dimuat. Selalu milik user yang login (bukan riwayat lokal browser).
+  const [stats, setStats] = useState<OverviewStats | null>(null);
   const { settings } = useSiteSettings();
 
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -88,18 +117,32 @@ export default function OverviewPage() {
     };
   }, []);
 
-  // Riwayat pesanan dari database (sama dengan halaman Riwayat Pesanan).
+  // Statistik kartu dari database, per user (token login).
   useEffect(() => {
+    setStats(null);
     if (!user?.token) return;
     let alive = true;
-    fetch(`${RIWAYAT_API}?token=${encodeURIComponent(user.token)}&t=${Date.now()}`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((j) => {
-        if (alive && j?.ok && Array.isArray(j.orders)) setRiwayat(j.orders as RiwayatRow[]);
-      })
-      .catch(() => {
-        /* fallback ke riwayat lokal */
-      });
+    const token = encodeURIComponent(user.token);
+    const load = async (): Promise<OverviewStats> => {
+      // 1) order_stats.php (dihitung server, pakai kolom jatuh_tempo)
+      try {
+        const r = await fetch(`${STATS_API}?token=${token}&t=${Date.now()}`, { cache: 'no-store' });
+        const j = await r.json();
+        if (j?.ok) return { bulanIni: Number(j.bulan_ini) || 0, vps: Number(j.vps_aktif) || 0, agen: Number(j.agent_aktif) || 0 };
+      } catch {
+        /* lanjut ke cadangan */
+      }
+      // 2) cadangan: riwayat_pesanan.php milik user ini, dihitung di klien
+      try {
+        const r = await fetch(`${RIWAYAT_API}?token=${token}&t=${Date.now()}`, { cache: 'no-store' });
+        const j = await r.json();
+        if (j?.ok && Array.isArray(j.orders)) return statsFromRows(j.orders as RiwayatRow[]);
+      } catch {
+        /* abaikan */
+      }
+      return { bulanIni: 0, vps: 0, agen: 0 };
+    };
+    load().then((st) => alive && setStats(st));
     return () => {
       alive = false;
     };
@@ -114,32 +157,6 @@ export default function OverviewPage() {
     return out;
   }, [services]);
 
-  const stats = useMemo(() => {
-    const now = new Date();
-    const sameMonth = (ms: number) => {
-      const d = new Date(ms);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    };
-    // Utamakan data database; bila gagal dimuat, pakai riwayat lokal.
-    const rows = riwayat
-      ? riwayat.map((r) => ({ name: r.service_name || '', status: String(r.status), price: Number(r.price) || 0, at: Number(r.created_at) || 0 }))
-      : orders.map((o) => ({ name: o.serviceName || '', status: o.status || 'proses', price: o.price || 0, at: o.createdAt }));
-    let bulanIni = 0;
-    let vps = 0;
-    let agen = 0;
-    for (const r of rows) {
-      if (r.status === 'batal') continue;
-      if (sameMonth(r.at)) bulanIni += r.price;
-      const n = r.name.toLowerCase();
-      if (n.includes('agen ai') || n.includes('ai agent')) {
-        const due = dueDateOf(r.name);
-        if (!due || due.getTime() >= now.getTime()) agen += 1; // belum jatuh tempo
-      } else if (/\bvps\b|server vps/.test(n)) {
-        vps += 1;
-      }
-    }
-    return { bulanIni, vps, agen };
-  }, [riwayat, orders]);
 
   // Berita: kartu info Overview (diatur admin) disematkan paling atas + berita admin lainnya.
   const news: InfoItem[] = useMemo(() => {
@@ -169,9 +186,9 @@ export default function OverviewPage() {
         <div className="grid grid-cols-2 gap-4 lg:col-start-2 lg:row-start-1">
           {[
             { label: 'Sisa Saldo Anda', value: rupiah(user?.balance ?? 0), icon: Wallet },
-            { label: 'Pesanan Anda Bulan Ini', value: rupiah(stats.bulanIni), icon: ShoppingCart },
-            { label: 'Server VPS Aktif', value: `${stats.vps} Server`, icon: Server },
-            { label: 'AI Agent Aktif', value: `${stats.agen} Agent`, icon: Bot },
+            { label: 'Pesanan Anda Bulan Ini', value: stats ? rupiah(stats.bulanIni) : null, icon: ShoppingCart },
+            { label: 'Server VPS Aktif', value: stats ? `${stats.vps} Server` : null, icon: Server },
+            { label: 'AI Agent Aktif', value: stats ? `${stats.agen} Agent` : null, icon: Bot },
           ].map((s) => {
             const Icon = s.icon;
             return (
@@ -181,7 +198,11 @@ export default function OverviewPage() {
                 </span>
                 <div className="min-w-0">
                   <p className="text-[11.5px] leading-tight text-slate-400 dark:text-slate-500">{s.label}</p>
-                  <p className="truncate text-[15px] font-bold text-slate-800 dark:text-slate-100">{s.value}</p>
+                  {s.value === null ? (
+                    <span className="mt-1 block h-[18px] w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" aria-label="Memuat" />
+                  ) : (
+                    <p className="truncate text-[15px] font-bold text-slate-800 dark:text-slate-100">{s.value}</p>
+                  )}
                 </div>
               </div>
             );

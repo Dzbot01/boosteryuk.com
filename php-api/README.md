@@ -79,3 +79,26 @@ Saldo user dipotong **di database** (bukan hanya di UI), pola sama seperti `orde
 
 Kartu Overview "Server VPS Aktif" & "AI Agent Aktif" dihitung dari `riwayat_pesanan.php`
 (status ≠ batal, agen yang lewat jatuh tempo tidak dihitung).
+
+## Kolom tambahan `riwayat_pesanan` (pesanan non-SMM) — `riwayat_schema.php`
+
+| Kolom | Tipe | Isi |
+|---|---|---|
+| `order_type` | VARCHAR(20) default `smm` | `smm` / `agent_ai` / `vps` |
+| `paket` | VARCHAR(50) NULL | Starter / Medium / Bisnis / paket VPS |
+| `durasi_bulan` | TINYINT NULL | lama sewa |
+| `jatuh_tempo` | DATETIME NULL | akhir masa aktif |
+| `target` | VARCHAR(100) NULL | nomor WhatsApp agen / hostname VPS |
+| `detail` | TEXT NULL | JSON (nama AI, platform, tier) |
+| `updated_at` | TIMESTAMP NULL | otomatis saat status berubah |
+
+Pesanan SMM (order.php / riwayat_pesanan.php) **tidak berubah** — kolom baru boleh NULL.
+Kolom ditambahkan otomatis saat `agent_order.php`/`order_stats.php` pertama dipanggil, atau
+jalankan manual `riwayat_pesanan_migration.sql`. Saat WhatsApp agen tertaut, `agent.php?action=status`
+mengubah status `proses` → `selesai`.
+
+## Statistik Overview per user — `order_stats.php`
+
+`GET /api/order_stats.php?token=...` → `{ok, bulan_ini, jumlah_bulan_ini, vps_aktif, agent_aktif, layanan[]}`.
+Dihitung dari `riwayat_pesanan` milik user yang login (status ≠ batal; bulan berjalan; layanan aktif =
+belum lewat `jatuh_tempo`). Overview tidak lagi memakai riwayat lokal browser.

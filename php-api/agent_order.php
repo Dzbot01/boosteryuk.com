@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 error_reporting(0);
 require 'configdb.php'; // menyediakan $conn (mysqli) + getUserIdByToken()
+require __DIR__ . '/riwayat_schema.php'; // kolom order_type, paket, durasi_bulan, jatuh_tempo, ...
 if (isset($conn) && $conn instanceof mysqli) $conn->set_charset('utf8mb4');
 
 function reply($data, $code = 200) {
@@ -96,10 +97,37 @@ $dueStr  = date('j', $due) . ' ' . $bulan[(int)date('n', $due)] . ' ' . date('Y'
 $serviceName = "Agen AI WhatsApp {$tier['name']} - Jatuh tempo $dueStr";
 $status  = 'pending';
 
-$st = $conn->prepare("INSERT INTO riwayat_pesanan (user_id, order_id, service_name, quantity, price, status) VALUES (?,?,?,?,?,?)");
-$st->bind_param("issids", $user_id, $orderId, $serviceName, $months, $price, $status);
-$st->execute();
-$st->close();
+$dueSql = date('Y-m-d 23:59:59', $due);
+$saved  = false;
+if (riwayat_ensure_columns($conn)) {
+    $type   = 'agent_ai';
+    $paket  = $tier['name'];
+    $detail = json_encode(['nama_ai' => $nama, 'platform' => $platform, 'tier' => $tierId], JSON_UNESCAPED_UNICODE);
+    $st = $conn->prepare("INSERT INTO riwayat_pesanan
+        (user_id, order_id, service_name, quantity, price, status, order_type, paket, durasi_bulan, jatuh_tempo, target, detail)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+    if ($st) {
+        $st->bind_param("issidsssisss", $user_id, $orderId, $serviceName, $months, $price, $status,
+            $type, $paket, $months, $dueSql, $phone, $detail);
+        $saved = $st->execute();
+        $st->close();
+    }
+}
+if (!$saved) {
+    // cadangan bila ALTER TABLE tidak diizinkan hosting: format kolom lama
+    $st = $conn->prepare("INSERT INTO riwayat_pesanan (user_id, order_id, service_name, quantity, price, status) VALUES (?,?,?,?,?,?)");
+    $st->bind_param("issids", $user_id, $orderId, $serviceName, $months, $price, $status);
+    $saved = $st->execute();
+    $st->close();
+}
+if (!$saved) {
+    // riwayat gagal disimpan -> jangan biarkan saldo terpotong tanpa catatan
+    $st = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+    $st->bind_param("di", $price, $user_id);
+    $st->execute();
+    $st->close();
+    reply(["ok" => false, "message" => "Gagal menyimpan riwayat pesanan. Saldo dikembalikan.", "refunded" => true], 500);
+}
 
 function refund_and_fail($conn, $user_id, $price, $orderId, $msg) {
     $st = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
@@ -178,4 +206,5 @@ reply([
     "serviceName" => $serviceName,
     "price"       => $price,
     "dueDate"     => $dueStr,
+    "jatuhTempo"  => $dueSql,
 ]);
