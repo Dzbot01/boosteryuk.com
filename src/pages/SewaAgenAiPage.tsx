@@ -9,7 +9,7 @@ import { useSlides } from '../lib/useSlides';
 import { markupFactor } from '../lib/tenant';
 import { useAuth } from '../context/AuthContext';
 import { isValidEmail } from '../services/otp';
-import { orderAgent, resendAgentCode, getAgentStatus } from '../services/agentApi';
+import { orderAgent, resendAgentCode, getAgentStatus, getMyAgents, type MyAgent } from '../services/agentApi';
 
 const SLIDE_INTERVAL = 4500;
 
@@ -105,7 +105,10 @@ export default function SewaAgenAiPage() {
   const [resending, setResending] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<{ name: string; total: number; due: number } | null>(null);
   const orderIdRef = useRef<string>('');
-  const [waStatus, setWaStatus] = useState<'starting' | 'pairing' | 'linked' | 'closed'>('starting');
+  const [waStatus, setWaStatus] = useState<'starting' | 'pairing' | 'linked' | 'closed' | 'expired'>('starting');
+  // Sisa waktu tautan (detik) dari VPS; batas 10 menit.
+  const [waRemaining, setWaRemaining] = useState<number | null>(null);
+  const [refundInfo, setRefundInfo] = useState<string | null>(null);
   const [waLog, setWaLog] = useState<string[]>([]);
   const [waPhone, setWaPhone] = useState('');
   const finishedRef = useRef(false);
@@ -193,6 +196,8 @@ export default function SewaAgenAiPage() {
     setWaStatus(res.status || 'pairing');
     setWaPhone(nomor);
     setWaLog([]);
+    setWaRemaining(600); // batas tautan 10 menit (disinkronkan dari VPS saat polling)
+    setRefundInfo(null);
     setPhase('pairing');
   };
 
@@ -205,18 +210,37 @@ export default function SewaAgenAiPage() {
         setWaStatus(r.status);
         if (Array.isArray(r.log)) setWaLog(r.log);
         if (r.phone) setWaPhone(r.phone);
+        if (typeof r.remainingSec === 'number') setWaRemaining(r.remainingSec);
         if (r.status === 'linked') { window.clearInterval(t); finishOrder(); }
+        if (r.status === 'expired') {
+          window.clearInterval(t);
+          // Saldo sudah dikembalikan di DATABASE oleh server → ambil ulang saldo terbaru.
+          setRefundInfo(
+            r.refunded
+              ? `Waktu tautan 10 menit habis. Bot dihentikan dan saldo ${r.refund_amount ? formatRupiah(r.refund_amount) + ' ' : ''}sudah dikembalikan ke akunmu.`
+              : 'Waktu tautan 10 menit habis. Bot dihentikan.',
+          );
+          void refresh();
+        }
       }
     }, 4000);
     return () => window.clearInterval(t);
   }, [phase, finishOrder]);
+
+  // Hitung mundur lokal di antara polling.
+  useEffect(() => {
+    if (phase !== 'pairing' || waRemaining === null || waRemaining <= 0) return;
+    const t = window.setTimeout(() => setWaRemaining((x) => (x === null ? x : Math.max(0, x - 1))), 1000);
+    return () => window.clearTimeout(t);
+  }, [phase, waRemaining]);
 
   const resendCode = async () => {
     if (!orderIdRef.current) return;
     setResending(true);
     const r = await resendAgentCode(orderIdRef.current);
     setResending(false);
-    setNotice(r?.ok ? { ok: true, msg: 'Kode pairing baru sudah dikirim ke email.' } : { ok: false, msg: r?.message || 'Gagal kirim ulang kode.' });
+    setNotice(r?.ok ? { ok: true, msg: 'Kode pairing baru sudah dikirim ke email. Waktu tautan diulang 10 menit.' } : { ok: false, msg: r?.message || 'Gagal kirim ulang kode.' });
+    if (r?.ok && typeof r.remainingSec === 'number') setWaRemaining(r.remainingSec);
   };
 
   return (
@@ -339,6 +363,9 @@ export default function SewaAgenAiPage() {
             email={user?.email || ''}
             phone={waPhone || nomor}
             status={waStatus}
+            remainingSec={waRemaining}
+            refundInfo={refundInfo}
+            onNewOrder={() => { setRefundInfo(null); setWaRemaining(null); setPhase('form'); }}
             log={waLog}
             onResend={resendCode}
             resending={resending}
@@ -350,6 +377,8 @@ export default function SewaAgenAiPage() {
           <DoneCard order={pendingOrder} onGo={() => navigate('/agen-ai-saya')} />
         )}
       </div>
+      {/* ===== Daftar agen AI milik user (aktif & menunggu tautan) ===== */}
+      {user && <MyActiveAgents refreshKey={phase} onOpen={() => navigate('/agen-ai-saya')} />}
     </div>
   );
 }
@@ -503,12 +532,33 @@ function ProcessingCard({ steps, active }: { steps: string[]; active: number }) 
 
 function PairingCard(props: {
   email: string; phone: string;
-  status: 'starting' | 'pairing' | 'linked' | 'closed';
+  status: 'starting' | 'pairing' | 'linked' | 'closed' | 'expired';
+  remainingSec: number | null;
+  refundInfo: string | null;
+  onNewOrder: () => void;
   log: string[];
   onResend: () => void; resending: boolean;
   notice: { ok: boolean; msg: string } | null;
 }) {
   const waiting = props.status !== 'linked';
+  const expired = props.status === 'expired';
+  const mmss = (n: number) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+  if (expired) {
+    return (
+      <Reveal>
+        <div role="alert" className="mx-auto max-w-md rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-[0_18px_44px_-26px_rgba(15,23,42,0.4)] dark:border-rose-800/50 dark:bg-slate-900">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600">
+            <AlertCircle className="h-6 w-6" strokeWidth={2.2} />
+          </span>
+          <h3 className="mt-3 font-display text-[17px] font-extrabold text-slate-900 dark:text-white">Waktu tautan habis</h3>
+          <p className="mt-1 text-[13px] text-slate-600 dark:text-slate-300">{props.refundInfo || 'Nomor tidak ditautkan dalam 10 menit. Bot dihentikan.'}</p>
+          <button onClick={props.onNewOrder} className="mt-4 h-11 w-full rounded-xl bg-emerald-600 text-[14px] font-bold text-white hover:bg-emerald-700">
+            Pesan ulang
+          </button>
+        </div>
+      </Reveal>
+    );
+  }
   return (
     <Reveal>
       <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-[0_18px_44px_-26px_rgba(15,23,42,0.4)] dark:border-slate-700 dark:bg-slate-900">
@@ -527,7 +577,14 @@ function PairingCard(props: {
         </ol>
 
         <div className={`mt-5 flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-[12.5px] font-bold ${waiting ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700/50 dark:bg-emerald-950/40 dark:text-emerald-300'}`}>
-          {waiting ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Menunggu WhatsApp tertaut…</> : <><CheckCircle2 className="h-4 w-4" /> WhatsApp tertaut!</>}
+          {waiting ? (
+            <>
+              <LoaderCircle className="h-4 w-4 animate-spin" /> Menunggu WhatsApp tertaut…
+              {props.remainingSec !== null && <span className="tabular-nums">sisa {mmss(props.remainingSec)}</span>}
+            </>
+          ) : (
+            <><CheckCircle2 className="h-4 w-4" /> WhatsApp tertaut!</>
+          )}
         </div>
 
         {/* Log dari bot di VPS (nomor yang dipakai + progres) */}
@@ -543,7 +600,7 @@ function PairingCard(props: {
           <p className={`mt-3 text-[12px] font-semibold ${props.notice.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{props.notice.msg}</p>
         )}
 
-        <p className="mt-3 text-[11px] text-slate-400">Kode kedaluwarsa? Tekan kirim ulang — sesi lama dihapus & dibuat kode pairing baru.</p>
+        <p className="mt-3 text-[11px] text-slate-400">Tautkan dalam 10 menit. Bila lewat, bot dihentikan dan saldo otomatis dikembalikan. Kode kedaluwarsa? Tekan kirim ulang — sesi lama dihapus & dibuat kode pairing baru.</p>
         <button onClick={props.onResend} disabled={props.resending} className="mt-2 h-11 w-full rounded-xl border border-emerald-300 text-[13px] font-bold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
           {props.resending ? 'Mengirim…' : 'Kirim ulang kode pairing'}
         </button>
@@ -578,5 +635,55 @@ function L({ label, children }: { label: string; children: React.ReactNode }) {
       <span className="mb-1.5 block text-[12px] font-semibold text-slate-600 dark:text-slate-300">{label}</span>
       {children}
     </label>
+  );
+}
+
+/** Daftar Agen AI milik user: aktif (tertaut) dan yang masih menunggu tautan. */
+function MyActiveAgents({ refreshKey, onOpen }: { refreshKey: string; onOpen: () => void }) {
+  const [agents, setAgents] = useState<MyAgent[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getMyAgents().then((r) => alive && setAgents(r.ok ? r.agents.filter((a) => a.state !== 'kedaluwarsa') : []));
+    return () => {
+      alive = false;
+    };
+  }, [refreshKey]);
+  if (!agents || agents.length === 0) return null;
+  const tgl = (ms: number | null) => (ms ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(ms) : '—');
+  return (
+    <Reveal>
+      <section aria-labelledby="agen-aktif" className="mx-auto mt-12 max-w-3xl">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <h2 id="agen-aktif" className="font-display text-[18px] font-extrabold text-slate-900 dark:text-white">Agen AI kamu</h2>
+          <button onClick={onOpen} className="text-[12.5px] font-bold text-emerald-600 hover:underline dark:text-emerald-400">Lihat semua</button>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {agents.slice(0, 6).map((a) => {
+            const aktif = a.state === 'aktif';
+            return (
+              <button
+                key={a.order_id}
+                onClick={onOpen}
+                className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition-colors hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-emerald-700"
+              >
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${aktif ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'}`}>
+                  <Bot className="h-5 w-5" strokeWidth={2.2} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{a.nama_ai || 'Agen AI WhatsApp'}</span>
+                  <span className="block text-[11.5px] text-slate-500">Paket {a.paket || '-'} · {a.nomor_bot || a.nomor_pemilik || '-'}</span>
+                  <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${aktif ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                      {aktif ? 'Aktif' : 'Menunggu tautan'}
+                    </span>
+                    {aktif && <span className="text-[11px] text-slate-400">Jatuh tempo {tgl(a.jatuh_tempo)}</span>}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    </Reveal>
   );
 }

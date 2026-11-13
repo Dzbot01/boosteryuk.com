@@ -210,9 +210,10 @@ $st->bind_param("ssi", $proses, $orderId, $user_id);
 $st->execute();
 $st->close();
 
-// Child panel: catat pesanan + pendapatan reseller (harga dibayar - harga asli).
+// Child panel: pendapatan BELUM dicatat di sini. Dicatat setelah WhatsApp tertaut (riwayat 'selesai')
+// oleh agent_lifecycle.php; bila waktu tautan habis, order 'batal' + saldo di-refund tanpa pendapatan.
 if ($tenant) {
-    try { cp_record_order($conn, $tenant['id'], $user_id, $orderId, 'agent', $serviceName, $months, $price, $basePrice); } catch (Throwable $e) { /* jangan gagalkan order */ }
+    try { cp_touch_activity($conn, $tenant['id'], $user_id, 'order'); } catch (Throwable $e) { /* abaikan */ }
 }
 
 $st = $conn->prepare("SELECT balance FROM users WHERE id = ? LIMIT 1");

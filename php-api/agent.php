@@ -9,7 +9,8 @@
  *
  * Aksi (?action=):
  *   - resend  POST {token, orderId}      -> kirim kode pairing baru (hanya pemilik order)
- *   - status  GET  ?id=<orderId>&token=  -> { status, hasCode, phone, log } (hanya pemilik order)
+ *   - status  GET  ?id=<orderId>&token=  -> { status, hasCode, phone, log, remainingSec, refunded? } (hanya pemilik order)
+ *             status 'expired' (10 menit tanpa tautan) → saldo dikembalikan di database (agent_lifecycle.php)
  *   (create dinonaktifkan — pemesanan + potong saldo lewat agent_order.php)
  */
 
@@ -92,12 +93,13 @@ function require_owner($token, $orderId) {
     $token = trim((string)$token);
     $uid = ($token !== '' && function_exists('getUserIdByToken')) ? getUserIdByToken($token) : null;
     if (!$uid) out(['ok' => false, 'message' => 'Sesi tidak valid. Silakan login ulang.'], 401);
-    $st = $conn->prepare("SELECT id FROM riwayat_pesanan WHERE order_id = ? AND user_id = ? LIMIT 1");
+    $st = $conn->prepare("SELECT id, status FROM riwayat_pesanan WHERE order_id = ? AND user_id = ? LIMIT 1");
     $st->bind_param("si", $orderId, $uid);
     $st->execute();
     $row = $st->get_result()->fetch_assoc();
     $st->close();
     if (!$row) out(['ok' => false, 'message' => 'Order tidak ditemukan untuk akun ini.'], 403);
+    return ['uid' => (int)$uid, 'status' => $row['status']];
 }
 
 if ($action === 'create') {
@@ -109,7 +111,8 @@ if ($action === 'resend') {
     $in = json_decode(file_get_contents('php://input'), true);
     $orderId = preg_replace('/[^a-zA-Z0-9_-]/', '', $in['orderId'] ?? '');
     if (!$orderId) out(['ok' => false, 'message' => 'orderId wajib.'], 400);
-    require_owner($in['token'] ?? '', $orderId);
+    $own = require_owner($in['token'] ?? '', $orderId);
+    if ($own['status'] === 'batal') out(['ok' => false, 'status' => 'expired', 'message' => 'Waktu tautan sudah habis dan saldo sudah dikembalikan. Silakan pesan ulang.'], 410);
     list($code, $body, $err) = vps('POST', "$ORIGIN/session/$orderId/resend", $TOKEN, []);
     if ($code === 0) out(['ok' => false, 'message' => 'Tidak bisa menghubungi VPS: ' . $err]);
     out(relay($code, $body));
@@ -118,14 +121,25 @@ if ($action === 'resend') {
 if ($action === 'status') {
     $orderId = preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['id'] ?? '');
     if (!$orderId) out(['ok' => false, 'message' => 'id wajib.'], 400);
-    require_owner($_GET['token'] ?? '', $orderId);
+    $own = require_owner($_GET['token'] ?? '', $orderId);
     list($code, $body, $err) = vps('GET', "$ORIGIN/session/$orderId", $TOKEN);
     if ($code === 0) out(['ok' => false, 'message' => 'Tidak bisa menghubungi VPS: ' . $err]);
     $res = relay($code, $body);
-    // WhatsApp sudah tertaut -> pesanan agen aktif: status riwayat 'proses' -> 'selesai'
-    if (!empty($res['ok']) && ($res['status'] ?? '') === 'linked' && !empty($GLOBALS['conn'])) {
-        $st = $GLOBALS['conn']->prepare("UPDATE riwayat_pesanan SET status = 'selesai' WHERE order_id = ? AND status IN ('pending','proses')");
-        if ($st) { $st->bind_param("s", $orderId); $st->execute(); $st->close(); }
+    // linked → riwayat 'selesai'; expired (10 menit tanpa tautan) → refund saldo di DATABASE.
+    if (!empty($GLOBALS['conn'])) {
+        require_once __DIR__ . '/agent_lifecycle.php';
+        $sync = agent_sync_order($GLOBALS['conn'], $orderId, $own['uid'], $res);
+        if (!empty($sync['refunded'])) {
+            $st = $GLOBALS['conn']->prepare("SELECT balance FROM users WHERE id = ? LIMIT 1");
+            $st->bind_param('i', $own['uid']);
+            $st->execute();
+            $res['new_balance'] = (float)($st->get_result()->fetch_assoc()['balance'] ?? 0);
+            $st->close();
+            $res['refunded'] = true;
+            $res['refund_amount'] = $sync['amount'];
+        } elseif (($res['status'] ?? '') === 'expired' && $own['status'] === 'batal') {
+            $res['refunded'] = true; // sudah dikembalikan sebelumnya
+        }
     }
     out($res);
 }

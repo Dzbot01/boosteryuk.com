@@ -11,7 +11,8 @@ export interface AgentCreate {
   paket?: string;
 }
 
-export type AgentStatus = 'starting' | 'pairing' | 'linked' | 'closed';
+/** expired = 10 menit tanpa tautan → bot dihentikan & saldo dikembalikan di database. */
+export type AgentStatus = 'starting' | 'pairing' | 'linked' | 'closed' | 'expired';
 
 function authToken(): string {
   try {
@@ -84,7 +85,7 @@ export function resendAgentCode(orderId: string) {
 }
 
 /** Cek status sesi (starting | pairing | linked | closed). */
-export async function getAgentStatus(orderId: string): Promise<{ ok: boolean; status?: AgentStatus; hasCode?: boolean; phone?: string; log?: string[]; message?: string }> {
+export async function getAgentStatus(orderId: string): Promise<{ ok: boolean; status?: AgentStatus; hasCode?: boolean; phone?: string; log?: string[]; message?: string; remainingSec?: number; refunded?: boolean; refund_amount?: number; new_balance?: number }> {
   try {
     const r = await fetch(`${API_BASE}/agent.php?action=status&id=${encodeURIComponent(orderId)}&token=${encodeURIComponent(authToken())}`);
     return await r.json();

@@ -302,7 +302,12 @@ if(loading) return <div className="text-center py-20">Loading...</div>;
                           )}
                           <p className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-slate-400 dark:text-slate-500">
                             <StIcon className="h-3 w-3" strokeWidth={2.2} />
-                            {st.label} · {formatDate(o.created_at)}, {formatTime(o.created_at)}
+                            {agent && statusOf(o) === 'batal'
+                              ? 'Gagal · saldo dikembalikan'
+                              : agent && (statusOf(o) === 'proses' || statusOf(o) === 'pending')
+                                ? 'Menunggu tautan'
+                                : st.label}{' '}
+                            · {formatDate(o.created_at)}, {formatTime(o.created_at)}
                           </p>
                         </td>
                         <td className="px-5 py-4">

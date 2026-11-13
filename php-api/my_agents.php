@@ -72,5 +72,10 @@ foreach ($rows as $r) {
 }
 
 // pengingat jatuh tempo agen milik user ini (tanpa cron) — dijalankan setelah respons terkirim
-agent_reminder_after_response(fn() => agent_reminder_check_user($conn, $uid));
+agent_reminder_after_response(function () use ($conn, $uid) {
+    // order agen yang waktu tautnya habis → refund saldo di DB (user yang sudah menutup halaman pairing)
+    require_once __DIR__ . '/agent_lifecycle.php';
+    agent_sync_user($conn, $uid);
+    agent_reminder_check_user($conn, $uid);
+});
 reply(['ok' => true, 'agents' => $agents]);

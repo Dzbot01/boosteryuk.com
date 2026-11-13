@@ -165,3 +165,14 @@ Catatan `order.php` (belum diubah): agar markup SMM tidak bisa dilewati, harga y
 `order.php` sebaiknya dihitung ulang di server: `require_once 'child_panel_lib.php';
 $tenant = cp_resolve($conn); $price = cp_apply_markup($hargaDasar, $tenant, 'smm');` lalu catat
 `cp_record_order(...)`. Kirim file order.php untuk dipasangkan.
+
+## Batas tautan 10 menit + refund otomatis — `agent_lifecycle.php`
+
+- VPS (`server.js` bot Paimon) menghentikan bot sewa bila nomor belum tertaut dalam 10 menit
+  (`AGENT_PAIR_TIMEOUT_MIN`) → status `expired`, tidak ada kode pairing baru.
+- PHP mengembalikan saldo **di database** (atomik, sekali per order): `riwayat_pesanan` → `batal`,
+  `users.balance += harga`. Dipicu oleh `agent.php?action=status` (halaman pairing, membalas
+  `refunded` + `new_balance`) serta `my_agents.php` / `order_stats.php` (bila halaman pairing sudah ditutup).
+- Status lain / 404 (mis. agen lama) TIDAK pernah di-refund.
+- Order agen dianggap sukses hanya setelah tertaut (`selesai`). Pendapatan child panel dicatat pada saat itu,
+  bukan saat tombol pesan diklik. Kartu "AI Agent Aktif" hanya menghitung agen yang sudah tertaut.

@@ -62,7 +62,8 @@ foreach ($rows as $r) {
     $due = !empty($r['jatuh_tempo']) ? strtotime($r['jatuh_tempo']) : riwayat_due_from_name($r['service_name']);
     $aktif = $due === null || $due >= $now;
     if ($aktif && $type === 'vps') $vps++;
-    if ($aktif && $type === 'agent_ai') $agent++;
+    // Agen dihitung aktif hanya setelah WhatsApp tertaut (riwayat 'selesai'), bukan saat baru dipesan.
+    if ($aktif && $type === 'agent_ai' && $r['status'] === 'selesai') $agent++;
     $layanan[] = [
         'order_id'    => $r['order_id'],
         'type'        => $type,
@@ -75,7 +76,12 @@ foreach ($rows as $r) {
 }
 
 // pengingat jatuh tempo agen milik user ini (tanpa cron) — dijalankan setelah respons terkirim
-agent_reminder_after_response(fn() => agent_reminder_check_user($conn, $uid));
+agent_reminder_after_response(function () use ($conn, $uid) {
+    // order agen yang waktu tautnya habis → refund saldo di DB (user yang sudah menutup halaman pairing)
+    require_once __DIR__ . '/agent_lifecycle.php';
+    agent_sync_user($conn, $uid);
+    agent_reminder_check_user($conn, $uid);
+});
 reply([
     'ok'               => true,
     'bulan_ini'        => (float)$m['total'],
