@@ -1,6 +1,6 @@
 import { X, ChevronDown, Search } from 'lucide-react';
 import { useState } from 'react';
-import { LOGO_URL } from '../constants';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 interface FAQModalProps {
   isOpen: boolean;
@@ -35,6 +35,8 @@ const faqs = [
 ];
 
 export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
+  // Logo mengikuti pengaturan (child panel / admin), bukan logo Boosteryuk bawaan.
+  const logoUrl = useSiteSettings().settings.logoUrl;
   const [expanded, setExpanded] = useState<number | null>(0);
   const [query, setQuery] = useState('');
 
@@ -57,7 +59,7 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
           </div>
 
           <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700/60">
-            <img src={LOGO_URL} alt="FAQ" className="h-10 w-10 shrink-0 object-contain" />
+            <img src={logoUrl} alt="FAQ" className="h-10 w-10 shrink-0 object-contain" />
             <div className="min-w-0 flex-1">
               <h2 className="font-display text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">Pertanyaan Umum</h2>
               <p className="text-[11.5px] font-medium text-slate-400 dark:text-slate-500">{filtered.length} topik seputar booster</p>

@@ -5,6 +5,7 @@ import App from './App';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { SiteSettingsProvider } from './context/SiteSettingsContext';
+import { BrandRewriter } from './lib/brandRewrite';
 import { DepositProvider } from './context/DepositContext';
 import { OrderHistoryProvider } from './context/OrderHistoryContext';
 import { LanguageProvider } from './i18n'; // i18n ID/EN (penerjemah DOM)
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')!).render(
     <LanguageProvider>
     <ThemeProvider>
       <SiteSettingsProvider>
+        <BrandRewriter />
         <AuthProvider>
           <OrderHistoryProvider>
             <DepositProvider>

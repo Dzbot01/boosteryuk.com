@@ -11,7 +11,6 @@ import {
   LoaderCircle,
   AlertTriangle,
 } from 'lucide-react';
-import { LOGO_URL } from '../constants';
 import {
   formatCount,
   isCanceled,
@@ -27,6 +26,7 @@ import {
   requestRefill,
   type RefillStatus,
 } from '../services/refillApi';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 const STEPS: Stage[] = ['Dibuat', 'Di Proses', 'Selesai'];
 
@@ -68,6 +68,8 @@ interface Props {
 }
 
 export default function OrderResult({ order, message }: Props) {
+  // Logo mengikuti pengaturan (child panel / admin), bukan logo Boosteryuk bawaan.
+  const logoUrl = useSiteSettings().settings.logoUrl;
   const stage = mapStatusToStage(order.orderStatus);
   const activeIndex = stageIndex(stage);
   const timeline = timelineFor(order.orderStatus);
@@ -81,7 +83,7 @@ export default function OrderResult({ order, message }: Props) {
         <div className={`h-1.5 w-full ${canceled ? 'bg-rose-500' : stageStyle[stage].bar}`} />
         <div className="p-6 sm:p-7">
           <div className="flex flex-wrap items-start gap-4">
-            <img src={LOGO_URL} alt="Pesanan" className="h-14 w-14 shrink-0 object-contain" />
+            <img src={logoUrl} alt="Pesanan" className="h-14 w-14 shrink-0 object-contain" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2.5">
                 <span

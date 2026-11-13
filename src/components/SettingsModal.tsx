@@ -1,10 +1,10 @@
 import { X, Bell, Shield, Globe, Sun, Moon, SlidersHorizontal, Check, Lock, Construction } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { LOGO_URL } from '../constants';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLang, type Lang } from '../i18n'; // UI: bahasa global + toggle geser/klik
 import { mintaIzinNotif } from '../firebase'; // FIX: toggle notif kini benar-benar minta izin FCM
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -94,6 +94,8 @@ function LanguageSwitch({ lang, onChange }: { lang: Lang; onChange: (lang: Lang)
 }
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+  // Logo mengikuti pengaturan (child panel / admin), bukan logo Boosteryuk bawaan.
+  const logoUrl = useSiteSettings().settings.logoUrl;
   const { theme, setTheme, isDark } = useTheme();
   const { user } = useAuth();
   const [notif, setNotif] = useState(false);
@@ -118,7 +120,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700/60">
-            <img src={LOGO_URL} alt="Pengaturan" className="h-10 w-10 shrink-0 object-contain" />
+            <img src={logoUrl} alt="Pengaturan" className="h-10 w-10 shrink-0 object-contain" />
             <div className="min-w-0 flex-1">
               <h2 className="font-display text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
                 Pengaturan

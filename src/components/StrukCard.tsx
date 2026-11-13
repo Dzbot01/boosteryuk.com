@@ -1,8 +1,10 @@
 import { BadgeCheck, XCircle } from 'lucide-react';
-import { LOGO_URL } from '../constants';
 import type { Struk } from '../services/strukStore';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 export default function StrukCard({ struk }: { struk: Struk }) {
+  // Logo mengikuti pengaturan (child panel / admin), bukan logo Boosteryuk bawaan.
+  const logoUrl = useSiteSettings().settings.logoUrl;
   const rows = [
     { label: 'Id Pesanan', value: struk.ok ? struk.orderId : '' },
     { label: 'Layanan', value: struk.ok ? struk.layanan : '' },
@@ -20,7 +22,7 @@ export default function StrukCard({ struk }: { struk: Struk }) {
         <div
           className="absolute -inset-[60%] -rotate-[30deg]"
           style={{
-            backgroundImage: `url('${LOGO_URL}')`,
+            backgroundImage: `url('${logoUrl}')`,
             backgroundRepeat: 'repeat',
             backgroundSize: '120px 120px',
             backgroundPosition: 'center',
@@ -34,7 +36,7 @@ export default function StrukCard({ struk }: { struk: Struk }) {
 
       <div className="relative px-5 pb-8 pt-2 sm:px-7">
         <div className="flex items-center justify-center gap-2.5">
-          <img src={LOGO_URL} alt="Boosteryuk" className="h-9 w-9 object-contain" />
+          <img src={logoUrl} alt="Boosteryuk" className="h-9 w-9 object-contain" />
           <p className="font-display text-[17px] font-extrabold tracking-tight">
             <span className="text-cyan-600">Booster</span>yuk
           </p>

@@ -13,7 +13,6 @@ import {
 import Reveal from '../components/Reveal';
 import OrderResult from '../components/OrderResult';
 import ErrorPanel from '../components/ErrorPanel';
-import { LOGO_URL } from '../constants';
 import {
   checkOrderStatus,
   parseOrderIds,
@@ -21,9 +20,12 @@ import {
   type LookupFailure,
   type OrderData,
 } from '../services/orderApi';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 export default function CekStatusPage() {
 
+  // Logo mengikuti pengaturan (child panel / admin), bukan logo Boosteryuk bawaan.
+  const logoUrl = useSiteSettings().settings.logoUrl;
   const [orderId, setOrderId] = useState('');
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [failures, setFailures] = useState<LookupFailure[]>([]);
@@ -211,7 +213,7 @@ export default function CekStatusPage() {
               <span className="absolute inset-0 rounded-full border-4 border-slate-100 dark:border-slate-700" />
               <span className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-blue-600" />
               <span className="absolute inset-0 flex items-center justify-center">
-                <img src={LOGO_URL} alt="" className="h-9 w-9 object-contain" />
+                <img src={logoUrl} alt="" className="h-9 w-9 object-contain" />
               </span>
             </div>
             <div className="text-center">

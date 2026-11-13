@@ -14,7 +14,6 @@ import Reveal from '../components/Reveal';
 import AuthModal from '../components/AuthModal';
 
 import {
-  LOGO_URL,
   SECONDARY_SOCIAL_BRANDS,
   SOCIAL_BRANDS,
   socialIconUrl,
@@ -35,6 +34,8 @@ const HOME_JSONLD = [
 ];
 
 export default function HomePage() {
+  // Logo mengikuti pengaturan (child panel / admin), bukan logo Boosteryuk bawaan.
+  const logoUrl = useSiteSettings().settings.logoUrl;
   const { isDark } = useTheme();
   const { heroImageSrc, settings, dashboardVideo } = useSiteSettings();
   const { user } = useAuth();
@@ -187,7 +188,7 @@ export default function HomePage() {
               <span className="absolute h-[64%] w-[64%] rounded-full border border-white/10" />
               <span className="absolute h-[42%] w-[42%] rounded-full border border-white/[0.07]" />
               <img
-                src={LOGO_URL}
+                src={logoUrl}
                 alt="Boosteryuk"
                 className="relative h-2/5 w-2/5 max-h-[200px] min-h-[120px] animate-float-slow object-contain drop-shadow-[0_18px_34px_rgba(0,0,0,0.5)]"
               />

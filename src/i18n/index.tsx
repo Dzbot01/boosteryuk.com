@@ -14,6 +14,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { EN } from './en';
+import { applyBrand, unbrand } from '../lib/brandRewrite';
 
 export type Lang = 'id' | 'en';
 
@@ -37,13 +38,14 @@ const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
 
 /** Terjemahkan satu string Indonesia ke Inggris; kembalikan null bila tidak dikenal. */
 export function translateText(text: string): string | null {
-  const key = normalize(text);
+  // Child panel: kamus berbasis teks asli "Boosteryuk" → kembalikan brand dulu, lalu pasang lagi.
+  const key = normalize(unbrand(text));
   if (!key) return null;
   const hit = EN[key];
-  if (hit) return hit;
+  if (hit) return applyBrand(hit);
   for (const [re, fn] of PATTERNS) {
     const m = key.match(re);
-    if (m) return fn(...m);
+    if (m) return applyBrand(fn(...m));
   }
   return null;
 }
