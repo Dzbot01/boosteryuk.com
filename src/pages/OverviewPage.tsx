@@ -5,6 +5,7 @@ import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings, type InfoItem } from '../context/SiteSettingsContext';
 import { fetchServices, type ServiceItem } from '../services/servicesApi';
+import { MAIN_API } from '../lib/apiBase';
 
 const rupiah = (n: number) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
@@ -17,7 +18,7 @@ const PLATFORMS: { key: string; test: RegExp }[] = [
 ];
 const PER_PLATFORM = 5;
 /** Statistik per user dihitung server dari tabel riwayat_pesanan (kolom jatuh_tempo dll). */
-const STATS_API = 'https://boosteryuk.com/api/order_stats.php';
+const STATS_API = `${MAIN_API}/order_stats.php`;
 /** Cadangan: sumber riwayat yang sama dengan halaman Riwayat Pesanan. */
 const RIWAYAT_API = 'https://cekidku.my.id/api/riwayat_pesanan.php';
 

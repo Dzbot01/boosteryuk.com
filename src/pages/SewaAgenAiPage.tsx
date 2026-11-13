@@ -4,7 +4,9 @@ import { Check, X, LoaderCircle, CheckCircle2, AlertCircle, Smartphone, Bot } fr
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
 import AiAssistantCard from '../components/AiAssistantCard';
-import { SERVICE_SLIDES, socialIconUrl } from '../constants';
+import { socialIconUrl } from '../constants';
+import { useSlides } from '../lib/useSlides';
+import { markupFactor } from '../lib/tenant';
 import { useAuth } from '../context/AuthContext';
 import { isValidEmail } from '../services/otp';
 import { orderAgent, resendAgentCode, getAgentStatus } from '../services/agentApi';
@@ -70,13 +72,15 @@ const PROCESS_STEPS = [
 type Phase = 'select' | 'beam' | 'packages' | 'form' | 'processing' | 'pairing' | 'done';
 
 export default function SewaAgenAiPage() {
+  const SLIDES = useSlides();
+
   const navigate = useNavigate();
   const { user, topUp, refresh } = useAuth();
 
   // slider
   const [index, setIndex] = useState(0);
   const paused = useRef(false);
-  const next = useCallback(() => setIndex((i) => (i + 1) % SERVICE_SLIDES.length), []);
+  const next = useCallback(() => setIndex((i) => (i + 1) % SLIDES.length), [SLIDES.length]);
   useEffect(() => {
     const t = window.setInterval(() => { if (!paused.current) next(); }, SLIDE_INTERVAL);
     return () => window.clearInterval(t);
@@ -120,7 +124,8 @@ export default function SewaAgenAiPage() {
 
   const months = Math.min(12, Math.max(1, Number(durasi) || 1)); // sama dgn batas server (1–12)
   const tier = tierIdx != null ? WA_TIERS[tierIdx] : null;
-  const total = tier ? tier.price * months : 0;
+  // Child panel: tampilkan harga + markup panel (server menghitung ulang harga final).
+  const total = tier ? Math.ceil(tier.price * months * markupFactor('agent')) : 0;
 
   // Sinar keluar dari ikon yang DIPILIH, lalu lanjut searah siklus (WA->Discord->Telegram->Facebook).
   // Segmen i mulai dari sudut i; delay diputar agar segmen dari ikon terpilih animasi duluan.
@@ -226,15 +231,15 @@ export default function SewaAgenAiPage() {
           onMouseEnter={() => (paused.current = true)}
           onMouseLeave={() => (paused.current = false)}
         >
-          <div className="flex h-full transition-transform duration-500 ease-out" style={{ width: `${SERVICE_SLIDES.length * 100}%`, transform: `translateX(-${index * (100 / SERVICE_SLIDES.length)}%)` }}>
-            {SERVICE_SLIDES.map((s) => (
-              <div key={s.url} className="h-full" style={{ width: `${100 / SERVICE_SLIDES.length}%` }}>
+          <div className="flex h-full transition-transform duration-500 ease-out" style={{ width: `${SLIDES.length * 100}%`, transform: `translateX(-${index * (100 / SLIDES.length)}%)` }}>
+            {SLIDES.map((s) => (
+              <div key={s.url} className="h-full" style={{ width: `${100 / SLIDES.length}%` }}>
                 <img src={s.url} alt={s.title} className="h-full w-full object-cover" loading="lazy" />
               </div>
             ))}
           </div>
           <div className="absolute bottom-4 right-5 flex items-center gap-1.5 sm:bottom-6 sm:right-8">
-            {SERVICE_SLIDES.map((s, i) => (
+            {SLIDES.map((s, i) => (
               <button key={s.url} onClick={() => setIndex(i)} aria-label={`Slide ${i + 1}`} className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? 'w-6 bg-white dark:bg-slate-900' : 'w-1.5 bg-white/50 hover:bg-white/80 dark:bg-slate-900/50'}`} />
             ))}
           </div>
@@ -366,7 +371,7 @@ function PackageCarousel({ onPick }: { onPick: (i: number) => void }) {
               <h3 className="mt-3 font-display text-xl font-black tracking-tight text-slate-900 dark:text-white">{t.name}</h3>
               <p className="mt-1 text-[12.5px] leading-relaxed text-slate-500 dark:text-slate-400">{t.desc}</p>
               <p className="mt-3">
-                <span className="font-display text-[26px] font-extrabold text-emerald-600 dark:text-emerald-400">{formatRupiah(t.price)}</span>
+                <span className="font-display text-[26px] font-extrabold text-emerald-600 dark:text-emerald-400">{formatRupiah(Math.ceil(t.price * markupFactor('agent')))}</span>
                 <span className="text-[12px] font-semibold text-slate-400"> /bulan</span>
               </p>
               <ul className="mt-4 flex-1 space-y-2">

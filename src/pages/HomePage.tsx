@@ -36,7 +36,7 @@ const HOME_JSONLD = [
 
 export default function HomePage() {
   const { isDark } = useTheme();
-  const { heroImageSrc } = useSiteSettings();
+  const { heroImageSrc, settings } = useSiteSettings();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
@@ -70,8 +70,8 @@ export default function HomePage() {
           <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <Reveal>
             <h1 className="font-display text-[44px] font-extrabold leading-[1.02] tracking-[-0.04em] text-white sm:text-[58px] lg:text-[64px]">
-              <span className="text-cyan-300">Booster</span>
-              <span className="text-white">yuk</span>
+              <span className="by-accent-hero">{settings.brandName}</span>
+              <span className="text-white">{settings.brandSuffix}</span>
             </h1>
 
             <p className="mt-5 max-w-md font-display text-[19px] font-bold leading-snug tracking-tight text-white/90 sm:text-[22px]">

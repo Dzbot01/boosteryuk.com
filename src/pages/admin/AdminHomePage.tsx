@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Settings, Server, Shield, ArrowUpRight, DollarSign } from 'lucide-react';
+import { Settings, Server, Shield, ArrowUpRight, DollarSign, Globe } from 'lucide-react';
 import Reveal from '../../components/Reveal';
 import { useAuth } from '../../context/AuthContext';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
@@ -18,6 +18,13 @@ const CARDS = [
     title: 'Pengaturan Website',
     desc: 'Ubah logo, nama brand, footer, musik, dan papan informasi.',
     color: 'from-cyan-500 to-cyan-700',
+  },
+  {
+    path: '/admin/child-panel',
+    icon: Globe,
+    title: 'Child Panel',
+    desc: 'Kloning website di subdomain: logo, tema, slider, markup harga & voice.',
+    color: 'from-violet-500 to-violet-700',
   },
   {
     path: '/admin/server',

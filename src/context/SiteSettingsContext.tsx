@@ -2,11 +2,14 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { LOGO_URL as DEFAULT_LOGO } from '../constants';
+import { MAIN_API, IS_CHILD_PANEL } from '../lib/apiBase';
+import { loadTenant, tenantAssetUrl, type Tenant, type TenantSlide, type VoiceMode } from '../lib/tenant';
 
 export interface InfoItem {
   id: number;
@@ -42,6 +45,8 @@ export interface SiteSettings {
   menuActive: string;
   /** Id set aksesoris menggantung di bawah header ('' = tidak ada). */
   headerOrnament: string;
+  /** Teks kecil di bawah nama brand pada header (bawaan "SMM Panel"). */
+  headerTagline: string;
 }
 
 interface SiteCtx {
@@ -58,6 +63,12 @@ interface SiteCtx {
   saveHeroImage: (dataUrl: string | null) => Promise<{ ok: boolean; message?: string }>;
   /** URL gambar hero yang siap dipakai di CSS ('' = bawaan). */
   heroImageSrc: string;
+  /** Child panel aktif (null = web utama). */
+  tenant: Tenant | null;
+  /** Slider kustom child panel (null = slider bawaan). */
+  slides: TenantSlide[] | null;
+  /** Mode suara Guri Booster saat login. */
+  voiceMode: VoiceMode;
   /** Status sinkron ke database (khusus admin saat menyimpan). */
   sync: SyncState;
 }
@@ -70,7 +81,7 @@ export interface SyncState {
 const STORAGE_KEY = 'boosteryuk-site-settings';
 const DEFAULT_FAVICON = '/favicon.png';
 /** Endpoint PHP (folder /api) yang menyimpan pengaturan ke tabel MySQL site_settings. */
-const SETTINGS_API = 'https://boosteryuk.com/api/site_settings.php';
+const SETTINGS_API = `${MAIN_API}/site_settings.php`;
 /** Field yang dibagikan ke semua pengunjung lewat database. */
 const SHARED_KEYS = [
   'infoItems',
@@ -168,6 +179,7 @@ const DEFAULTS: SiteSettings = {
   headerTint: '',
   menuActive: '',
   headerOrnament: '',
+  headerTagline: '',
 };
 
 function load(): SiteSettings {
@@ -192,11 +204,44 @@ const SiteContext = createContext<SiteCtx>({
   resetFavicon: () => {},
   saveHeroImage: async () => ({ ok: false }),
   heroImageSrc: '',
+  tenant: null,
+  slides: null,
+  voiceMode: 'full',
   sync: { status: 'idle', message: '' },
 });
 
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<SiteSettings>(load);
+  // Child panel: konfigurasi panel menimpa tampilan (TIDAK disimpan ke pengaturan web utama).
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+  useEffect(() => {
+    if (!IS_CHILD_PANEL) return;
+    let alive = true;
+    loadTenant().then((t) => alive && setTenant(t));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const effective = useMemo<SiteSettings>(() => {
+    if (!tenant) return settings;
+    const c = tenant.config || {};
+    const logo = tenantAssetUrl(tenant, c.logo);
+    return {
+      ...settings,
+      brandName: c.brandName || settings.brandName,
+      brandSuffix: c.brandSuffix ?? settings.brandSuffix,
+      footerText: c.footerText || settings.footerText,
+      headerTagline: c.headerTagline || '',
+      logoUrl: logo || settings.logoUrl,
+      faviconUrl: logo || settings.faviconUrl,
+      // warna/aksesoris panel: kosong = bawaan (tidak mewarisi tema musiman web utama)
+      brandAccent: c.brandAccent || '',
+      headerTint: c.headerTint || '',
+      menuActive: c.menuActive || '',
+      headerOrnament: c.headerOrnament || '',
+      heroImageUrl: '',
+    };
+  }, [settings, tenant]);
   const [sync, setSync] = useState<SyncState>({ status: 'idle', message: '' });
   // Kunci yang diubah admin & belum dikirim ke server.
   const dirtyKeys = useRef<Set<SharedKey>>(new Set());
@@ -279,7 +324,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
   // Terapkan favicon ke <link rel="icon"> secara langsung.
   useEffect(() => {
-    const href = settings.faviconUrl || DEFAULT_FAVICON;
+    const href = effective.faviconUrl || DEFAULT_FAVICON;
     let link = document.getElementById('app-favicon') as HTMLLinkElement | null;
     if (!link) {
       link = document.createElement('link');
@@ -289,21 +334,22 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     }
     link.type = href.startsWith('data:image/svg') || href.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
     link.href = href;
-  }, [settings.faviconUrl]);
+  }, [effective.faviconUrl]);
 
   // Terapkan warna tema ke variabel CSS di <html> (lihat index.css: .by-accent, .by-menu-active, ...).
   useEffect(() => {
     const root = document.documentElement.style;
     const setVar = (name: string, val: string | null) => (val ? root.setProperty(name, val) : root.removeProperty(name));
-    const acc = HEX.test(settings.brandAccent) ? settings.brandAccent : '';
+    const acc = HEX.test(effective.brandAccent) ? effective.brandAccent : '';
     setVar('--by-accent', acc || null);
     setVar('--by-accent-dark', acc ? lighten(acc, 0.35) : null);
     setVar('--by-accent-hero', acc ? lighten(acc, 0.5) : null);
-    setVar('--by-menu', HEX.test(settings.menuActive) ? settings.menuActive : null);
-    setVar('--by-header', HEX.test(settings.headerTint) ? settings.headerTint : null);
-  }, [settings.brandAccent, settings.menuActive, settings.headerTint]);
+    setVar('--by-menu', HEX.test(effective.menuActive) ? effective.menuActive : null);
+    setVar('--by-header', HEX.test(effective.headerTint) ? effective.headerTint : null);
+  }, [effective.brandAccent, effective.menuActive, effective.headerTint]);
 
   const heroImageSrc = (() => {
+    if (tenant) return tenantAssetUrl(tenant, tenant.config?.hero);
     const m = /^asset:hero:([\w-]+)$/.exec(settings.heroImageUrl || '');
     return m ? `${SETTINGS_API}?asset=hero&v=${m[1]}` : '';
   })();
@@ -387,7 +433,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   return (
     <SiteContext.Provider
       value={{
-        settings,
+        settings: effective,
         updateSettings,
         setInfoItems,
         setMusicFile,
@@ -398,6 +444,12 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         resetFavicon,
         saveHeroImage,
         heroImageSrc,
+        tenant,
+        slides: tenant?.config?.slides?.length
+          ? tenant.config.slides.map((sl) => ({ ...sl, image: tenantAssetUrl(tenant, sl.image) })).filter((sl) => sl.image)
+          : null,
+        // Panel: bawaan hanya sapaan (info reseller Boosteryuk tidak cocok untuk panel reseller).
+        voiceMode: tenant ? tenant.config?.voice || 'welcome' : 'full',
         sync,
       }}
     >

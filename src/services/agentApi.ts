@@ -1,6 +1,7 @@
+import { MAIN_API } from '../lib/apiBase';
 // Klien Agen Sewa AI. Memanggil PHP proxy (agent.php) yang meneruskan ke VPS
 // lewat Cloudflare tunnel. Token disimpan server-side (tidak di browser).
-const API_BASE = 'https://boosteryuk.com/api';
+const API_BASE = MAIN_API;
 
 export interface AgentCreate {
   orderId: string;

@@ -90,7 +90,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               <span className={onHeroTop ? 'text-white' : 'text-black dark:text-white'}>{settings.brandSuffix}</span>
             </span>
             <span className={`mt-1 block text-[10px] font-semibold uppercase tracking-[0.16em] ${onHeroTop ? 'text-slate-300' : 'text-slate-400 dark:text-slate-500'}`}>
-              {isAdmin? 'Admin Panel' : 'SMM Panel'}
+              {isAdmin? 'Admin Panel' : settings.headerTagline || 'SMM Panel'}
             </span>
           </span>
         </Link>

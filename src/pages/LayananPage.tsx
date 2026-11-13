@@ -4,16 +4,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Reveal from '../components/Reveal';
 import BuatPesananCard from '../components/BuatPesananCard';
-import { SERVICE_SLIDES } from '../constants';
+import { useSlides } from '../lib/useSlides';
 
 const SLIDE_INTERVAL = 4500;
 
 export default function LayananPage() {
+  const SLIDES = useSlides();
+
   const [index, setIndex] = useState(0);
   const paused = useRef(false);
 
   const next = useCallback(() => {
-    setIndex((i) => (i + 1) % SERVICE_SLIDES.length);
+    setIndex((i) => (i + 1) % SLIDES.length);
   }, []);
 
   // Auto-advance the slider, pausing while the pointer is over it.
@@ -39,21 +41,21 @@ export default function LayananPage() {
           <div
             className="flex h-full transition-transform duration-500 ease-out"
             style={{
-              width: `${SERVICE_SLIDES.length * 100}%`,
-              transform: `translateX(-${index * (100 / SERVICE_SLIDES.length)}%)`,
+              width: `${SLIDES.length * 100}%`,
+              transform: `translateX(-${index * (100 / SLIDES.length)}%)`,
             }}
           >
-            {SERVICE_SLIDES.map((slide) => (
+            {SLIDES.map((slide) => (
               <div
                 key={slide.url}
                 className="h-full"
-                style={{ width: `${100 / SERVICE_SLIDES.length}%` }}
+                style={{ width: `${100 / SLIDES.length}%` }}
               >
                 <img
                   src={slide.url}
                   alt={slide.title}
                   className="h-full w-full object-cover"
-                  loading={slide.url === SERVICE_SLIDES[0].url ? 'eager' : 'lazy'}
+                  loading={slide.url === SLIDES[0].url ? 'eager' : 'lazy'}
                 />
               </div>
             ))}
@@ -61,7 +63,7 @@ export default function LayananPage() {
 
           {/* dots */}
           <div className="absolute bottom-4 right-5 flex items-center gap-1.5 sm:bottom-6 sm:right-8">
-            {SERVICE_SLIDES.map((s, i) => (
+            {SLIDES.map((s, i) => (
               <button
                 key={s.url}
                 onClick={() => setIndex(i)}

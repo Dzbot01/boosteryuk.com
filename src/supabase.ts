@@ -1,3 +1,4 @@
+import { MAIN_API } from './lib/apiBase';
 export interface EdgePayload {
   action: 'status' | 'refill' | 'refill_status' | 'services' | 'order' | 'balance';
   id?: string;
@@ -16,7 +17,7 @@ export interface EdgeResponse<T = unknown> {
   error: string | null;
 }
 
-const API_BASE_URL = 'https://boosteryuk.com/api';
+const API_BASE_URL = MAIN_API;
 
 const ENDPOINTS: Record<Exclude<EdgePayload['action'], undefined>, string> = {
   status: `${API_BASE_URL}/status.php`,

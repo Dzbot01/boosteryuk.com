@@ -1,7 +1,10 @@
 // Controller suara "Guri Booster" (singleton pub/sub).
 // Dimulai DI DALAM gesture klik login (AuthModal) agar autoplay diizinkan browser,
 // lalu AiAssistantCard berlangganan untuk menampilkan subtitle tersinkron.
-import { BOOSTY_SEQUENCE, type BoostyVoice } from '../data/boostyVoices';
+import { BOOSTY_SEQUENCE, BOOSTY_WELCOME, type BoostyVoice } from '../data/boostyVoices';
+
+/** full = sapaan + info reseller, welcome = sapaan saja, off = tanpa suara (diatur per child panel). */
+export type BoostyVoiceMode = 'full' | 'welcome' | 'off';
 
 export interface BoostyVoiceState {
   voice: BoostyVoice | null;
@@ -16,6 +19,7 @@ let state: BoostyVoiceState = { voice: null, subtitle: '', blocked: false };
  * penting untuk Safari/iOS yang memblokir new Audio() di luar gesture.
  */
 let el: HTMLAudioElement | null = null;
+let sequence: BoostyVoice[] = BOOSTY_SEQUENCE;
 let playing = false;
 let primeToken = 0;
 let gestureCleanup: (() => void) | null = null;
@@ -72,7 +76,7 @@ function retryOnGesture(a: HTMLAudioElement) {
 
 function playAt(index: number) {
   clearAudio();
-  const voice = BOOSTY_SEQUENCE[index];
+  const voice = sequence[index];
   if (!voice) {
     set({ voice: null, subtitle: '' });
     return;
@@ -90,7 +94,7 @@ function playAt(index: number) {
     if (cue) set({ subtitle: cue.text });
   };
   a.onended = () => {
-    if (index + 1 < BOOSTY_SEQUENCE.length) playAt(index + 1);
+    if (index + 1 < sequence.length) playAt(index + 1);
     else {
       playing = false;
       set({ voice: null, subtitle: '' });
@@ -134,9 +138,15 @@ export const boostyVoice = {
       })
       .catch(() => { /* diblokir: start() akan memakai retryOnGesture */ });
   },
-  /** Mulai urutan dari awal (sapaan -> info reseller). */
-  start() {
+  /** Mulai urutan dari awal (sapaan -> info reseller), sesuai mode suara. */
+  start(mode: BoostyVoiceMode = 'full') {
     primeToken++;
+    if (mode === 'off') {
+      clearAudio();
+      if (el) el.muted = false;
+      return;
+    }
+    sequence = mode === 'welcome' ? [BOOSTY_WELCOME] : BOOSTY_SEQUENCE;
     playAt(0);
   },
   /** Hentikan & kosongkan subtitle. */

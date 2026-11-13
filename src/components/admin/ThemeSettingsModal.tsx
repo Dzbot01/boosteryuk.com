@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X, Upload, RotateCcw, Check, Loader2, Palette, ImageIcon, Sparkles, CircleAlert } from 'lucide-react';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { ORNAMENT_ASSETS, ORNAMENT_SETS } from '../../data/headerOrnaments';
+import { compressImage } from '../../lib/image';
 
 const DEFAULT_HERO = '/world.png';
 const DEFAULTS = { brandAccent: '#0891b2', headerTint: '#ffffff', menuActive: '#0891b2' };
@@ -13,30 +14,6 @@ const COLOR_FIELDS: { key: ColorKey; label: string; hint: string }[] = [
   { key: 'headerTint', label: 'Warna kartu header', hint: 'Tetap transparan + blur saat halaman discroll.' },
   { key: 'menuActive', label: 'Tombol aktif side menu', hint: 'Warna tombol menu yang sedang dibuka.' },
 ];
-
-/** Perkecil gambar ke maks 1920px & JPEG agar ringan disimpan di database. */
-function compressImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, 1920 / img.width);
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width * scale);
-      c.height = Math.round(img.height * scale);
-      const ctx = c.getContext('2d');
-      if (!ctx) return reject(new Error('Canvas tidak tersedia'));
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url);
-      resolve(c.toDataURL('image/jpeg', 0.82));
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('File bukan gambar yang valid'));
-    };
-    img.src = url;
-  });
-}
 
 export default function ThemeSettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { settings, updateSettings, saveHeroImage, heroImageSrc, sync } = useSiteSettings();
@@ -89,11 +66,8 @@ export default function ThemeSettingsModal({ open, onClose }: { open: boolean; o
   const pickHero = async (file: File | undefined) => {
     if (!file) return;
     setHeroErr('');
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return setHeroErr('Gunakan gambar JPG, PNG, atau WebP.');
     try {
-      const data = await compressImage(file);
-      if (data.length > 2_700_000) return setHeroErr('Gambar terlalu besar setelah dikompres. Coba gambar lain.');
-      setHero(data);
+      setHero(await compressImage(file));
     } catch (e) {
       setHeroErr(e instanceof Error ? e.message : 'Gagal membaca gambar.');
     }

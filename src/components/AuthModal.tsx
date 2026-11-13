@@ -4,8 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { sendOtpEmail, genOtp, isValidEmail, otpRateCheck, otpRateRecord } from '../services/otp';
 import { boostyVoice } from '../services/boostyVoice';
+import { MAIN_API } from '../lib/apiBase';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
-const API_URL = 'https://boosteryuk.com/api';
+const API_URL = MAIN_API;
 type Mode = 'register' | 'login' | 'recover' | 'otp';
 
 interface Props {
@@ -17,6 +19,7 @@ interface Props {
 
 export default function AuthModal({ open, onClose, onSuccess, initialMode = 'login' }: Props) {
   const { login } = useAuth();
+  const { voiceMode } = useSiteSettings();
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -158,7 +161,7 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
       if (res.ok) {
         // Suara Guri Booster diputar SETIAP kali user baru login. Refresh halaman tidak
         // memanggil submitLogin, jadi suara tidak diulang saat refresh.
-        boostyVoice.start();
+        boostyVoice.start(voiceMode);
         onSuccess?.();
         onClose();
         navigate('/overview'); // redirect setelah login -> Overview

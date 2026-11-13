@@ -29,6 +29,7 @@ const PlaygroundPage = lazy(() => import('./pages/PlaygroundPage'));
 const SewaAgenAiPage = lazy(() => import('./pages/SewaAgenAiPage'));
 const OverviewPage = lazy(() => import('./pages/OverviewPage'));
 const AgenAiSayaPage = lazy(() => import('./pages/AgenAiSayaPage'));
+const AdminChildPanelPage = lazy(() => import('./pages/admin/AdminChildPanelPage'));
 const PengaturanAkunPage = lazy(() => import('./pages/PengaturanAkunPage'));
 const DepositPage = lazy(() => import('./pages/DepositPage'));
 const DepositMethodPage = lazy(() => import('./pages/DepositMethodPage'));
@@ -79,6 +80,7 @@ export default function App() {
           <Route path="admin/profit" element={<ProtectedRoute adminOnly><AdminProfitPage /></ProtectedRoute>} />
           <Route path="admin/broadcast" element={<ProtectedRoute adminOnly><AdminBroadcastPage /></ProtectedRoute>} />
           <Route path="admin/website" element={<ProtectedRoute adminOnly><AdminWebsitePage /></ProtectedRoute>} />
+          <Route path="admin/child-panel" element={<ProtectedRoute adminOnly><AdminChildPanelPage /></ProtectedRoute>} />
           <Route path="admin/server" element={<ProtectedRoute adminOnly><AdminServerPage /></ProtectedRoute>} />
 
           <Route path="s/:slug" element={<StrukSuksesPage />} />

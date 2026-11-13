@@ -27,7 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 error_reporting(0);
 require 'configdb.php'; // menyediakan $conn (mysqli) + getUserIdByToken()
 require_once __DIR__ . '/riwayat_schema.php'; // kolom order_type, paket, durasi_bulan, jatuh_tempo, ...
-require_once __DIR__ . '/agent_reminder.php'; // jadwal email pengingat jatuh tempo (H-7/H-3/H-1/H)
+require_once __DIR__ . '/agent_reminder.php';
+require_once __DIR__ . '/child_panel_lib.php'; // markup harga child panel (subdomain) // jadwal email pengingat jatuh tempo (H-7/H-3/H-1/H)
 if (isset($conn) && $conn instanceof mysqli) $conn->set_charset('utf8mb4');
 
 function reply($data, $code = 200) {
@@ -61,7 +62,11 @@ if ($token === '' || strlen($phone) < 9) reply(["ok" => false, "message" => "Dat
 if ($nama === '') reply(["ok" => false, "message" => "Nama AI wajib diisi."], 400);
 
 $tier  = $TIERS[$tierId];
-$price = (float)($tier['price'] * $months);
+$basePrice = (float)($tier['price'] * $months);
+// Child panel: harga = harga dasar + markup panel (dihitung di server, tidak pernah di bawah harga dasar).
+$tenant = null;
+try { $tenant = cp_resolve($conn); } catch (Throwable $e) { $tenant = null; }
+$price = cp_apply_markup($basePrice, $tenant, 'agent');
 
 /* ===== 1. Token -> user ===== */
 $user_id = function_exists('getUserIdByToken') ? getUserIdByToken($token) : null;
@@ -115,6 +120,8 @@ if (riwayat_ensure_columns($conn)) {
         'platform'        => $platform,
         'tier'            => $tierId,
         'payment_gateway' => $tier['pg'],
+        'child_panel_id'  => $tenant['id'] ?? null,
+        'harga_dasar'     => $basePrice,
     ], JSON_UNESCAPED_UNICODE);
     $st = $conn->prepare("INSERT INTO riwayat_pesanan
         (user_id, order_id, service_name, quantity, price, status, order_type, paket, durasi_bulan, jatuh_tempo, target, detail)

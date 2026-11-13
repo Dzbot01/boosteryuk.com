@@ -7,6 +7,7 @@
 
 import { invokeProxy } from '../supabase';
 import type { ServiceCategory } from '../constants';
+import { markupFactor } from '../lib/tenant';
 
 export interface ServiceItem {
   id: string;
@@ -163,7 +164,10 @@ export const RATE_MARKUP_PLUS_PER_1000 = 1000;
 
 export function applyMarkup(rate: number | null, isPlus = false): number | null {
   if (rate === null) return null;
-  return rate + (isPlus? RATE_MARKUP_PLUS_PER_1000 : RATE_MARKUP_PER_1000);
+  const base = rate + (isPlus? RATE_MARKUP_PLUS_PER_1000 : RATE_MARKUP_PER_1000);
+  // Child panel: + markup % milik panel (1 di web utama).
+  const factor = markupFactor('smm');
+  return factor === 1 ? base : Math.ceil(base * factor);
 }
 
 export function formatRate(rate: number | null, isPlus = false): string {

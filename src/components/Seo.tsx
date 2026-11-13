@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { SITE_URL, SITE_NAME, DEFAULT_TITLE, DEFAULT_DESC, DEFAULT_OG_IMAGE, abs } from '../seo/config';
+import { IS_CHILD_PANEL } from '../lib/apiBase';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 type JsonLd = Record<string, unknown> | Record<string, unknown>[];
 
@@ -22,7 +24,11 @@ interface SeoProps {
 export default function Seo({ title, description, image, type = 'website', noindex, bareOnHome, jsonLd }: SeoProps) {
   const { pathname } = useLocation();
   const canonical = SITE_URL + (pathname === '/' ? '/' : pathname.replace(/\/+$/, ''));
-  const fullTitle = title ? `${title} · ${SITE_NAME}` : DEFAULT_TITLE;
+  const { settings } = useSiteSettings();
+  // Child panel: judul memakai brand panel & halaman tidak diindeks (hindari konten duplikat web utama).
+  const brand = IS_CHILD_PANEL ? `${settings.brandName}${settings.brandSuffix}` : SITE_NAME;
+  const fullTitle = title ? `${title} · ${brand}` : IS_CHILD_PANEL ? brand : DEFAULT_TITLE;
+  noindex = noindex || IS_CHILD_PANEL;
   const desc = description || DEFAULT_DESC;
   const img = abs(image || DEFAULT_OG_IMAGE);
 

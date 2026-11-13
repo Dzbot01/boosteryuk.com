@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Layers, Server, Sparkles, Tag } from 'lucide-react';
-import { SERVICE_SLIDES } from '../constants';
+import { useSlides } from '../lib/useSlides';
 import DragScroller from '../components/DragScroller';
 import OrderDetailSheet, { type OrderDetail } from '../components/OrderDetailSheet';
 import {
@@ -157,11 +157,12 @@ function CustomSelect({
 }
 
 export default function App() {
+  const SLIDES = useSlides();
   const [slideIndex, setSlideIndex] = useState(0);
   const paused = useRef(false);
 
   const next = useCallback(() => {
-    setSlideIndex((i) => (i + 1) % SERVICE_SLIDES.length);
+    setSlideIndex((i) => (i + 1) % SLIDES.length);
   }, []);
 
   useEffect(() => {
@@ -253,21 +254,21 @@ export default function App() {
           <div
             className="flex h-full transition-transform duration-500 ease-out"
             style={{
-              width: `${SERVICE_SLIDES.length * 100}%`,
-              transform: `translateX(-${slideIndex * (100 / SERVICE_SLIDES.length)}%)`,
+              width: `${SLIDES.length * 100}%`,
+              transform: `translateX(-${slideIndex * (100 / SLIDES.length)}%)`,
             }}
           >
-            {SERVICE_SLIDES.map((slide) => (
+            {SLIDES.map((slide) => (
               <div
                 key={slide.url}
                 className="h-full"
-                style={{ width: `${100 / SERVICE_SLIDES.length}%` }}
+                style={{ width: `${100 / SLIDES.length}%` }}
               >
                 <img
                   src={slide.url}
                   alt={slide.title}
                   className="h-full w-full object-cover"
-                  loading={slide.url === SERVICE_SLIDES[0].url ? 'eager' : 'lazy'}
+                  loading={slide.url === SLIDES[0].url ? 'eager' : 'lazy'}
                 />
               </div>
             ))}
@@ -275,7 +276,7 @@ export default function App() {
 
           {/* dots */}
           <div className="absolute bottom-4 right-5 flex items-center gap-1.5 sm:bottom-6 sm:right-8">
-            {SERVICE_SLIDES.map((s, i) => (
+            {SLIDES.map((s, i) => (
               <button
                 key={s.url}
                 onClick={() => setSlideIndex(i)}

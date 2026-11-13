@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { boostyVoice } from '../services/boostyVoice';
+import { MAIN_API, IS_CHILD_PANEL } from '../lib/apiBase';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://boosteryuk.com/api';
+// Di child panel selalu lewat /api subdomain (header tenant dari Worker).
+const API_URL = IS_CHILD_PANEL ? MAIN_API : import.meta.env.VITE_API_URL || MAIN_API;
 
 type User = {
   id: number;

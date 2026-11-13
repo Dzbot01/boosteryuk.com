@@ -8,6 +8,7 @@
 // jalan normal dan notifikasi hanya diaktifkan saat benar-benar didukung & diminta user.
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported, type Messaging } from 'firebase/messaging';
+import { MAIN_API } from './lib/apiBase';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCOtYdDIPwwOObdVaxs1wRijJOswk0UExQ',
@@ -85,7 +86,7 @@ export const mintaIzinNotif = async (): Promise<string | null> => {
     if (!token) return null;
 
     // Simpan token ke backend (endpoint auth/user tidak diubah).
-    await fetch('https://boosteryuk.com/api/save.php', {
+    await fetch(`${MAIN_API}/save.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),

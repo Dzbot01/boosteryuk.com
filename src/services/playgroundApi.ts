@@ -1,6 +1,7 @@
+import { MAIN_API } from '../lib/apiBase';
 // Klien untuk fitur Playground. Memanggil PHP proxy di backend boosteryuk.com/api.
 // (ai.php -> siputzx; tts.php -> ElevenLabs). Key ElevenLabs disimpan server-side.
-const API_BASE = 'https://boosteryuk.com/api';
+const API_BASE = MAIN_API;
 
 export interface TtsModel {
   model_id: string;
