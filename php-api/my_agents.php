@@ -6,7 +6,7 @@
  *                         sisa_hari, nomor_bot, nama_ai, nomor_pemilik, ewallet, nama_toko,
  *                         payment_gateway, platform } ] }
  *   state: 'aktif' (WA tertaut) | 'menunggu' (belum tertaut) | 'kedaluwarsa'
- * Juga menjadwalkan email pengingat jatuh tempo (agent_reminder.php) setelah respons terkirim.
+ * Juga mengecek/menjadwalkan email pengingat jatuh tempo agen user ini (agent_reminder.php).
  */
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
@@ -71,5 +71,6 @@ foreach ($rows as $r) {
     ];
 }
 
-agent_reminder_schedule($conn);
+// pengingat jatuh tempo agen milik user ini (tanpa cron) — dijalankan setelah respons terkirim
+agent_reminder_after_response(fn() => agent_reminder_check_user($conn, $uid));
 reply(['ok' => true, 'agents' => $agents]);

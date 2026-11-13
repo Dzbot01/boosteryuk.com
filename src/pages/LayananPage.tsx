@@ -1,4 +1,5 @@
 import Seo from '../components/Seo';
+import { staticSeo } from '../seo/content';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Reveal from '../components/Reveal';
@@ -25,7 +26,7 @@ export default function LayananPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-32 pt-8 sm:px-6">
-      <Seo title="Buat Pesanan" description="Buat pesanan layanan SMM Boosteryuk: followers, likes, views & engagement untuk semua platform. Harga transparan, proses cepat." />
+      <Seo title={staticSeo('/layanan')?.title} description={staticSeo('/layanan')?.description} />
 
       {/* ================= SLIDER (atas, ukuran lebih kecil) ================= */}
       <Reveal delay={40}>

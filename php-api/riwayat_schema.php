@@ -21,18 +21,27 @@ const RIWAYAT_EXTRA_COLUMNS = [
 function riwayat_ensure_columns($conn) {
     static $ready = null;
     if ($ready !== null) return $ready;
+    // PHP 8.1+: mysqli melempar exception (operator @ tidak meredamnya) -> pakai try/catch.
     $have = [];
-    $res = @$conn->query("SHOW COLUMNS FROM riwayat_pesanan");
-    if (!$res) return $ready = false;
-    while ($r = $res->fetch_assoc()) $have[strtolower($r['Field'])] = true;
+    try {
+        $res = $conn->query("SHOW COLUMNS FROM riwayat_pesanan");
+        if (!$res) return $ready = false;
+        while ($r = $res->fetch_assoc()) $have[strtolower($r['Field'])] = true;
+    } catch (\Throwable $e) {
+        return $ready = false;
+    }
     $ok = true;
     foreach (RIWAYAT_EXTRA_COLUMNS as $col => $def) {
         if (isset($have[$col])) continue;
-        if (!@$conn->query("ALTER TABLE riwayat_pesanan ADD COLUMN `$col` $def")) $ok = false;
+        try {
+            if (!$conn->query("ALTER TABLE riwayat_pesanan ADD COLUMN `$col` $def")) $ok = false;
+        } catch (\Throwable $e) {
+            $ok = false; // hosting tidak mengizinkan ALTER -> pakai format kolom lama
+        }
     }
     if ($ok && !isset($have['order_type'])) {
         // index untuk hitung layanan aktif per user
-        @$conn->query("ALTER TABLE riwayat_pesanan ADD INDEX idx_user_type_due (user_id, order_type, jatuh_tempo)");
+        try { $conn->query("ALTER TABLE riwayat_pesanan ADD INDEX idx_user_type_due (user_id, order_type, jatuh_tempo)"); } catch (\Throwable $e) { /* opsional */ }
     }
     return $ready = $ok;
 }

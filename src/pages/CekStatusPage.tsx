@@ -1,4 +1,5 @@
 import Seo from '../components/Seo';
+import { staticSeo } from '../seo/content';
 import { useState } from 'react';
 
 import {
@@ -126,7 +127,7 @@ export default function CekStatusPage() {
 
   return (
     <main className="page-align-left mx-auto max-w-4xl px-4 pb-32 pt-8 sm:px-6">
-      <Seo title="Cek Status Pesanan" description="Cek status pesanan Boosteryuk dengan mudah dan cepat. Masukkan ID pesanan untuk melacak progres layanan SMM kamu." />
+      <Seo title={staticSeo('/cek-status')?.title} description={staticSeo('/cek-status')?.description} />
 
       {/* ================= SEARCH ================= */}
       <Reveal delay={30}>

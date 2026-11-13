@@ -209,7 +209,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                       }}
                       className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 ${
                         isActive
-                         ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/25'
+                         ? 'by-menu-active text-white'
                           : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
                       }`}
                     >
@@ -256,7 +256,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                         onClick={() => handleNav(item.id)}
                         className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 ${
                           isActive
-                           ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/25'
+                           ? 'by-menu-active text-white'
                             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
                         } ${item.neon? 'neon-menu-item active' : ''}`}
                       >

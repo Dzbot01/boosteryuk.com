@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { boostyVoice } from '../services/boostyVoice';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://boosteryuk.com/api';
 
@@ -141,6 +142,7 @@ const refresh = async () => {
   }
 
   const logout = () => {
+    boostyVoice.stop(); // hentikan suara Guri Booster saat keluar
     localStorage.removeItem('token');
     setUser(null);
   }

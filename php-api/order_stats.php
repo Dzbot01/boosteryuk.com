@@ -14,7 +14,7 @@ header("Cache-Control: no-store");
 error_reporting(0);
 require 'configdb.php';
 require_once __DIR__ . '/riwayat_schema.php';
-require_once __DIR__ . '/agent_reminder.php'; // email pengingat jatuh tempo (otomatis, maks 1x/30 menit)
+require_once __DIR__ . '/agent_reminder.php'; // email pengingat jatuh tempo (dihitung dari hari menuju jatuh tempo, tanpa cron)
 if (isset($conn) && $conn instanceof mysqli) $conn->set_charset('utf8mb4');
 
 function reply($d, $c = 200) { http_response_code($c); echo json_encode($d); exit; }
@@ -74,7 +74,8 @@ foreach ($rows as $r) {
     ];
 }
 
-agent_reminder_schedule($conn);
+// pengingat jatuh tempo agen milik user ini (tanpa cron) — dijalankan setelah respons terkirim
+agent_reminder_after_response(fn() => agent_reminder_check_user($conn, $uid));
 reply([
     'ok'               => true,
     'bulan_ini'        => (float)$m['total'],

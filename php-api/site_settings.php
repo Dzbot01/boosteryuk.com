@@ -7,7 +7,11 @@
  * POST {token, settings}  -> simpan (HANYA admin; token dicek di tabel sessions + users.role = 'admin')
  *
  * Kunci yang disimpan: infoItems (Berita), faviconUrl, overviewTitle, overviewSubtitle,
- * overviewMessage, brandName, brandSuffix, footerText.
+ * overviewMessage, brandName, brandSuffix, footerText,
+ * + Tema: brandAccent, headerTint, menuActive (hex #rrggbb atau ''), headerOrnament (id set),
+ *   heroImage (data URL JPEG/PNG/WebP, maks ~2 MB) -> disimpan TERPISAH di baris 'asset_hero'
+ *   lalu settings.heroImageUrl = 'asset:hero:<versi>'.
+ * GET ?asset=hero          -> file gambar hero (cache 1 tahun; URL berversi)
  * Tabel: site_settings (lihat site_settings.sql) — dibuat otomatis bila belum ada.
  */
 
@@ -101,6 +105,24 @@ function load_site($db) {
     return [is_array($val) ? $val : [], $row['updated_at'] ?? null];
 }
 
+/* ===================== GET ?asset=hero (gambar hero, publik) ===================== */
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['asset'] ?? '') === 'hero') {
+    $row = q_row($sdb, "SELECT setting_value FROM site_settings WHERE setting_key = 'asset_hero'");
+    if (!$row || !preg_match('#^data:(image/(?:jpeg|png|webp));base64,(.+)$#s', $row['setting_value'], $m)) {
+        while (ob_get_level()) ob_end_clean();
+        http_response_code(404);
+        exit;
+    }
+    $bin = base64_decode($m[2]);
+    while (ob_get_level()) ob_end_clean();
+    header_remove('Cache-Control');
+    header('Content-Type: ' . $m[1]);
+    header('Cache-Control: public, max-age=31536000, immutable'); // URL berversi (?v=)
+    header('Content-Length: ' . strlen($bin));
+    echo $bin;
+    exit;
+}
+
 /* ===================== GET (publik) ===================== */
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
@@ -178,6 +200,34 @@ if (array_key_exists('infoItems', $patch) && is_array($patch['infoItems'])) {
     }
     $clean['infoItems'] = $items;
 }
+/* ----- Tema ----- */
+foreach (['brandAccent', 'headerTint', 'menuActive'] as $k) {
+    if (!array_key_exists($k, $patch)) continue;
+    $v = trim((string)$patch[$k]);
+    if ($v !== '' && !preg_match('/^#[0-9a-f]{6}$/i', $v)) out(['ok' => false, 'message' => "Warna $k tidak valid (format #rrggbb)."], 400);
+    $clean[$k] = strtolower($v);
+}
+if (array_key_exists('headerOrnament', $patch)) {
+    $v = trim((string)$patch['headerOrnament']);
+    if ($v !== '' && !preg_match('/^[a-z0-9-]{1,40}$/', $v)) out(['ok' => false, 'message' => 'Aksesoris header tidak valid.'], 400);
+    $clean['headerOrnament'] = $v;
+}
+if (array_key_exists('heroImage', $patch)) {
+    $img = trim((string)$patch['heroImage']);
+    if ($img === '') {
+        q_exec($sdb, "DELETE FROM site_settings WHERE setting_key = 'asset_hero'");
+        $clean['heroImageUrl'] = '';
+    } else {
+        if (!preg_match('#^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$#', $img)) out(['ok' => false, 'message' => 'Gambar hero harus JPG, PNG, atau WebP.'], 400);
+        if (strlen($img) > 2800000) out(['ok' => false, 'message' => 'Gambar hero terlalu besar (maks ~2 MB).'], 400);
+        q_exec($sdb,
+            "INSERT INTO site_settings (setting_key, setting_value, updated_by) VALUES ('asset_hero', ?, ?)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by)",
+            [$img, (string)$who]);
+        $clean['heroImageUrl'] = 'asset:hero:' . substr(md5($img), 0, 12);
+    }
+}
+
 if (!$clean) out(['ok' => false, 'message' => 'Tidak ada pengaturan yang dikirim.'], 400);
 
 try {

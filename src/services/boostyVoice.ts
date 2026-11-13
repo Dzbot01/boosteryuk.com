@@ -10,7 +10,14 @@ export interface BoostyVoiceState {
 }
 
 let state: BoostyVoiceState = { voice: null, subtitle: '', blocked: false };
-let audio: HTMLAudioElement | null = null;
+/**
+ * SATU elemen audio dipakai ulang untuk seluruh urutan suara. Elemen yang sudah
+ * "di-unlock" lewat gesture (prime) boleh diputar ulang/ganti src tanpa gesture baru —
+ * penting untuk Safari/iOS yang memblokir new Audio() di luar gesture.
+ */
+let el: HTMLAudioElement | null = null;
+let playing = false;
+let primeToken = 0;
 let gestureCleanup: (() => void) | null = null;
 const subs = new Set<() => void>();
 
@@ -25,6 +32,14 @@ function set(patch: Partial<BoostyVoiceState>) {
   emit();
 }
 
+function getEl(): HTMLAudioElement {
+  if (!el) {
+    el = new Audio();
+    el.preload = 'auto';
+  }
+  return el;
+}
+
 function removeGestureRetry() {
   if (gestureCleanup) {
     gestureCleanup();
@@ -34,11 +49,11 @@ function removeGestureRetry() {
 
 function clearAudio() {
   removeGestureRetry();
-  if (audio) {
-    audio.pause();
-    audio.onended = null;
-    audio.ontimeupdate = null;
-    audio = null;
+  playing = false;
+  if (el) {
+    el.pause();
+    el.onended = null;
+    el.ontimeupdate = null;
   }
 }
 
@@ -63,9 +78,12 @@ function playAt(index: number) {
     return;
   }
   set({ voice, subtitle: voice.cues[0]?.text ?? '', blocked: false });
-  const a = new Audio(voice.src);
+  const a = getEl();
+  playing = true;
+  a.muted = false;
   a.volume = 1;
-  audio = a;
+  if (!a.src.endsWith(voice.src)) a.src = voice.src;
+  a.currentTime = 0;
   a.ontimeupdate = () => {
     const t = a.currentTime;
     const cue = voice.cues.find((c) => t >= c.start && t < c.end);
@@ -74,7 +92,7 @@ function playAt(index: number) {
   a.onended = () => {
     if (index + 1 < BOOSTY_SEQUENCE.length) playAt(index + 1);
     else {
-      audio = null;
+      playing = false;
       set({ voice: null, subtitle: '' });
     }
   };
@@ -94,13 +112,38 @@ export const boostyVoice = {
   getState(): BoostyVoiceState {
     return state;
   },
+  /**
+   * Panggil SINKRON di dalam handler klik/submit login (sebelum await) untuk
+   * "membuka kunci" audio: putar senyap sesaat lalu jeda. Setelah login sukses,
+   * start() bisa memutar suara walau request login memakan waktu lama.
+   */
+  prime() {
+    const first = BOOSTY_SEQUENCE[0];
+    if (!first || playing) return;
+    const a = getEl();
+    const token = ++primeToken;
+    a.muted = true;
+    if (!a.src.endsWith(first.src)) a.src = first.src;
+    a.play()
+      .then(() => {
+        // jangan ganggu bila start() sudah memutar suara sungguhan
+        if (token === primeToken && !playing) {
+          a.pause();
+          a.currentTime = 0;
+        }
+      })
+      .catch(() => { /* diblokir: start() akan memakai retryOnGesture */ });
+  },
   /** Mulai urutan dari awal (sapaan -> info reseller). */
   start() {
+    primeToken++;
     playAt(0);
   },
   /** Hentikan & kosongkan subtitle. */
   stop() {
+    primeToken++;
     clearAudio();
+    if (el) el.muted = false;
     set({ voice: null, subtitle: '', blocked: false });
   },
   isActive() {

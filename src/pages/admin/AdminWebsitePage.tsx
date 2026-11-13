@@ -21,10 +21,13 @@ import {
   ShieldCheck,
   LayoutGrid,
   Clock3,
+  Palette,
   Loader2,
   CircleAlert,
 } from 'lucide-react';
 import Reveal from '../../components/Reveal';
+import ThemeSettingsModal from '../../components/admin/ThemeSettingsModal';
+import { findOrnamentSet } from '../../data/headerOrnaments';
 import { useSiteSettings, type InfoItem } from '../../context/SiteSettingsContext';
 
 const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -66,6 +69,7 @@ export default function AdminWebsitePage() {
   const infoImageInput = useRef<HTMLInputElement>(null);
   const [uploadTargetId, setUploadTargetId] = useState<number | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
   // Simpan Informasi: loading sampai server (site_settings.php) membalas, lalu alert.
   const [infoSaving, setInfoSaving] = useState(false);
   const [infoAlert, setInfoAlert] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -186,6 +190,37 @@ export default function AdminWebsitePage() {
       )}
 
       {/* Logo */}
+      <Reveal delay={45}>
+        <Card title="Tema Website" icon={Palette}>
+          <p className="text-[13px] text-slate-500 dark:text-slate-400">
+            Ganti gambar hero dashboard, warna aksen brand, warna kartu header, warna tombol aktif side menu, dan
+            aksesoris menggantung di bawah header (mis. ketupat &amp; lentera saat Ramadhan).
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {[settings.brandAccent, settings.headerTint, settings.menuActive].map((c, i) => (
+              <span
+                key={i}
+                title={c || 'bawaan'}
+                className="h-6 w-6 rounded-full ring-1 ring-slate-200 dark:ring-slate-700"
+                style={{ backgroundColor: c || ['#0891b2', '#ffffff', '#0891b2'][i] }}
+              />
+            ))}
+            <span className="text-[12px] text-slate-500 dark:text-slate-400">
+              Aksesoris: {findOrnamentSet(settings.headerOrnament)?.name || 'tidak ada'}
+              {settings.heroImageUrl ? ' · hero kustom' : ''}
+            </span>
+          </div>
+          <button
+            onClick={() => setThemeOpen(true)}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-[12.5px] font-bold text-white shadow-sm transition-all hover:bg-cyan-700 active:scale-95"
+          >
+            <Palette className="h-3.5 w-3.5" strokeWidth={2.4} />
+            Atur Tema
+          </button>
+        </Card>
+      </Reveal>
+      <ThemeSettingsModal open={themeOpen} onClose={() => setThemeOpen(false)} />
+
       <Reveal delay={60}>
         <Card title="Logo Header" icon={ImageIcon}>
           <div className="flex flex-wrap items-center gap-4">

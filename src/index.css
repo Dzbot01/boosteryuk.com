@@ -843,3 +843,27 @@ body {
 
 /* Peta dunia hero — ditanam sebagai data-URI agar tidak pernah 404. */
 .hero-map{background-image:url('/world.png');background-size:cover;background-position:center;opacity:.60;filter:grayscale(.55) brightness(.92) contrast(1.05);}
+
+/* ===== Tema website (diatur admin: Pengaturan Website → Tema) =====
+   Nilai default = warna bawaan. SiteSettingsContext mengisi variabel ini di <html>. */
+:root {
+  --by-accent: #0891b2;       /* cyan-600: teks "Booster" */
+  --by-accent-dark: #22d3ee;  /* cyan-400: mode gelap */
+  --by-accent-hero: #67e8f9;  /* cyan-300: di atas hero */
+  --by-menu: #0891b2;         /* tombol aktif side menu */
+}
+.by-accent { color: var(--by-accent); }
+.dark .by-accent { color: var(--by-accent-dark); }
+.by-accent-hero { color: var(--by-accent-hero); }
+.by-menu-active {
+  background-color: var(--by-menu);
+  box-shadow: 0 4px 6px -1px color-mix(in srgb, var(--by-menu) 25%, transparent);
+}
+/* Header kartu kaca dengan warna kustom: tetap transparan + blur. */
+.by-header-tint { background-color: color-mix(in srgb, var(--by-header) 55%, transparent); }
+.dark .by-header-tint { background-color: color-mix(in srgb, var(--by-header) 30%, rgb(15 23 42 / 0.6)); }
+
+/* Aksesoris header: ayunan pelan dari titik gantung */
+@keyframes by-sway { 0%, 100% { rotate: -4deg; } 50% { rotate: 4deg; } }
+.by-sway { transform-origin: 50% 0; animation: by-sway 3.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .by-sway { animation: none; } }

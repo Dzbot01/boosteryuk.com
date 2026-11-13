@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { SITE_URL, SITE_NAME, DEFAULT_TITLE, DEFAULT_DESC, DEFAULT_OG_IMAGE, abs } from '../seo/config';
 
@@ -24,6 +25,17 @@ export default function Seo({ title, description, image, type = 'website', noind
   const fullTitle = title ? `${title} · ${SITE_NAME}` : DEFAULT_TITLE;
   const desc = description || DEFAULT_DESC;
   const img = abs(image || DEFAULT_OG_IMAGE);
+
+  // index.html / HTML prerender membawa tag SEO statis (data-seo-static) untuk crawler tanpa JS.
+  // Setelah React jalan, tag milik React yang dipakai -> hapus duplikat statis agar
+  // <title>/description per halaman benar-benar berlaku (browser memakai <title> pertama).
+  useEffect(() => {
+    document.head.querySelectorAll('[data-seo-static]').forEach((el) => {
+      const isSocial = /^(og:|twitter:)/.test(el.getAttribute('property') || el.getAttribute('name') || '');
+      if (bareOnHome && isSocial) return; // homepage memakai OG statis
+      el.remove();
+    });
+  }, [bareOnHome, pathname]);
 
   return (
     <>

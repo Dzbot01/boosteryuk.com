@@ -4,9 +4,16 @@
   AddType image/webp .webp
 </IfModule>
 
+# Halaman SEO pra-render ada di folder (mis. /layanan/tiktok/index.html): jangan redirect
+# ke versi bergaris-miring, sajikan index.html-nya langsung (URL kanonik tanpa "/").
+DirectorySlash Off
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  # Jangan rewrite file/direktori yang benar-benar ada (mp3, png, js, css, dll).
+  RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]+$
+  RewriteCond %{DOCUMENT_ROOT}/$1/index.html -f
+  RewriteRule ^(.+?)/?$ $1/index.html [L]
+  # Jangan rewrite file yang benar-benar ada (mp3, png, js, css, dll).
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]

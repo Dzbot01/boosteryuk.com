@@ -150,25 +150,24 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
     if (!email.trim() ||!password) return setError('Email dan password wajib diisi.');
     if (!isValidEmail(email)) return setError('Masukkan email yang valid.');
     setLoading(true);
+    // Buka kunci audio SEKARANG (masih di dalam gesture klik/enter, sebelum await login)
+    // agar suara Guri Booster boleh diputar setelah login selesai — termasuk di Safari/iOS.
+    boostyVoice.prime();
     try {
       const res = await login(email, password);
       if (res.ok) {
-        // Auto-play suara Guri Booster 1x per user. Dimulai DI SINI (masih dalam gesture klik
-        // login) agar autoplay diizinkan browser. Flag disetel dulu -> refresh TIDAK mengulang.
-        try {
-          const vkey = `by_boosty_voice:${email.trim().toLowerCase()}`;
-          if (localStorage.getItem(vkey) !== '1') {
-            localStorage.setItem(vkey, '1');
-            boostyVoice.start();
-          }
-        } catch { /* abaikan */ }
+        // Suara Guri Booster diputar SETIAP kali user baru login. Refresh halaman tidak
+        // memanggil submitLogin, jadi suara tidak diulang saat refresh.
+        boostyVoice.start();
         onSuccess?.();
         onClose();
         navigate('/overview'); // redirect setelah login -> Overview
       } else {
+        boostyVoice.stop();
         setError(res.message || 'Login gagal');
       }
     } catch (err: any) {
+      boostyVoice.stop();
       setError('Gagal konek ke server: ' + (err.message || 'Coba lagi'));
     } finally {
       setLoading(false);

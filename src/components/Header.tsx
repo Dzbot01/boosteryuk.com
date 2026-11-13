@@ -70,7 +70,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
         scrolled
           ? isPlayground
             ? 'border-emerald-300/50 bg-emerald-500/20 shadow-[0_8px_24px_-16px_rgba(5,120,80,0.45)] backdrop-blur-xl backdrop-saturate-150 dark:border-emerald-700/50 dark:bg-emerald-900/35'
-            : 'border-slate-200/70 bg-white/55 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] backdrop-blur-xl backdrop-saturate-150 dark:border-slate-700/50 dark:bg-slate-900/55'
+            : `border-slate-200/70 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] backdrop-blur-xl backdrop-saturate-150 dark:border-slate-700/50 ${
+                settings.headerTint ? 'by-header-tint' : 'bg-white/55 dark:bg-slate-900/55'
+              }`
           : 'border-transparent bg-transparent shadow-none'
       }`}
     >
@@ -84,7 +86,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           />
           <span className="leading-none">
             <span className="block font-display text-[19px] font-extrabold tracking-tight">
-              <span className={onHeroTop ? 'text-cyan-300' : 'text-cyan-600 dark:text-cyan-400'}>{settings.brandName}</span>
+              <span className={onHeroTop ? 'by-accent-hero' : 'by-accent'}>{settings.brandName}</span>
               <span className={onHeroTop ? 'text-white' : 'text-black dark:text-white'}>{settings.brandSuffix}</span>
             </span>
             <span className={`mt-1 block text-[10px] font-semibold uppercase tracking-[0.16em] ${onHeroTop ? 'text-slate-300' : 'text-slate-400 dark:text-slate-500'}`}>

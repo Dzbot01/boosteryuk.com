@@ -31,6 +31,17 @@ export interface SiteSettings {
   overviewMessage: string;
   /** Favicon tab browser (URL atau data URL). Default: /favicon.png */
   faviconUrl: string;
+  /* ===== Tema (Pengaturan Website → Tema). '' = bawaan ===== */
+  /** Gambar background hero dashboard: '' = /world.png, 'asset:hero:<versi>' = gambar dari DB. */
+  heroImageUrl: string;
+  /** Warna aksen teks brand "Booster" (hex). */
+  brandAccent: string;
+  /** Warna kartu header (hex) — tetap transparan + blur. */
+  headerTint: string;
+  /** Warna tombol aktif side menu (hex). */
+  menuActive: string;
+  /** Id set aksesoris menggantung di bawah header ('' = tidak ada). */
+  headerOrnament: string;
 }
 
 interface SiteCtx {
@@ -43,6 +54,10 @@ interface SiteCtx {
   resetLogo: () => void;
   setFaviconFile: (file: File | null) => void;
   resetFavicon: () => void;
+  /** Upload gambar hero (data URL JPEG/PNG/WebP) ke database; null = kembali ke bawaan. */
+  saveHeroImage: (dataUrl: string | null) => Promise<{ ok: boolean; message?: string }>;
+  /** URL gambar hero yang siap dipakai di CSS ('' = bawaan). */
+  heroImageSrc: string;
   /** Status sinkron ke database (khusus admin saat menyimpan). */
   sync: SyncState;
 }
@@ -66,7 +81,24 @@ const SHARED_KEYS = [
   'brandName',
   'brandSuffix',
   'footerText',
+  'brandAccent',
+  'headerTint',
+  'menuActive',
+  'headerOrnament',
 ] as const;
+// heroImageUrl TIDAK di SHARED_KEYS untuk penyimpanan: diunggah lewat saveHeroImage()
+// (gambar disimpan terpisah di DB & disajikan site_settings.php?asset=hero).
+
+const HEX = /^#[0-9a-f]{6}$/i;
+const THEME_KEYS = ['brandAccent', 'headerTint', 'menuActive', 'headerOrnament', 'heroImageUrl'] as const;
+
+/** Campur warna hex dengan putih (0..1) untuk varian mode gelap. */
+function lighten(hex: string, amt: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * amt);
+  const r = mix((n >> 16) & 255), g = mix((n >> 8) & 255), b = mix(n & 255);
+  return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
 type SharedKey = (typeof SHARED_KEYS)[number];
 
 function pickShared(src: Partial<SiteSettings>): Partial<SiteSettings> {
@@ -131,6 +163,11 @@ const DEFAULTS: SiteSettings = {
   overviewMessage:
     'Pantau semua pesanan boostermu, kelola VPS, dan jalankan Agen AI WhatsApp dari satu dashboard. Butuh bantuan? Hubungi admin lewat menu Contact Support kapan saja — kami standby 24/7.',
   faviconUrl: DEFAULT_FAVICON,
+  heroImageUrl: '',
+  brandAccent: '',
+  headerTint: '',
+  menuActive: '',
+  headerOrnament: '',
 };
 
 function load(): SiteSettings {
@@ -153,6 +190,8 @@ const SiteContext = createContext<SiteCtx>({
   resetLogo: () => {},
   setFaviconFile: () => {},
   resetFavicon: () => {},
+  saveHeroImage: async () => ({ ok: false }),
+  heroImageSrc: '',
   sync: { status: 'idle', message: '' },
 });
 
@@ -174,10 +213,14 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       .then((j) => {
         if (!alive || !j?.ok || !j.settings || typeof j.settings !== 'object') return;
         const remote = pickShared(j.settings as Partial<SiteSettings>);
+        const hero = (j.settings as Partial<SiteSettings>).heroImageUrl;
+        if (typeof hero === 'string') (remote as Partial<SiteSettings>).heroImageUrl = hero;
         // buang field kosong agar default tetap dipakai
-        for (const k of Object.keys(remote) as SharedKey[]) {
+        for (const k of Object.keys(remote) as (SharedKey | 'heroImageUrl')[]) {
           const v = remote[k];
-          if (v === '' || v === null || (Array.isArray(v) && k !== 'infoItems' && v.length === 0)) delete remote[k];
+          // Kunci tema: '' berarti "kembali ke bawaan" -> tetap dipakai agar cache lama tertimpa.
+          const themeKey = (THEME_KEYS as readonly string[]).includes(k);
+          if ((v === '' && !themeKey) || v === null || (Array.isArray(v) && k !== 'infoItems' && v.length === 0)) delete remote[k];
         }
         if (Object.keys(remote).length) setSettings((s) => ({ ...s, ...remote }));
       })
@@ -248,6 +291,52 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     link.href = href;
   }, [settings.faviconUrl]);
 
+  // Terapkan warna tema ke variabel CSS di <html> (lihat index.css: .by-accent, .by-menu-active, ...).
+  useEffect(() => {
+    const root = document.documentElement.style;
+    const setVar = (name: string, val: string | null) => (val ? root.setProperty(name, val) : root.removeProperty(name));
+    const acc = HEX.test(settings.brandAccent) ? settings.brandAccent : '';
+    setVar('--by-accent', acc || null);
+    setVar('--by-accent-dark', acc ? lighten(acc, 0.35) : null);
+    setVar('--by-accent-hero', acc ? lighten(acc, 0.5) : null);
+    setVar('--by-menu', HEX.test(settings.menuActive) ? settings.menuActive : null);
+    setVar('--by-header', HEX.test(settings.headerTint) ? settings.headerTint : null);
+  }, [settings.brandAccent, settings.menuActive, settings.headerTint]);
+
+  const heroImageSrc = (() => {
+    const m = /^asset:hero:([\w-]+)$/.exec(settings.heroImageUrl || '');
+    return m ? `${SETTINGS_API}?asset=hero&v=${m[1]}` : '';
+  })();
+
+  const saveHeroImage = async (dataUrl: string | null): Promise<{ ok: boolean; message?: string }> => {
+    let token = '';
+    try {
+      token = localStorage.getItem('token') || '';
+    } catch {
+      /* abaikan */
+    }
+    setSync({ status: 'saving', message: 'Mengunggah gambar hero…' });
+    try {
+      const r = await fetch(SETTINGS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, settings: { heroImage: dataUrl ?? '' } }),
+      });
+      const j = await r.json();
+      if (!j?.ok) {
+        setSync({ status: 'error', message: j?.message || 'Gagal mengunggah gambar hero.' });
+        return { ok: false, message: j?.message };
+      }
+      const url = typeof j.settings?.heroImageUrl === 'string' ? j.settings.heroImageUrl : '';
+      setSettings((s) => ({ ...s, heroImageUrl: url }));
+      setSync({ status: 'saved', message: 'Gambar hero tersimpan — tampil untuk semua pengunjung.' });
+      return { ok: true };
+    } catch {
+      setSync({ status: 'error', message: 'Tidak bisa menghubungi server (site_settings.php).' });
+      return { ok: false, message: 'Tidak bisa menghubungi server.' };
+    }
+  };
+
   const updateSettings = (patch: Partial<SiteSettings>) => {
     markDirty(Object.keys(patch));
     setSettings((s) => ({ ...s, ...patch }));
@@ -307,6 +396,8 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         resetLogo,
         setFaviconFile,
         resetFavicon,
+        saveHeroImage,
+        heroImageSrc,
         sync,
       }}
     >

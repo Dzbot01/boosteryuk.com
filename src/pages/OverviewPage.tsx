@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ThumbsUp, ChevronUp, ChevronRight, ShoppingCart, Wallet, Newspaper, Server, Bot, BellRing } from 'lucide-react';
+import { ThumbsUp, ChevronUp, ChevronRight, ShoppingCart, Wallet, Newspaper, Server, Bot, BellRing, X } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings, type InfoItem } from '../context/SiteSettingsContext';
@@ -100,6 +100,8 @@ export default function OverviewPage() {
   const { user } = useAuth();
   // null = sedang dimuat. Selalu milik user yang login (bukan riwayat lokal browser).
   const [stats, setStats] = useState<OverviewStats | null>(null);
+  // Banner pengingat bisa ditutup; sengaja TIDAK disimpan -> muncul lagi setiap refresh.
+  const [reminderClosed, setReminderClosed] = useState(false);
   const { settings } = useSiteSettings();
 
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -196,23 +198,32 @@ export default function OverviewPage() {
     <div className="mx-auto max-w-6xl px-4 pb-32 pt-6 sm:px-6">
       <Seo title="Overview" description="Ringkasan akun Boosteryuk: saldo, pesanan bulan ini, layanan rekomendasi, dan berita." noindex />
 
-      {stats?.segera && stats.segera.length > 0 && (
-        <button
-          type="button"
-          onClick={() => navigate('/agen-ai-saya')}
+      {!reminderClosed && stats?.segera && stats.segera.length > 0 && (
+        <div
           role="alert"
-          className="mb-4 flex w-full items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left transition-colors hover:bg-amber-100/70 dark:border-amber-800/50 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
+          className="mb-4 flex w-full items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800/50 dark:bg-amber-900/20"
         >
           <BellRing className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" strokeWidth={2.4} />
-          <span className="min-w-0 flex-1 text-[13px] text-amber-800 dark:text-amber-200">
+          <button
+            type="button"
+            onClick={() => navigate('/agen-ai-saya')}
+            className="min-w-0 flex-1 text-left text-[13px] text-amber-800 hover:underline dark:text-amber-200"
+          >
             <b>Pengingat jatuh tempo:</b>{' '}
             {stats.segera
               .map((a) => `${a.nama} (${a.orderId}) ${a.hari <= 0 ? 'jatuh tempo hari ini' : a.hari === 1 ? 'jatuh tempo besok' : `jatuh tempo ${a.hari} hari lagi`}`)
               .join(' · ')}
             . Lihat detail di Agen AI Saya.
-          </span>
-          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-        </button>
+          </button>
+          <button
+            type="button"
+            onClick={() => setReminderClosed(true)}
+            aria-label="Tutup pengingat"
+            className="-m-1 rounded-md p-1 text-amber-500 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-900/40"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       )}
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-[auto_1fr]">

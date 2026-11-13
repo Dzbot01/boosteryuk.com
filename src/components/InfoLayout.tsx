@@ -1,4 +1,6 @@
 import Seo from './Seo';
+import { useLocation } from 'react-router-dom';
+import { staticSeo } from '../seo/content';
 import type { ReactNode } from 'react';
 
 import { Info } from 'lucide-react';
@@ -19,10 +21,12 @@ export function InfoLayout({
   icon: typeof Info;
   children: ReactNode;
 }) {
+  // Judul & deskripsi unik dari src/seo/pages.json (sama dengan sitemap/prerender) bila ada.
+  const seo = staticSeo(useLocation().pathname);
 
   return (
     <main className="page-align-left mx-auto max-w-3xl px-4 pb-24 pt-8 sm:px-6">
-      <Seo title={title} description={intro} />
+      <Seo title={seo?.title || title} description={seo?.description || intro} />
 
       <Reveal delay={30}>
         <header className="border-b border-slate-200 pb-6 dark:border-slate-700">

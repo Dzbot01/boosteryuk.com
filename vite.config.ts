@@ -1,5 +1,7 @@
 import path from "path";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync } from "fs";
+// @ts-expect-error modul .mjs tanpa deklarasi tipe
+import { seoPages, renderPage } from "./scripts/seo-pages.mjs";
 import { fileURLToPath } from "url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -14,11 +16,18 @@ const __dirname = path.dirname(__filename);
  * meta Open Graph (preview link WhatsApp wajib URL gambar absolut).
  * Urutan: VITE_SITE_URL -> domain production Vercel -> https://boosteryuk.com.
  */
+const SITE_URL = (
+  process.env.VITE_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "") ||
+  "https://boosteryuk.com"
+).replace(/\/+$/, "");
+
 function siteUrlPlugin(): Plugin {
   const fromVercel = process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : undefined;
-  const siteUrl = (process.env.VITE_SITE_URL || fromVercel || "https://boosteryuk.com").replace(/\/+$/, "");
+  const siteUrl = SITE_URL;
+  void fromVercel;
   return {
     name: "site-url",
     transformIndexHtml: (html) => html.split("__SITE_URL__").join(siteUrl),
@@ -75,9 +84,39 @@ function buildVersionPlugin(): Plugin {
   };
 }
 
+/**
+ * SEO prerender: setiap halaman publik (src/seo/pages.json) mendapat file HTML sendiri
+ * (dist/<path>/index.html) berisi <title>, meta description, OG, canonical, dan teks
+ * deskripsi unik di dalam #root. Crawler/preview link tanpa JavaScript tetap membaca
+ * konten unik; saat JS jalan, React mengganti isi #root seperti biasa.
+ */
+function seoPrerenderPlugin(): Plugin {
+  let outDir = "dist";
+  return {
+    name: "seo-prerender",
+    apply: "build",
+    configResolved(c) {
+      outDir = path.resolve(c.root, c.build.outDir);
+    },
+    closeBundle() {
+      const template = readFileSync(path.join(outDir, "index.html"), "utf8");
+      const pages = seoPages();
+      let n = 0;
+      for (const page of pages) {
+        if (page.path === "/") continue;
+        const dir = path.join(outDir, page.path);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(path.join(dir, "index.html"), renderPage(template, page, pages, SITE_URL));
+        n++;
+      }
+      console.log(`seo-prerender: ${n} halaman HTML statis`);
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), siteUrlPlugin(), musicAssetPlugin(), buildVersionPlugin()],
+  plugins: [react(), tailwindcss(), siteUrlPlugin(), musicAssetPlugin(), buildVersionPlugin(), seoPrerenderPlugin()],
   build: {
     // Pisahkan vendor besar agar caching lebih baik & initial chunk lebih kecil.
     rollupOptions: {

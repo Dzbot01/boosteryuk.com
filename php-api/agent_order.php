@@ -26,7 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 error_reporting(0);
 require 'configdb.php'; // menyediakan $conn (mysqli) + getUserIdByToken()
-require __DIR__ . '/riwayat_schema.php'; // kolom order_type, paket, durasi_bulan, jatuh_tempo, ...
+require_once __DIR__ . '/riwayat_schema.php'; // kolom order_type, paket, durasi_bulan, jatuh_tempo, ...
+require_once __DIR__ . '/agent_reminder.php'; // jadwal email pengingat jatuh tempo (H-7/H-3/H-1/H)
 if (isset($conn) && $conn instanceof mysqli) $conn->set_charset('utf8mb4');
 
 function reply($data, $code = 200) {
@@ -207,7 +208,9 @@ $st->bind_param("i", $user_id);
 $st->execute();
 $new_balance = (float)($st->get_result()->fetch_assoc()['balance'] ?? 0);
 $st->close();
-$conn->close();
+
+// Jadwalkan email pengingat berdasarkan hitungan hari ke jatuh tempo (dijalankan setelah respons).
+agent_reminder_after_response(fn() => agent_reminder_plan_order($conn, $orderId));
 
 reply([
     "ok"          => true,

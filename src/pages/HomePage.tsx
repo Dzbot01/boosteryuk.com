@@ -36,7 +36,7 @@ const HOME_JSONLD = [
 
 export default function HomePage() {
   const { isDark } = useTheme();
-  const { settings } = useSiteSettings();
+  const { heroImageSrc } = useSiteSettings();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
@@ -57,7 +57,8 @@ export default function HomePage() {
           {/* base abu-abu gelap (charcoal) */}
           <div className="absolute inset-0 bg-gradient-to-br from-[#1b1c20] via-[#141519] to-[#0e0f12]" />
           {/* peta dunia (data-URI di CSS .hero-map) */}
-          <div className="hero-map absolute inset-0" />
+          {/* Gambar bisa diganti admin (Tema). Hanya background-image yang ditimpa; opacity/filter tetap dari .hero-map */}
+          <div className="hero-map absolute inset-0" style={heroImageSrc ? { backgroundImage: `url("${heroImageSrc}")` } : undefined} />
           {/* overlay menggelapkan sisi kiri agar teks kontras */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#0e0f12]/85 via-[#0e0f12]/40 to-transparent" />
           <div className="absolute inset-0 bg-[radial-gradient(55%_45%_at_50%_-8%,rgba(255,255,255,0.05),transparent_70%)]" />
@@ -263,20 +264,6 @@ export default function HomePage() {
         </Reveal>
       </main>
 
-      <footer className="border-t border-slate-200 bg-white/70 pb-24 dark:border-slate-700/60 dark:bg-slate-900/70">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 py-8 sm:flex-row sm:justify-between sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <img src={settings.logoUrl} alt="" className="h-9 w-9 object-contain" />
-            <p className="font-display text-[15px] font-extrabold tracking-tight text-slate-900 dark:text-white">
-              <span className="text-cyan-600 dark:text-cyan-400">{settings.brandName}</span>
-              <span className="text-black dark:text-white">{settings.brandSuffix}</span>
-            </p>
-          </div>
-          <p className="text-[12px] font-medium text-slate-400 dark:text-slate-500">
-            {settings.footerText}
-          </p>
-        </div>
-      </footer>
 
       <AuthModal
         open={authOpen}

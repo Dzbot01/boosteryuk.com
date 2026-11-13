@@ -5,6 +5,8 @@ import SideMenu from './SideMenu';
 import BottomNavbar from './BottomNavbar';
 import AuthLoadingModal from './AuthLoadingModal';
 import Calculator from './Calculator';
+import Footer from './Footer';
+import HeaderOrnament from './HeaderOrnament';
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -16,7 +18,7 @@ export default function Layout() {
   }, [pathname]);
 
   return (
-    <div className="relative min-h-screen overflow-x-clip bg-[#eef1f5] text-slate-900 transition-colors duration-300 dark:bg-[#0a0a0b] dark:text-slate-100">
+    <div className="relative flex min-h-screen flex-col overflow-x-clip bg-[#eef1f5] text-slate-900 transition-colors duration-300 dark:bg-[#0a0a0b] dark:text-slate-100">
       {/* ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-grid dark:opacity-40" />
@@ -26,6 +28,8 @@ export default function Layout() {
       </div>
 
       <Header onMenuClick={() => setMenuOpen(true)} />
+      {/* Aksesoris tema (ketupat, lentera, dll) menggantung di bawah header */}
+      <HeaderOrnament />
       {/* spacer for fixed header */}
       <div className="h-[60px]" />
 
@@ -34,7 +38,12 @@ export default function Layout() {
         onClose={() => setMenuOpen(false)}
       />
 
-      <Outlet />
+      <div className="flex-1">
+        <Outlet />
+      </div>
+
+      {/* Footer global: tampil di semua halaman */}
+      <Footer />
 
       <BottomNavbar />
 

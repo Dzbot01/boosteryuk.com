@@ -111,18 +111,26 @@ belum lewat `jatuh_tempo`). Overview tidak lagi memakai riwayat lokal browser.
 Data form disimpan `agent_order.php` di kolom `detail` (JSON). Pesanan lama yang dibuat
 sebelum update ini tidak punya data form, jadi tampil "—".
 
-## Email pengingat jatuh tempo — `agent_reminder.php`
+## Email pengingat jatuh tempo — `agent_reminder.php` (tanpa cron job)
 
-Tahap email (masing-masing sekali per order, dicatat di tabel `agent_reminder_log`):
-H-7, H-3, H-1, dan saat sudah lewat (maks 3 hari). Dikirim lewat worker Resend yang sama dengan OTP.
+Tahap email dihitung dari **jumlah hari menuju jatuh tempo**: H-7, H-3, H-1, dan hari H,
+dikirim pukul 09:00 WIB. Tidak ada cron job / proses yang standby.
 
-Hosting gratis tidak punya cron, jadi pengecekan berjalan **otomatis setelah respons**
-`order_stats.php` (Overview) / `my_agents.php`. Paling sering sekali per 30 menit untuk seluruh
-website (kunci di tabel `cron_state`). Agar tetap jalan walau sepi pengunjung, bisa dipanggil
-dari cron eksternal (mis. cron-job.org) — hosting gratis kadang memblokir bot, jadi cek dulu:
+1. **Saat order dibuat** (`agent_order.php`): tiap tahap yang waktunya ≤ 30 hari ke depan langsung
+   **dijadwalkan di Resend** (`scheduled_at`) — Resend yang mengirim pada harinya.
+2. Tahap yang masih > 30 hari lagi (sewa ≥ 2 bulan; batas jadwal Resend 30 hari) dijadwalkan saat
+   **user itu sendiri** membuka Overview / Agen AI Saya (hanya agen milik user tsb yang dicek).
+   Tahap yang waktunya sudah lewat & belum terkirim dikirim saat itu juga.
 
-    https://boosteryuk.com/api/agent_reminder.php?key=<token agen di agent_config.php>
-    (tambah &dry=1 untuk melihat daftar tanpa mengirim email)
+Wajib untuk penjadwalan: isi `'resend_key' => 're_...'` di `agent_config.php` di server
+(API key Resend yang sama dengan di order.php — **jangan di-commit ke GitHub**).
+Tanpa key, email hanya dikirim (lewat worker email) ketika harinya sudah tiba dan user membuka
+Overview / Agen AI Saya. Setiap tahap tercatat sekali di tabel `agent_reminder_log` (dibuat otomatis).
 
-Opsional: tambahkan `'cron_key' => 'rahasia-lain'` di `agent_config.php` agar cron tidak memakai token agen.
-Tabel `agent_reminder_log` & `cron_state` dibuat otomatis.
+## Tema website — `site_settings.php`
+
+Admin → Pengaturan Website → **Tema Website**: gambar hero dashboard, warna aksen brand, warna kartu
+header (tetap transparan + blur), warna tombol aktif side menu, dan aksesoris menggantung di bawah
+header (ketupat, lentera, lampion, bendera, dll — aset di `public/ornaments/`).
+Warna & aksesoris disimpan di baris `site`; gambar hero disimpan terpisah di baris `asset_hero` dan
+disajikan lewat `site_settings.php?asset=hero&v=<versi>` (cache 1 tahun) agar JSON pengaturan tetap kecil.

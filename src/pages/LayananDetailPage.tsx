@@ -1,5 +1,6 @@
 import Seo from '../components/Seo';
 import { SITE_URL } from '../seo/config';
+import { categorySeo, faqJsonLd } from '../seo/content';
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -29,6 +30,7 @@ export default function LayananDetailPage() {
   const { user } = useAuth();
   const { platform } = useParams<{ platform: string }>();
   const category = findCategory(platform);
+  const seo = categorySeo(category?.slug);
 
   const [all, setAll] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,15 +77,16 @@ export default function LayananDetailPage() {
   return (
     <div className="page-align-left mx-auto max-w-4xl px-4 pb-32 pt-8 sm:px-6">
       <Seo
-        title={`Layanan ${category.name}`}
-        description={`Beli layanan ${category.name} di Boosteryuk — followers, likes, views & engagement ${category.name}. Harga transparan, proses cepat, support 24/7.`}
+        title={seo?.title || `Layanan ${category.name}`}
+        description={seo?.description || `Beli layanan ${category.name} di Boosteryuk — followers, likes, views & engagement ${category.name}.`}
         jsonLd={[
           { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
             { '@type': 'ListItem', position: 1, name: 'Beranda', item: SITE_URL + '/' },
             { '@type': 'ListItem', position: 2, name: 'Layanan', item: SITE_URL + '/layanan' },
             { '@type': 'ListItem', position: 3, name: category.name, item: SITE_URL + '/layanan/' + category.slug },
           ] },
-          { '@context': 'https://schema.org', '@type': 'Service', name: `Layanan ${category.name}`, serviceType: `SMM ${category.name}`, areaServed: 'ID', provider: { '@type': 'Organization', name: 'Boosteryuk', url: SITE_URL } },
+          { '@context': 'https://schema.org', '@type': 'Service', name: `Layanan ${category.name}`, description: seo?.description, serviceType: `SMM ${category.name}`, areaServed: 'ID', provider: { '@type': 'Organization', name: 'Boosteryuk', url: SITE_URL } },
+          ...(seo?.faq?.length ? [faqJsonLd(seo.faq)] : []),
         ]}
       />
       <Reveal>
@@ -277,6 +280,36 @@ export default function LayananDetailPage() {
             </section>
           ))}
         </div>
+      )}
+
+      {/* ---------- Tentang layanan (teks unik per platform untuk pengguna & SEO) ---------- */}
+      {seo && (
+        <section aria-labelledby="tentang-layanan" className="mt-10 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700/60 dark:bg-slate-800/60 sm:p-6">
+          <h2 id="tentang-layanan" className="text-[17px] font-bold text-slate-900 dark:text-white">
+            Tentang Layanan {category.name}
+          </h2>
+          {seo.intro?.map((p, i) => (
+            <p key={i} className="mt-2.5 text-[13.5px] leading-relaxed text-slate-600 dark:text-slate-300">
+              {p}
+            </p>
+          ))}
+          {seo.faq && seo.faq.length > 0 && (
+            <>
+              <h3 className="mt-5 text-[14px] font-bold text-slate-900 dark:text-white">Pertanyaan Umum</h3>
+              <div className="mt-2 divide-y divide-slate-100 dark:divide-slate-700/60">
+                {seo.faq.map((f) => (
+                  <details key={f.q} className="group py-2.5">
+                    <summary className="cursor-pointer list-none text-[13.5px] font-semibold text-slate-800 marker:hidden dark:text-slate-100">
+                      <span className="mr-1.5 inline-block text-slate-400 transition-transform group-open:rotate-90">›</span>
+                      {f.q}
+                    </summary>
+                    <p className="mt-1.5 pl-4 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">{f.a}</p>
+                  </details>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
       )}
     </div>
   );
