@@ -430,7 +430,8 @@ function PanelEditor({ initial, onClose, onSaved }: { initial: Draft; onClose: (
             <label className="mt-3 block">
               <span className={lbl}>Aksesoris menggantung di bawah header</span>
               <select className={inp} value={cfg.headerOrnament || ''} onChange={(e) => setCfg({ headerOrnament: e.target.value })}>
-                <option value="">Tanpa aksesoris</option>
+                <option value="">Ikuti web utama (otomatis sama dengan tema aksesoris admin utama)</option>
+                <option value="none">Tanpa aksesoris</option>
                 {ORNAMENT_SETS.map((o) => (
                   <option key={o.id} value={o.id}>{o.name} — {o.theme}</option>
                 ))}

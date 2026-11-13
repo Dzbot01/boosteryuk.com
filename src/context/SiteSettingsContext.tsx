@@ -242,11 +242,12 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       headerTagline: c.headerTagline || '',
       logoUrl: logo || settings.logoUrl,
       faviconUrl: logo || settings.faviconUrl,
-      // warna/aksesoris panel: kosong = bawaan (tidak mewarisi tema musiman web utama)
+      // warna panel: kosong = warna bawaan (tidak mewarisi warna web utama)
       brandAccent: c.brandAccent || '',
       headerTint: c.headerTint || '',
       menuActive: c.menuActive || '',
-      headerOrnament: c.headerOrnament || '',
+      // Aksesoris header: '' = ikuti tema aksesoris web utama (mis. Ramadhan), 'none' = matikan, id = pilihan panel.
+      headerOrnament: c.headerOrnament === 'none' ? '' : c.headerOrnament || settings.headerOrnament,
       heroImageUrl: '',
     };
   }, [settings, tenant]);
