@@ -36,7 +36,7 @@ const HOME_JSONLD = [
 
 export default function HomePage() {
   const { isDark } = useTheme();
-  const { heroImageSrc, settings } = useSiteSettings();
+  const { heroImageSrc, settings, dashboardVideo } = useSiteSettings();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
@@ -198,26 +198,29 @@ export default function HomePage() {
       </section>
 
       {/* ================= VIDEO PLAYER (antara hero & body) =================
-          File boosteryuk.mp4 diletakkan di root web (sejajar index.html).
+          Web utama: video Boosteryuk (Supabase Storage). Child panel: video milik panel bila ada.
           Tidak dapat diunduh: controlsList=nodownload + klik-kanan dinonaktifkan. */}
-      <section className="mx-auto mt-6 max-w-xl px-4 sm:px-6">
-        <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-black shadow-[0_26px_60px_-30px_rgba(15,23,42,0.6)] dark:border-slate-700/60">
-          <video
-            src="https://dzvsjcjvnpasrwuuopeg.supabase.co/storage/v1/object/public/publik/boosteryuk.mp4"
-            poster="/boosteryuk-thumb.png"
-            className="aspect-video w-full"
-            controls
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            controlsList="nodownload noplaybackrate noremoteplayback"
-            disablePictureInPicture
-            onContextMenu={(e) => e.preventDefault()}
-          />
-        </div>
-      </section>
+      {dashboardVideo && (
+        <section className="mx-auto mt-6 max-w-xl px-4 sm:px-6">
+          <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-black shadow-[0_26px_60px_-30px_rgba(15,23,42,0.6)] dark:border-slate-700/60">
+            <video
+              key={dashboardVideo.src}
+              src={dashboardVideo.src}
+              poster={dashboardVideo.poster || undefined}
+              className="aspect-video w-full"
+              controls
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              controlsList="nodownload noplaybackrate noremoteplayback"
+              disablePictureInPicture
+              onContextMenu={(e) => e.preventDefault()}
+            />
+          </div>
+        </section>
+      )}
 
         {/* ================= BODY LAYER ================= */}
       <main className="mx-auto max-w-6xl px-4 pb-32 sm:px-6">

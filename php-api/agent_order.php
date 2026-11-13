@@ -210,6 +210,11 @@ $st->bind_param("ssi", $proses, $orderId, $user_id);
 $st->execute();
 $st->close();
 
+// Child panel: catat pesanan + pendapatan reseller (harga dibayar - harga asli).
+if ($tenant) {
+    try { cp_record_order($conn, $tenant['id'], $user_id, $orderId, 'agent', $serviceName, $months, $price, $basePrice); } catch (Throwable $e) { /* jangan gagalkan order */ }
+}
+
 $st = $conn->prepare("SELECT balance FROM users WHERE id = ? LIMIT 1");
 $st->bind_param("i", $user_id);
 $st->execute();

@@ -5,11 +5,17 @@
  * Publik:
  *   GET  ?host=toko1.boosteryuk.com          → { ok, tenant: {...} | null }   (atau header X-Child-Panel dari Worker)
  *   GET  ?asset=<panelId>-<slot>&v=<versi>   → file gambar (logo/hero/slideN), cache 1 tahun
- * Admin (POST JSON {token, action, ...}):
+ * Child panel (POST, host = subdomain panel; user login):
+ *   ping                                       → catat kunjungan, balas is_owner (admin ke-2?)
+ *   record_order {order_id}                    → catat pesanan SMM (harga dari riwayat_pesanan milik user)
+ * Admin ke-2 / pemilik panel (owner_user_id) atau admin utama:
+ *   owner_summary | owner_orders | owner_users | owner_set_markup {markup_smm_pct, markup_agent_pct}
+ * Admin utama (POST JSON {token, action, ...}):
  *   list                                       → semua child panel + hostname
  *   check   {subdomain}                        → apakah nama tersedia
  *   save    {panel:{id?, name, subdomain, status, markup_smm_pct, markup_agent_pct, config}}
  *   upload  {id, slot, data}                   → simpan gambar, balas ref 'cpasset:<slot>:<versi>'
+ *   video_sign {id, ext, size}                 → signed upload URL Supabase (browser upload langsung)
  *   delete  {id}
  * Subdomain cukup didaftarkan di sini — DNS wildcard *.boosteryuk.com + Worker sudah mengarahkannya.
  */
@@ -55,7 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['asset'])) {
 /* ===================== GET: konfigurasi tenant (publik) ===================== */
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
-        cp_out(['ok' => true, 'tenant' => cp_resolve($conn)]);
+        $t = cp_resolve($conn);
+        if ($t) unset($t['_owner_user_id']);
+        cp_out(['ok' => true, 'tenant' => $t]);
     } catch (Throwable $e) {
         cp_out(['ok' => false, 'message' => $e->getMessage()], 500);
     }
@@ -64,8 +72,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 /* ===================== POST: admin ===================== */
 $in = json_decode(file_get_contents('php://input'), true);
 if (!is_array($in)) cp_out(['ok' => false, 'message' => 'Body JSON tidak valid.'], 400);
-cp_require_admin($conn, $in['token'] ?? '', function ($msg, $code) { cp_out(['ok' => false, 'message' => $msg], $code); });
 $action = (string)($in['action'] ?? '');
+
+/* ---------- Aksi di child panel (user biasa & admin ke-2 / pemilik panel) ---------- */
+if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 'owner_users', 'owner_set_markup'], true)) {
+    $tenant = cp_resolve($conn);
+    if (!$tenant) cp_out(['ok' => false, 'message' => 'Child panel tidak ditemukan untuk host ini.'], 404);
+    $uid = cp_user_id($conn, $in['token'] ?? '');
+    if (!$uid) cp_out(['ok' => false, 'message' => 'Sesi tidak valid. Silakan login ulang.'], 401);
+    $pid = (int)$tenant['id'];
+
+    if ($action === 'ping') {
+        cp_touch_activity($conn, $pid, $uid, 'visit');
+        cp_out(['ok' => true, 'is_owner' => cp_is_owner($conn, $tenant, $uid)]);
+    }
+
+    if ($action === 'record_order') {
+        // Pesanan SMM: harga diambil dari riwayat_pesanan milik user ini (bukan dari browser).
+        $orderId = mb_substr(trim((string)($in['order_id'] ?? '')), 0, 64);
+        if ($orderId === '') cp_out(['ok' => false, 'message' => 'order_id wajib.'], 400);
+        $st = cp_q($conn, "SELECT service_name, quantity, price FROM riwayat_pesanan WHERE order_id = ? AND user_id = ? ORDER BY id DESC LIMIT 1", 'si', $orderId, (int)$uid);
+        $row = $st->get_result()->fetch_assoc();
+        $st->close();
+        if (!$row) cp_out(['ok' => false, 'message' => 'Pesanan tidak ditemukan di riwayat akun ini.'], 404);
+        $base = cp_base_from_price($row['price'], $tenant['markup_smm_pct']);
+        cp_record_order($conn, $pid, $uid, $orderId, 'smm', $row['service_name'], $row['quantity'], $row['price'], $base);
+        cp_out(['ok' => true]);
+    }
+
+    // Selebihnya hanya untuk admin ke-2 (pemilik panel) atau admin utama.
+    if (!cp_is_owner($conn, $tenant, $uid)) cp_out(['ok' => false, 'message' => 'Hanya admin panel ini yang boleh membuka halaman ini.'], 403);
+
+    if ($action === 'owner_summary') {
+        $q = function ($where) use ($conn, $pid) {
+            $st = cp_q($conn, "SELECT COUNT(*) n, COALESCE(SUM(price),0) omzet, COALESCE(SUM(profit),0) profit FROM child_panel_orders WHERE child_panel_id = ? $where", 'i', $pid);
+            $r = $st->get_result()->fetch_assoc();
+            $st->close();
+            return ['orders' => (int)$r['n'], 'omzet' => (float)$r['omzet'], 'profit' => (float)$r['profit']];
+        };
+        $st = cp_q($conn, "SELECT COUNT(*) n, SUM(last_seen >= NOW() - INTERVAL 7 DAY) aktif FROM child_panel_activity WHERE child_panel_id = ?", 'i', $pid);
+        $u = $st->get_result()->fetch_assoc();
+        $st->close();
+        cp_out(['ok' => true, 'panel' => ['name' => $tenant['name'], 'hostname' => $tenant['hostname'],
+            'markup_smm_pct' => $tenant['markup_smm_pct'], 'markup_agent_pct' => $tenant['markup_agent_pct']],
+            'all' => $q(''), 'month' => $q("AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"), 'today' => $q("AND created_at >= CURDATE()"),
+            'users' => ['total' => (int)$u['n'], 'active7d' => (int)$u['aktif']]]);
+    }
+
+    if ($action === 'owner_orders') {
+        $limit = max(1, min(200, (int)($in['limit'] ?? 50)));
+        $st = cp_q($conn, "SELECT o.order_id, o.kind, o.service_name, o.quantity, o.price, o.base_price, o.profit, o.created_at,
+                                  u.name, u.email, r.status
+                           FROM child_panel_orders o
+                           LEFT JOIN users u ON u.id = o.user_id
+                           LEFT JOIN riwayat_pesanan r ON r.order_id = o.order_id AND r.user_id = o.user_id
+                           WHERE o.child_panel_id = ? ORDER BY o.id DESC LIMIT $limit", 'i', $pid);
+        $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+        $st->close();
+        foreach ($rows as &$r) { $r['email'] = cp_mask_email($r['email']); foreach (['price', 'base_price', 'profit'] as $k) $r[$k] = (float)$r[$k]; }
+        cp_out(['ok' => true, 'orders' => $rows]);
+    }
+
+    if ($action === 'owner_users') {
+        $st = cp_q($conn, "SELECT a.user_id, u.name, u.email, a.first_seen, a.last_seen, a.visits, a.last_action,
+                                  COUNT(o.id) orders, COALESCE(SUM(o.price),0) spend, COALESCE(SUM(o.profit),0) profit
+                           FROM child_panel_activity a
+                           LEFT JOIN users u ON u.id = a.user_id
+                           LEFT JOIN child_panel_orders o ON o.child_panel_id = a.child_panel_id AND o.user_id = a.user_id
+                           WHERE a.child_panel_id = ?
+                           GROUP BY a.user_id, u.name, u.email, a.first_seen, a.last_seen, a.visits, a.last_action
+                           ORDER BY a.last_seen DESC LIMIT 200", 'i', $pid);
+        $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+        $st->close();
+        foreach ($rows as &$r) { $r['email'] = cp_mask_email($r['email']); unset($r['user_id']); foreach (['spend', 'profit'] as $k) $r[$k] = (float)$r[$k]; $r['orders'] = (int)$r['orders']; $r['visits'] = (int)$r['visits']; }
+        cp_out(['ok' => true, 'users' => $rows]);
+    }
+
+    if ($action === 'owner_set_markup') {
+        $mSmm = max(0, min(CP_MAX_MARKUP, round((float)($in['markup_smm_pct'] ?? 0), 2)));
+        $mAgent = max(0, min(CP_MAX_MARKUP, round((float)($in['markup_agent_pct'] ?? 0), 2)));
+        cp_q($conn, "UPDATE child_panels SET markup_smm_pct = ?, markup_agent_pct = ? WHERE id = ?", 'ddi', $mSmm, $mAgent, $pid)->close();
+        cp_out(['ok' => true, 'markup_smm_pct' => $mSmm, 'markup_agent_pct' => $mAgent]);
+    }
+}
+
+/* ---------- Aksi admin utama ---------- */
+cp_require_admin($conn, $in['token'] ?? '', function ($msg, $code) { cp_out(['ok' => false, 'message' => $msg], $code); });
 
 function cp_host_of($sub) { return $sub . '.' . CP_ROOT_DOMAIN; }
 
@@ -95,6 +187,9 @@ function cp_clean_config($c) {
         'headerOrnament' => preg_match('/^[a-z0-9-]{0,40}$/', (string)($c['headerOrnament'] ?? '')) ? (string)($c['headerOrnament'] ?? '') : '',
         'logo'           => cp_img_ref($c['logo'] ?? ''),
         'hero'           => cp_img_ref($c['hero'] ?? ''),
+        // Video player dashboard: kosong = tidak tampil. URL https (Supabase Storage / mp4 / webm).
+        'videoUrl'       => preg_match('#^https://[^\s"\'<>]{4,500}$#i', trim((string)($c['videoUrl'] ?? ''))) ? trim((string)$c['videoUrl']) : '',
+        'videoPoster'    => cp_img_ref($c['videoPoster'] ?? ''),
         'voice'          => in_array($c['voice'] ?? 'welcome', ['full', 'welcome', 'off'], true) ? ($c['voice'] ?? 'welcome') : 'welcome',
         'slides'         => [],
     ];
@@ -191,11 +286,23 @@ try {
         cp_out(['ok' => true, 'ref' => "cpasset:$slot:$ver"]);
     }
 
+    if ($action === 'video_sign') {
+        $id = (int)($in['id'] ?? 0);
+        $ext = strtolower((string)($in['ext'] ?? ''));
+        $size = (int)($in['size'] ?? 0);
+        if ($id <= 0) cp_out(['ok' => false, 'message' => 'Simpan child panel dulu sebelum mengunggah video.'], 400);
+        if (!in_array($ext, ['mp4', 'webm'], true)) cp_out(['ok' => false, 'message' => 'Video harus MP4 atau WebM.'], 400);
+        $max = cp_video_config()['max_mb'];
+        if ($size <= 0 || $size > $max * 1024 * 1024) cp_out(['ok' => false, 'message' => "Ukuran video maksimal $max MB."], 400);
+        [$ok, $data] = cp_video_sign($id, $ext);
+        cp_out($ok ? ['ok' => true] + $data : ['ok' => false, 'message' => $data], $ok ? 200 : 502);
+    }
+
     if ($action === 'delete') {
         $id = (int)($in['id'] ?? 0);
         if ($id <= 0) cp_out(['ok' => false, 'message' => 'ID tidak valid.'], 400);
         $conn->begin_transaction();
-        foreach (['child_panel_assets', 'child_panel_domains'] as $t) cp_q($conn, "DELETE FROM $t WHERE child_panel_id = ?", 'i', $id)->close();
+        foreach (['child_panel_assets', 'child_panel_domains', 'child_panel_activity'] as $t) cp_q($conn, "DELETE FROM $t WHERE child_panel_id = ?", 'i', $id)->close();
         cp_q($conn, "DELETE FROM child_panels WHERE id = ?", 'i', $id)->close();
         $conn->commit();
         cp_out(['ok' => true, 'panels' => cp_list($conn)]);

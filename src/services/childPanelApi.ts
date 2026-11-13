@@ -50,5 +50,22 @@ export const childPanelApi = {
   check: (subdomain: string, id?: number) => call<{ available?: boolean; hostname?: string }>('check', { subdomain, id }),
   save: (panel: ChildPanelInput) => call<{ id?: number; hostname?: string; url?: string; panels?: ChildPanel[] }>('save', { panel }),
   upload: (id: number, slot: string, data: string) => call<{ ref?: string }>('upload', { id, slot, data }),
+  /** Signed upload URL Supabase untuk video dashboard (dibuat server, key tidak pernah ke browser). */
+  videoSign: (id: number, ext: string, size: number) => call<{ upload_url?: string; public_url?: string; max_mb?: number }>('video_sign', { id, ext, size }),
   remove: (id: number) => call<{ panels?: ChildPanel[] }>('delete', { id }),
 };
+
+/** Unggah file langsung ke signed URL Supabase (PUT) dengan progres 0..1. */
+export function uploadToSignedUrl(url: string, file: File, onProgress: (p: number) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+    xhr.setRequestHeader('x-upsert', 'true');
+    xhr.setRequestHeader('cache-control', 'max-age=31536000');
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload gagal (HTTP ${xhr.status})`)));
+    xhr.onerror = () => reject(new Error('Upload gagal: koneksi terputus.'));
+    xhr.send(file);
+  });
+}

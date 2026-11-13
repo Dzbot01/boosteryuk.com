@@ -17,6 +17,8 @@ import AiAssistantCard from './AiAssistantCard';
 import { applyMarkup, formatRate, fetchServices, isCustomCommentService, type ServiceItem } from '../services/servicesApi';
 import { placeOrder } from '../services/checkoutApi';
 import { brandForCategory, brandIconUrl } from '../constants';
+import { IS_CHILD_PANEL } from '../lib/apiBase';
+import { panelApi } from '../services/panelApi';
 
 
 /** Small round brand badge shown in front of a dropdown result. */
@@ -429,6 +431,9 @@ if(!tokenFromStorage) {
     
     if(!dataRiwayat.ok){
       riwayatMessage = ` Gagal simpan riwayat: ${dataRiwayat.message}`;
+    } else if (IS_CHILD_PANEL) {
+      // Child panel: catat pesanan ke panel (pendapatan reseller). Server memverifikasi lewat riwayat_pesanan.
+      void panelApi.recordOrder(String(orderIdFinal));
     }
   } catch(err: any) {
     riwayatMessage = ` Gagal konek riwayat: ${err.message}`;

@@ -134,3 +134,34 @@ header (tetap transparan + blur), warna tombol aktif side menu, dan aksesoris me
 header (ketupat, lentera, lampion, bendera, dll — aset di `public/ornaments/`).
 Warna & aksesoris disimpan di baris `site`; gambar hero disimpan terpisah di baris `asset_hero` dan
 disajikan lewat `site_settings.php?asset=hero&v=<versi>` (cache 1 tahun) agar JSON pengaturan tetap kecil.
+
+## Child Panel (subdomain reseller) — `child_panel.php`, `child_panel_lib.php`
+
+Alur: `toko1.boosteryuk.com` → Cloudflare Worker (repo Boosteryuk, route `*.boosteryuk.com/*`) →
+`boosteryuk.com` + header `X-Child-Panel: toko1` → `cp_resolve()` mencari `child_panel_domains.hostname`
+→ konfigurasi panel (`child_panels`). Subdomain **cukup didaftarkan di database** lewat Admin → Child Panel
+(DNS wildcard sudah mengarahkan semua subdomain).
+
+| Tabel | Isi |
+|---|---|
+| `child_panels` | nama, status, pemilik (`owner_user_id` = admin ke-2), markup SMM/Agen AI %, `config` JSON (brand, warna, footer, slider, voice, video) |
+| `child_panel_domains` | hostname → panel (UNIK) |
+| `child_panel_assets` | logo, hero, thumbnail video, gambar slider (disajikan `?asset=<id>-<slot>`) |
+| `child_panel_orders` | pesanan dari panel: harga dibayar, harga asli, **pendapatan (markup)** |
+| `child_panel_activity` | aktivitas user per panel (kunjungan, terakhir aktif, aksi terakhir) |
+
+Semua tabel dibuat otomatis (atau jalankan `child_panel.sql`).
+
+- **Markup**: Agen AI dihitung di server (`agent_order.php`). SMM: harga tampil di panel sudah + markup;
+  `order.php` perlu memakai `cp_apply_markup()` agar harga final juga dihitung server (lihat catatan di bawah).
+- **Admin ke-2**: pemilik panel (email diisi admin utama) membuka **Menu → Admin Panel Toko** di subdomain
+  (`/panel-admin`): ringkasan pendapatan, pesanan terbaru, aktivitas user, ubah markup. Role akun TIDAK
+  diubah menjadi `admin` (tidak punya akses ke admin panel utama).
+- **Video dashboard panel**: bawaan tidak ada. Upload langsung dari browser admin ke Supabase Storage
+  (bucket `publik/childpanel/`) memakai signed upload URL. Isi `supabase_service_key` di
+  `child_panel_config.php` di server (jangan di-commit).
+
+Catatan `order.php` (belum diubah): agar markup SMM tidak bisa dilewati, harga yang dipotong di
+`order.php` sebaiknya dihitung ulang di server: `require_once 'child_panel_lib.php';
+$tenant = cp_resolve($conn); $price = cp_apply_markup($hargaDasar, $tenant, 'smm');` lalu catat
+`cp_record_order(...)`. Kirim file order.php untuk dipasangkan.

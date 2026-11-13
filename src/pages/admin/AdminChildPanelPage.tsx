@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Globe, ExternalLink, Pencil, Trash2, X, Loader2, Check, CircleAlert, Upload, Image as ImageIcon,
-  Palette, Type, Percent, Mic, Layers, RotateCcw,
+  Palette, Type, Percent, Mic, Layers, RotateCcw, Film,
 } from 'lucide-react';
 import Reveal from '../../components/Reveal';
-import { childPanelApi, type ChildPanel, type ChildPanelInput } from '../../services/childPanelApi';
+import { childPanelApi, uploadToSignedUrl, type ChildPanel, type ChildPanelInput } from '../../services/childPanelApi';
 import { tenantAssetUrl, type TenantConfig, type VoiceMode } from '../../lib/tenant';
 import { compressImage } from '../../lib/image';
 import { THEME_PRESETS } from '../../data/themePresets';
@@ -34,6 +34,7 @@ interface Draft {
   slides: SlideDraft[];
   pendingLogo?: string;
   pendingHero?: string;
+  pendingPoster?: string;
 }
 
 const emptyDraft = (): Draft => ({
@@ -221,13 +222,35 @@ function PanelEditor({ initial, onClose, onSaved }: { initial: Draft; onClose: (
     return () => window.clearTimeout(t);
   }, [d.subdomain, initial.subdomain, initial.id]);
 
-  const pickImage = async (file: File | undefined, kind: 'logo' | 'hero' | number) => {
+  // Video dashboard: diunggah langsung ke Supabase Storage lewat signed URL dari server.
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
+  const uploadVideo = async (file: File | undefined) => {
+    if (!file) return;
+    setErr('');
+    if (!initial.id) return setErr('Simpan child panel dulu, lalu unggah video.');
+    const ext = file.name.toLowerCase().endsWith('.webm') || file.type === 'video/webm' ? 'webm' : 'mp4';
+    if (!/^video\/(mp4|webm)$/.test(file.type)) return setErr('Video harus MP4 atau WebM.');
+    const sign = await childPanelApi.videoSign(initial.id, ext, file.size);
+    if (!sign.ok || !sign.upload_url || !sign.public_url) return setErr(sign.message || 'Gagal menyiapkan upload video.');
+    setVideoProgress(0);
+    try {
+      await uploadToSignedUrl(sign.upload_url, file, (p) => setVideoProgress(p));
+      setCfg({ videoUrl: sign.public_url });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Upload video gagal.');
+    } finally {
+      setVideoProgress(null);
+    }
+  };
+
+  const pickImage = async (file: File | undefined, kind: 'logo' | 'hero' | 'poster' | number) => {
     if (!file) return;
     setErr('');
     try {
-      const data = kind === 'logo' ? await compressImage(file, 512, 'image/png') : await compressImage(file, 1920);
+      const data = kind === 'logo' ? await compressImage(file, 512, 'image/png') : await compressImage(file, kind === 'poster' ? 1280 : 1920);
       if (kind === 'logo') setD((x) => ({ ...x, pendingLogo: data }));
       else if (kind === 'hero') setD((x) => ({ ...x, pendingHero: data }));
+      else if (kind === 'poster') setD((x) => ({ ...x, pendingPoster: data }));
       else setD((x) => ({ ...x, slides: x.slides.map((s, i) => (i === kind ? { ...s, pending: data } : s)) }));
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Gagal membaca gambar.');
@@ -264,6 +287,7 @@ function PanelEditor({ initial, onClose, onSaved }: { initial: Draft; onClose: (
     const uploads: [string, string, (ref: string) => void][] = [];
     if (d.pendingLogo) uploads.push(['logo', d.pendingLogo, (ref) => (config.logo = ref)]);
     if (d.pendingHero) uploads.push(['hero', d.pendingHero, (ref) => (config.hero = ref)]);
+    if (d.pendingPoster) uploads.push(['poster', d.pendingPoster, (ref) => (config.videoPoster = ref)]);
     slides.forEach((s, i) => s.pending && uploads.push([`slide${i}`, s.pending, (ref) => (slides[i].image = ref)]));
     for (const [slot, data, apply] of uploads) {
       const u = await childPanelApi.upload(id, slot, data);
@@ -460,6 +484,43 @@ function PanelEditor({ initial, onClose, onSaved }: { initial: Draft; onClose: (
             )}
           </section>
 
+          {/* Video player dashboard */}
+          <section className={sec}>
+            <h3 className={h3}><Film className="h-4 w-4 text-slate-400" /> Video player di dashboard</h3>
+            <p className="mb-3 text-[12px] text-slate-500">
+              Bawaan: <b>tidak ada video</b>. Unggah video (MP4/WebM, maks 50 MB) — disimpan di Supabase Storage seperti video web utama — atau tempel link video https.
+            </p>
+            {cfg.videoUrl ? (
+              <video key={cfg.videoUrl} src={cfg.videoUrl} poster={preview(cfg.videoPoster, d.pendingPoster) || undefined} className="aspect-video w-full rounded-lg bg-black" controls muted playsInline preload="metadata" />
+            ) : (
+              <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-dashed border-slate-300 text-[12.5px] text-slate-400 dark:border-slate-700">
+                Video player tidak ditampilkan
+              </div>
+            )}
+            {videoProgress !== null && (
+              <div className="mt-2" role="progressbar" aria-valuenow={Math.round(videoProgress * 100)} aria-valuemin={0} aria-valuemax={100}>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                  <div className="h-full bg-cyan-600 transition-[width]" style={{ width: `${Math.round(videoProgress * 100)}%` }} />
+                </div>
+                <p className="mt-1 text-[11.5px] text-slate-500">Mengunggah video… {Math.round(videoProgress * 100)}%</p>
+              </div>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <VideoPicker disabled={videoProgress !== null || !initial.id} onPick={(f) => void uploadVideo(f)} />
+              <ImagePicker label="Thumbnail video" onPick={(f) => void pickImage(f, 'poster')} />
+              {cfg.videoUrl && (
+                <button type="button" onClick={() => { setCfg({ videoUrl: '', videoPoster: '' }); setD((x) => ({ ...x, pendingPoster: undefined })); }} className="rounded-lg border border-rose-200 px-3 py-2 text-[12px] font-semibold text-rose-600">
+                  Hapus video
+                </button>
+              )}
+            </div>
+            {!initial.id && <p className="mt-2 text-[11.5px] text-amber-600">Simpan child panel dulu untuk bisa mengunggah video.</p>}
+            <label className="mt-3 block">
+              <span className={lbl}>Atau tempel link video (https, .mp4/.webm)</span>
+              <input className={inp} value={cfg.videoUrl || ''} onChange={(e) => setCfg({ videoUrl: e.target.value.trim() })} placeholder="https://…/video.mp4" />
+            </label>
+          </section>
+
           {/* Markup */}
           <section className={sec}>
             <h3 className={h3}><Percent className="h-4 w-4 text-slate-400" /> Margin markup harga</h3>
@@ -525,6 +586,27 @@ function ImagePicker({ label, onPick }: { label: string; onPick: (f: File | unde
         ref={ref}
         type="file"
         accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          onPick(e.target.files?.[0]);
+          e.target.value = '';
+        }}
+      />
+    </>
+  );
+}
+
+function VideoPicker({ onPick, disabled }: { onPick: (f: File | undefined) => void; disabled?: boolean }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <button type="button" disabled={disabled} onClick={() => ref.current?.click()} className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-[12px] font-semibold text-white hover:bg-cyan-700 disabled:opacity-50">
+        <Upload className="h-3.5 w-3.5" /> Unggah video
+      </button>
+      <input
+        ref={ref}
+        type="file"
+        accept="video/mp4,video/webm"
         className="hidden"
         onChange={(e) => {
           onPick(e.target.files?.[0]);

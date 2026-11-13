@@ -20,10 +20,14 @@ import {
   Megaphone,
   Bot,
   LayoutGrid,
+  Globe,
+  Shield,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { usePanelOwner } from '../services/panelApi';
+import { IS_CHILD_PANEL } from '../lib/apiBase';
 
 export type PageId =
   | 'home'
@@ -110,6 +114,7 @@ const HIDDEN_PROFILE_ITEM = 'profil';
 export { baseMenu, authMenu };
 
 const ADMIN_MENU = [
+  { id: 'childpanel' as const, icon: Globe, label: 'Child Panel', desc: 'Subdomain reseller', path: '/admin/child-panel' },
   { id: 'profit' as const, icon: DollarSign, label: 'My Profit', desc: 'Ringkasan keuangan', path: '/admin/profit' },
   { id: 'website' as const, icon: Settings, label: 'Pengaturan Website', desc: 'Logo, brand & musik', path: '/admin/website' },
   { id: 'broadcast' as const, icon: Megaphone, label: 'Broadcast', desc: 'Broadcasting', path: '/admin/broadcast' },
@@ -119,6 +124,8 @@ const ADMIN_MENU = [
 export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
   const { user, isAdmin, logout } = useAuth();
   const { settings } = useSiteSettings();
+  // Child panel: pemilik panel (admin ke-2) mendapat menu Admin Panel Toko.
+  const isPanelOwner = usePanelOwner(user?.token) === true && IS_CHILD_PANEL;
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location?.pathname || "/";
@@ -239,6 +246,29 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                 );
               })}
             </ul>
+          )}
+
+          {/* Admin ke-2 (pemilik child panel) */}
+          {!isAdmin && isPanelOwner && (
+            <button
+              onClick={() => {
+                navigate('/panel-admin');
+                onClose();
+              }}
+              className={`mb-3 flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                pathname.startsWith('/panel-admin')
+                  ? 'by-menu-active border-transparent text-white'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <Shield className="h-[17px] w-[17px]" strokeWidth={1.9} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13.5px] font-semibold leading-tight">Admin Panel Toko</span>
+                <span className="block truncate text-[11px] opacity-70">Pendapatan, pesanan & user panel</span>
+              </span>
+            </button>
           )}
 
           {/* User menus */}

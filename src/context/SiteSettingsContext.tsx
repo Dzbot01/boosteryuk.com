@@ -69,6 +69,8 @@ interface SiteCtx {
   slides: TenantSlide[] | null;
   /** Mode suara Guri Booster saat login. */
   voiceMode: VoiceMode;
+  /** Video player dashboard (null = tidak tampil). */
+  dashboardVideo: { src: string; poster: string } | null;
   /** Status sinkron ke database (khusus admin saat menyimpan). */
   sync: SyncState;
 }
@@ -101,6 +103,11 @@ const SHARED_KEYS = [
 // (gambar disimpan terpisah di DB & disajikan site_settings.php?asset=hero).
 
 const HEX = /^#[0-9a-f]{6}$/i;
+/** Video dashboard web utama (Supabase Storage) — child panel memakai videonya sendiri / tidak ada. */
+const ROOT_VIDEO = {
+  src: 'https://dzvsjcjvnpasrwuuopeg.supabase.co/storage/v1/object/public/publik/boosteryuk.mp4',
+  poster: '/boosteryuk-thumb.png',
+};
 const THEME_KEYS = ['brandAccent', 'headerTint', 'menuActive', 'headerOrnament', 'heroImageUrl'] as const;
 
 /** Campur warna hex dengan putih (0..1) untuk varian mode gelap. */
@@ -207,6 +214,7 @@ const SiteContext = createContext<SiteCtx>({
   tenant: null,
   slides: null,
   voiceMode: 'full',
+  dashboardVideo: null,
   sync: { status: 'idle', message: '' },
 });
 
@@ -450,6 +458,12 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
           : null,
         // Panel: bawaan hanya sapaan (info reseller Boosteryuk tidak cocok untuk panel reseller).
         voiceMode: tenant ? tenant.config?.voice || 'welcome' : 'full',
+        // Child panel: bawaan TANPA video; tampil hanya bila admin mengunggah/mengisi video.
+        dashboardVideo: IS_CHILD_PANEL
+          ? tenant?.config?.videoUrl
+            ? { src: tenant.config.videoUrl, poster: tenantAssetUrl(tenant, tenant.config.videoPoster) }
+            : null
+          : ROOT_VIDEO,
         sync,
       }}
     >
