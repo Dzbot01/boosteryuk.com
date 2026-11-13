@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ThumbsUp, ChevronUp, ShoppingCart, Wallet, Newspaper, Server, Bot } from 'lucide-react';
+import { ThumbsUp, ChevronUp, ChevronRight, ShoppingCart, Wallet, Newspaper, Server, Bot, BellRing } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings, type InfoItem } from '../context/SiteSettingsContext';
@@ -25,7 +25,11 @@ interface OverviewStats {
   bulanIni: number;
   vps: number;
   agen: number;
+  /** Agen AI yang jatuh tempo ≤ 7 hari lagi (pengingat di Overview). */
+  segera?: { orderId: string; nama: string; hari: number }[];
 }
+
+const REMINDER_DAYS = 7;
 
 interface RiwayatRow {
   order_id: string;
@@ -128,7 +132,18 @@ export default function OverviewPage() {
       try {
         const r = await fetch(`${STATS_API}?token=${token}&t=${Date.now()}`, { cache: 'no-store' });
         const j = await r.json();
-        if (j?.ok) return { bulanIni: Number(j.bulan_ini) || 0, vps: Number(j.vps_aktif) || 0, agen: Number(j.agent_aktif) || 0 };
+        if (j?.ok) {
+          const now = Date.now();
+          const segera = (Array.isArray(j.layanan) ? j.layanan : [])
+            .filter((l: { type?: string; aktif?: boolean; jatuh_tempo?: string | null }) => l.type === 'agent_ai' && l.aktif && l.jatuh_tempo)
+            .map((l: { order_id: string; nama: string; jatuh_tempo: string }) => ({
+              orderId: l.order_id,
+              nama: String(l.nama || '').split(' - ')[0],
+              hari: Math.ceil((new Date(l.jatuh_tempo).getTime() - now) / 86400000),
+            }))
+            .filter((l: { hari: number }) => l.hari <= REMINDER_DAYS);
+          return { bulanIni: Number(j.bulan_ini) || 0, vps: Number(j.vps_aktif) || 0, agen: Number(j.agent_aktif) || 0, segera };
+        }
       } catch {
         /* lanjut ke cadangan */
       }
@@ -181,6 +196,25 @@ export default function OverviewPage() {
     <div className="mx-auto max-w-6xl px-4 pb-32 pt-6 sm:px-6">
       <Seo title="Overview" description="Ringkasan akun Boosteryuk: saldo, pesanan bulan ini, layanan rekomendasi, dan berita." noindex />
 
+      {stats?.segera && stats.segera.length > 0 && (
+        <button
+          type="button"
+          onClick={() => navigate('/agen-ai-saya')}
+          role="alert"
+          className="mb-4 flex w-full items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left transition-colors hover:bg-amber-100/70 dark:border-amber-800/50 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
+        >
+          <BellRing className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" strokeWidth={2.4} />
+          <span className="min-w-0 flex-1 text-[13px] text-amber-800 dark:text-amber-200">
+            <b>Pengingat jatuh tempo:</b>{' '}
+            {stats.segera
+              .map((a) => `${a.nama} (${a.orderId}) ${a.hari <= 0 ? 'jatuh tempo hari ini' : a.hari === 1 ? 'jatuh tempo besok' : `jatuh tempo ${a.hari} hari lagi`}`)
+              .join(' · ')}
+            . Lihat detail di Agen AI Saya.
+          </span>
+          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+        </button>
+      )}
+
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-[auto_1fr]">
         {/* ===== Saldo & pesanan bulan ini (mobile: paling atas) ===== */}
         <div className="grid grid-cols-2 gap-4 lg:col-start-2 lg:row-start-1">
@@ -188,11 +222,16 @@ export default function OverviewPage() {
             { label: 'Sisa Saldo Anda', value: rupiah(user?.balance ?? 0), icon: Wallet },
             { label: 'Pesanan Anda Bulan Ini', value: stats ? rupiah(stats.bulanIni) : null, icon: ShoppingCart },
             { label: 'Server VPS Aktif', value: stats ? `${stats.vps} Server` : null, icon: Server },
-            { label: 'AI Agent Aktif', value: stats ? `${stats.agen} Agent` : null, icon: Bot },
-          ].map((s) => {
+            { label: 'AI Agent Aktif', value: stats ? `${stats.agen} Agent` : null, icon: Bot, to: '/agen-ai-saya' },
+          ].map((s: { label: string; value: string | null; icon: typeof Bot; to?: string }) => {
             const Icon = s.icon;
+            const Tag = s.to ? 'button' : 'div';
             return (
-              <div key={s.label} className={`${card} flex items-center gap-3 p-4`}>
+              <Tag
+                key={s.label}
+                {...(s.to ? { type: 'button' as const, onClick: () => navigate(s.to!), 'aria-label': `${s.label} — lihat daftar` } : {})}
+                className={`${card} flex items-center gap-3 p-4 text-left ${s.to ? 'group transition-colors hover:border-cyan-300 hover:bg-cyan-50/40 active:scale-[0.99] dark:hover:border-cyan-800 dark:hover:bg-slate-800/60' : ''}`}
+              >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-500 text-white">
                   <Icon className="h-5 w-5" strokeWidth={2.2} />
                 </span>
@@ -204,7 +243,8 @@ export default function OverviewPage() {
                     <p className="truncate text-[15px] font-bold text-slate-800 dark:text-slate-100">{s.value}</p>
                   )}
                 </div>
-              </div>
+                {s.to && <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-cyan-500 dark:text-slate-600" />}
+              </Tag>
             );
           })}
         </div>

@@ -165,6 +165,8 @@ export default function SewaAgenAiPage() {
       months,
       phone: nomor.replace(/\D/g, ''),
       nama: namaAi.trim(),
+      ewallet: ewallet.trim(),
+      toko: toko.trim(),
       platform: platform || 'whatsapp',
     });
     if (!res.ok || !res.orderId) {
@@ -340,7 +342,7 @@ export default function SewaAgenAiPage() {
         )}
 
         {phase === 'done' && pendingOrder && (
-          <DoneCard order={pendingOrder} onGo={() => navigate('/riwayat-pesanan')} />
+          <DoneCard order={pendingOrder} onGo={() => navigate('/agen-ai-saya')} />
         )}
       </div>
     </div>
@@ -556,7 +558,7 @@ function DoneCard({ order, onGo }: { order: { name: string; due: number }; onGo:
         <h3 className="mt-3 font-display text-[18px] font-extrabold text-emerald-800 dark:text-emerald-300">Pesanan selesai!</h3>
         <p className="mt-1 text-[13px] text-slate-600 dark:text-slate-300">{order.name} aktif. Jatuh tempo sewa: <b>{dueStr}</b>.</p>
         <button onClick={onGo} className="mt-4 h-11 w-full rounded-xl bg-emerald-600 text-[14px] font-bold text-white transition-all hover:bg-emerald-700 active:scale-[0.99]">
-          Lihat Riwayat Pesanan
+          Lihat Agen AI Saya
         </button>
       </div>
     </Reveal>

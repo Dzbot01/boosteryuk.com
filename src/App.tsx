@@ -28,6 +28,7 @@ const OrderVpsPage = lazy(() => import('./pages/OrderVpsPage'));
 const PlaygroundPage = lazy(() => import('./pages/PlaygroundPage'));
 const SewaAgenAiPage = lazy(() => import('./pages/SewaAgenAiPage'));
 const OverviewPage = lazy(() => import('./pages/OverviewPage'));
+const AgenAiSayaPage = lazy(() => import('./pages/AgenAiSayaPage'));
 const PengaturanAkunPage = lazy(() => import('./pages/PengaturanAkunPage'));
 const DepositPage = lazy(() => import('./pages/DepositPage'));
 const DepositMethodPage = lazy(() => import('./pages/DepositMethodPage'));
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="playground" element={<PlaygroundPage />} />
           <Route path="sewa-agen-ai" element={<SewaAgenAiPage />} />
           <Route path="overview" element={<ProtectedRoute><OverviewPage /></ProtectedRoute>} />
+          <Route path="agen-ai-saya" element={<ProtectedRoute><AgenAiSayaPage /></ProtectedRoute>} />
           <Route path="layanan/:platform" element={<LayananDetailPage />} />
           <Route path="plus" element={<PlusPage />} />
 

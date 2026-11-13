@@ -10,6 +10,8 @@ import {
   PackageCheck,
   Hourglass,
   Ban,
+  Bot,
+  ChevronRight,
 } from 'lucide-react';
 import Reveal from '../components/Reveal';
 import { useAuth } from '../context/AuthContext';
@@ -42,6 +44,30 @@ function formatTime(ts: number): string {
 }
 
 type Filter = 'all' | 'selesai' | 'proses' | 'batal' | 'pending';
+const STATUSES = ['pending', 'proses', 'selesai', 'batal'] as const;
+
+/** Pesanan sewa Agen AI (agent_order.php): ID "AI…" / nama "Agen AI WhatsApp … - Jatuh tempo …". */
+function agentInfo(o: { order_id: string; service_name: string }): { title: string; due: string } | null {
+  const isAgent = /^AI\d{6,}$/.test(o.order_id) || /^agen ai/i.test(o.service_name);
+  if (!isAgent) return null;
+  const [title, ...rest] = o.service_name.split(' - ');
+  const due = rest.join(' - ').replace(/^jatuh tempo\s*/i, '');
+  return { title: title.trim() || 'Agen AI', due };
+}
+
+/** Normalisasi baris dari riwayat_pesanan.php (mysqli mengirim DECIMAL/INT sebagai string). */
+function normalize(r: Record<string, unknown>): OrderFromDB {
+  const st = String(r.status ?? '').toLowerCase();
+  return {
+    id: Number(r.id) || 0,
+    order_id: String(r.order_id ?? ''),
+    service_name: String(r.service_name ?? ''),
+    quantity: Number(r.quantity) || 0,
+    price: Number(r.price) || 0,
+    status: (STATUSES as readonly string[]).includes(st) ? (st as OrderFromDB['status']) : 'pending',
+    created_at: Number(r.created_at) || 0,
+  };
+}
 type OrderFromDB = {
   id: number;
   order_id: string;
@@ -66,7 +92,7 @@ export default function RiwayatPage() {
   fetch('https://cekidku.my.id/api/riwayat_pesanan.php?token=' + user.token)
  .then(res => res.json())
  .then(data => {
-      setOrders(data.orders || []);
+      setOrders(Array.isArray(data.orders) ? data.orders.map(normalize) : []);
       setLoading(false);
     }).catch(() => {
       setOrders([]);
@@ -127,6 +153,7 @@ export default function RiwayatPage() {
     { id: 'all', label: 'Semua' },
     { id: 'selesai', label: 'Selesai' },
     { id: 'proses', label: 'Diproses' },
+    { id: 'pending', label: 'Pending' },
     { id: 'batal', label: 'Dibatalkan' },
   ];
 
@@ -172,7 +199,7 @@ if(loading) return <div className="text-center py-20">Loading...</div>;
               className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-[13.5px] text-slate-800 outline-none transition-colors focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/10 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
             />
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 overflow-x-auto">
             {filters.map((f) => (
               <button
                 key={f.id}
@@ -241,17 +268,38 @@ if(loading) return <div className="text-center py-20">Loading...</div>;
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                   {visible.map((o) => {
-                    const st = STATUS_META[statusOf(o)];
+                    const st = STATUS_META[statusOf(o)] ?? STATUS_META.pending;
                     const StIcon = st.icon;
+                    const agent = agentInfo(o);
                     return (
                       <tr
                         key={o.id}
                         className="group transition-colors hover:bg-cyan-50/40 dark:hover:bg-slate-700/30"
                       >
                         <td className="px-5 py-4">
-                          <p className="max-w-[220px] truncate text-[13px] font-bold text-slate-800 dark:text-slate-200">
-                            {o.service_name}
-                          </p>
+                          {agent ? (
+                            <button
+                              type="button"
+                              onClick={() => navigate('/agen-ai-saya')}
+                              className="group/agent block max-w-[240px] text-left"
+                              title="Lihat detail Agen AI"
+                            >
+                              <span className="flex items-center gap-1.5 text-[13px] font-bold text-slate-800 dark:text-slate-200">
+                                <Bot className="h-3.5 w-3.5 shrink-0 text-cyan-600 dark:text-cyan-400" strokeWidth={2.4} />
+                                <span className="truncate">{agent.title}</span>
+                                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition-transform group-hover/agent:translate-x-0.5 group-hover/agent:text-cyan-500" />
+                              </span>
+                              {agent.due && (
+                                <span className="mt-0.5 block text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                                  Jatuh tempo {agent.due}
+                                </span>
+                              )}
+                            </button>
+                          ) : (
+                            <p className="max-w-[220px] truncate text-[13px] font-bold text-slate-800 dark:text-slate-200" title={o.service_name}>
+                              {o.service_name}
+                            </p>
+                          )}
                           <p className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-slate-400 dark:text-slate-500">
                             <StIcon className="h-3 w-3" strokeWidth={2.2} />
                             {st.label} · {formatDate(o.created_at)}, {formatTime(o.created_at)}
@@ -272,7 +320,7 @@ if(loading) return <div className="text-center py-20">Loading...</div>;
                           </button>
                         </td>
                         <td className="px-5 py-4 text-right font-mono text-[13px] font-bold text-slate-700 dark:text-slate-300">
-                          {formatQty(o.quantity)}
+                          {agent ? `${o.quantity} bulan` : formatQty(o.quantity)}
                         </td>
                         <td className="px-5 py-4 text-right">
                           <p className="font-display text-[14px] font-extrabold text-cyan-700 dark:text-cyan-400">

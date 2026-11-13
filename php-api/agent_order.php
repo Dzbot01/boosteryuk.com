@@ -5,7 +5,8 @@
  * agent_config.php). Format mengikuti order.php: token -> users, cek saldo, potong saldo,
  * simpan ke riwayat_pesanan. order.php TIDAK diubah.
  *
- * POST JSON: { token, tier: 'starter'|'medium'|'bisnis', months: 1..12, phone, nama, platform? }
+ * POST JSON: { token, tier: 'starter'|'medium'|'bisnis', months: 1..12, phone, nama, ewallet, toko, platform? }
+ *   phone = nomor pemilik / nomor WhatsApp bot, nama = nama AI, ewallet & toko = fitur Store.
  * Resp     : { ok, orderId, status, new_balance, serviceName, price, dueDate }
  *
  * Alur:
@@ -43,12 +44,14 @@ $months = (int)($data['months'] ?? 1);
 $phone  = preg_replace('/\D/', '', $data['phone'] ?? '');
 $nama   = mb_substr(trim($data['nama'] ?? ''), 0, 60);
 $platform = strtolower(trim($data['platform'] ?? 'whatsapp'));
+$ewallet = mb_substr(preg_replace('/[^\d+\- ]/', '', $data['ewallet'] ?? ''), 0, 30);
+$toko    = mb_substr(trim(strip_tags($data['toko'] ?? '')), 0, 80);
 
 /* ===== Harga paket (sumber kebenaran ada di server) ===== */
 $TIERS = [
-    'starter' => ['name' => 'Starter', 'price' => 10000],
-    'medium'  => ['name' => 'Medium',  'price' => 35000],
-    'bisnis'  => ['name' => 'Bisnis',  'price' => 75000],
+    'starter' => ['name' => 'Starter', 'price' => 10000, 'pg' => false],
+    'medium'  => ['name' => 'Medium',  'price' => 35000, 'pg' => false],
+    'bisnis'  => ['name' => 'Bisnis',  'price' => 75000, 'pg' => true],
 ];
 if ($platform !== 'whatsapp') reply(["ok" => false, "message" => "Saat ini hanya Agen AI WhatsApp yang tersedia."], 400);
 if (!isset($TIERS[$tierId])) reply(["ok" => false, "message" => "Paket tidak valid."], 400);
@@ -102,7 +105,16 @@ $saved  = false;
 if (riwayat_ensure_columns($conn)) {
     $type   = 'agent_ai';
     $paket  = $tier['name'];
-    $detail = json_encode(['nama_ai' => $nama, 'platform' => $platform, 'tier' => $tierId], JSON_UNESCAPED_UNICODE);
+    // Data form order (ditampilkan di halaman "Agen AI Saya")
+    $detail = json_encode([
+        'nama_ai'         => $nama,
+        'nomor_pemilik'   => $phone,
+        'ewallet'         => $ewallet,
+        'nama_toko'       => $toko,
+        'platform'        => $platform,
+        'tier'            => $tierId,
+        'payment_gateway' => $tier['pg'],
+    ], JSON_UNESCAPED_UNICODE);
     $st = $conn->prepare("INSERT INTO riwayat_pesanan
         (user_id, order_id, service_name, quantity, price, status, order_type, paket, durasi_bulan, jatuh_tempo, target, detail)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");

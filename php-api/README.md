@@ -102,3 +102,27 @@ mengubah status `proses` → `selesai`.
 `GET /api/order_stats.php?token=...` → `{ok, bulan_ini, jumlah_bulan_ini, vps_aktif, agent_aktif, layanan[]}`.
 Dihitung dari `riwayat_pesanan` milik user yang login (status ≠ batal; bulan berjalan; layanan aktif =
 belum lewat `jatuh_tempo`). Overview tidak lagi memakai riwayat lokal browser.
+
+## Halaman "Agen AI Saya" — `my_agents.php`
+
+`GET /api/my_agents.php?token=...` → daftar Agen AI milik user: paket, status (`aktif` / `menunggu` /
+`kedaluwarsa`), harga, durasi, tanggal beli, jatuh tempo, sisa hari, dan data form order
+(nama AI, nomor pemilik/bot, nama toko, alamat e-wallet, payment gateway).
+Data form disimpan `agent_order.php` di kolom `detail` (JSON). Pesanan lama yang dibuat
+sebelum update ini tidak punya data form, jadi tampil "—".
+
+## Email pengingat jatuh tempo — `agent_reminder.php`
+
+Tahap email (masing-masing sekali per order, dicatat di tabel `agent_reminder_log`):
+H-7, H-3, H-1, dan saat sudah lewat (maks 3 hari). Dikirim lewat worker Resend yang sama dengan OTP.
+
+Hosting gratis tidak punya cron, jadi pengecekan berjalan **otomatis setelah respons**
+`order_stats.php` (Overview) / `my_agents.php`. Paling sering sekali per 30 menit untuk seluruh
+website (kunci di tabel `cron_state`). Agar tetap jalan walau sepi pengunjung, bisa dipanggil
+dari cron eksternal (mis. cron-job.org) — hosting gratis kadang memblokir bot, jadi cek dulu:
+
+    https://boosteryuk.com/api/agent_reminder.php?key=<token agen di agent_config.php>
+    (tambah &dry=1 untuk melihat daftar tanpa mengirim email)
+
+Opsional: tambahkan `'cron_key' => 'rahasia-lain'` di `agent_config.php` agar cron tidak memakai token agen.
+Tabel `agent_reminder_log` & `cron_state` dibuat otomatis.

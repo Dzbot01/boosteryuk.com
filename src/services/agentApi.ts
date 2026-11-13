@@ -37,7 +37,15 @@ export interface AgentOrderResult {
  * lalu server meminta VPS membuat agen. Harga dihitung server dari paket x durasi.
  * Jika VPS gagal, saldo otomatis dikembalikan oleh server.
  */
-export async function orderAgent(body: { tier: string; months: number; phone: string; nama: string; platform?: string }): Promise<AgentOrderResult> {
+export async function orderAgent(body: {
+  tier: string;
+  months: number;
+  phone: string;
+  nama: string;
+  ewallet?: string;
+  toko?: string;
+  platform?: string;
+}): Promise<AgentOrderResult> {
   try {
     const r = await fetch(`${API_BASE}/agent_order.php`, {
       method: 'POST',
@@ -81,5 +89,38 @@ export async function getAgentStatus(orderId: string): Promise<{ ok: boolean; st
     return await r.json();
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : 'Gagal cek status.' };
+  }
+}
+
+/** Satu Agen AI milik user (dari my_agents.php / tabel riwayat_pesanan). */
+export interface MyAgent {
+  order_id: string;
+  nama_layanan: string;
+  paket: string | null;
+  status: string;
+  state: 'aktif' | 'menunggu' | 'kedaluwarsa';
+  harga: number;
+  durasi_bulan: number;
+  dibeli: number;
+  jatuh_tempo: number | null;
+  sisa_hari: number | null;
+  nomor_bot: string | null;
+  nama_ai: string | null;
+  nomor_pemilik: string | null;
+  ewallet: string | null;
+  nama_toko: string | null;
+  payment_gateway: boolean;
+  platform: string;
+}
+
+/** Daftar Agen AI user yang login. Juga memicu email pengingat jatuh tempo di server. */
+export async function getMyAgents(): Promise<{ ok: boolean; agents: MyAgent[]; message?: string }> {
+  try {
+    const r = await fetch(`${API_BASE}/my_agents.php?token=${encodeURIComponent(authToken())}&t=${Date.now()}`, { cache: 'no-store' });
+    const j = await r.json();
+    if (j?.ok && Array.isArray(j.agents)) return { ok: true, agents: j.agents as MyAgent[] };
+    return { ok: false, agents: [], message: j?.message || `HTTP ${r.status}` };
+  } catch (e) {
+    return { ok: false, agents: [], message: e instanceof Error ? e.message : 'Gagal memuat data agen.' };
   }
 }
