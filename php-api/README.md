@@ -198,3 +198,20 @@ voice, tombol musik). "Bayar & Buat Panel" → `plan_upgrade.php` (bayar + buat 
 gambar diunggah lewat `child_panel.php` aksi `my_upload` → disimpan `my_save`. Setelah panel ada, halaman
 yang sama dipakai untuk mengubah tampilan & memperpanjang. Pemilik TIDAK bisa mengubah subdomain, status,
 atau pemilik panel.
+
+### Pencairan (withdraw) pendapatan child panel
+Pemilik panel: tab **Withdraw** di Admin Panel Toko (`/panel-admin` di subdomain) atau tombol **Withdraw** di
+`/upgrade/extra` (tetap bisa walau langganan EXTRA habis). Isi metode (DANA direkomendasikan: tanpa biaya),
+nomor wallet/rekening, nama pemilik, jumlah → `child_panel.php` `my_withdraw` → email **Resend** ke
+`boosteryukid@gmail.com` (`CP_WD_ADMIN_EMAIL`). Admin utama: **Admin → Withdraw Request** (`/admin/withdraw`):
+modal detail (tujuan transfer + tombol salin, saldo verifikasi, pesanan terbaru) → *Sudah dibayar* / *Tolak*
+(alasan wajib) → email ke pemilik.
+
+Aturan saldo (`cp_wd_balance`, tabel `child_panel_withdrawals`):
+- Pesanan `batal` tidak dihitung (juga di ringkasan pendapatan).
+- Bisa dicairkan = pesanan `selesai`, atau tidak batal & berumur ≥ `CP_WD_HOLD_DAYS` (3) hari.
+- Saldo = bisa dicairkan − (dibayar + sedang diproses). Ditolak → saldo otomatis kembali.
+- Minimal `CP_WD_MIN` (Rp10.000); 1 permintaan aktif per panel; dikunci `SELECT … FOR UPDATE` (anti klik ganda);
+  admin hanya bisa memproses yang masih `pending` (anti diproses dua kali).
+- Biaya: DANA Rp0, OVO/GoPay/ShopeePay Rp1.000, bank Rp2.500 (`CP_WD_METHODS`).
+- Email: memakai `resend_key` di `agent_config.php` (isi di server); tanpa key → lewat Worker email.

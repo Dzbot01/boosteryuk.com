@@ -29,6 +29,7 @@ const SewaAgenAiPage = lazy(() => import('./pages/SewaAgenAiPage'));
 const OverviewPage = lazy(() => import('./pages/OverviewPage'));
 const AgenAiSayaPage = lazy(() => import('./pages/AgenAiSayaPage'));
 const AdminChildPanelPage = lazy(() => import('./pages/admin/AdminChildPanelPage'));
+const AdminWithdrawPage = lazy(() => import('./pages/admin/AdminWithdrawPage'));
 const PanelAdminPage = lazy(() => import('./pages/PanelAdminPage'));
 const ExtraSetupPage = lazy(() => import('./pages/ExtraSetupPage'));
 const PengaturanAkunPage = lazy(() => import('./pages/PengaturanAkunPage'));
@@ -85,6 +86,7 @@ export default function App() {
           <Route path="admin/broadcast" element={<ProtectedRoute adminOnly><AdminBroadcastPage /></ProtectedRoute>} />
           <Route path="admin/website" element={<ProtectedRoute adminOnly><AdminWebsitePage /></ProtectedRoute>} />
           <Route path="admin/child-panel" element={<ProtectedRoute adminOnly><AdminChildPanelPage /></ProtectedRoute>} />
+          <Route path="admin/withdraw" element={<ProtectedRoute adminOnly><AdminWithdrawPage /></ProtectedRoute>} />
           <Route path="admin/server" element={<ProtectedRoute adminOnly><AdminServerPage /></ProtectedRoute>} />
 
           <Route path="s/:slug" element={<StrukSuksesPage />} />

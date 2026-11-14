@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, ShoppingBag, Users, Percent, Wallet, TrendingUp, RefreshCw, Loader2, Check, CircleAlert, ShieldOff } from 'lucide-react';
+import { BarChart3, ShoppingBag, Users, Percent, Wallet, Banknote, TrendingUp, RefreshCw, Loader2, Check, CircleAlert, ShieldOff } from 'lucide-react';
 import Seo from '../components/Seo';
+import WithdrawPanel from '../components/childpanel/WithdrawPanel';
 import { useAuth } from '../context/AuthContext';
 import { IS_CHILD_PANEL } from '../lib/apiBase';
 import { panelApi, usePanelOwner, type PanelOrder, type PanelSummary, type PanelUser } from '../services/panelApi';
@@ -10,12 +11,13 @@ const waktu = (s: string) => {
   const d = new Date(s.replace(' ', 'T'));
   return isNaN(d.getTime()) ? s : new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d);
 };
-type Tab = 'ringkasan' | 'pesanan' | 'user' | 'markup';
+type Tab = 'ringkasan' | 'pesanan' | 'user' | 'markup' | 'withdraw';
 const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
   { id: 'ringkasan', label: 'Ringkasan', icon: BarChart3 },
   { id: 'pesanan', label: 'Pesanan', icon: ShoppingBag },
   { id: 'user', label: 'Aktivitas User', icon: Users },
   { id: 'markup', label: 'Markup', icon: Percent },
+  { id: 'withdraw', label: 'Withdraw', icon: Banknote },
 ];
 const ACTION_LABEL: Record<string, string> = { visit: 'Berkunjung', order: 'Memesan' };
 
@@ -131,7 +133,10 @@ export default function PanelAdminPage() {
                 <div><dt className="text-[11.5px] text-slate-400">Total omzet</dt><dd className="font-semibold">{rupiah(summary.all.omzet)}</dd></div>
                 <div><dt className="text-[11.5px] text-slate-400">Markup saat ini</dt><dd className="font-semibold">SMM {summary.panel.markup_smm_pct}% · Agen AI {summary.panel.markup_agent_pct}%</dd></div>
               </dl>
-              <p className="mt-3 text-[11.5px] text-slate-500">Pendapatan = harga yang dibayar user di panel ini − harga asli Boosteryuk.</p>
+              <p className="mt-3 text-[11.5px] text-slate-500">
+                Pendapatan = harga yang dibayar user di panel ini − harga asli Boosteryuk (pesanan dibatalkan tidak dihitung).{' '}
+                <button className="font-semibold text-cyan-700 underline dark:text-cyan-400" onClick={() => setTab('withdraw')}>Cairkan pendapatan</button>
+              </p>
             </div>
           )}
         </div>
@@ -211,6 +216,12 @@ export default function PanelAdminPage() {
       )}
 
       {tab === 'markup' && summary && <MarkupForm summary={summary} onSaved={(s) => setSummary(s)} />}
+
+      {tab === 'withdraw' && (
+        <div className="mt-4">
+          <WithdrawPanel />
+        </div>
+      )}
     </div>
   );
 }

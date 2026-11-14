@@ -30,3 +30,25 @@ CREATE TABLE IF NOT EXISTS child_panel_assets (
   updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (child_panel_id, slot)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Pencairan pendapatan markup pemilik child panel (Withdraw Request di admin utama)
+CREATE TABLE IF NOT EXISTS child_panel_withdrawals (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  child_panel_id INT NOT NULL,
+  user_id        INT NOT NULL,
+  method         VARCHAR(20) NOT NULL,
+  bank_name      VARCHAR(60) NULL,
+  account_number VARCHAR(40) NOT NULL,
+  account_name   VARCHAR(80) NOT NULL,
+  amount         DECIMAL(15,2) NOT NULL,
+  fee            DECIMAL(15,2) NOT NULL DEFAULT 0,
+  net_amount     DECIMAL(15,2) NOT NULL,
+  status         VARCHAR(12) NOT NULL DEFAULT 'pending',
+  admin_note     VARCHAR(255) NULL,
+  email_sent     TINYINT(1) NOT NULL DEFAULT 0,
+  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  processed_at   DATETIME NULL,
+  processed_by   INT NULL,
+  KEY idx_panel_status (child_panel_id, status),
+  KEY idx_status_time (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

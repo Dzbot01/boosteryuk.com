@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { Settings, Server, Shield, ArrowUpRight, DollarSign, Globe } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Settings, Server, Shield, ArrowUpRight, DollarSign, Globe, Banknote } from 'lucide-react';
+import { withdrawApi } from '../../services/childPanelApi';
 import Reveal from '../../components/Reveal';
 import { useAuth } from '../../context/AuthContext';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
@@ -27,6 +29,13 @@ const CARDS = [
     color: 'from-violet-500 to-violet-700',
   },
   {
+    path: '/admin/withdraw',
+    icon: Banknote,
+    title: 'Withdraw Request',
+    desc: 'Pencairan pendapatan pemilik child panel: detail tujuan transfer, tandai dibayar / tolak.',
+    color: 'from-amber-500 to-orange-600',
+  },
+  {
     path: '/admin/server',
     icon: Server,
     title: 'Server Panel',
@@ -39,6 +48,10 @@ export default function AdminHomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { settings } = useSiteSettings();
+  const [pendingWd, setPendingWd] = useState(0);
+  useEffect(() => {
+    void withdrawApi.list('pending').then((r) => r.ok && setPendingWd(r.counts?.pending || 0));
+  }, []);
 
   return (
     <div className="mx-auto max-w-4xl px-4 pb-32 pt-10 sm:px-6">
@@ -78,6 +91,9 @@ export default function AdminHomePage() {
               >
                 <c.icon className="h-6 w-6" strokeWidth={2} />
               </span>
+              {c.path === '/admin/withdraw' && pendingWd > 0 && (
+                <span className="absolute right-5 top-5 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-bold text-white">{pendingWd} menunggu</span>
+              )}
               <h2 className="mt-4 font-display text-[18px] font-extrabold tracking-tight text-slate-900 dark:text-white">
                 {c.title}
               </h2>

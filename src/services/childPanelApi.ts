@@ -82,3 +82,76 @@ export const ownerPanelApi = {
   upload: (slot: string, data: string) => call<{ ref?: string }>('my_upload', { slot, data }),
   videoSign: (ext: string, size: number) => call<{ upload_url?: string; public_url?: string; max_mb?: number }>('my_video_sign', { ext, size }),
 };
+
+/* ===================== Pencairan (withdraw) pendapatan child panel ===================== */
+export type WdStatus = 'pending' | 'paid' | 'rejected';
+export interface WdBalance {
+  earned: number;
+  held: number;
+  paid: number;
+  pending: number;
+  pending_count: number;
+  available: number;
+  /** cleared - paid - pending; negatif = pesanan dibatalkan setelah dicairkan. */
+  raw_available?: number;
+}
+export interface WdMethod {
+  id: string;
+  label: string;
+  fee: number;
+  kind: 'ewallet' | 'bank';
+  recommended: boolean;
+}
+export interface WdRow {
+  id: number;
+  method: string;
+  method_label: string;
+  bank_name: string | null;
+  account_number: string;
+  account_name: string;
+  amount: number;
+  fee: number;
+  net_amount: number;
+  status: WdStatus;
+  admin_note: string | null;
+  created_at: string;
+  processed_at: string | null;
+}
+export interface WdAdminRow extends WdRow {
+  child_panel_id: number;
+  panel_name: string | null;
+  hostname: string | null;
+  owner_name: string | null;
+  owner_email: string | null;
+  email_sent?: number;
+}
+export interface WdInput {
+  method: string;
+  bank_name?: string;
+  account_number: string;
+  account_name: string;
+  amount: number;
+}
+export interface WdOrder {
+  order_id: string;
+  kind: string;
+  service_name: string;
+  price: number;
+  base_price: number;
+  profit: number;
+  created_at: string;
+  name: string | null;
+  status: string | null;
+}
+
+export const withdrawApi = {
+  /** Pemilik panel: saldo, metode, riwayat. */
+  info: () =>
+    call<{ balance?: WdBalance; history?: WdRow[]; methods?: WdMethod[]; min?: number; hold_days?: number; last?: Partial<WdInput> | null }>('my_wd_info'),
+  request: (withdraw: WdInput) => call<{ balance?: WdBalance; history?: WdRow[] }>('my_withdraw', { withdraw }),
+  /** Admin utama. */
+  list: (status: WdStatus | 'all') =>
+    call<{ requests?: WdAdminRow[]; counts?: Record<WdStatus, number>; totals?: Record<WdStatus, number> }>('wd_list', { status }),
+  detail: (id: number) => call<{ request?: WdAdminRow; balance?: WdBalance; history?: WdRow[]; orders?: WdOrder[] }>('wd_detail', { id }),
+  update: (id: number, status: 'paid' | 'rejected', note: string) => call<{ request?: WdAdminRow }>('wd_update', { id, status, note }),
+};

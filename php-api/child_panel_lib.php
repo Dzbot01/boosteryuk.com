@@ -100,6 +100,27 @@ function cp_ensure_schema($conn) {
         PRIMARY KEY (child_panel_id, user_id),
         KEY idx_last_seen (child_panel_id, last_seen)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    // Pencairan pendapatan markup pemilik panel (diproses manual oleh admin utama).
+    $conn->query("CREATE TABLE IF NOT EXISTS child_panel_withdrawals (
+        id             INT AUTO_INCREMENT PRIMARY KEY,
+        child_panel_id INT NOT NULL,
+        user_id        INT NOT NULL COMMENT 'pemilik panel yang mengajukan',
+        method         VARCHAR(20) NOT NULL COMMENT 'dana|ovo|gopay|shopeepay|bank',
+        bank_name      VARCHAR(60) NULL,
+        account_number VARCHAR(40) NOT NULL,
+        account_name   VARCHAR(80) NOT NULL,
+        amount         DECIMAL(15,2) NOT NULL COMMENT 'dipotong dari saldo pendapatan',
+        fee            DECIMAL(15,2) NOT NULL DEFAULT 0,
+        net_amount     DECIMAL(15,2) NOT NULL COMMENT 'yang ditransfer admin = amount - fee',
+        status         VARCHAR(12) NOT NULL DEFAULT 'pending' COMMENT 'pending|paid|rejected',
+        admin_note     VARCHAR(255) NULL,
+        email_sent     TINYINT(1) NOT NULL DEFAULT 0,
+        created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        processed_at   DATETIME NULL,
+        processed_by   INT NULL,
+        KEY idx_panel_status (child_panel_id, status),
+        KEY idx_status_time (status, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
 
 /** Catat aktivitas user di panel (kunjungan / login / order). */
@@ -320,4 +341,227 @@ function cp_clean_config($c) {
         $out['slides'][] = ['image' => $img, 'title' => cp_str($s['title'] ?? '', 80), 'subtitle' => cp_str($s['subtitle'] ?? '', 140)];
     }
     return $out;
+}
+
+/* ===================== Pencairan (withdraw) pendapatan child panel ===================== */
+
+const CP_WD_ADMIN_EMAIL = 'boosteryukid@gmail.com';   // penerima notifikasi permintaan withdraw
+const CP_WD_MIN         = 10000;                      // minimal pencairan (Rp)
+const CP_WD_HOLD_DAYS   = 3;    // pendapatan pesanan yg belum "selesai" baru bisa dicairkan setelah N hari
+const CP_WD_FROM        = 'Boosteryuk <noreply@cekidku.my.id>';
+const CP_WD_WORKER      = 'https://boosteryuk.boosteryukid.workers.dev/api/email/send';
+/** Metode pencairan → [label, biaya admin (Rp), jenis]. DANA direkomendasikan: cepat & tanpa biaya. */
+const CP_WD_METHODS = [
+    'dana'      => ['DANA', 0, 'ewallet'],
+    'ovo'       => ['OVO', 1000, 'ewallet'],
+    'gopay'     => ['GoPay', 1000, 'ewallet'],
+    'shopeepay' => ['ShopeePay', 1000, 'ewallet'],
+    'bank'      => ['Transfer Bank', 2500, 'bank'],
+];
+
+/** Status riwayat terbaru suatu pesanan (riwayat_pesanan: pending|proses|selesai|batal). */
+const CP_ORDER_STATUS_SQL = "(SELECT r.status FROM riwayat_pesanan r WHERE r.order_id = o.order_id AND r.user_id = o.user_id ORDER BY r.id DESC LIMIT 1)";
+
+/**
+ * Saldo pendapatan panel:
+ *  - pesanan BATAL tidak dihitung;
+ *  - "cleared" (bisa dicairkan) = pesanan selesai, atau tidak batal & sudah lewat CP_WD_HOLD_DAYS hari;
+ *  - available = cleared - (dicairkan + sedang diproses). Bisa negatif bila pesanan dibatalkan setelah dicairkan
+ *    → otomatis menahan pencairan berikutnya.
+ */
+function cp_wd_balance($conn, $panelId) {
+    $hold = (int)CP_WD_HOLD_DAYS;
+    $st = cp_q($conn, "SELECT
+            COALESCE(SUM(CASE WHEN COALESCE(s.st,'') <> 'batal' THEN s.profit END),0) AS earned,
+            COALESCE(SUM(CASE WHEN COALESCE(s.st,'') <> 'batal' AND (s.st = 'selesai' OR s.created_at <= NOW() - INTERVAL $hold DAY) THEN s.profit END),0) AS cleared
+        FROM (SELECT o.profit, o.created_at, " . CP_ORDER_STATUS_SQL . " AS st FROM child_panel_orders o WHERE o.child_panel_id = ?) s", 'i', (int)$panelId);
+    $e = $st->get_result()->fetch_assoc();
+    $st->close();
+    $st = cp_q($conn, "SELECT COALESCE(SUM(CASE WHEN status='paid' THEN amount END),0) paid,
+                              COALESCE(SUM(CASE WHEN status='pending' THEN amount END),0) pending,
+                              SUM(status='pending') pending_count
+                       FROM child_panel_withdrawals WHERE child_panel_id = ?", 'i', (int)$panelId);
+    $w = $st->get_result()->fetch_assoc();
+    $st->close();
+    $earned = round((float)$e['earned'], 2);
+    $cleared = round((float)$e['cleared'], 2);
+    $paid = round((float)$w['paid'], 2);
+    $pending = round((float)$w['pending'], 2);
+    return [
+        'earned'        => $earned,                       // total pendapatan (tanpa pesanan batal)
+        'held'          => round($earned - $cleared, 2),  // menunggu pesanan selesai / masa tahan
+        'paid'          => $paid,
+        'pending'       => $pending,
+        'pending_count' => (int)$w['pending_count'],
+        'available'     => floor(max(0, $cleared - $paid - $pending)),
+        'raw_available' => round($cleared - $paid - $pending, 2),
+    ];
+}
+
+function cp_wd_methods_public() {
+    $out = [];
+    foreach (CP_WD_METHODS as $id => [$label, $fee, $kind]) $out[] = ['id' => $id, 'label' => $label, 'fee' => $fee, 'kind' => $kind, 'recommended' => $id === 'dana'];
+    return ['methods' => $out, 'min' => CP_WD_MIN, 'hold_days' => CP_WD_HOLD_DAYS];
+}
+
+function cp_wd_row_public($r) {
+    foreach (['amount', 'fee', 'net_amount'] as $k) $r[$k] = (float)$r[$k];
+    $r['id'] = (int)$r['id'];
+    if (isset($r['child_panel_id'])) $r['child_panel_id'] = (int)$r['child_panel_id'];
+    $r['method_label'] = CP_WD_METHODS[$r['method']][0] ?? $r['method'];
+    if (isset($r['email_sent'])) $r['email_sent'] = (int)$r['email_sent'];
+    unset($r['processed_by']);
+    return $r;
+}
+
+function cp_wd_history($conn, $panelId, $limit = 30) {
+    $limit = max(1, min(100, (int)$limit));
+    $st = cp_q($conn, "SELECT id, method, bank_name, account_number, account_name, amount, fee, net_amount, status, admin_note, created_at, processed_at, email_sent, processed_by
+                       FROM child_panel_withdrawals WHERE child_panel_id = ? ORDER BY id DESC LIMIT $limit", 'i', (int)$panelId);
+    $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    $st->close();
+    return array_map('cp_wd_row_public', $rows);
+}
+
+/**
+ * Ajukan pencairan. Diserialkan per panel (SELECT ... FOR UPDATE) agar dua klik/tab bersamaan
+ * tidak bisa mencairkan saldo yang sama dua kali. @return array [ok, data|pesan, httpCode]
+ */
+function cp_wd_request($conn, $panelId, $uid, $in) {
+    $method = strtolower(trim((string)($in['method'] ?? '')));
+    if (!isset(CP_WD_METHODS[$method])) return [false, 'Pilih metode pencairan.', 400];
+    [$label, $fee, $kind] = CP_WD_METHODS[$method];
+    $bank = $kind === 'bank' ? cp_str($in['bank_name'] ?? '', 60) : null;
+    if ($kind === 'bank' && mb_strlen($bank) < 2) return [false, 'Nama bank wajib diisi.', 400];
+    $number = preg_replace('/[\s.-]+/', '', (string)($in['account_number'] ?? ''));
+    if ($kind === 'ewallet') {
+        if (preg_match('/^(\+?62)/', $number)) $number = '0' . preg_replace('/^\+?62/', '', $number);
+        if (!preg_match('/^08\d{8,12}$/', $number)) return [false, 'Nomor ' . $label . ' harus nomor HP aktif, contoh 081234567890.', 400];
+    } elseif (!preg_match('/^\d{6,20}$/', $number)) {
+        return [false, 'Nomor rekening hanya angka (6–20 digit).', 400];
+    }
+    $name = cp_str($in['account_name'] ?? '', 80);
+    if (mb_strlen($name) < 3 || !preg_match("/^[\p{L} .,'-]+$/u", $name)) return [false, 'Nama pemilik ' . ($kind === 'bank' ? 'rekening' : 'akun ' . $label) . ' wajib diisi sesuai yang terdaftar (huruf saja).', 400];
+    $amount = floor((float)($in['amount'] ?? 0));
+    if ($amount < CP_WD_MIN) return [false, 'Minimal pencairan Rp' . number_format(CP_WD_MIN, 0, ',', '.') . '.', 400];
+    if ($amount <= $fee) return [false, 'Jumlah harus lebih besar dari biaya admin.', 400];
+
+    $conn->begin_transaction();
+    try {
+        $st = cp_q($conn, "SELECT id FROM child_panels WHERE id = ? FOR UPDATE", 'i', (int)$panelId);
+        $st->get_result()->fetch_assoc();
+        $st->close();
+        $bal = cp_wd_balance($conn, $panelId);
+        if ($bal['pending_count'] > 0) { $conn->rollback(); return [false, 'Masih ada pencairan yang sedang diproses. Tunggu sampai selesai dulu ya.', 409]; }
+        if ($amount > $bal['available']) { $conn->rollback(); return [false, 'Saldo yang bisa dicairkan hanya Rp' . number_format($bal['available'], 0, ',', '.') . '.', 400]; }
+        $net = $amount - $fee;
+        cp_q($conn, "INSERT INTO child_panel_withdrawals (child_panel_id, user_id, method, bank_name, account_number, account_name, amount, fee, net_amount)
+                     VALUES (?,?,?,?,?,?,?,?,?)", 'iissssddd', (int)$panelId, (int)$uid, $method, $bank, $number, $name, $amount, $fee, $net)->close();
+        $id = (int)$conn->insert_id;
+        $conn->commit();
+    } catch (Throwable $e) {
+        $conn->rollback();
+        return [false, 'Gagal menyimpan permintaan: ' . $e->getMessage(), 500];
+    }
+    return [true, ['id' => $id, 'amount' => $amount, 'fee' => $fee, 'net_amount' => $net, 'method_label' => $label], 200];
+}
+
+/** Detail lengkap satu permintaan (untuk email & modal admin). */
+function cp_wd_get($conn, $id) {
+    $st = cp_q($conn, "SELECT w.*, p.name AS panel_name, d.hostname, u.name AS owner_name, u.email AS owner_email
+                       FROM child_panel_withdrawals w
+                       LEFT JOIN child_panels p ON p.id = w.child_panel_id
+                       LEFT JOIN child_panel_domains d ON d.child_panel_id = w.child_panel_id AND d.is_primary = 1
+                       LEFT JOIN users u ON u.id = w.user_id
+                       WHERE w.id = ? LIMIT 1", 'i', (int)$id);
+    $r = $st->get_result()->fetch_assoc();
+    $st->close();
+    return $r ? cp_wd_row_public($r) : null;
+}
+
+function cp_resend_key() {
+    $k = getenv('RESEND_API_KEY') ?: '';
+    if (!$k && is_file(__DIR__ . '/agent_config.php')) {
+        $cfg = include __DIR__ . '/agent_config.php';
+        if (is_array($cfg) && !empty($cfg['resend_key'])) $k = $cfg['resend_key'];
+    }
+    return $k;
+}
+
+/** Kirim email lewat Resend (API key di agent_config.php) — tanpa key: lewat Worker email. */
+function cp_send_email($to, $subject, $html) {
+    $body = ['from' => CP_WD_FROM, 'to' => [$to], 'subject' => $subject, 'html' => $html];
+    $key = cp_resend_key();
+    if ($key) {
+        $url = getenv('AGENT_RESEND_URL') ?: 'https://api.resend.com/emails'; // env hanya untuk uji lokal
+        $headers = ['Content-Type: application/json', 'Authorization: Bearer ' . $key];
+    } else {
+        $body['to'] = $to;
+        $url = getenv('AGENT_EMAIL_WORKER') ?: CP_WD_WORKER;
+        $headers = ['Content-Type: application/json'];
+    }
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode($body), CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10, CURLOPT_HTTPHEADER => $headers]);
+    curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    return $code >= 200 && $code < 300;
+}
+
+function cp_wd_rp($n) { return 'Rp' . number_format((float)$n, 0, ',', '.'); }
+
+function cp_wd_email_table($w) {
+    $h = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+    $rows = [
+        'Child panel'     => $h($w['panel_name']) . ' (' . $h($w['hostname']) . ')',
+        'Pemilik'         => $h($w['owner_name']) . ' — ' . $h($w['owner_email']),
+        'Metode'          => $h($w['method_label']) . ($w['bank_name'] ? ' — ' . $h($w['bank_name']) : ''),
+        'Nomor'           => '<b style="font-size:16px">' . $h($w['account_number']) . '</b>',
+        'Atas nama'       => '<b>' . $h($w['account_name']) . '</b>',
+        'Jumlah ditarik'  => cp_wd_rp($w['amount']),
+        'Biaya admin'     => cp_wd_rp($w['fee']),
+        'Ditransfer'      => '<b style="font-size:16px;color:#0e7490">' . cp_wd_rp($w['net_amount']) . '</b>',
+        'Diajukan'        => $h($w['created_at']),
+    ];
+    $tr = '';
+    foreach ($rows as $k => $v) $tr .= "<tr><td style=\"padding:6px 12px 6px 0;color:#64748b\">$k</td><td style=\"padding:6px 0\">$v</td></tr>";
+    return "<table style=\"border-collapse:collapse;font-size:14px\">$tr</table>";
+}
+
+/** Notifikasi permintaan baru ke admin utama. */
+function cp_wd_notify_admin($conn, $id) {
+    $w = cp_wd_get($conn, $id);
+    if (!$w) return false;
+    $html = '<div style="font-family:Arial,sans-serif;color:#0f172a"><h2 style="margin:0 0 8px">Permintaan withdraw child panel #' . $w['id'] . '</h2>'
+        . '<p style="margin:0 0 14px;color:#475569">Pemilik child panel mengajukan pencairan pendapatan markup.</p>'
+        . cp_wd_email_table($w)
+        . '<p style="margin:18px 0 0"><a href="https://' . CP_ROOT_DOMAIN . '/admin/withdraw" style="background:#0e7490;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold">Buka Withdraw Request</a></p>'
+        . '<p style="margin:14px 0 0;font-size:12px;color:#94a3b8">Setelah transfer, tandai "Sudah dibayar" di Admin → Withdraw Request.</p></div>';
+    $ok = cp_send_email(CP_WD_ADMIN_EMAIL, 'Withdraw ' . cp_wd_rp($w['net_amount']) . ' via ' . $w['method_label'] . ' — ' . $w['panel_name'], $html);
+    if ($ok) cp_q($conn, "UPDATE child_panel_withdrawals SET email_sent = 1 WHERE id = ?", 'i', (int)$id)->close();
+    return $ok;
+}
+
+/** Kabari pemilik panel saat permintaannya dibayar / ditolak. */
+function cp_wd_notify_owner($conn, $id) {
+    $w = cp_wd_get($conn, $id);
+    if (!$w || empty($w['owner_email'])) return false;
+    $paid = $w['status'] === 'paid';
+    $note = $w['admin_note'] ? '<p style="margin:12px 0 0"><b>Catatan admin:</b> ' . htmlspecialchars($w['admin_note'], ENT_QUOTES, 'UTF-8') . '</p>' : '';
+    $html = '<div style="font-family:Arial,sans-serif;color:#0f172a"><h2 style="margin:0 0 8px">'
+        . ($paid ? 'Pencairan berhasil ditransfer' : 'Pencairan ditolak') . '</h2>'
+        . '<p style="margin:0 0 14px;color:#475569">' . ($paid
+            ? 'Dana pencairan child panel kamu sudah dikirim ke akun tujuan.'
+            : 'Permintaan pencairan kamu ditolak, saldo pendapatan sudah dikembalikan dan bisa diajukan lagi.') . '</p>'
+        . cp_wd_email_table($w) . $note . '</div>';
+    return cp_send_email($w['owner_email'], ($paid ? 'Pencairan ' . cp_wd_rp($w['net_amount']) . ' berhasil' : 'Pencairan ditolak') . ' — ' . $w['panel_name'], $html);
+}
+
+/** Jalankan $fn setelah respons terkirim (email tidak memperlambat tombol). */
+function cp_after_response(callable $fn) {
+    register_shutdown_function(function () use ($fn) {
+        if (function_exists('fastcgi_finish_request')) @fastcgi_finish_request();
+        try { $fn(); } catch (Throwable $e) { /* abaikan */ }
+    });
 }

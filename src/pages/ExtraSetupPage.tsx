@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Crown, ExternalLink, Loader2, CircleAlert, Check, Wallet } from 'lucide-react';
+import { ArrowLeft, Crown, ExternalLink, Loader2, CircleAlert, Check, Wallet, Banknote } from 'lucide-react';
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PanelEditor, emptyDraft, toDraft, type Draft, type PanelEditorApi } from '../components/childpanel/PanelEditor';
 import { ownerPanelApi, type MyPanel } from '../services/childPanelApi';
+import WithdrawPanel from '../components/childpanel/WithdrawPanel';
 import { planApi } from '../services/planApi';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,6 +29,7 @@ export default function ExtraSetupPage() {
   const [notice, setNotice] = useState<{ ok: boolean; msg: string; url?: string } | null>(null);
   const [renewing, setRenewing] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
+  const [showWd, setShowWd] = useState(false);
   // Id panel yang baru dibuat oleh pembayaran — mencegah pembayaran ganda bila langkah unggah gambar diulang.
   const createdId = useRef<number | null>(null);
 
@@ -137,6 +139,9 @@ export default function ExtraSetupPage() {
                 <Button size="sm" variant="outline" onClick={() => window.open(`https://${panel.hostname}/panel-admin`, '_blank')}>
                   Admin Panel Toko
                 </Button>
+                <Button size="sm" variant={showWd ? 'default' : 'outline'} onClick={() => setShowWd((v) => !v)} aria-expanded={showWd}>
+                  <Banknote /> Withdraw
+                </Button>
               </div>
             </div>
           )}
@@ -153,6 +158,13 @@ export default function ExtraSetupPage() {
             </a>
           )}
         </div>
+      )}
+
+      {!isNew && showWd && (
+        <section className="mb-6" aria-label="Pencairan pendapatan">
+          <h2 className="mb-3 text-[16px] font-bold text-foreground">Pencairan pendapatan</h2>
+          <WithdrawPanel />
+        </section>
       )}
 
       <PanelEditor

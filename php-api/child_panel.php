@@ -12,6 +12,9 @@
  *   owner_summary | owner_orders | owner_users | owner_set_markup {markup_smm_pct, markup_agent_pct}
  * Pemilik panel (paket EXTRA) dari web utama: my_panel | my_save {panel:{name, config, markup_*}} |
  *   my_upload {slot, data} | my_video_sign {ext, size}   — hanya panel miliknya; subdomain/status tetap.
+ * Pencairan pendapatan (pemilik panel, dari web utama ATAU subdomain): my_wd_info | my_withdraw {withdraw:{method,
+ *   bank_name?, account_number, account_name, amount}} → email Resend ke admin utama.
+ * Admin utama — Withdraw Request: wd_list {status} | wd_detail {id} | wd_update {id, status:'paid'|'rejected', note}
  * Admin utama (POST JSON {token, action, ...}):
  *   list                                       → semua child panel + hostname
  *   check   {subdomain}                        → apakah nama tersedia
@@ -77,7 +80,7 @@ if (!is_array($in)) cp_out(['ok' => false, 'message' => 'Body JSON tidak valid.'
 $action = (string)($in['action'] ?? '');
 
 /* ---------- Pengaturan child panel MILIK SENDIRI (pemilik paket EXTRA), dari web utama ---------- */
-if (in_array($action, ['my_panel', 'my_save', 'my_upload', 'my_video_sign'], true)) {
+if (in_array($action, ['my_panel', 'my_save', 'my_upload', 'my_video_sign', 'my_wd_info', 'my_withdraw'], true)) {
     $uid = cp_user_id($conn, $in['token'] ?? '');
     if (!$uid) cp_out(['ok' => false, 'message' => 'Sesi tidak valid. Silakan login ulang.'], 401);
     $st = cp_q($conn, "SELECT p.*, d.hostname FROM child_panels p
@@ -116,6 +119,21 @@ if (in_array($action, ['my_panel', 'my_save', 'my_upload', 'my_video_sign'], tru
         cp_q($conn, "INSERT INTO child_panel_assets (child_panel_id, slot, data, version) VALUES (?,?,?,?)
                      ON DUPLICATE KEY UPDATE data = VALUES(data), version = VALUES(version)", 'isss', $pid, $slot, $data, $ver)->close();
         cp_out(['ok' => true, 'ref' => "cpasset:$slot:$ver"]);
+    }
+    if ($action === 'my_wd_info') {
+        // Saldo pendapatan + riwayat pencairan. Tetap bisa dibuka walau langganan EXTRA habis.
+        $st = cp_q($conn, "SELECT method, bank_name, account_number, account_name FROM child_panel_withdrawals WHERE child_panel_id = ? ORDER BY id DESC LIMIT 1", 'i', $pid);
+        $last = $st->get_result()->fetch_assoc() ?: null;
+        $st->close();
+        cp_out(['ok' => true, 'balance' => cp_wd_balance($conn, $pid), 'history' => cp_wd_history($conn, $pid), 'last' => $last] + cp_wd_methods_public());
+    }
+    if ($action === 'my_withdraw') {
+        [$ok, $data, $code] = cp_wd_request($conn, $pid, $uid, is_array($in['withdraw'] ?? null) ? $in['withdraw'] : []);
+        if (!$ok) cp_out(['ok' => false, 'message' => $data], $code);
+        $wid = $data['id'];
+        cp_after_response(function () use ($conn, $wid) { cp_wd_notify_admin($conn, $wid); });
+        cp_out(['ok' => true, 'withdraw' => $data, 'balance' => cp_wd_balance($conn, $pid), 'history' => cp_wd_history($conn, $pid),
+            'message' => 'Permintaan pencairan terkirim. Admin akan memproses dan mentransfer ke akunmu.']);
     }
     if ($action === 'my_video_sign') {
         $ext = strtolower((string)($in['ext'] ?? ''));
@@ -159,7 +177,9 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
 
     if ($action === 'owner_summary') {
         $q = function ($where) use ($conn, $pid) {
-            $st = cp_q($conn, "SELECT COUNT(*) n, COALESCE(SUM(price),0) omzet, COALESCE(SUM(profit),0) profit FROM child_panel_orders WHERE child_panel_id = ? $where", 'i', $pid);
+            // Pesanan yang dibatalkan (riwayat_pesanan.status = 'batal') tidak dihitung sebagai pendapatan.
+            $st = cp_q($conn, "SELECT COUNT(*) n, COALESCE(SUM(o.price),0) omzet, COALESCE(SUM(o.profit),0) profit FROM child_panel_orders o
+                               WHERE o.child_panel_id = ? $where AND COALESCE(" . CP_ORDER_STATUS_SQL . ", '') <> 'batal'", 'i', $pid);
             $r = $st->get_result()->fetch_assoc();
             $st->close();
             return ['orders' => (int)$r['n'], 'omzet' => (float)$r['omzet'], 'profit' => (float)$r['profit']];
@@ -169,7 +189,8 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
         $st->close();
         cp_out(['ok' => true, 'panel' => ['name' => $tenant['name'], 'hostname' => $tenant['hostname'],
             'markup_smm_pct' => $tenant['markup_smm_pct'], 'markup_agent_pct' => $tenant['markup_agent_pct']],
-            'all' => $q(''), 'month' => $q("AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"), 'today' => $q("AND created_at >= CURDATE()"),
+            'all' => $q(''), 'month' => $q("AND o.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"), 'today' => $q("AND o.created_at >= CURDATE()"),
+            'balance' => cp_wd_balance($conn, $pid),
             'users' => ['total' => (int)$u['n'], 'active7d' => (int)$u['aktif']]]);
     }
 
@@ -242,6 +263,59 @@ function cp_sub_taken($conn, $sub, $exceptPanelId = 0) {
 
 try {
     if ($action === 'list') cp_out(['ok' => true, 'panels' => cp_list($conn), 'root' => CP_ROOT_DOMAIN]);
+
+    /* ----- Withdraw Request (pencairan pemilik child panel) ----- */
+    if ($action === 'wd_list') {
+        $status = (string)($in['status'] ?? 'pending');
+        $where = in_array($status, ['pending', 'paid', 'rejected'], true) ? "WHERE w.status = '$status'" : '';
+        $res = $conn->query("SELECT w.id, w.child_panel_id, w.method, w.bank_name, w.account_number, w.account_name, w.amount, w.fee, w.net_amount,
+                                    w.status, w.admin_note, w.created_at, w.processed_at, w.email_sent, w.processed_by,
+                                    p.name AS panel_name, d.hostname, u.name AS owner_name, u.email AS owner_email
+                             FROM child_panel_withdrawals w
+                             LEFT JOIN child_panels p ON p.id = w.child_panel_id
+                             LEFT JOIN child_panel_domains d ON d.child_panel_id = w.child_panel_id AND d.is_primary = 1
+                             LEFT JOIN users u ON u.id = w.user_id
+                             $where ORDER BY (w.status = 'pending') DESC, w.id DESC LIMIT 300");
+        $rows = [];
+        while ($res && ($r = $res->fetch_assoc())) $rows[] = cp_wd_row_public($r);
+        $c = $conn->query("SELECT status, COUNT(*) n, COALESCE(SUM(net_amount),0) total FROM child_panel_withdrawals GROUP BY status");
+        $counts = ['pending' => 0, 'paid' => 0, 'rejected' => 0];
+        $totals = ['pending' => 0, 'paid' => 0, 'rejected' => 0];
+        while ($c && ($r = $c->fetch_assoc())) { $counts[$r['status']] = (int)$r['n']; $totals[$r['status']] = (float)$r['total']; }
+        cp_out(['ok' => true, 'requests' => $rows, 'counts' => $counts, 'totals' => $totals]);
+    }
+
+    if ($action === 'wd_detail') {
+        $w = cp_wd_get($conn, (int)($in['id'] ?? 0));
+        if (!$w) cp_out(['ok' => false, 'message' => 'Permintaan tidak ditemukan.'], 404);
+        $pid = $w['child_panel_id'];
+        $st = cp_q($conn, "SELECT o.order_id, o.kind, o.service_name, o.price, o.base_price, o.profit, o.created_at, u.name, " . CP_ORDER_STATUS_SQL . " AS status
+                           FROM child_panel_orders o LEFT JOIN users u ON u.id = o.user_id
+                           WHERE o.child_panel_id = ? ORDER BY o.id DESC LIMIT 15", 'i', $pid);
+        $orders = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+        $st->close();
+        foreach ($orders as &$o) foreach (['price', 'base_price', 'profit'] as $k) $o[$k] = (float)$o[$k];
+        unset($o);
+        cp_out(['ok' => true, 'request' => $w, 'balance' => cp_wd_balance($conn, $pid), 'history' => cp_wd_history($conn, $pid, 10), 'orders' => $orders]);
+    }
+
+    if ($action === 'wd_update') {
+        $id = (int)($in['id'] ?? 0);
+        $status = (string)($in['status'] ?? '');
+        $note = cp_str($in['note'] ?? '', 255);
+        if (!in_array($status, ['paid', 'rejected'], true)) cp_out(['ok' => false, 'message' => 'Status tidak valid.'], 400);
+        if ($status === 'rejected' && mb_strlen($note) < 3) cp_out(['ok' => false, 'message' => 'Tulis alasan penolakan agar pemilik panel tahu.'], 400);
+        $adminId = (int)cp_user_id($conn, $in['token'] ?? '');
+        // Hanya permintaan yang masih "pending" yang bisa diproses (mencegah diproses dua kali).
+        $st = cp_q($conn, "UPDATE child_panel_withdrawals SET status = ?, admin_note = ?, processed_at = NOW(), processed_by = ? WHERE id = ? AND status = 'pending'",
+            'ssii', $status, $note ?: null, $adminId, $id);
+        $changed = $st->affected_rows;
+        $st->close();
+        if ($changed !== 1) cp_out(['ok' => false, 'message' => 'Permintaan ini sudah diproses sebelumnya.'], 409);
+        cp_after_response(function () use ($conn, $id) { cp_wd_notify_owner($conn, $id); });
+        cp_out(['ok' => true, 'request' => cp_wd_get($conn, $id),
+            'message' => $status === 'paid' ? 'Ditandai sudah dibayar. Pemilik panel dikabari lewat email.' : 'Permintaan ditolak, saldo pendapatan pemilik dikembalikan.']);
+    }
 
     if ($action === 'check') {
         $sub = cp_clean_sub($in['subdomain'] ?? '');
