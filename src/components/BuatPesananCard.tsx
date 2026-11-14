@@ -17,8 +17,6 @@ import AiAssistantCard from './AiAssistantCard';
 import { applyMarkup, formatRate, fetchServices, isCustomCommentService, type ServiceItem } from '../services/servicesApi';
 import { placeOrder } from '../services/checkoutApi';
 import { brandForCategory, brandIconUrl } from '../constants';
-import { IS_CHILD_PANEL } from '../lib/apiBase';
-import { panelApi } from '../services/panelApi';
 
 
 /** Small round brand badge shown in front of a dropdown result. */
@@ -384,12 +382,12 @@ const handleOrder = async () => {
 })
     setOrdering(false);
 
-    const isProviderBalanceIssue = !result.ok && result.message.toLowerCase().includes('saldo');
-    const orderIdFinal = result.orderId || String(Math.floor(100000 + Math.random() * 900000));
-    const orderStatus = isProviderBalanceIssue ? 'pending' : 'proses';
-    let riwayatMessage = ""; // tampung error riwayat di sini
+    // order.php membalas ok:true juga saat provider sedang kosong (order masuk antrian manual).
+    // ok:false = order TIDAK dibuat (mis. saldo user kurang) → saldo tidak dipotong.
+    const orderIdFinal = result.orderId || '';
+    const orderStatus = 'pending';
 
-    if (result.ok || isProviderBalanceIssue) {
+    if (result.ok && orderIdFinal) {
       const now = new Date();
       topUp(-price);
       setSuccessInfo({ 
@@ -408,45 +406,11 @@ const handleOrder = async () => {
         status: orderStatus,
       });
 
-     // === SIMPAN KE DB ===
-const tokenFromStorage = localStorage.getItem('token'); // <-- AMBIL LANGSUNG
-if(!tokenFromStorage) {
-  riwayatMessage = ` Gagal simpan riwayat: Token kosong. Silahkan login ulang`;
-} else {
-  try {
-    const resRiwayat = await fetch('https://cekidku.my.id/api/riwayat_pesanan.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token: tokenFromStorage, // <-- PAKAI INI
-        orderId: orderIdFinal,
-        serviceName: captured.name,
-        quantity: captured.qty,
-        price: price,
-        status: orderStatus
-      })
-    });
-    
-    const dataRiwayat = await resRiwayat.json();
-    
-    if(!dataRiwayat.ok){
-      riwayatMessage = ` Gagal simpan riwayat: ${dataRiwayat.message}`;
-    } else if (IS_CHILD_PANEL) {
-      // Child panel: catat pesanan ke panel (pendapatan reseller). Server memverifikasi lewat riwayat_pesanan.
-      void panelApi.recordOrder(String(orderIdFinal));
-    }
-  } catch(err: any) {
-    riwayatMessage = ` Gagal konek riwayat: ${err.message}`;
-  }
-}
-// === SELESAI ===
+     // Riwayat pesanan & pendapatan child panel dicatat oleh order.php di server
+     // (dulu dikirim lagi dari browser → riwayat dobel & harga bisa dipalsukan).
 
-      const successMessage = isProviderBalanceIssue
-        ? `Pesanan berhasil dibuat. ID #${orderIdFinal}`
-        : `Pesanan berhasil dibuat. ID #${orderIdFinal}`;
-
-      // Gabungin pesan sukses + error riwayat jadi 1
-      setOrderNotice({ ok: riwayatMessage === "", message: successMessage + riwayatMessage });
+      const successMessage = `Pesanan berhasil dibuat. ID #${orderIdFinal}`;
+      setOrderNotice({ ok: true, message: successMessage });
 
       setTarget('');
       setQuantity('');
