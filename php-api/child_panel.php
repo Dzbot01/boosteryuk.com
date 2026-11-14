@@ -34,6 +34,20 @@ require 'configdb.php';
 require_once __DIR__ . '/child_panel_lib.php';
 if (isset($conn) && $conn instanceof mysqli) $conn->set_charset('utf8mb4');
 
+// Error tak terduga → tetap balas JSON berisi pesan (bukan HTTP 500 kosong) agar mudah didiagnosis.
+set_exception_handler(function ($e) {
+    if (!headers_sent()) { http_response_code(500); header('Content-Type: application/json; charset=utf-8'); }
+    echo json_encode(['ok' => false, 'message' => 'Kesalahan server: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+});
+register_shutdown_function(function () {
+    $e = error_get_last();
+    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true) && !headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'message' => 'Kesalahan server: ' . $e['message'] . ' (cek apakah child_panel_lib.php terbaru sudah diupload)'], JSON_UNESCAPED_UNICODE);
+    }
+});
+
 function cp_out($d, $code = 200) {
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
@@ -180,7 +194,7 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
         $q = function ($where) use ($conn, $pid) {
             // Pesanan yang dibatalkan (riwayat_pesanan.status = 'batal') tidak dihitung sebagai pendapatan.
             $st = cp_q($conn, "SELECT COUNT(*) n, COALESCE(SUM(o.price),0) omzet, COALESCE(SUM(o.profit),0) profit FROM child_panel_orders o
-                               WHERE o.child_panel_id = ? $where AND COALESCE(" . CP_ORDER_STATUS_SQL . ", '') <> 'batal'", 'i', $pid);
+                               WHERE o.child_panel_id = ? $where AND COALESCE(" . cp_order_status_sql($conn) . ", '') <> 'batal'", 'i', $pid);
             $r = $st->get_result()->fetch_assoc();
             $st->close();
             return ['orders' => (int)$r['n'], 'omzet' => (float)$r['omzet'], 'profit' => (float)$r['profit']];
@@ -198,10 +212,9 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
     if ($action === 'owner_orders') {
         $limit = max(1, min(200, (int)($in['limit'] ?? 50)));
         $st = cp_q($conn, "SELECT o.order_id, o.kind, o.service_name, o.quantity, o.price, o.base_price, o.profit, o.created_at,
-                                  u.name, u.email, r.status
+                                  u.name, u.email, " . cp_order_status_sql($conn) . " AS status
                            FROM child_panel_orders o
                            LEFT JOIN users u ON u.id = o.user_id
-                           LEFT JOIN riwayat_pesanan r ON r.order_id = o.order_id AND r.user_id = o.user_id
                            WHERE o.child_panel_id = ? ORDER BY o.id DESC LIMIT $limit", 'i', $pid);
         $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
         $st->close();
@@ -291,7 +304,7 @@ try {
         $w = cp_wd_get($conn, (int)($in['id'] ?? 0));
         if (!$w) cp_out(['ok' => false, 'message' => 'Permintaan tidak ditemukan.'], 404);
         $pid = $w['child_panel_id'];
-        $st = cp_q($conn, "SELECT o.order_id, o.kind, o.service_name, o.price, o.base_price, o.profit, o.created_at, u.name, " . CP_ORDER_STATUS_SQL . " AS status
+        $st = cp_q($conn, "SELECT o.order_id, o.kind, o.service_name, o.price, o.base_price, o.profit, o.created_at, u.name, " . cp_order_status_sql($conn) . " AS status
                            FROM child_panel_orders o LEFT JOIN users u ON u.id = o.user_id
                            WHERE o.child_panel_id = ? ORDER BY o.id DESC LIMIT 15", 'i', $pid);
         $orders = $st->get_result()->fetch_all(MYSQLI_ASSOC);

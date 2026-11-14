@@ -365,8 +365,34 @@ const CP_WD_METHODS = [
     'bank'      => ['Transfer Bank', 2500, 'bank'],
 ];
 
-/** Status riwayat terbaru suatu pesanan (riwayat_pesanan: pending|proses|selesai|batal). */
-const CP_ORDER_STATUS_SQL = "(SELECT r.status FROM riwayat_pesanan r WHERE r.order_id = o.order_id AND r.user_id = o.user_id ORDER BY r.id DESC LIMIT 1)";
+/**
+ * Subquery status riwayat terbaru suatu pesanan (riwayat_pesanan: pending|proses|selesai|batal), alias tabel `o`.
+ * riwayat_pesanan (tabel lama) bisa memakai collation berbeda dari child_panel_orders (mis. utf8mb4_unicode_ci vs
+ * utf8mb4_general_ci) → MySQL menolak "Illegal mix of collations". Maka order_id dikonversi ke collation
+ * riwayat_pesanan (index riwayat tetap terpakai). Bila tetap gagal → NULL (status tidak difilter, halaman tetap jalan).
+ */
+function cp_order_status_sql($conn) {
+    static $sql = null;
+    if ($sql !== null) return $sql;
+    $cands = [];
+    try {
+        $r = $conn->query("SELECT CHARACTER_SET_NAME cs, COLLATION_NAME co FROM information_schema.COLUMNS
+                           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'riwayat_pesanan' AND COLUMN_NAME = 'order_id' LIMIT 1");
+        $c = $r ? $r->fetch_assoc() : null;
+        if ($c && preg_match('/^[a-z0-9_]+$/i', (string)$c['cs']) && preg_match('/^[a-z0-9_]+$/i', (string)$c['co'])) {
+            $cands[] = "r.order_id = CONVERT(o.order_id USING {$c['cs']}) COLLATE {$c['co']}";
+        }
+    } catch (Throwable $e) { /* information_schema tidak bisa dibaca */ }
+    array_unshift($cands, 'r.order_id = o.order_id');
+    foreach ($cands as $cond) {
+        $try = "(SELECT r.status FROM riwayat_pesanan r WHERE $cond AND r.user_id = o.user_id ORDER BY r.id DESC LIMIT 1)";
+        try {
+            $conn->query("SELECT $try AS st FROM child_panel_orders o LIMIT 1");
+            return $sql = $try;
+        } catch (Throwable $e) { /* coba kandidat berikutnya */ }
+    }
+    return $sql = 'NULL';
+}
 
 /**
  * Saldo pendapatan panel:
@@ -380,7 +406,7 @@ function cp_wd_balance($conn, $panelId) {
     $st = cp_q($conn, "SELECT
             COALESCE(SUM(CASE WHEN COALESCE(s.st,'') <> 'batal' THEN s.profit END),0) AS earned,
             COALESCE(SUM(CASE WHEN COALESCE(s.st,'') <> 'batal' AND (s.st = 'selesai' OR s.created_at <= NOW() - INTERVAL $hold DAY) THEN s.profit END),0) AS cleared
-        FROM (SELECT o.profit, o.created_at, " . CP_ORDER_STATUS_SQL . " AS st FROM child_panel_orders o WHERE o.child_panel_id = ?) s", 'i', (int)$panelId);
+        FROM (SELECT o.profit, o.created_at, " . cp_order_status_sql($conn) . " AS st FROM child_panel_orders o WHERE o.child_panel_id = ?) s", 'i', (int)$panelId);
     $e = $st->get_result()->fetch_assoc();
     $st->close();
     $st = cp_q($conn, "SELECT COALESCE(SUM(CASE WHEN status='paid' THEN amount END),0) paid,
