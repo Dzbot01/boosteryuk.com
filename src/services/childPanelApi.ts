@@ -69,3 +69,16 @@ export function uploadToSignedUrl(url: string, file: File, onProgress: (p: numbe
     xhr.send(file);
   });
 }
+
+/** Panel milik user sendiri (paket EXTRA) — endpoint my_* di child_panel.php. */
+export interface MyPanel extends Omit<ChildPanel, 'owner_email' | 'created_at'> {
+  expires_at: string | null;
+}
+
+export const ownerPanelApi = {
+  mine: () => call<{ panel?: MyPanel | null }>('my_panel'),
+  save: (panel: { name: string; config: TenantConfig; markup_smm_pct: number; markup_agent_pct: number }) =>
+    call<{ id?: number; hostname?: string; url?: string }>('my_save', { panel }),
+  upload: (slot: string, data: string) => call<{ ref?: string }>('my_upload', { slot, data }),
+  videoSign: (ext: string, size: number) => call<{ upload_url?: string; public_url?: string; max_mb?: number }>('my_video_sign', { ext, size }),
+};

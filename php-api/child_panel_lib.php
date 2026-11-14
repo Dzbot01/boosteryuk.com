@@ -276,3 +276,48 @@ function cp_video_sign($panelId, $ext) {
         'max_mb'     => $c['max_mb'],
     ]];
 }
+
+
+/* ===== Sanitasi konfigurasi tampilan (dipakai child_panel.php & plan_upgrade.php) ===== */
+function cp_hex($v) {
+    $v = strtolower(trim((string)$v));
+    return ($v === '' || preg_match('/^#[0-9a-f]{6}$/', $v)) ? $v : '';
+}
+function cp_img_ref($v) {
+    $v = trim((string)$v);
+    if ($v === '' || preg_match('/^cpasset:[a-z0-9]+:[a-f0-9]{6,16}$/', $v)) return $v;
+    return preg_match('#^https://[^\s"\'<>]{4,400}$#i', $v) ? $v : '';
+}
+function cp_str($v, $max) { return mb_substr(trim(strip_tags((string)$v)), 0, $max); }
+
+/** Whitelist konfigurasi tampilan child panel. */
+function cp_clean_config($c) {
+    $c = is_array($c) ? $c : [];
+    $out = [
+        'brandName'      => cp_str($c['brandName'] ?? '', 40),
+        'brandSuffix'    => cp_str($c['brandSuffix'] ?? '', 40),
+        'headerTagline'  => cp_str($c['headerTagline'] ?? '', 30),
+        'footerText'     => cp_str($c['footerText'] ?? '', 200),
+        'themePreset'    => preg_match('/^[a-z0-9-]{1,30}$/', (string)($c['themePreset'] ?? '')) ? $c['themePreset'] : '',
+        'brandAccent'    => cp_hex($c['brandAccent'] ?? ''),
+        'headerTint'     => cp_hex($c['headerTint'] ?? ''),
+        'menuActive'     => cp_hex($c['menuActive'] ?? ''),
+        'headerOrnament' => preg_match('/^[a-z0-9-]{0,40}$/', (string)($c['headerOrnament'] ?? '')) ? (string)($c['headerOrnament'] ?? '') : '',
+        'logo'           => cp_img_ref($c['logo'] ?? ''),
+        'hero'           => cp_img_ref($c['hero'] ?? ''),
+        // Video player dashboard: kosong = tidak tampil. URL https (Supabase Storage / mp4 / webm).
+        'videoUrl'       => preg_match('#^https://[^\s"\'<>]{4,500}$#i', trim((string)($c['videoUrl'] ?? ''))) ? trim((string)$c['videoUrl']) : '',
+        'videoPoster'    => cp_img_ref($c['videoPoster'] ?? ''),
+        // Tombol musik di bottom navbar child panel: bawaan TIDAK tampil.
+        'showMusic'      => !empty($c['showMusic']),
+        'voice'          => in_array($c['voice'] ?? 'welcome', ['full', 'welcome', 'off'], true) ? ($c['voice'] ?? 'welcome') : 'welcome',
+        'slides'         => [],
+    ];
+    foreach (array_slice(is_array($c['slides'] ?? null) ? $c['slides'] : [], 0, 6) as $s) {
+        if (!is_array($s)) continue;
+        $img = cp_img_ref($s['image'] ?? '');
+        if ($img === '') continue;
+        $out['slides'][] = ['image' => $img, 'title' => cp_str($s['title'] ?? '', 80), 'subtitle' => cp_str($s['subtitle'] ?? '', 140)];
+    }
+    return $out;
+}

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { boostyVoice } from '../services/boostyVoice';
 import { MAIN_API, IS_CHILD_PANEL } from '../lib/apiBase';
 
@@ -58,6 +58,9 @@ export function AuthProvider({children}: {children: React.ReactNode}){
   const [loading, setLoading] = useState(true);
 
   const isAdmin = user?.role === 'admin';
+  // Refresh saat sudah login dilakukan diam-diam (tanpa layar loading) agar halaman tidak di-unmount.
+  const userRef = useRef<User | null>(null);
+  userRef.current = user;
 
   useEffect(() => {
     refresh();
@@ -134,7 +137,7 @@ useEffect(() => {
 }, []);
 
 const refresh = async () => {
-  setLoading(true);
+  if (!userRef.current) setLoading(true);
   const token = localStorage.getItem('token');
 
   if(!token) { 

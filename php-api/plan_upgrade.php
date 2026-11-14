@@ -6,7 +6,7 @@
  * GET  ?token=…                         → status paket user + harga (publik bila tanpa token: hanya harga)
  * GET  ?check_sub=nama                   → apakah subdomain child panel tersedia
  * POST {token, plan:'plus'}             → Plus: sekali bayar, harga reseller selamanya
- * POST {token, plan:'extra', subdomain?, panel_name?}
+ * POST {token, plan:'extra', subdomain?, panel_name?, config?, markup_smm_pct?, markup_agent_pct?}
  *       → EXTRA bulanan: semua benefit Plus (selamanya) + Child Panel + Full Support.
  *         Bulan pertama harga promo hanya untuk user yang belum pernah berlangganan EXTRA.
  *         Pembelian pertama WAJIB subdomain → child panel dibuat otomatis (pemilik = user ini).
@@ -167,6 +167,7 @@ $st->close();
 if (!$charged) pu_out(['ok' => false, 'message' => 'Saldo tidak cukup. Butuh Rp ' . number_format($price, 0, ',', '.') . '.'], 400);
 
 $orderId = 'UP' . time() . mt_rand(100, 999);
+$MARKUP_SMM = null; $MARKUP_AGENT = null; $newPanelId = null;
 try {
     $conn->begin_transaction();
     // Plus selamanya (juga diberikan oleh EXTRA).
@@ -186,10 +187,16 @@ try {
             }
         } else {
             $name = mb_substr(trim(strip_tags((string)($in['panel_name'] ?? ''))), 0, 80) ?: ucfirst($sub);
-            $config = json_encode(['brandName' => $name, 'brandSuffix' => '', 'headerTagline' => 'SMM Panel', 'voice' => 'off', 'showMusic' => false], JSON_UNESCAPED_UNICODE);
+            // Pengaturan dari halaman setup child panel (logo/hero/slider diunggah setelah panel dibuat).
+            $cfgIn = is_array($in['config'] ?? null) ? $in['config'] : [];
+            $cfgIn += ['brandName' => $name, 'headerTagline' => 'SMM Panel', 'voice' => 'off'];
+            $config = json_encode(cp_clean_config($cfgIn), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if (isset($in['markup_smm_pct'])) $MARKUP_SMM = max(0, min(CP_MAX_MARKUP, round((float)$in['markup_smm_pct'], 2)));
+            if (isset($in['markup_agent_pct'])) $MARKUP_AGENT = max(0, min(CP_MAX_MARKUP, round((float)$in['markup_agent_pct'], 2)));
             cp_q($conn, "INSERT INTO child_panels (owner_user_id, name, status, markup_smm_pct, markup_agent_pct, config, expires_at) VALUES (?,?, 'active', ?, ?, ?, ?)",
-                'isddss', (int)$uid, $name, $MARKUP_DEFAULT, $MARKUP_DEFAULT, $config, $until)->close();
+                'isddss', (int)$uid, $name, $MARKUP_SMM ?? $MARKUP_DEFAULT, $MARKUP_AGENT ?? $MARKUP_DEFAULT, $config, $until)->close();
             $pid = (int)$conn->insert_id;
+            $newPanelId = $pid;
             cp_q($conn, "INSERT INTO child_panel_domains (child_panel_id, hostname, is_primary) VALUES (?, ?, 1)", 'is', $pid, $sub . '.' . CP_ROOT_DOMAIN)->close();
         }
     }
@@ -217,4 +224,4 @@ try {
 $st = cp_q($conn, "SELECT balance FROM users WHERE id = ? LIMIT 1", 'i', (int)$uid);
 $balance = (float)($st->get_result()->fetch_assoc()['balance'] ?? 0);
 $st->close();
-pu_out(['ok' => true, 'order_id' => $orderId, 'plan' => $plan, 'price' => $price, 'new_balance' => $balance] + pu_status($conn, $uid, $prices));
+pu_out(['ok' => true, 'order_id' => $orderId, 'plan' => $plan, 'price' => $price, 'new_balance' => $balance, 'panel_id' => $newPanelId ?? null] + pu_status($conn, $uid, $prices));

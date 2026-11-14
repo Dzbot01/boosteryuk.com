@@ -10,6 +10,8 @@
  *   record_order {order_id}                    → catat pesanan SMM (harga dari riwayat_pesanan milik user)
  * Admin ke-2 / pemilik panel (owner_user_id) atau admin utama:
  *   owner_summary | owner_orders | owner_users | owner_set_markup {markup_smm_pct, markup_agent_pct}
+ * Pemilik panel (paket EXTRA) dari web utama: my_panel | my_save {panel:{name, config, markup_*}} |
+ *   my_upload {slot, data} | my_video_sign {ext, size}   — hanya panel miliknya; subdomain/status tetap.
  * Admin utama (POST JSON {token, action, ...}):
  *   list                                       → semua child panel + hostname
  *   check   {subdomain}                        → apakah nama tersedia
@@ -73,6 +75,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 $in = json_decode(file_get_contents('php://input'), true);
 if (!is_array($in)) cp_out(['ok' => false, 'message' => 'Body JSON tidak valid.'], 400);
 $action = (string)($in['action'] ?? '');
+
+/* ---------- Pengaturan child panel MILIK SENDIRI (pemilik paket EXTRA), dari web utama ---------- */
+if (in_array($action, ['my_panel', 'my_save', 'my_upload', 'my_video_sign'], true)) {
+    $uid = cp_user_id($conn, $in['token'] ?? '');
+    if (!$uid) cp_out(['ok' => false, 'message' => 'Sesi tidak valid. Silakan login ulang.'], 401);
+    $st = cp_q($conn, "SELECT p.*, d.hostname FROM child_panels p
+                       LEFT JOIN child_panel_domains d ON d.child_panel_id = p.id AND d.is_primary = 1
+                       WHERE p.owner_user_id = ? ORDER BY p.id ASC LIMIT 1", 'i', (int)$uid);
+    $mine = $st->get_result()->fetch_assoc();
+    $st->close();
+    if ($action === 'my_panel') {
+        if (!$mine) cp_out(['ok' => true, 'panel' => null]);
+        $pub = cp_public($mine, $mine['hostname']);
+        $pub['subdomain'] = $mine['hostname'] ? substr($mine['hostname'], 0, -(strlen(CP_ROOT_DOMAIN) + 1)) : '';
+        $pub['status'] = $mine['status'];
+        $pub['expires_at'] = $mine['expires_at'] ?? null;
+        cp_out(['ok' => true, 'panel' => $pub]);
+    }
+    if (!$mine) cp_out(['ok' => false, 'message' => 'Kamu belum punya child panel. Upgrade ke EXTRA dulu.'], 404);
+    $pid = (int)$mine['id'];
+
+    if ($action === 'my_save') {
+        // Pemilik boleh mengubah tampilan, nama & markup — BUKAN subdomain, status, atau pemilik.
+        $p = is_array($in['panel'] ?? null) ? $in['panel'] : [];
+        $name = cp_str($p['name'] ?? $mine['name'], 80) ?: $mine['name'];
+        $mSmm = max(0, min(CP_MAX_MARKUP, round((float)($p['markup_smm_pct'] ?? $mine['markup_smm_pct']), 2)));
+        $mAgent = max(0, min(CP_MAX_MARKUP, round((float)($p['markup_agent_pct'] ?? $mine['markup_agent_pct']), 2)));
+        $config = json_encode(cp_clean_config($p['config'] ?? []), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        cp_q($conn, "UPDATE child_panels SET name = ?, markup_smm_pct = ?, markup_agent_pct = ?, config = ? WHERE id = ?", 'sddsi', $name, $mSmm, $mAgent, $config, $pid)->close();
+        cp_out(['ok' => true, 'id' => $pid, 'hostname' => $mine['hostname'], 'url' => 'https://' . $mine['hostname']]);
+    }
+    if ($action === 'my_upload') {
+        $slot = (string)($in['slot'] ?? '');
+        $data = trim((string)($in['data'] ?? ''));
+        if (!in_array($slot, CP_SLOTS, true)) cp_out(['ok' => false, 'message' => 'Slot gambar tidak valid.'], 400);
+        if (!preg_match('#^data:image/(jpeg|png|webp|svg\+xml|x-icon);base64,[A-Za-z0-9+/=]+$#', $data)) cp_out(['ok' => false, 'message' => 'Gambar harus JPG, PNG, WebP, SVG, atau ICO.'], 400);
+        if (strlen($data) > 2800000) cp_out(['ok' => false, 'message' => 'Gambar terlalu besar (maks ~2 MB).'], 400);
+        $ver = substr(md5($data), 0, 12);
+        cp_q($conn, "INSERT INTO child_panel_assets (child_panel_id, slot, data, version) VALUES (?,?,?,?)
+                     ON DUPLICATE KEY UPDATE data = VALUES(data), version = VALUES(version)", 'isss', $pid, $slot, $data, $ver)->close();
+        cp_out(['ok' => true, 'ref' => "cpasset:$slot:$ver"]);
+    }
+    if ($action === 'my_video_sign') {
+        $ext = strtolower((string)($in['ext'] ?? ''));
+        $size = (int)($in['size'] ?? 0);
+        if (!in_array($ext, ['mp4', 'webm'], true)) cp_out(['ok' => false, 'message' => 'Video harus MP4 atau WebM.'], 400);
+        $max = cp_video_config()['max_mb'];
+        if ($size <= 0 || $size > $max * 1024 * 1024) cp_out(['ok' => false, 'message' => "Ukuran video maksimal $max MB."], 400);
+        [$ok, $data] = cp_video_sign($pid, $ext);
+        cp_out($ok ? ['ok' => true] + $data : ['ok' => false, 'message' => $data], $ok ? 200 : 502);
+    }
+}
 
 /* ---------- Aksi di child panel (user biasa & admin ke-2 / pemilik panel) ---------- */
 if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 'owner_users', 'owner_set_markup'], true)) {
@@ -161,48 +215,6 @@ cp_require_admin($conn, $in['token'] ?? '', function ($msg, $code) { cp_out(['ok
 
 function cp_host_of($sub) { return $sub . '.' . CP_ROOT_DOMAIN; }
 
-function cp_hex($v) {
-    $v = strtolower(trim((string)$v));
-    return ($v === '' || preg_match('/^#[0-9a-f]{6}$/', $v)) ? $v : '';
-}
-function cp_img_ref($v) {
-    $v = trim((string)$v);
-    if ($v === '' || preg_match('/^cpasset:[a-z0-9]+:[a-f0-9]{6,16}$/', $v)) return $v;
-    return preg_match('#^https://[^\s"\'<>]{4,400}$#i', $v) ? $v : '';
-}
-function cp_str($v, $max) { return mb_substr(trim(strip_tags((string)$v)), 0, $max); }
-
-/** Whitelist konfigurasi tampilan child panel. */
-function cp_clean_config($c) {
-    $c = is_array($c) ? $c : [];
-    $out = [
-        'brandName'      => cp_str($c['brandName'] ?? '', 40),
-        'brandSuffix'    => cp_str($c['brandSuffix'] ?? '', 40),
-        'headerTagline'  => cp_str($c['headerTagline'] ?? '', 30),
-        'footerText'     => cp_str($c['footerText'] ?? '', 200),
-        'themePreset'    => preg_match('/^[a-z0-9-]{1,30}$/', (string)($c['themePreset'] ?? '')) ? $c['themePreset'] : '',
-        'brandAccent'    => cp_hex($c['brandAccent'] ?? ''),
-        'headerTint'     => cp_hex($c['headerTint'] ?? ''),
-        'menuActive'     => cp_hex($c['menuActive'] ?? ''),
-        'headerOrnament' => preg_match('/^[a-z0-9-]{0,40}$/', (string)($c['headerOrnament'] ?? '')) ? (string)($c['headerOrnament'] ?? '') : '',
-        'logo'           => cp_img_ref($c['logo'] ?? ''),
-        'hero'           => cp_img_ref($c['hero'] ?? ''),
-        // Video player dashboard: kosong = tidak tampil. URL https (Supabase Storage / mp4 / webm).
-        'videoUrl'       => preg_match('#^https://[^\s"\'<>]{4,500}$#i', trim((string)($c['videoUrl'] ?? ''))) ? trim((string)$c['videoUrl']) : '',
-        'videoPoster'    => cp_img_ref($c['videoPoster'] ?? ''),
-        // Tombol musik di bottom navbar child panel: bawaan TIDAK tampil.
-        'showMusic'      => !empty($c['showMusic']),
-        'voice'          => in_array($c['voice'] ?? 'welcome', ['full', 'welcome', 'off'], true) ? ($c['voice'] ?? 'welcome') : 'welcome',
-        'slides'         => [],
-    ];
-    foreach (array_slice(is_array($c['slides'] ?? null) ? $c['slides'] : [], 0, 6) as $s) {
-        if (!is_array($s)) continue;
-        $img = cp_img_ref($s['image'] ?? '');
-        if ($img === '') continue;
-        $out['slides'][] = ['image' => $img, 'title' => cp_str($s['title'] ?? '', 80), 'subtitle' => cp_str($s['subtitle'] ?? '', 140)];
-    }
-    return $out;
-}
 
 function cp_list($conn) {
     $res = $conn->query("SELECT p.*, d.hostname, u.email AS owner_email FROM child_panels p

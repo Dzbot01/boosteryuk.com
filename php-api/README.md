@@ -190,3 +190,11 @@ akun lain; sebaiknya file itu dihapus dari server).
 - Token dicek di `sessions`, harga dari `plan_config.php`, saldo dipotong atomik. Kolom `users.plus_active`
   ikut diisi agar `me.php`/`order.php` mengenali Plus. Tabel `user_plans` + kolom `child_panels.expires_at`
   dibuat otomatis. Transaksi tercatat di `riwayat_pesanan` (order_type `plan`).
+
+### Halaman pembuatan child panel EXTRA (`/upgrade/extra`)
+Saat user memilih EXTRA, ia diarahkan ke halaman setup berisi editor yang SAMA dengan Admin → Child Panel
+(nama, subdomain, logo, judul, tagline, footer, preset tema & warna, aksesoris, hero, slider, video, markup,
+voice, tombol musik). "Bayar & Buat Panel" → `plan_upgrade.php` (bayar + buat panel dengan pengaturan itu) →
+gambar diunggah lewat `child_panel.php` aksi `my_upload` → disimpan `my_save`. Setelah panel ada, halaman
+yang sama dipakai untuk mengubah tampilan & memperpanjang. Pemilik TIDAK bisa mengubah subdomain, status,
+atau pemilik panel.

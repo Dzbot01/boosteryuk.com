@@ -71,6 +71,8 @@ export default function PlusPage() {
 
   const choose = (p: PlanChoice) => {
     if (!user) return setAuthOpen(true);
+    // EXTRA: halaman pembuatan/pengaturan child panel lengkap (logo, judul, tema, slider, dll).
+    if (p === 'extra') return navigate('/upgrade/extra');
     setCheckout(p);
   };
 

@@ -33,7 +33,10 @@ export const planApi = {
     }
   },
   /** Beli/perpanjang paket. Saldo dipotong di server (atomik); harga dihitung server. */
-  async buy(plan: PlanChoice, extra: { subdomain?: string; panel_name?: string } = {}): Promise<Res<Partial<UserPlan> & { new_balance?: number; price?: number }>> {
+  async buy(
+    plan: PlanChoice,
+    extra: { subdomain?: string; panel_name?: string; config?: unknown; markup_smm_pct?: number; markup_agent_pct?: number } = {},
+  ): Promise<Res<Partial<UserPlan> & { new_balance?: number; price?: number; panel_id?: number | null }>> {
     try {
       const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: token(), plan, ...extra }) });
       const j = await r.json().catch(() => null);
