@@ -556,6 +556,13 @@ function PanelEditor({ initial, onClose, onSaved }: { initial: Draft; onClose: (
               ))}
             </div>
             <p className="mt-2 text-[11.5px] text-slate-500">Rekaman suara saat ini menyebut “boosteryuk.com”. Pilih “Tanpa suara” bila panel memakai brand lain.</p>
+            <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2.5 dark:border-slate-700">
+              <span>
+                <span className="block text-[12.5px] font-semibold text-slate-700 dark:text-slate-200">Tombol putar musik di bottom navbar</span>
+                <span className="block text-[11.5px] text-slate-500">Bawaan: tidak ditampilkan di child panel.</span>
+              </span>
+              <input type="checkbox" checked={!!cfg.showMusic} onChange={(e) => setCfg({ showMusic: e.target.checked })} className="h-5 w-5 accent-cyan-600" />
+            </label>
           </section>
         </div>
 

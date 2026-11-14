@@ -100,7 +100,7 @@ const baseMenu: {
   { id: 'privacy', icon: ShieldCheck, label: 'Privasi dan Keamanan', desc: 'Informasi Keamanan' },
   { id: 'struk', icon: Receipt, label: 'Struk Digital', desc: 'Buat bukti pesanan' },
   { id: 'support', icon: Phone, label: 'Contact Support', desc: 'Bantuan 24 jam' },
-  { id: 'plus', icon: Sparkles, label: 'Boosteryuk Plus', desc: 'Upgrade akun premium', neon: true },
+  { id: 'plus', icon: Sparkles, label: 'Upgrade', desc: 'Paket Plus & EXTRA', neon: true },
 ];
 
 const authMenu: typeof baseMenu = [
@@ -143,8 +143,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
           (item) =>
            !HIDDEN_USER_ITEMS.includes(item.id) &&
             item.id!== HIDDEN_PROFILE_ITEM &&
-            (!AUTH_REQUIRED.includes(item.id) || user!== null) &&
-           !(item.id === 'plus' && user?.plusActive),
+            (!AUTH_REQUIRED.includes(item.id) || user!== null),
         );
 
   const handleNav = (id: PageId) => {

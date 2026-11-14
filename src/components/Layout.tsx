@@ -7,6 +7,7 @@ import AuthLoadingModal from './AuthLoadingModal';
 import Calculator from './Calculator';
 import Footer from './Footer';
 import HeaderOrnament from './HeaderOrnament';
+import SessionGuard from './SessionGuard';
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -50,6 +51,9 @@ export default function Layout() {
       {/* Modal loading auth: hanya tampil sekali saat data akun pertama dimuat
           (menggantikan InfoModal + PushBanner yang muncul tiap buka/refresh). */}
       <AuthLoadingModal />
+
+      {/* Sesi kedaluwarsa → keluar otomatis + kembali ke beranda */}
+      <SessionGuard />
 
       {/* Floating calculator */}
       <Calculator />

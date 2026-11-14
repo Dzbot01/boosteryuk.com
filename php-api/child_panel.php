@@ -190,6 +190,8 @@ function cp_clean_config($c) {
         // Video player dashboard: kosong = tidak tampil. URL https (Supabase Storage / mp4 / webm).
         'videoUrl'       => preg_match('#^https://[^\s"\'<>]{4,500}$#i', trim((string)($c['videoUrl'] ?? ''))) ? trim((string)$c['videoUrl']) : '',
         'videoPoster'    => cp_img_ref($c['videoPoster'] ?? ''),
+        // Tombol musik di bottom navbar child panel: bawaan TIDAK tampil.
+        'showMusic'      => !empty($c['showMusic']),
         'voice'          => in_array($c['voice'] ?? 'welcome', ['full', 'welcome', 'off'], true) ? ($c['voice'] ?? 'welcome') : 'welcome',
         'slides'         => [],
     ];

@@ -105,7 +105,7 @@ const SHARED_KEYS = [
 const HEX = /^#[0-9a-f]{6}$/i;
 /** Video dashboard web utama (Supabase Storage) — child panel memakai videonya sendiri / tidak ada. */
 const ROOT_VIDEO = {
-  src: 'https://dzvsjcjvnpasrwuuopeg.supabase.co/storage/v1/object/public/publik/boosteryuk.mp4',
+  src: 'https://dzvsjcjvnpasrwuuopeg.supabase.co/storage/v1/object/public/publik/Boosteryuk_Official_Music_Video_Optimized.mp4',
   poster: '/boosteryuk-thumb.png',
 };
 const THEME_KEYS = ['brandAccent', 'headerTint', 'menuActive', 'headerOrnament', 'heroImageUrl'] as const;

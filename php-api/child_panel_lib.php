@@ -68,6 +68,11 @@ function cp_ensure_schema($conn) {
         updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (child_panel_id, slot)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    // Child panel dari paket EXTRA punya masa aktif (expires_at); panel buatan admin = NULL (tanpa batas).
+    try {
+        $hasExp = $conn->query("SHOW COLUMNS FROM child_panels LIKE 'expires_at'");
+        if ($hasExp && $hasExp->num_rows === 0) $conn->query("ALTER TABLE child_panels ADD COLUMN expires_at DATETIME NULL COMMENT 'masa aktif (paket EXTRA)'");
+    } catch (Throwable $e) { /* abaikan: resolver tetap jalan tanpa kolom ini */ }
     // Pesanan yang dibuat lewat child panel (dasar perhitungan pendapatan reseller).
     $conn->query("CREATE TABLE IF NOT EXISTS child_panel_orders (
         id             INT AUTO_INCREMENT PRIMARY KEY,
@@ -174,11 +179,13 @@ function cp_resolve($conn, $hostname = null) {
     $hostname = $hostname ?: cp_request_host();
     if (!$hostname) return null;
     cp_ensure_schema($conn);
+    // Panel paket EXTRA yang langganannya habis (expires_at lewat) dianggap tidak aktif.
     $st = cp_q($conn, "SELECT p.* FROM child_panel_domains d JOIN child_panels p ON p.id = d.child_panel_id
                        WHERE d.hostname = ? AND p.status = 'active' LIMIT 1", 's', $hostname);
     $row = $st->get_result()->fetch_assoc();
     $st->close();
     if (!$row) return null;
+    if (!empty($row['expires_at']) && strtotime($row['expires_at']) < time()) return null;
     $t = cp_public($row, $hostname);
     $t['_owner_user_id'] = $row['owner_user_id'] !== null ? (int)$row['owner_user_id'] : null; // internal, dibuang sebelum dikirim
     return $t;

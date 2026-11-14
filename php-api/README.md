@@ -176,3 +176,17 @@ $tenant = cp_resolve($conn); $price = cp_apply_markup($hargaDasar, $tenant, 'smm
 - Status lain / 404 (mis. agen lama) TIDAK pernah di-refund.
 - Order agen dianggap sukses hanya setelah tertaut (`selesai`). Pendapatan child panel dicatat pada saat itu,
   bukan saat tombol pesan diklik. Kartu "AI Agent Aktif" hanya menghitung agen yang sudah tertaut.
+
+## Paket Upgrade (Plus & EXTRA) — `plan_upgrade.php`, `plan_config.php`
+
+Menggantikan `upgrade.php` lama (yang menerima `user_id` tanpa token — siapa pun bisa memotong saldo
+akun lain; sebaiknya file itu dihapus dari server).
+
+- **Plus**: sekali bayar (bawaan Rp 5.000) → harga reseller selamanya + badge reseller.
+- **EXTRA**: Rp 20.000/bulan, bulan pertama Rp 10.000 untuk user yang belum pernah berlangganan EXTRA.
+  Termasuk Plus selamanya + Child Panel (dibuat otomatis saat checkout dari subdomain yang diisi user,
+  pemilik = user, masa aktif = masa EXTRA) + Full Support. Perpanjangan menambah 1 bulan dan ikut
+  memperpanjang child panel. Panel buatan admin (tanpa masa aktif) tidak diberi batas waktu.
+- Token dicek di `sessions`, harga dari `plan_config.php`, saldo dipotong atomik. Kolom `users.plus_active`
+  ikut diisi agar `me.php`/`order.php` mengenali Plus. Tabel `user_plans` + kolom `child_panels.expires_at`
+  dibuat otomatis. Transaksi tercatat di `riwayat_pesanan` (order_type `plan`).

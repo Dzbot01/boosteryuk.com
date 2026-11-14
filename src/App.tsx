@@ -14,7 +14,6 @@ const RiwayatPage = lazy(() => import('./pages/RiwayatPage'));
 const HubungiPage = lazy(() => import('./pages/HubungiPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const PlusPage = lazy(() => import('./pages/PlusPage'));
-const UpgradePlusPage = lazy(() => import('./pages/UpgradePlusPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
 const PaymentPage = lazy(() => import('./pages/PaymentPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
@@ -73,7 +72,8 @@ export default function App() {
           {/* Order Nomor disembunyikan dari UI (kode dipertahankan):
           <Route path="otp-service/panduan" element={<OrderNomorGuidePage />} />
           <Route path="otp-service" element={<ProtectedRoute><OrderNomorPage /></ProtectedRoute>} /> */}
-          <Route path="upgrade-plus" element={<ProtectedRoute><UpgradePlusPage /></ProtectedRoute>} />
+          {/* Checkout lama digantikan halaman Upgrade (/plus) */}
+          <Route path="upgrade-plus" element={<Navigate to="/plus" replace />} />
           <Route path="ordervps" element={<ProtectedRoute><OrderVpsPage /></ProtectedRoute>} />
           <Route path="payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
           <Route path="pengaturan-akun" element={<ProtectedRoute><PengaturanAkunPage /></ProtectedRoute>} />

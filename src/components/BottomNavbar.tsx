@@ -5,6 +5,8 @@ import FAQModal from './FAQModal';
 import SettingsModal from './SettingsModal';
 import { useAuth } from '../context/AuthContext';
 import { useMusic } from '../context/MusicContext';
+import { useSiteSettings } from '../context/SiteSettingsContext';
+import { IS_CHILD_PANEL } from '../lib/apiBase';
 
 export default function BottomNavbar() {
   const { user } = useAuth();
@@ -12,6 +14,9 @@ export default function BottomNavbar() {
   const location = useLocation();
   const pathname = location?.pathname || "/";
   const { playing, toggle, showTooltip } = useMusic();
+  // Child panel: tombol musik bawaan TIDAK tampil; diaktifkan admin utama (Child Panel → Atur → Tombol musik).
+  const { tenant } = useSiteSettings();
+  const showMusic = !IS_CHILD_PANEL || !!tenant?.config?.showMusic;
   const [showFAQ, setShowFAQ] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const profileActive = pathname === '/pengaturan-akun';
@@ -58,6 +63,7 @@ export default function BottomNavbar() {
             </button>
           ))}
 
+          {showMusic && (
           <div className="relative">
             {showTooltip && (
               <div className="absolute bottom-full left-1/2 z-10 mb-3 w-max max-w-[220px] -translate-x-1/2 animate-fade-in rounded-xl bg-slate-900 px-3.5 py-2.5 text-center shadow-xl dark:bg-slate-100">
@@ -95,6 +101,7 @@ export default function BottomNavbar() {
               )}
             </button>
           </div>
+          )}
 
           {user && (
             <>

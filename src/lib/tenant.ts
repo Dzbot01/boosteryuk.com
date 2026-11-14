@@ -24,6 +24,8 @@ export interface TenantConfig {
   hero?: string;
   voice?: VoiceMode;
   slides?: TenantSlide[];
+  /** Tombol musik di bottom navbar (bawaan false = tidak tampil). */
+  showMusic?: boolean;
   /** Video player dashboard (URL https mp4/webm). Kosong = tidak tampil. */
   videoUrl?: string;
   /** Thumbnail video: 'cpasset:poster:<versi>' atau URL https */
