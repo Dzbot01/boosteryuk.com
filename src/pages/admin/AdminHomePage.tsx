@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Settings, Server, Shield, ArrowUpRight, DollarSign, Globe, Banknote } from 'lucide-react';
+import { Settings, Server, Shield, ArrowUpRight, DollarSign, Globe, Banknote, Crown } from 'lucide-react';
+import { nexspaceApi } from '../../services/nexspaceApi';
 import { withdrawApi } from '../../services/childPanelApi';
 import Reveal from '../../components/Reveal';
 import { useAuth } from '../../context/AuthContext';
@@ -36,6 +37,13 @@ const CARDS = [
     color: 'from-amber-500 to-orange-600',
   },
   {
+    path: '/admin/nexspace',
+    icon: Crown,
+    title: 'NexSpace Pro Request',
+    desc: 'Pesanan NexSpace Pro yang menunggu data login: isi host, username, password — otomatis tampil ke pemesan.',
+    color: 'from-slate-700 to-cyan-800',
+  },
+  {
     path: '/admin/server',
     icon: Server,
     title: 'Server Panel',
@@ -49,8 +57,10 @@ export default function AdminHomePage() {
   const { user } = useAuth();
   const { settings } = useSiteSettings();
   const [pendingWd, setPendingWd] = useState(0);
+  const [pendingNx, setPendingNx] = useState(0);
   useEffect(() => {
     void withdrawApi.list('pending').then((r) => r.ok && setPendingWd(r.counts?.pending || 0));
+    void nexspaceApi.adminList('pending').then((r) => r.ok && setPendingNx(r.counts?.pending || 0));
   }, []);
 
   return (
@@ -91,6 +101,9 @@ export default function AdminHomePage() {
               >
                 <c.icon className="h-6 w-6" strokeWidth={2} />
               </span>
+              {c.path === '/admin/nexspace' && pendingNx > 0 && (
+                <span className="absolute right-5 top-5 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-bold text-white">{pendingNx} menunggu</span>
+              )}
               {c.path === '/admin/withdraw' && pendingWd > 0 && (
                 <span className="absolute right-5 top-5 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-bold text-white">{pendingWd} menunggu</span>
               )}

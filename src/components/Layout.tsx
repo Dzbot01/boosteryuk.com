@@ -8,6 +8,7 @@ import Calculator from './Calculator';
 import Footer from './Footer';
 import HeaderOrnament from './HeaderOrnament';
 import SessionGuard from './SessionGuard';
+import NexSpaceBanner from './NexSpaceBanner';
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -33,6 +34,8 @@ export default function Layout() {
       <HeaderOrnament />
       {/* spacer for fixed header */}
       <div className="h-[60px]" />
+      {/* Pintu masuk kembali ke Portal Server NexSpace Pro (pesanan belum diambil) */}
+      <NexSpaceBanner />
 
       <SideMenu
         isOpen={menuOpen}

@@ -7,3 +7,6 @@ dist-ssr
 .vercel
 .DS_Store
 *.log
+
+# Rahasia server (dibuat otomatis di hosting, jangan di-commit)
+php-api/nexspace_secret.php

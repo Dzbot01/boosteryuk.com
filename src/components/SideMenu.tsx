@@ -64,7 +64,7 @@ const ROUTE_PATH: Record<PageId, string> = {
   payment: '/payment',
   struk: '/struk',
   layanan: '/layanan',
-  ordervps: '/ordervps',
+  ordervps: '/nexspace',
   overview: '/overview',
   'sewa-agen': '/sewa-agen-ai',
   deposit: '/deposit',
@@ -95,7 +95,7 @@ const baseMenu: {
   { id: 'home', icon: Home, label: 'Dashboard', desc: 'Beranda utama' },
   { id: 'overview', icon: LayoutGrid, label: 'Overview', desc: 'Ringkasan akun & statistik' },
   { id: 'layanan', icon: ShoppingCart, label: 'Buat Pesanan', desc: 'Katalog & order layanan' },
-  { id: 'ordervps', icon: Server, label: 'Order Vps', desc: 'Layanan Virtual Private Server' },
+  { id: 'ordervps', icon: Server, label: 'NexSpace', desc: 'Server Linux Started & Pro' },
   { id: 'sewa-agen', icon: Bot, label: 'Sewa Agen AI', desc: 'Agen AI WhatsApp, Telegram, dll' },
   { id: 'riwayat', icon: History, label: 'Riwayat Pesanan', desc: 'Tabel riwayat pesanan' },
   { id: 'cek-status', icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan' },
@@ -123,6 +123,7 @@ const ADMIN_MENU = [
   { id: 'profit' as const, icon: DollarSign, label: 'My Profit', desc: 'Ringkasan keuangan', path: '/admin/profit' },
   { id: 'website' as const, icon: Settings, label: 'Pengaturan Website', desc: 'Logo, brand & musik', path: '/admin/website' },
   { id: 'broadcast' as const, icon: Megaphone, label: 'Broadcast', desc: 'Broadcasting', path: '/admin/broadcast' },
+  { id: 'nexspace' as const, icon: Server, label: 'NexSpace Pro Request', desc: 'Kirim data login Pro', path: '/admin/nexspace' },
   { id: 'server' as const, icon: Server, label: 'Server Panel', desc: 'Ping provider', path: '/admin/server' },
 ];
 

@@ -27,7 +27,10 @@ const StrukSuksesPage = lazy(() => import('./pages/StrukSuksesPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const LayananPage = lazy(() => import('./pages/LayananPage'));
 const LayananDetailPage = lazy(() => import('./pages/LayananDetailPage'));
-const OrderVpsPage = lazy(() => import('./pages/OrderVpsPage'));
+// Menu VPS diganti NexSpace (OrderVpsPage lama tidak dipakai lagi).
+const NexSpacePage = lazy(() => import('./pages/NexSpacePage'));
+const NexSpacePortalPage = lazy(() => import('./pages/NexSpacePortalPage'));
+const AdminNexSpacePage = lazy(() => import('./pages/admin/AdminNexSpacePage'));
 const PlaygroundPage = lazy(() => import('./pages/PlaygroundPage'));
 const SewaAgenAiPage = lazy(() => import('./pages/SewaAgenAiPage'));
 const OverviewPage = lazy(() => import('./pages/OverviewPage'));
@@ -84,7 +87,9 @@ export default function App() {
           <Route path="otp-service" element={<ProtectedRoute><OrderOtpPage /></ProtectedRoute>} />
           {/* Checkout lama digantikan halaman Upgrade (/plus) */}
           <Route path="upgrade-plus" element={<Navigate to="/plus" replace />} />
-          <Route path="ordervps" element={<ProtectedRoute><OrderVpsPage /></ProtectedRoute>} />
+          <Route path="ordervps" element={<Navigate to="/nexspace" replace />} />
+          <Route path="nexspace" element={<ProtectedRoute><NexSpacePage /></ProtectedRoute>} />
+          <Route path="nexspace/portal" element={<ProtectedRoute><NexSpacePortalPage /></ProtectedRoute>} />
           <Route path="payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
           <Route path="pengaturan-akun" element={<ProtectedRoute><PengaturanAkunPage /></ProtectedRoute>} />
 
@@ -93,6 +98,7 @@ export default function App() {
           <Route path="admin/broadcast" element={<ProtectedRoute adminOnly><AdminBroadcastPage /></ProtectedRoute>} />
           <Route path="admin/website" element={<ProtectedRoute adminOnly><AdminWebsitePage /></ProtectedRoute>} />
           <Route path="admin/child-panel" element={<ProtectedRoute adminOnly><AdminChildPanelPage /></ProtectedRoute>} />
+          <Route path="admin/nexspace" element={<ProtectedRoute adminOnly><AdminNexSpacePage /></ProtectedRoute>} />
           <Route path="admin/withdraw" element={<ProtectedRoute adminOnly><AdminWithdrawPage /></ProtectedRoute>} />
           <Route path="admin/server" element={<ProtectedRoute adminOnly><AdminServerPage /></ProtectedRoute>} />
 

@@ -238,3 +238,14 @@ otomatis (cek tiap 5 detik, maks 15 menit) → batal/timeout/stok habis = saldo 
 ### Agen AI menunggu tautan
 `my_agents.php` menyinkronkan status VPS dulu (refund bila waktu habis), lalu TIDAK menampilkan order
 yang menunggu tautan > 10 menit. Yang masih menunggu menampilkan hitung mundur sisa waktu tautan.
+
+### NexSpace (pengganti menu VPS) — `nexspace.php`, `nexspace_config.php`
+- **Started** (512MB/1GB/2GB, non-root): saldo dipotong atomik → akun Linux dibuat di VPS lewat tunnel wa-origin
+  (`vps-nexspace/`) → login `<username>@185.205.222.202 -p 10892` dengan password dari user. Gagal = saldo kembali.
+- **Pro** (1–32GB, root, boleh dijual lagi): saldo dipotong → kode unik `NXP-XXXX-XXXX` dikirim ke email user, admin
+  dikabari → user memasukkan kode di `/nexspace/portal` → halaman tunggu (status dari DB, tetap walau refresh/tutup)
+  → admin mengisi data login di **Admin → NexSpace Pro Request** (`/admin/nexspace`) → data tampil otomatis di portal
+  + email pemberitahuan (password tidak dikirim lewat email). Ditolak = saldo kembali.
+- Banner di bawah header semua halaman selama pesanan Pro belum diambil (pintu masuk ke portal).
+- Password Pro disimpan terenkripsi AES-256-GCM; kunci `nexspace_secret.php` dibuat otomatis di server (jangan
+  dihapus, tidak di-commit). Harga Started di `nexspace_config.php` masih usulan — ubah sesuai keinginan.
