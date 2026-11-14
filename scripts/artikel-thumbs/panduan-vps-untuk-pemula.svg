@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<rect width="1200" height="630" fill="#f3efe7"/>
+<rect x="0" y="540" width="1200" height="90" fill="#e3d8c6"/>
+<rect x="190" y="70" width="380" height="470" rx="10" fill="#1d2b36"/>
+<g><rect x="220" y="110" width="320" height="110" rx="6" fill="#ffffff"/><rect x="220" y="245" width="320" height="110" rx="6" fill="#ffffff"/><rect x="220" y="380" width="320" height="110" rx="6" fill="#ffffff"/></g>
+<g fill="#0f6e7e"><circle cx="252" cy="165" r="12"/><circle cx="252" cy="300" r="12"/></g><circle cx="252" cy="435" r="12" fill="#d9733a"/>
+<g fill="#e3d8c6"><rect x="282" y="150" width="140" height="12" rx="4"/><rect x="282" y="172" width="100" height="12" rx="4"/><rect x="282" y="285" width="160" height="12" rx="4"/><rect x="282" y="307" width="90" height="12" rx="4"/><rect x="282" y="420" width="120" height="12" rx="4"/><rect x="282" y="442" width="150" height="12" rx="4"/></g>
+<g stroke="#1d2b36" stroke-width="5" stroke-linecap="round"><path d="M480 150v30M496 150v30M512 150v30"/><path d="M480 285v30M496 285v30M512 285v30"/><path d="M480 420v30M496 420v30M512 420v30"/></g>
+<rect x="650" y="150" width="400" height="290" rx="12" fill="#1d2b36"/>
+<path d="M650 162a12 12 0 0 1 12-12h376a12 12 0 0 1 12 12v30H650z" fill="#2c3d4a"/>
+<g fill="#d9733a"><circle cx="676" cy="171" r="7"/></g><g fill="#e3d8c6"><circle cx="700" cy="171" r="7"/><circle cx="724" cy="171" r="7"/></g>
+<g font-family="Menlo, Consolas, monospace" font-size="22" fill="#f3efe7"><text x="680" y="238">$ apt update</text><text x="680" y="276">$ ufw allow 22</text><text x="680" y="314" fill="#7fc3cf">✓ firewall aktif</text><text x="680" y="352">$ ssh-keygen</text></g>
+<rect x="680" y="372" width="16" height="26" fill="#d9733a"/>
+</svg>

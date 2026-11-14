@@ -1,331 +1,355 @@
 {
-  "_info": "Sumber tunggal konten SEO: dipakai halaman React (Seo + teks halaman), scripts/gen-sitemap.mjs (sitemap.xml) dan plugin prerender di vite.config.ts (HTML statis per URL). Ubah 'updated' (YYYY-MM-DD) HANYA bila isi halaman benar-benar berubah — dipakai sebagai <lastmod>.",
-  "static": [
+ "_info": "Sumber tunggal konten SEO: dipakai halaman React (Seo + teks halaman), scripts/gen-sitemap.mjs (sitemap.xml) dan plugin prerender di vite.config.ts (HTML statis per URL). Ubah 'updated' (YYYY-MM-DD) HANYA bila isi halaman benar-benar berubah — dipakai sebagai <lastmod>.",
+ "static": [
+  {
+   "path": "/",
+   "updated": "2026-11-14",
+   "title": "Boosteryuk — SMM Panel Indonesia & Jasa Booster Media Sosial",
+   "description": "Boosteryuk adalah SMM Panel Indonesia untuk layanan followers, likes, views, dan engagement TikTok, Instagram, YouTube, serta platform lainnya. Nikmati pemesanan online, harga transparan, dan dukungan pelanggan."
+  },
+  {
+   "path": "/layanan",
+   "updated": "2026-11-14",
+   "title": "SMM Panel Indonesia – Panel Social Media Marketing",
+   "description": "SMM Panel Indonesia untuk followers, likes, views, dan engagement TikTok, Instagram, YouTube, Telegram, hingga Shopee. Harga per 1.000 tampil sebelum memesan, dibayar dari saldo akun.",
+   "h1": "Boosteryuk, SMM Panel Indonesia untuk Berbagai Kebutuhan Media Sosial",
+   "intro": [
+    "SMM panel adalah situs tempat kamu memesan layanan social media marketing secara mandiri: pilih layanan, masukkan link atau username, tentukan jumlah, lalu bayar dari saldo akun. Pesanan diteruskan otomatis ke sistem penyedia dan statusnya bisa dipantau sendiri.",
+    "Di Boosteryuk, layanan dikelompokkan per platform: TikTok, Instagram, YouTube, Threads, Telegram, WhatsApp, Shopee, Tokopedia, dan lainnya. Harga ditulis per 1.000 dan total biaya dihitung otomatis sebelum pesanan dibuat. Saldo diisi lewat QRIS, virtual account bank, atau gerai ritel, lalu dipotong setiap kali kamu memesan.",
+    "Selain layanan SMM, Boosteryuk menyediakan Sewa Agen AI untuk membalas pelanggan WhatsApp otomatis, paket Plus dengan harga layanan lebih murah, dan paket EXTRA untuk membuka child panel sendiri."
+   ],
+   "faq": [
     {
-      "path": "/",
-      "updated": "2026-11-13",
-      "title": "Boosteryuk — Booster Media Sosial Terpercaya",
-      "description": "Boosteryuk adalah panel SMM untuk menambah followers, likes, views, dan engagement TikTok, Instagram, YouTube, Shopee, dan platform lain dengan saldo deposit."
+     "q": "Apa itu SMM panel?",
+     "a": "SMM panel adalah situs untuk memesan layanan pemasaran media sosial seperti followers, likes, dan views secara mandiri dengan sistem saldo. Pesanan diproses otomatis dan statusnya bisa dicek sendiri."
     },
     {
-      "path": "/layanan",
-      "updated": "2026-11-13",
-      "title": "Daftar Layanan SMM",
-      "description": "Pilih platform lalu layanan SMM yang kamu butuhkan: followers, likes, views, subscribers, hingga engagement marketplace. Semua pesanan dibayar dari saldo akun.",
-      "h1": "Daftar Layanan SMM Boosteryuk",
-      "intro": [
-        "Halaman ini mengumpulkan seluruh layanan social media marketing (SMM) Boosteryuk per platform. Pilih platform seperti TikTok, Instagram, YouTube, Telegram, WhatsApp, Shopee, atau Tokopedia untuk melihat layanan yang sedang aktif, perkiraan waktu mulai, minimal–maksimal pesanan, dan harga per 1.000.",
-        "Daftar layanan diperbarui otomatis dari penyedia, jadi layanan yang sedang gangguan tidak ditampilkan. Setelah memilih layanan, cukup masukkan link atau username target dan jumlah pesanan; saldo akun akan terpotong saat pesanan dibuat dan statusnya bisa dipantau di Riwayat Pesanan."
-      ]
+     "q": "Bagaimana cara memesan di Boosteryuk?",
+     "a": "Daftar dan isi saldo lewat menu Deposit, pilih kategori dan layanan, masukkan link atau username target serta jumlah, lalu klik Pesan. Saldo terpotong sesuai total harga yang tampil."
     },
     {
-      "path": "/cek-status",
-      "updated": "2026-11-13",
-      "title": "Cek Status Pesanan",
-      "description": "Lacak progres pesanan Boosteryuk dengan memasukkan ID pesanan: lihat apakah pesanan masih pending, sedang diproses, selesai, atau dibatalkan.",
-      "h1": "Cek Status Pesanan Boosteryuk",
-      "intro": [
-        "Masukkan ID pesanan yang kamu dapat setelah order untuk melihat status terbaru langsung dari penyedia layanan: pending, diproses, sebagian (partial), selesai, atau dibatalkan.",
-        "Jika pesanan dibatalkan atau hanya terkirim sebagian, sisa saldo mengikuti ketentuan pengembalian di halaman Syarat & Ketentuan. Pertanyaan lebih lanjut bisa disampaikan lewat halaman Support."
-      ]
+     "q": "Bagaimana harga dihitung?",
+     "a": "Harga tertulis per 1.000. Total = jumlah pesanan dibagi 1.000 dikali harga per 1.000, dan selalu ditampilkan sebelum kamu memesan. Member Plus mendapat harga per 1.000 yang lebih murah."
     },
     {
-      "path": "/plus",
-      "updated": "2026-11-13",
-      "title": "Upgrade: Boosteryuk Plus & EXTRA",
-      "description": "Upgrade akun Boosteryuk: Plus untuk harga reseller selamanya dengan sekali bayar, atau EXTRA bulanan dengan child panel website sendiri dan dukungan penuh.",
-      "h1": "Upgrade Akun Boosteryuk",
-      "intro": [
-        "Boosteryuk Plus adalah paket sekali bayar untuk mendapatkan harga reseller selamanya dan badge profil khusus reseller. Cocok untuk kamu yang rutin order layanan SMM.",
-        "Boosteryuk EXTRA adalah langganan bulanan yang mencakup semua benefit Plus, ditambah child panel: website panel sendiri di subdomain boosteryuk.com dengan markup harga, pencatatan pendapatan, dan dukungan penuh."
-      ]
+     "q": "Apakah perlu memberikan password akun?",
+     "a": "Tidak. Cukup link postingan atau username yang bersifat publik. Jangan pernah memberikan password akunmu kepada siapa pun."
     },
     {
-      "path": "/about",
-      "updated": "2026-11-13",
-      "title": "Tentang Boosteryuk",
-      "description": "Kenali Boosteryuk: panel SMM asal Indonesia yang menyediakan layanan booster media sosial, sewa Agen AI WhatsApp, dan alat bantu konten dalam satu dashboard.",
-      "h1": "Tentang Boosteryuk",
-      "intro": [
-        "Boosteryuk adalah panel SMM Indonesia yang membantu kreator, UMKM, dan reseller mengelola pertumbuhan akun media sosial. Selain layanan booster, Boosteryuk menyediakan sewa Agen AI WhatsApp untuk auto-reply toko serta Playground berisi alat bantu konten.",
-        "Semua transaksi memakai sistem saldo: deposit sekali, lalu gunakan untuk berbagai layanan dengan riwayat pesanan yang tercatat rapi di akun."
-      ]
-    },
-    {
-      "path": "/terms",
-      "updated": "2026-11-13",
-      "title": "Syarat & Ketentuan",
-      "description": "Syarat dan ketentuan penggunaan Boosteryuk: aturan akun, deposit saldo, pembatalan, pengembalian saldo, dan larangan penggunaan layanan untuk aktivitas merugikan.",
-      "h1": "Syarat & Ketentuan Boosteryuk"
-    },
-    {
-      "path": "/privacy",
-      "updated": "2026-11-13",
-      "title": "Kebijakan Privasi",
-      "description": "Kebijakan privasi Boosteryuk: data apa yang dikumpulkan saat kamu mendaftar dan memesan, bagaimana data tersebut dipakai, dan cara meminta penghapusan data.",
-      "h1": "Kebijakan Privasi Boosteryuk"
-    },
-    {
-      "path": "/support",
-      "updated": "2026-11-13",
-      "title": "Bantuan & Support",
-      "description": "Butuh bantuan soal deposit, pesanan yang belum masuk, atau akun? Hubungi tim support Boosteryuk dan temukan jawaban atas kendala yang paling sering ditanyakan.",
-      "h1": "Bantuan & Support Boosteryuk"
+     "q": "Bagaimana jika pesanan gagal atau dibatalkan?",
+     "a": "Pesanan yang dibatalkan penyedia atau hanya terpenuhi sebagian dikembalikan sebagai saldo akun. Status setiap pesanan bisa dilihat di Riwayat Pesanan atau halaman Cek Status."
     }
-  ],
-  "categories": {
-    "tiktok": {
-      "updated": "2026-11-13",
-      "title": "Layanan TikTok: Followers, Likes & Views",
-      "description": "Tambah followers, likes, views, share, dan komentar TikTok untuk akun kreator atau toko. Pilih layanan, tempel link video atau username, lalu pantau statusnya.",
-      "intro": [
-        "Layanan TikTok di Boosteryuk mencakup followers untuk akun, serta likes, views, share, dan save untuk video tertentu. Layanan views cocok untuk membantu video baru mendapat dorongan awal, sedangkan followers membantu akun kreator atau TikTok Shop terlihat lebih kredibel.",
-        "Untuk layanan berbasis video, gunakan link video lengkap; untuk followers, gunakan username atau link profil. Pastikan akun tidak dikunci (private) selama pesanan berjalan agar layanan bisa terkirim."
-      ],
-      "faq": [
-        {
-          "q": "Apakah akun TikTok harus publik?",
-          "a": "Ya. Selama pesanan berjalan akun dan video harus bisa dilihat publik, jika tidak pesanan bisa tertahan atau gagal."
-        },
-        {
-          "q": "Link apa yang dimasukkan untuk likes dan views?",
-          "a": "Link video TikTok lengkap, misalnya dari tombol Bagikan → Salin tautan. Untuk followers cukup username atau link profil."
-        },
-        {
-          "q": "Bisakah satu video diorder lebih dari sekali?",
-          "a": "Bisa, tetapi tunggu pesanan sebelumnya selesai agar penghitungan jumlah awal tidak bertabrakan."
-        }
-      ]
-    },
-    "instagram": {
-      "updated": "2026-11-13",
-      "title": "Layanan Instagram: Followers, Likes & Reels Views",
-      "description": "Layanan Instagram untuk followers, likes postingan, views Reels dan Story, hingga komentar. Cocok untuk online shop, personal brand, dan akun kreator.",
-      "intro": [
-        "Instagram punya banyak format konten, karena itu layanan Instagram di Boosteryuk dibagi per kebutuhan: followers untuk profil, likes untuk foto atau carousel, views untuk Reels dan Story, serta komentar bila tersedia.",
-        "Online shop biasanya memadukan followers dengan likes agar profil terlihat aktif, sementara kreator Reels lebih sering memakai views. Gunakan link postingan untuk layanan konten dan username untuk followers."
-      ],
-      "faq": [
-        {
-          "q": "Apakah perlu memberikan password Instagram?",
-          "a": "Tidak. Boosteryuk hanya membutuhkan username atau link postingan; jangan pernah membagikan password akun."
-        },
-        {
-          "q": "Apa beda likes postingan dan views Reels?",
-          "a": "Likes menambah jumlah suka di foto, carousel, atau Reels; views menambah jumlah tayangan khusus untuk video Reels atau Story."
-        },
-        {
-          "q": "Kenapa pesanan Instagram belum mulai?",
-          "a": "Cek kembali apakah akun dalam mode privat atau link salah. Waktu mulai tiap layanan tercantum di deskripsi layanan."
-        }
-      ]
-    },
-    "youtube": {
-      "updated": "2026-11-13",
-      "title": "Layanan YouTube: Subscribers, Views & Likes",
-      "description": "Dukung channel YouTube dengan layanan subscribers, views video dan Shorts, serta likes. Masukkan link video atau channel untuk mulai memesan.",
-      "intro": [
-        "Layanan YouTube Boosteryuk dibuat untuk pemilik channel yang ingin mempercepat pertumbuhan: subscribers untuk channel, views untuk video panjang maupun Shorts, likes, dan komentar bila tersedia.",
-        "Untuk subscribers gunakan link channel, sedangkan untuk views dan likes gunakan link video. Perhatikan deskripsi tiap layanan karena kecepatan dan sumber penayangan YouTube bisa berbeda antar layanan."
-      ],
-      "faq": [
-        {
-          "q": "Apakah views Shorts dan video biasa sama?",
-          "a": "Tidak selalu. Pilih layanan yang menyebut Shorts untuk konten Shorts, dan layanan views biasa untuk video panjang."
-        },
-        {
-          "q": "Link channel seperti apa yang dipakai?",
-          "a": "Gunakan link channel lengkap (youtube.com/@namachannel atau /channel/ID) untuk layanan subscribers."
-        },
-        {
-          "q": "Apakah video boleh diubah ke privat saat pesanan berjalan?",
-          "a": "Jangan. Video atau channel harus tetap publik hingga pesanan selesai."
-        }
-      ]
-    },
-    "threads": {
-      "updated": "2026-11-13",
-      "title": "Layanan Threads: Followers & Likes",
-      "description": "Kembangkan akun Threads dengan layanan followers, likes, dan repost. Cocok untuk kreator yang sedang membangun audiens baru di platform milik Meta ini.",
-      "intro": [
-        "Threads adalah platform percakapan teks milik Meta yang terhubung dengan akun Instagram. Layanan Threads di Boosteryuk membantu akun baru mendapat followers awal serta interaksi berupa likes dan repost pada utas tertentu.",
-        "Gunakan username Threads untuk followers dan link utas untuk likes atau repost. Karena terhubung dengan Instagram, pastikan profil Threads kamu tidak diatur privat."
-      ],
-      "faq": [
-        {
-          "q": "Apakah followers Threads ikut menambah followers Instagram?",
-          "a": "Tidak. Followers Threads dan Instagram dihitung terpisah walaupun akunnya terhubung."
-        },
-        {
-          "q": "Di mana mendapatkan link utas Threads?",
-          "a": "Buka utas, ketuk ikon bagikan, lalu pilih salin tautan."
-        },
-        {
-          "q": "Apakah akun harus publik?",
-          "a": "Ya, profil Threads harus publik agar layanan dapat terkirim."
-        }
-      ]
-    },
-    "telegram": {
-      "updated": "2026-11-13",
-      "title": "Layanan Telegram: Members & Post Views",
-      "description": "Tambah member channel atau grup Telegram, views postingan, dan reaksi. Ideal untuk channel info, komunitas, dan toko yang berjualan lewat Telegram.",
-      "intro": [
-        "Layanan Telegram Boosteryuk berfokus pada channel dan grup publik: penambahan member atau subscriber, views untuk postingan channel, dan reaksi emoji bila layanannya tersedia.",
-        "Gunakan link publik channel atau grup (t.me/namachannel) untuk member, dan link postingan untuk views atau reaksi. Channel privat dengan link undangan biasanya tidak didukung, jadi cek deskripsi layanan terlebih dahulu."
-      ],
-      "faq": [
-        {
-          "q": "Apakah bisa untuk grup privat?",
-          "a": "Sebagian besar layanan membutuhkan channel atau grup publik. Lihat deskripsi layanan untuk memastikan."
-        },
-        {
-          "q": "Bagaimana format link postingan Telegram?",
-          "a": "Formatnya t.me/namachannel/nomor-postingan, bisa didapat dari menu salin tautan postingan."
-        },
-        {
-          "q": "Apakah views postingan bertambah untuk postingan lama?",
-          "a": "Bisa, selama postingan masih ada dan channel tetap publik."
-        }
-      ]
-    },
-    "whatsapp": {
-      "updated": "2026-11-13",
-      "title": "Layanan WhatsApp: Followers Saluran & Reaksi",
-      "description": "Layanan WhatsApp Channel (Saluran) untuk menambah followers dan reaksi emoji pada pembaruan. Cocok untuk brand dan toko yang memakai Saluran WhatsApp.",
-      "intro": [
-        "WhatsApp Channel atau Saluran adalah fitur siaran satu arah di WhatsApp. Layanan WhatsApp Boosteryuk membantu saluran baru mendapatkan followers dan reaksi emoji pada pembaruan sehingga saluran terlihat aktif.",
-        "Masukkan link saluran (whatsapp.com/channel/...) untuk followers, atau link pembaruan untuk reaksi. Selain layanan ini, Boosteryuk juga menyediakan sewa Agen AI WhatsApp untuk auto-reply toko."
-      ],
-      "faq": [
-        {
-          "q": "Apakah layanan ini untuk grup WhatsApp?",
-          "a": "Tidak, layanan ini khusus WhatsApp Channel (Saluran), bukan grup atau nomor pribadi."
-        },
-        {
-          "q": "Di mana menemukan link saluran?",
-          "a": "Buka Saluran → info saluran → Bagikan → salin tautan."
-        },
-        {
-          "q": "Bisa pilih emoji reaksi tertentu?",
-          "a": "Bisa, setiap layanan reaksi mencantumkan emoji yang dikirim pada nama layanannya."
-        }
-      ]
-    },
-    "snackvideo": {
-      "updated": "2026-11-13",
-      "title": "Layanan SnackVideo: Followers, Likes & Views",
-      "description": "Layanan SnackVideo untuk followers, likes, dan views video pendek. Bantu konten SnackVideo kamu lebih cepat terlihat di beranda pengguna lain.",
-      "intro": [
-        "SnackVideo adalah aplikasi video pendek yang populer di Indonesia. Layanan SnackVideo Boosteryuk menyediakan followers untuk akun, serta likes dan views untuk video tertentu.",
-        "Salin link video dari tombol bagikan di aplikasi SnackVideo untuk layanan likes dan views. Untuk followers gunakan link profil atau ID akun sesuai petunjuk di deskripsi layanan."
-      ],
-      "faq": [
-        {
-          "q": "Format link apa yang dipakai?",
-          "a": "Gunakan link dari tombol Bagikan di aplikasi SnackVideo, baik untuk video maupun profil."
-        },
-        {
-          "q": "Berapa lama pesanan mulai?",
-          "a": "Perkiraan waktu mulai tercantum di detail tiap layanan dan bisa berbeda antar layanan."
-        },
-        {
-          "q": "Apakah akun harus publik?",
-          "a": "Ya, akun dan video harus bisa diakses publik."
-        }
-      ]
-    },
-    "shopee": {
-      "updated": "2026-11-13",
-      "title": "Layanan Shopee: Followers Toko & Likes Produk",
-      "description": "Layanan Shopee untuk followers toko dan likes produk agar toko terlihat lebih dipercaya calon pembeli. Cocok untuk seller baru yang ingin membangun reputasi.",
-      "intro": [
-        "Bagi seller Shopee, jumlah pengikut toko dan suka pada produk ikut membentuk kesan pertama calon pembeli. Layanan Shopee Boosteryuk membantu toko baru menambah followers toko serta likes pada produk tertentu.",
-        "Gunakan link toko untuk followers dan link produk untuk likes. Layanan ini mendukung tampilan toko; kualitas produk, foto, dan ulasan pembeli tetap menjadi faktor utama penjualan."
-      ],
-      "faq": [
-        {
-          "q": "Layanan Shopee apa saja yang tersedia?",
-          "a": "Jenis layanan mengikuti stok penyedia dan ditampilkan langsung di halaman ini lengkap dengan harga, minimal, dan maksimal pesanan."
-        },
-        {
-          "q": "Link apa yang dimasukkan?",
-          "a": "Link toko (shopee.co.id/namatoko) untuk followers, dan link halaman produk untuk likes."
-        },
-        {
-          "q": "Apakah aman untuk toko?",
-          "a": "Layanan hanya menambah followers atau likes tanpa akses ke akun seller. Ikuti aturan platform dalam mengelola toko."
-        }
-      ]
-    },
-    "tokopedia": {
-      "updated": "2026-11-13",
-      "title": "Layanan Tokopedia: Followers Toko & Favorit Produk",
-      "description": "Layanan Tokopedia untuk followers toko dan interaksi produk seperti favorit. Bantu toko online di Tokopedia tampil lebih meyakinkan di mata calon pembeli.",
-      "intro": [
-        "Layanan Tokopedia di Boosteryuk ditujukan untuk seller yang ingin memperkuat tampilan toko, misalnya followers toko atau favorit pada produk, sesuai layanan yang sedang tersedia.",
-        "Masukkan link toko atau link produk sesuai petunjuk layanan. Layanan ini melengkapi upaya utama seperti deskripsi produk yang jelas, harga bersaing, dan pelayanan yang cepat."
-      ],
-      "faq": [
-        {
-          "q": "Apakah perlu login ke akun seller?",
-          "a": "Tidak. Cukup link toko atau link produk, tanpa password."
-        },
-        {
-          "q": "Layanan mana yang cocok untuk toko baru?",
-          "a": "Followers toko biasanya dipakai lebih dulu agar profil toko terlihat aktif; cek daftar di halaman ini untuk layanan yang tersedia saat ini."
-        },
-        {
-          "q": "Berapa minimal pesanan?",
-          "a": "Minimal dan maksimal pesanan tercantum di detail setiap layanan Tokopedia."
-        }
-      ]
-    },
-    "linkedin": {
-      "updated": "2026-11-13",
-      "title": "Layanan LinkedIn: Followers & Engagement",
-      "description": "Layanan LinkedIn untuk followers profil atau company page dan interaksi postingan, sesuai layanan yang tersedia. Cocok untuk personal branding dan halaman perusahaan.",
-      "intro": [
-        "LinkedIn adalah jejaring profesional, sehingga layanan LinkedIn Boosteryuk berfokus pada personal branding dan halaman perusahaan: followers untuk profil maupun company page, serta reaksi untuk postingan.",
-        "Gunakan link profil (linkedin.com/in/...) atau link halaman perusahaan (linkedin.com/company/...) sesuai layanan yang dipilih, dan link postingan untuk reaksi."
-      ],
-      "faq": [
-        {
-          "q": "Apa beda followers profil dan company page?",
-          "a": "Followers profil menambah pengikut akun pribadi, sedangkan company page menambah pengikut halaman perusahaan. Pilih layanan sesuai jenis link."
-        },
-        {
-          "q": "Apakah koneksi (connections) ikut bertambah?",
-          "a": "Tidak. Layanan menambah followers, bukan permintaan koneksi."
-        },
-        {
-          "q": "Postingan seperti apa yang bisa diberi reaksi?",
-          "a": "Postingan publik dari profil atau company page, menggunakan link postingan."
-        }
-      ]
-    },
-    "roblox": {
-      "updated": "2026-11-13",
-      "title": "Layanan Roblox",
-      "description": "Layanan Roblox di Boosteryuk untuk kebutuhan pemain dan kreator game, misalnya followers profil atau interaksi pada game buatanmu, sesuai layanan yang tersedia.",
-      "intro": [
-        "Kreator game di Roblox membutuhkan visits dan favorit agar game lebih mudah ditemukan pemain lain. Layanan Roblox Boosteryuk menyediakan layanan untuk profil pemain maupun game buatan sendiri, sesuai yang tersedia di daftar layanan.",
-        "Gunakan link profil Roblox untuk layanan profil dan link halaman game untuk visits atau favorit. Detail target yang dibutuhkan tercantum di deskripsi masing-masing layanan."
-      ],
-      "faq": [
-        {
-          "q": "Apakah Boosteryuk menjual Robux?",
-          "a": "Tidak. Layanan Roblox di Boosteryuk adalah layanan engagement untuk profil atau game, bukan penjualan mata uang game."
-        },
-        {
-          "q": "Link game seperti apa yang dipakai?",
-          "a": "Link halaman game (roblox.com/games/ID/nama-game)."
-        },
-        {
-          "q": "Apakah perlu password akun Roblox?",
-          "a": "Tidak, cukup link profil atau link game."
-        }
-      ]
-    }
+   ],
+   "fullTitle": "SMM Panel Indonesia – Panel Social Media Marketing | Boosteryuk"
+  },
+  {
+   "path": "/cek-status",
+   "updated": "2026-11-13",
+   "title": "Cek Status Pesanan",
+   "description": "Lacak progres pesanan Boosteryuk dengan memasukkan ID pesanan: lihat apakah pesanan masih pending, sedang diproses, selesai, atau dibatalkan.",
+   "h1": "Cek Status Pesanan Boosteryuk",
+   "intro": [
+    "Masukkan ID pesanan yang kamu dapat setelah order untuk melihat status terbaru langsung dari penyedia layanan: pending, diproses, sebagian (partial), selesai, atau dibatalkan.",
+    "Jika pesanan dibatalkan atau hanya terkirim sebagian, sisa saldo mengikuti ketentuan pengembalian di halaman Syarat & Ketentuan. Pertanyaan lebih lanjut bisa disampaikan lewat halaman Support."
+   ]
+  },
+  {
+   "path": "/plus",
+   "updated": "2026-11-13",
+   "title": "Upgrade: Boosteryuk Plus & EXTRA",
+   "description": "Upgrade akun Boosteryuk: Plus untuk harga reseller selamanya dengan sekali bayar, atau EXTRA bulanan dengan child panel website sendiri dan dukungan penuh.",
+   "h1": "Upgrade Akun Boosteryuk",
+   "intro": [
+    "Boosteryuk Plus adalah paket sekali bayar untuk mendapatkan harga reseller selamanya dan badge profil khusus reseller. Cocok untuk kamu yang rutin order layanan SMM.",
+    "Boosteryuk EXTRA adalah langganan bulanan yang mencakup semua benefit Plus, ditambah child panel: website panel sendiri di subdomain boosteryuk.com dengan markup harga, pencatatan pendapatan, dan dukungan penuh."
+   ]
+  },
+  {
+   "path": "/about",
+   "updated": "2026-11-13",
+   "title": "Tentang Boosteryuk",
+   "description": "Kenali Boosteryuk: panel SMM asal Indonesia yang menyediakan layanan booster media sosial, sewa Agen AI WhatsApp, dan alat bantu konten dalam satu dashboard.",
+   "h1": "Tentang Boosteryuk",
+   "intro": [
+    "Boosteryuk adalah panel SMM Indonesia yang membantu kreator, UMKM, dan reseller mengelola pertumbuhan akun media sosial. Selain layanan booster, Boosteryuk menyediakan sewa Agen AI WhatsApp untuk auto-reply toko serta Playground berisi alat bantu konten.",
+    "Semua transaksi memakai sistem saldo: deposit sekali, lalu gunakan untuk berbagai layanan dengan riwayat pesanan yang tercatat rapi di akun."
+   ]
+  },
+  {
+   "path": "/terms",
+   "updated": "2026-11-13",
+   "title": "Syarat & Ketentuan",
+   "description": "Syarat dan ketentuan penggunaan Boosteryuk: aturan akun, deposit saldo, pembatalan, pengembalian saldo, dan larangan penggunaan layanan untuk aktivitas merugikan.",
+   "h1": "Syarat & Ketentuan Boosteryuk"
+  },
+  {
+   "path": "/privacy",
+   "updated": "2026-11-13",
+   "title": "Kebijakan Privasi",
+   "description": "Kebijakan privasi Boosteryuk: data apa yang dikumpulkan saat kamu mendaftar dan memesan, bagaimana data tersebut dipakai, dan cara meminta penghapusan data.",
+   "h1": "Kebijakan Privasi Boosteryuk"
+  },
+  {
+   "path": "/support",
+   "updated": "2026-11-13",
+   "title": "Bantuan & Support",
+   "description": "Butuh bantuan soal deposit, pesanan yang belum masuk, atau akun? Hubungi tim support Boosteryuk dan temukan jawaban atas kendala yang paling sering ditanyakan.",
+   "h1": "Bantuan & Support Boosteryuk"
   }
+ ],
+ "categories": {
+  "tiktok": {
+   "updated": "2026-11-13",
+   "title": "Layanan TikTok: Followers, Likes & Views",
+   "description": "Tambah followers, likes, views, share, dan komentar TikTok untuk akun kreator atau toko. Pilih layanan, tempel link video atau username, lalu pantau statusnya.",
+   "intro": [
+    "Layanan TikTok di Boosteryuk mencakup followers untuk akun, serta likes, views, share, dan save untuk video tertentu. Layanan views cocok untuk membantu video baru mendapat dorongan awal, sedangkan followers membantu akun kreator atau TikTok Shop terlihat lebih kredibel.",
+    "Untuk layanan berbasis video, gunakan link video lengkap; untuk followers, gunakan username atau link profil. Pastikan akun tidak dikunci (private) selama pesanan berjalan agar layanan bisa terkirim."
+   ],
+   "faq": [
+    {
+     "q": "Apakah akun TikTok harus publik?",
+     "a": "Ya. Selama pesanan berjalan akun dan video harus bisa dilihat publik, jika tidak pesanan bisa tertahan atau gagal."
+    },
+    {
+     "q": "Link apa yang dimasukkan untuk likes dan views?",
+     "a": "Link video TikTok lengkap, misalnya dari tombol Bagikan → Salin tautan. Untuk followers cukup username atau link profil."
+    },
+    {
+     "q": "Bisakah satu video diorder lebih dari sekali?",
+     "a": "Bisa, tetapi tunggu pesanan sebelumnya selesai agar penghitungan jumlah awal tidak bertabrakan."
+    }
+   ]
+  },
+  "instagram": {
+   "updated": "2026-11-13",
+   "title": "Layanan Instagram: Followers, Likes & Reels Views",
+   "description": "Layanan Instagram untuk followers, likes postingan, views Reels dan Story, hingga komentar. Cocok untuk online shop, personal brand, dan akun kreator.",
+   "intro": [
+    "Instagram punya banyak format konten, karena itu layanan Instagram di Boosteryuk dibagi per kebutuhan: followers untuk profil, likes untuk foto atau carousel, views untuk Reels dan Story, serta komentar bila tersedia.",
+    "Online shop biasanya memadukan followers dengan likes agar profil terlihat aktif, sementara kreator Reels lebih sering memakai views. Gunakan link postingan untuk layanan konten dan username untuk followers."
+   ],
+   "faq": [
+    {
+     "q": "Apakah perlu memberikan password Instagram?",
+     "a": "Tidak. Boosteryuk hanya membutuhkan username atau link postingan; jangan pernah membagikan password akun."
+    },
+    {
+     "q": "Apa beda likes postingan dan views Reels?",
+     "a": "Likes menambah jumlah suka di foto, carousel, atau Reels; views menambah jumlah tayangan khusus untuk video Reels atau Story."
+    },
+    {
+     "q": "Kenapa pesanan Instagram belum mulai?",
+     "a": "Cek kembali apakah akun dalam mode privat atau link salah. Waktu mulai tiap layanan tercantum di deskripsi layanan."
+    }
+   ]
+  },
+  "youtube": {
+   "updated": "2026-11-13",
+   "title": "Layanan YouTube: Subscribers, Views & Likes",
+   "description": "Dukung channel YouTube dengan layanan subscribers, views video dan Shorts, serta likes. Masukkan link video atau channel untuk mulai memesan.",
+   "intro": [
+    "Layanan YouTube Boosteryuk dibuat untuk pemilik channel yang ingin mempercepat pertumbuhan: subscribers untuk channel, views untuk video panjang maupun Shorts, likes, dan komentar bila tersedia.",
+    "Untuk subscribers gunakan link channel, sedangkan untuk views dan likes gunakan link video. Perhatikan deskripsi tiap layanan karena kecepatan dan sumber penayangan YouTube bisa berbeda antar layanan."
+   ],
+   "faq": [
+    {
+     "q": "Apakah views Shorts dan video biasa sama?",
+     "a": "Tidak selalu. Pilih layanan yang menyebut Shorts untuk konten Shorts, dan layanan views biasa untuk video panjang."
+    },
+    {
+     "q": "Link channel seperti apa yang dipakai?",
+     "a": "Gunakan link channel lengkap (youtube.com/@namachannel atau /channel/ID) untuk layanan subscribers."
+    },
+    {
+     "q": "Apakah video boleh diubah ke privat saat pesanan berjalan?",
+     "a": "Jangan. Video atau channel harus tetap publik hingga pesanan selesai."
+    }
+   ]
+  },
+  "threads": {
+   "updated": "2026-11-13",
+   "title": "Layanan Threads: Followers & Likes",
+   "description": "Kembangkan akun Threads dengan layanan followers, likes, dan repost. Cocok untuk kreator yang sedang membangun audiens baru di platform milik Meta ini.",
+   "intro": [
+    "Threads adalah platform percakapan teks milik Meta yang terhubung dengan akun Instagram. Layanan Threads di Boosteryuk membantu akun baru mendapat followers awal serta interaksi berupa likes dan repost pada utas tertentu.",
+    "Gunakan username Threads untuk followers dan link utas untuk likes atau repost. Karena terhubung dengan Instagram, pastikan profil Threads kamu tidak diatur privat."
+   ],
+   "faq": [
+    {
+     "q": "Apakah followers Threads ikut menambah followers Instagram?",
+     "a": "Tidak. Followers Threads dan Instagram dihitung terpisah walaupun akunnya terhubung."
+    },
+    {
+     "q": "Di mana mendapatkan link utas Threads?",
+     "a": "Buka utas, ketuk ikon bagikan, lalu pilih salin tautan."
+    },
+    {
+     "q": "Apakah akun harus publik?",
+     "a": "Ya, profil Threads harus publik agar layanan dapat terkirim."
+    }
+   ]
+  },
+  "telegram": {
+   "updated": "2026-11-13",
+   "title": "Layanan Telegram: Members & Post Views",
+   "description": "Tambah member channel atau grup Telegram, views postingan, dan reaksi. Ideal untuk channel info, komunitas, dan toko yang berjualan lewat Telegram.",
+   "intro": [
+    "Layanan Telegram Boosteryuk berfokus pada channel dan grup publik: penambahan member atau subscriber, views untuk postingan channel, dan reaksi emoji bila layanannya tersedia.",
+    "Gunakan link publik channel atau grup (t.me/namachannel) untuk member, dan link postingan untuk views atau reaksi. Channel privat dengan link undangan biasanya tidak didukung, jadi cek deskripsi layanan terlebih dahulu."
+   ],
+   "faq": [
+    {
+     "q": "Apakah bisa untuk grup privat?",
+     "a": "Sebagian besar layanan membutuhkan channel atau grup publik. Lihat deskripsi layanan untuk memastikan."
+    },
+    {
+     "q": "Bagaimana format link postingan Telegram?",
+     "a": "Formatnya t.me/namachannel/nomor-postingan, bisa didapat dari menu salin tautan postingan."
+    },
+    {
+     "q": "Apakah views postingan bertambah untuk postingan lama?",
+     "a": "Bisa, selama postingan masih ada dan channel tetap publik."
+    }
+   ]
+  },
+  "whatsapp": {
+   "updated": "2026-11-13",
+   "title": "Layanan WhatsApp: Followers Saluran & Reaksi",
+   "description": "Layanan WhatsApp Channel (Saluran) untuk menambah followers dan reaksi emoji pada pembaruan. Cocok untuk brand dan toko yang memakai Saluran WhatsApp.",
+   "intro": [
+    "WhatsApp Channel atau Saluran adalah fitur siaran satu arah di WhatsApp. Layanan WhatsApp Boosteryuk membantu saluran baru mendapatkan followers dan reaksi emoji pada pembaruan sehingga saluran terlihat aktif.",
+    "Masukkan link saluran (whatsapp.com/channel/...) untuk followers, atau link pembaruan untuk reaksi. Selain layanan ini, Boosteryuk juga menyediakan sewa Agen AI WhatsApp untuk auto-reply toko."
+   ],
+   "faq": [
+    {
+     "q": "Apakah layanan ini untuk grup WhatsApp?",
+     "a": "Tidak, layanan ini khusus WhatsApp Channel (Saluran), bukan grup atau nomor pribadi."
+    },
+    {
+     "q": "Di mana menemukan link saluran?",
+     "a": "Buka Saluran → info saluran → Bagikan → salin tautan."
+    },
+    {
+     "q": "Bisa pilih emoji reaksi tertentu?",
+     "a": "Bisa, setiap layanan reaksi mencantumkan emoji yang dikirim pada nama layanannya."
+    }
+   ]
+  },
+  "snackvideo": {
+   "updated": "2026-11-13",
+   "title": "Layanan SnackVideo: Followers, Likes & Views",
+   "description": "Layanan SnackVideo untuk followers, likes, dan views video pendek. Bantu konten SnackVideo kamu lebih cepat terlihat di beranda pengguna lain.",
+   "intro": [
+    "SnackVideo adalah aplikasi video pendek yang populer di Indonesia. Layanan SnackVideo Boosteryuk menyediakan followers untuk akun, serta likes dan views untuk video tertentu.",
+    "Salin link video dari tombol bagikan di aplikasi SnackVideo untuk layanan likes dan views. Untuk followers gunakan link profil atau ID akun sesuai petunjuk di deskripsi layanan."
+   ],
+   "faq": [
+    {
+     "q": "Format link apa yang dipakai?",
+     "a": "Gunakan link dari tombol Bagikan di aplikasi SnackVideo, baik untuk video maupun profil."
+    },
+    {
+     "q": "Berapa lama pesanan mulai?",
+     "a": "Perkiraan waktu mulai tercantum di detail tiap layanan dan bisa berbeda antar layanan."
+    },
+    {
+     "q": "Apakah akun harus publik?",
+     "a": "Ya, akun dan video harus bisa diakses publik."
+    }
+   ]
+  },
+  "shopee": {
+   "updated": "2026-11-13",
+   "title": "Layanan Shopee: Followers Toko & Likes Produk",
+   "description": "Layanan Shopee untuk followers toko dan likes produk agar toko terlihat lebih dipercaya calon pembeli. Cocok untuk seller baru yang ingin membangun reputasi.",
+   "intro": [
+    "Bagi seller Shopee, jumlah pengikut toko dan suka pada produk ikut membentuk kesan pertama calon pembeli. Layanan Shopee Boosteryuk membantu toko baru menambah followers toko serta likes pada produk tertentu.",
+    "Gunakan link toko untuk followers dan link produk untuk likes. Layanan ini mendukung tampilan toko; kualitas produk, foto, dan ulasan pembeli tetap menjadi faktor utama penjualan."
+   ],
+   "faq": [
+    {
+     "q": "Layanan Shopee apa saja yang tersedia?",
+     "a": "Jenis layanan mengikuti stok penyedia dan ditampilkan langsung di halaman ini lengkap dengan harga, minimal, dan maksimal pesanan."
+    },
+    {
+     "q": "Link apa yang dimasukkan?",
+     "a": "Link toko (shopee.co.id/namatoko) untuk followers, dan link halaman produk untuk likes."
+    },
+    {
+     "q": "Apakah aman untuk toko?",
+     "a": "Layanan hanya menambah followers atau likes tanpa akses ke akun seller. Ikuti aturan platform dalam mengelola toko."
+    }
+   ]
+  },
+  "tokopedia": {
+   "updated": "2026-11-13",
+   "title": "Layanan Tokopedia: Followers Toko & Favorit Produk",
+   "description": "Layanan Tokopedia untuk followers toko dan interaksi produk seperti favorit. Bantu toko online di Tokopedia tampil lebih meyakinkan di mata calon pembeli.",
+   "intro": [
+    "Layanan Tokopedia di Boosteryuk ditujukan untuk seller yang ingin memperkuat tampilan toko, misalnya followers toko atau favorit pada produk, sesuai layanan yang sedang tersedia.",
+    "Masukkan link toko atau link produk sesuai petunjuk layanan. Layanan ini melengkapi upaya utama seperti deskripsi produk yang jelas, harga bersaing, dan pelayanan yang cepat."
+   ],
+   "faq": [
+    {
+     "q": "Apakah perlu login ke akun seller?",
+     "a": "Tidak. Cukup link toko atau link produk, tanpa password."
+    },
+    {
+     "q": "Layanan mana yang cocok untuk toko baru?",
+     "a": "Followers toko biasanya dipakai lebih dulu agar profil toko terlihat aktif; cek daftar di halaman ini untuk layanan yang tersedia saat ini."
+    },
+    {
+     "q": "Berapa minimal pesanan?",
+     "a": "Minimal dan maksimal pesanan tercantum di detail setiap layanan Tokopedia."
+    }
+   ]
+  },
+  "linkedin": {
+   "updated": "2026-11-13",
+   "title": "Layanan LinkedIn: Followers & Engagement",
+   "description": "Layanan LinkedIn untuk followers profil atau company page dan interaksi postingan, sesuai layanan yang tersedia. Cocok untuk personal branding dan halaman perusahaan.",
+   "intro": [
+    "LinkedIn adalah jejaring profesional, sehingga layanan LinkedIn Boosteryuk berfokus pada personal branding dan halaman perusahaan: followers untuk profil maupun company page, serta reaksi untuk postingan.",
+    "Gunakan link profil (linkedin.com/in/...) atau link halaman perusahaan (linkedin.com/company/...) sesuai layanan yang dipilih, dan link postingan untuk reaksi."
+   ],
+   "faq": [
+    {
+     "q": "Apa beda followers profil dan company page?",
+     "a": "Followers profil menambah pengikut akun pribadi, sedangkan company page menambah pengikut halaman perusahaan. Pilih layanan sesuai jenis link."
+    },
+    {
+     "q": "Apakah koneksi (connections) ikut bertambah?",
+     "a": "Tidak. Layanan menambah followers, bukan permintaan koneksi."
+    },
+    {
+     "q": "Postingan seperti apa yang bisa diberi reaksi?",
+     "a": "Postingan publik dari profil atau company page, menggunakan link postingan."
+    }
+   ]
+  },
+  "roblox": {
+   "updated": "2026-11-13",
+   "title": "Layanan Roblox",
+   "description": "Layanan Roblox di Boosteryuk untuk kebutuhan pemain dan kreator game, misalnya followers profil atau interaksi pada game buatanmu, sesuai layanan yang tersedia.",
+   "intro": [
+    "Kreator game di Roblox membutuhkan visits dan favorit agar game lebih mudah ditemukan pemain lain. Layanan Roblox Boosteryuk menyediakan layanan untuk profil pemain maupun game buatan sendiri, sesuai yang tersedia di daftar layanan.",
+    "Gunakan link profil Roblox untuk layanan profil dan link halaman game untuk visits atau favorit. Detail target yang dibutuhkan tercantum di deskripsi masing-masing layanan."
+   ],
+   "faq": [
+    {
+     "q": "Apakah Boosteryuk menjual Robux?",
+     "a": "Tidak. Layanan Roblox di Boosteryuk adalah layanan engagement untuk profil atau game, bukan penjualan mata uang game."
+    },
+    {
+     "q": "Link game seperti apa yang dipakai?",
+     "a": "Link halaman game (roblox.com/games/ID/nama-game)."
+    },
+    {
+     "q": "Apakah perlu password akun Roblox?",
+     "a": "Tidak, cukup link profil atau link game."
+    }
+   ]
+  }
+ }
 }

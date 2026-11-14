@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<rect width="1200" height="630" fill="#f3efe7"/>
+<g stroke="#1d2b36" stroke-width="4" fill="none" stroke-dasharray="2 12" stroke-linecap="round"><path d="M600 300 L270 430"/><path d="M600 300 L600 430"/><path d="M600 300 L930 430"/></g>
+<rect x="430" y="80" width="340" height="220" rx="12" fill="#ffffff" stroke="#1d2b36" stroke-width="4"/>
+<path d="M430 92a12 12 0 0 1 12-12h316a12 12 0 0 1 12 12v34H430z" fill="#1d2b36"/>
+<g fill="#0f6e7e"><rect x="462" y="160" width="120" height="16" rx="4"/></g><g fill="#e3d8c6"><rect x="462" y="196" width="276" height="16" rx="4"/><rect x="462" y="228" width="220" height="16" rx="4"/><rect x="462" y="260" width="250" height="16" rx="4"/></g>
+<g transform="translate(150 420)"><rect width="240" height="160" rx="10" fill="#ffffff" stroke="#1d2b36" stroke-width="4"/><path d="M0 10a10 10 0 0 1 10-10h220a10 10 0 0 1 10 10v28H0z" fill="#0f6e7e"/><rect x="24" y="64" width="110" height="14" rx="4" fill="#1d2b36"/><rect x="24" y="94" width="190" height="12" rx="4" fill="#e3d8c6"/><rect x="24" y="118" width="150" height="12" rx="4" fill="#e3d8c6"/></g>
+<g transform="translate(480 420)"><rect width="240" height="160" rx="10" fill="#ffffff" stroke="#1d2b36" stroke-width="4"/><path d="M0 10a10 10 0 0 1 10-10h220a10 10 0 0 1 10 10v28H0z" fill="#d9733a"/><rect x="24" y="64" width="110" height="14" rx="4" fill="#1d2b36"/><rect x="24" y="94" width="190" height="12" rx="4" fill="#e3d8c6"/><rect x="24" y="118" width="150" height="12" rx="4" fill="#e3d8c6"/></g>
+<g transform="translate(810 420)"><rect width="240" height="160" rx="10" fill="#ffffff" stroke="#1d2b36" stroke-width="4"/><path d="M0 10a10 10 0 0 1 10-10h220a10 10 0 0 1 10 10v28H0z" fill="#1d2b36"/><rect x="24" y="64" width="110" height="14" rx="4" fill="#1d2b36"/><rect x="24" y="94" width="190" height="12" rx="4" fill="#e3d8c6"/><rect x="24" y="118" width="150" height="12" rx="4" fill="#e3d8c6"/></g>
+<g transform="translate(1010 90)"><circle r="62" cx="62" cy="62" fill="#d9733a"/><text x="62" y="80" font-family="Georgia, serif" font-size="56" font-weight="700" fill="#ffffff" text-anchor="middle">%</text></g>
+</svg>

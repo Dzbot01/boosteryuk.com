@@ -23,6 +23,7 @@ import {
   Globe,
   Shield,
   Smartphone,
+  BookOpen,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -41,6 +42,7 @@ export type PageId =
   | 'struk'
   | 'layanan'
   | 'ordervps'
+  | 'artikel'
   | 'about'
   | 'nokos'
   | 'terms'
@@ -73,6 +75,7 @@ const ROUTE_PATH: Record<PageId, string> = {
   support: '/support',
   manualdepo: '/manualdepo',
   nokos: '/otp-service',
+  artikel: '/artikel',
 };
 
 interface SideMenuProps {
@@ -96,6 +99,7 @@ const baseMenu: {
   { id: 'sewa-agen', icon: Bot, label: 'Sewa Agen AI', desc: 'Agen AI WhatsApp, Telegram, dll' },
   { id: 'riwayat', icon: History, label: 'Riwayat Pesanan', desc: 'Tabel riwayat pesanan' },
   { id: 'cek-status', icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan' },
+  { id: 'artikel', icon: BookOpen, label: 'Artikel', desc: 'Panduan & tips' },
   { id: 'about', icon: Info, label: 'Tentang Kami', desc: 'Tentang Kami' },
   { id: 'terms', icon: FileText, label: 'Syarat & Ketentuan', desc: 'Informasi Syarat dan Ketentuan' },
   { id: 'privacy', icon: ShieldCheck, label: 'Privasi dan Keamanan', desc: 'Informasi Keamanan' },

@@ -1,5 +1,6 @@
 import Seo from '../components/Seo';
-import { staticSeo } from '../seo/content';
+import { faqJsonLd, staticSeo } from '../seo/content';
+import SmmPanelInfo from '../components/SmmPanelInfo';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Reveal from '../components/Reveal';
@@ -28,7 +29,20 @@ export default function LayananPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-32 pt-8 sm:px-6">
-      <Seo title={staticSeo('/layanan')?.title} description={staticSeo('/layanan')?.description} />
+      <Seo
+        title={staticSeo('/layanan')?.title}
+        fullTitle={staticSeo('/layanan')?.fullTitle}
+        description={staticSeo('/layanan')?.description}
+        jsonLd={faqJsonLd(staticSeo('/layanan')?.faq || [])}
+      />
+      <header className="mx-auto mb-6 max-w-2xl text-center">
+        <h1 className="font-display text-[22px] font-extrabold leading-tight tracking-tight text-slate-900 sm:text-[26px] dark:text-white">
+          {staticSeo('/layanan')?.h1}
+        </h1>
+        <p className="mt-2 text-[13.5px] leading-relaxed text-slate-500 dark:text-slate-400">
+          Followers, likes, views, dan engagement untuk TikTok, Instagram, YouTube, hingga marketplace — harga per 1.000 tampil sebelum memesan.
+        </p>
+      </header>
 
       {/* ================= SLIDER (atas, ukuran lebih kecil) ================= */}
       <Reveal delay={40}>
@@ -81,6 +95,8 @@ export default function LayananPage() {
       <Reveal delay={120} className="mt-8">
         <BuatPesananCard />
       </Reveal>
+
+      <SmmPanelInfo />
     </div>
   );
 }

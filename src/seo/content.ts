@@ -7,6 +7,8 @@ export interface SeoFaq {
 }
 export interface SeoContent {
   title: string;
+  /** Judul lengkap persis (tanpa akhiran brand otomatis). */
+  fullTitle?: string;
   description: string;
   h1?: string;
   intro?: string[];

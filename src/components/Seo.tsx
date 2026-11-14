@@ -8,6 +8,7 @@ type JsonLd = Record<string, unknown> | Record<string, unknown>[];
 
 interface SeoProps {
   title?: string;        // judul halaman (tanpa brand); kosong = judul default
+  fullTitle?: string;    // judul persis (mengabaikan akhiran brand)
   description?: string;
   image?: string;        // path/URL gambar OG
   type?: 'website' | 'article';
@@ -21,13 +22,13 @@ interface SeoProps {
  * SEO per-route. React 19 otomatis menghoist <title>/<meta>/<link> ke <head>.
  * Canonical dibangun dari SITE_URL + pathname aktif (URL management).
  */
-export default function Seo({ title, description, image, type = 'website', noindex, bareOnHome, jsonLd }: SeoProps) {
+export default function Seo({ title, fullTitle: exactTitle, description, image, type = 'website', noindex, bareOnHome, jsonLd }: SeoProps) {
   const { pathname } = useLocation();
   const canonical = SITE_URL + (pathname === '/' ? '/' : pathname.replace(/\/+$/, ''));
   const { settings } = useSiteSettings();
   // Child panel: judul memakai brand panel & halaman tidak diindeks (hindari konten duplikat web utama).
   const brand = IS_CHILD_PANEL ? `${settings.brandName}${settings.brandSuffix}` : SITE_NAME;
-  const fullTitle = title ? `${title} · ${brand}` : IS_CHILD_PANEL ? brand : DEFAULT_TITLE;
+  const fullTitle = exactTitle && !IS_CHILD_PANEL ? exactTitle : title ? `${title} · ${brand}` : IS_CHILD_PANEL ? brand : DEFAULT_TITLE;
   noindex = noindex || IS_CHILD_PANEL;
   const desc = description || DEFAULT_DESC;
   const img = abs(image || DEFAULT_OG_IMAGE);

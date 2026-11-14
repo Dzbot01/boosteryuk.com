@@ -12,7 +12,9 @@ const PORT = Number(process.env.PRERENDER_PORT || 4188);
 
 const ROUTES = ['/', '/layanan', '/cek-status', '/plus', '/about', '/terms', '/privacy', '/support',
   '/layanan/tiktok', '/layanan/instagram', '/layanan/youtube', '/layanan/threads', '/layanan/telegram',
-  '/layanan/whatsapp', '/layanan/snackvideo', '/layanan/shopee', '/layanan/tokopedia', '/layanan/linkedin', '/layanan/roblox'];
+  '/layanan/whatsapp', '/layanan/snackvideo', '/layanan/shopee', '/layanan/tokopedia', '/layanan/linkedin', '/layanan/roblox',
+  '/artikel', '/artikel/apa-itu-smm-panel', '/artikel/cara-meningkatkan-followers-tiktok', '/artikel/apa-itu-child-panel',
+  '/artikel/panduan-vps-untuk-pemula', '/artikel/apa-itu-agent-ai'];
 
 const MIME = { '.js':'text/javascript', '.css':'text/css', '.html':'text/html', '.json':'application/json',
   '.webp':'image/webp', '.jpg':'image/jpeg', '.png':'image/png', '.svg':'image/svg+xml', '.ico':'image/x-icon', '.woff2':'font/woff2' };

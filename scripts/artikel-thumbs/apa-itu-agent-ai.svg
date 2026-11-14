@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<rect width="1200" height="630" fill="#f3efe7"/>
+<circle cx="170" cy="520" r="170" fill="#e3d8c6"/>
+<rect x="420" y="40" width="360" height="560" rx="40" fill="#1d2b36"/>
+<rect x="438" y="72" width="324" height="500" rx="24" fill="#ece5d8"/>
+<rect x="438" y="72" width="324" height="64" rx="24" fill="#0f6e7e"/><rect x="438" y="110" width="324" height="26" fill="#0f6e7e"/>
+<circle cx="478" cy="104" r="18" fill="#f3efe7"/><rect x="508" y="94" width="120" height="14" rx="4" fill="#f3efe7"/>
+<g><rect x="462" y="166" width="210" height="58" rx="14" fill="#ffffff"/><rect x="480" y="184" width="150" height="10" rx="3" fill="#e3d8c6"/><rect x="480" y="202" width="110" height="10" rx="3" fill="#e3d8c6"/></g>
+<g><rect x="530" y="244" width="210" height="80" rx="14" fill="#cfe6e3"/><rect x="548" y="262" width="170" height="10" rx="3" fill="#0f6e7e"/><rect x="548" y="280" width="140" height="10" rx="3" fill="#0f6e7e"/><rect x="548" y="298" width="100" height="10" rx="3" fill="#0f6e7e"/></g>
+<g><rect x="462" y="344" width="170" height="44" rx="14" fill="#ffffff"/><rect x="480" y="361" width="120" height="10" rx="3" fill="#e3d8c6"/></g>
+<g><rect x="530" y="408" width="210" height="80" rx="14" fill="#cfe6e3"/><rect x="548" y="426" width="160" height="10" rx="3" fill="#0f6e7e"/><rect x="548" y="444" width="170" height="10" rx="3" fill="#0f6e7e"/><rect x="548" y="462" width="90" height="10" rx="3" fill="#0f6e7e"/></g>
+<g transform="translate(860 200)"><rect width="200" height="170" rx="40" fill="#d9733a"/><rect x="40" y="56" width="120" height="66" rx="22" fill="#f3efe7"/><circle cx="76" cy="89" r="11" fill="#1d2b36"/><circle cx="124" cy="89" r="11" fill="#1d2b36"/><rect x="94" y="-34" width="12" height="36" fill="#1d2b36"/><circle cx="100" cy="-38" r="14" fill="#1d2b36"/></g>
+<path d="M860 300 C 820 300 800 280 780 270" fill="none" stroke="#1d2b36" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round"/>
+<g transform="translate(170 150)"><rect width="150" height="56" rx="28" fill="#ffffff" stroke="#1d2b36" stroke-width="4"/><circle cx="46" cy="28" r="7" fill="#1d2b36"/><circle cx="75" cy="28" r="7" fill="#1d2b36"/><circle cx="104" cy="28" r="7" fill="#1d2b36"/></g>
+</svg>

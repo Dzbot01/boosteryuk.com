@@ -12,6 +12,8 @@ const CekStatusPage = lazy(() => import('./pages/CekStatusPage'));
 // const OrderNomorPage = lazy(() => import('./pages/OrderNomorPage'));
 // Order Nomor OTP realtime (bayar saldo) — ditampilkan di menu CHILD PANEL.
 const OrderOtpPage = lazy(() => import('./pages/OrderOtpPage'));
+const ArtikelIndexPage = lazy(() => import('./pages/artikel/ArtikelIndexPage'));
+const ArtikelPage = lazy(() => import('./pages/artikel/ArtikelPage'));
 const RiwayatPage = lazy(() => import('./pages/RiwayatPage'));
 const HubungiPage = lazy(() => import('./pages/HubungiPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
@@ -55,6 +57,8 @@ export default function App() {
           <Route path="hubungi" element={<HubungiPage />} />
           <Route path="hubungi-kami" element={<Navigate to="/hubungi" replace />} />
           <Route path="about" element={<AboutPage />} />
+          <Route path="artikel" element={<ArtikelIndexPage />} />
+          <Route path="artikel/:slug" element={<ArtikelPage />} />
           <Route path="terms" element={<TermsPage />} />
           <Route path="support" element={<SupportPage />} />
           <Route path="privacy" element={<PrivacyPage />} />

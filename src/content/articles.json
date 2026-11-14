@@ -1,0 +1,343 @@
+{
+  "_info": "Sumber tunggal artikel: halaman /artikel (React), HTML statis untuk crawler (scripts/seo-pages.mjs), schema Article/FAQ/Breadcrumb, dan sitemap. Inline: [teks](/url) dan **tebal**. Blok: p, h2, h3, ul, ol, note, table, cta.",
+  "author": {
+    "name": "Tim Redaksi Boosteryuk",
+    "role": "Ditulis dan diperiksa oleh tim operasional Boosteryuk yang menangani pesanan, deposit, dan dukungan pelanggan setiap hari.",
+    "url": "/about"
+  },
+  "articles": [
+    {
+      "slug": "apa-itu-smm-panel",
+      "category": "Panduan Dasar",
+      "title": "Apa Itu SMM Panel? Panduan Lengkap Mengenal SMM Panel Indonesia",
+      "seoTitle": "Apa Itu SMM Panel? Panduan Lengkap SMM Panel Indonesia",
+      "description": "Penjelasan lengkap SMM panel: pengertian, cara kerja, jenis layanan, sistem saldo, risiko yang perlu dipahami, dan cara memilih SMM panel Indonesia yang aman.",
+      "excerpt": "Pengertian SMM panel, cara kerjanya dari pesanan sampai proses, sistem saldo, risiko yang jarang dibahas, dan cara memilih panel yang tepat.",
+      "thumbnail": "/artikel/apa-itu-smm-panel.jpg",
+      "thumbAlt": "Ilustrasi dasbor SMM panel dengan grafik pertumbuhan dan daftar pesanan",
+      "published": "2026-11-14",
+      "updated": "2026-11-14",
+      "blocks": [
+        { "t": "p", "x": "Kalau kamu pernah melihat akun baru yang tiba-tiba punya ribuan pengikut, atau video yang penontonnya melonjak dalam sehari, besar kemungkinan pemiliknya memakai **SMM panel**. Istilah ini sering muncul di grup penjual online dan komunitas kreator, tapi jarang dijelaskan dengan utuh: apa sebenarnya yang dibeli, dari mana layanan itu berasal, dan apa batasannya." },
+        { "t": "p", "x": "Artikel ini membahas SMM panel dari sudut pandang orang yang mengoperasikannya setiap hari. Tujuannya sederhana: setelah membaca, kamu bisa menilai sendiri kapan SMM panel berguna, kapan tidak, dan bagaimana memakainya tanpa membuang uang." },
+        { "t": "h2", "x": "Pengertian SMM panel" },
+        { "t": "p", "x": "SMM adalah singkatan dari **Social Media Marketing**. SMM panel adalah situs tempat kamu memesan layanan pemasaran media sosial secara mandiri, misalnya menambah pengikut Instagram, likes TikTok, penonton YouTube, atau anggota grup Telegram. Semua dilakukan lewat formulir: pilih layanan, masukkan link atau username, tentukan jumlah, lalu bayar dari saldo akun." },
+        { "t": "p", "x": "Bedanya dengan jasa manual adalah otomatisasi. Di jasa manual, kamu mengirim pesan ke penjual, menunggu dia memproses, lalu menanyakan status berkali-kali. Di SMM panel, pesanan langsung diteruskan ke sistem penyedia, status bisa dicek sendiri, dan harga sudah tertera sebelum kamu membayar." },
+        { "t": "h3", "x": "Siapa yang biasanya memakai SMM panel" },
+        { "t": "ul", "items": [
+          "**Penjual online** yang ingin toko atau akun barunya tidak terlihat kosong saat calon pembeli pertama kali mampir.",
+          "**Kreator konten** yang ingin dorongan awal agar video baru tidak tenggelam sebelum sempat dinilai penonton.",
+          "**Pengelola akun bisnis dan agensi** yang menangani banyak klien sekaligus dan butuh pesanan cepat dalam jumlah besar.",
+          "**Reseller** yang menjual ulang layanan SMM dengan harga mereka sendiri, sering kali lewat panel turunan seperti [child panel](/artikel/apa-itu-child-panel)."
+        ] },
+        { "t": "h2", "x": "Bagaimana cara kerja SMM panel" },
+        { "t": "p", "x": "Di balik formulir yang sederhana, ada beberapa lapisan yang bekerja. Memahaminya membantu kamu membaca status pesanan dan tahu harus menunggu atau bertanya." },
+        { "t": "ol", "items": [
+          "**Kamu mengisi saldo.** Hampir semua SMM panel memakai sistem deposit. Saldo inilah yang dipotong setiap kali kamu memesan.",
+          "**Kamu memilih layanan.** Setiap layanan punya nama, harga per 1.000, batas minimal dan maksimal, serta keterangan seperti kecepatan atau garansi isi ulang.",
+          "**Panel meneruskan pesanan ke penyedia.** SMM panel umumnya tersambung ke satu atau beberapa penyedia lewat API. Penyedia inilah yang menjalankan pesanan.",
+          "**Pesanan diproses bertahap.** Status bergerak dari pending, diproses, sampai selesai. Jumlah yang masuk biasanya bertambah sedikit demi sedikit, bukan sekaligus.",
+          "**Kamu memantau hasilnya.** Status dan riwayat bisa dilihat di akun, termasuk jika pesanan dibatalkan atau hanya terpenuhi sebagian."
+        ] },
+        { "t": "note", "x": "Kecepatan dan kualitas setiap layanan bisa berbeda walaupun namanya mirip. Baca keterangan layanan sebelum memesan, terutama soal waktu mulai, kecepatan per hari, dan ada tidaknya garansi isi ulang." },
+        { "t": "h2", "x": "Jenis layanan yang umum tersedia" },
+        { "t": "p", "x": "Layanan SMM biasanya dikelompokkan per platform, lalu per jenis interaksi. Berikut gambaran yang paling sering dicari." },
+        { "t": "table", "head": ["Platform", "Contoh layanan", "Kegunaan yang wajar"], "rows": [
+          ["TikTok", "Followers, likes, views, share", "Memberi dorongan awal pada video atau akun baru"],
+          ["Instagram", "Followers, likes, views Reels, komentar", "Membuat profil toko terlihat aktif dan meyakinkan"],
+          ["YouTube", "Subscribers, views, likes", "Membantu video baru mendapat penonton pertama"],
+          ["Telegram dan WhatsApp", "Anggota grup atau channel, reaksi", "Mengisi komunitas yang baru dibentuk"],
+          ["Shopee dan Tokopedia", "Followers toko, likes produk", "Menambah kesan toko yang sudah berjalan"]
+        ] },
+        { "t": "p", "x": "Daftar lengkap dan harga yang sedang aktif selalu berubah mengikuti penyedia. Di Boosteryuk kamu bisa melihatnya langsung per platform, misalnya [layanan TikTok](/layanan/tiktok) atau [layanan Instagram](/layanan/instagram)." },
+        { "t": "h2", "x": "Sistem saldo dan cara harga dihitung" },
+        { "t": "p", "x": "Harga di SMM panel hampir selalu ditulis **per 1.000**. Artinya, jika sebuah layanan tertulis Rp10.000 per 1.000 dan kamu memesan 500, yang dipotong dari saldo adalah Rp5.000. Harga dihitung otomatis saat kamu mengisi jumlah, jadi kamu tahu biayanya sebelum menekan tombol pesan." },
+        { "t": "h3", "x": "Kenapa harus deposit dulu" },
+        { "t": "p", "x": "Sistem saldo membuat pesanan bisa langsung diproses tanpa menunggu konfirmasi pembayaran satu per satu. Bagi pemesan rutin, ini jauh lebih cepat: sekali isi saldo, bisa dipakai untuk banyak pesanan kecil. Di Boosteryuk, [deposit](/deposit) bisa dilakukan lewat QRIS, virtual account bank, maupun gerai ritel, dan saldo masuk setelah pembayaran terkonfirmasi." },
+        { "t": "h3", "x": "Apa yang terjadi jika pesanan gagal" },
+        { "t": "p", "x": "Pesanan yang dibatalkan oleh penyedia, atau hanya terpenuhi sebagian, umumnya dikembalikan dalam bentuk saldo, bukan uang tunai. Karena itu, saldo di SMM panel sebaiknya diperlakukan seperti dompet belanja: isi secukupnya sesuai rencana pemakaian." },
+        { "t": "h2", "x": "Risiko dan batasan yang perlu kamu pahami" },
+        { "t": "p", "x": "Bagian ini jarang ditulis oleh penjual, padahal paling penting untuk keputusan yang sehat." },
+        { "t": "ul", "items": [
+          "**Angka bukan pembeli.** Pengikut dari SMM panel menambah kesan ramai, tapi tidak otomatis membeli produkmu. Hasil terbaik muncul jika konten dan produkmu memang layak.",
+          "**Jumlah bisa berkurang.** Sebagian akun yang dipakai penyedia bisa dihapus atau dinonaktifkan oleh platform. Karena itu ada layanan bergaransi isi ulang (refill) untuk jangka waktu tertentu.",
+          "**Aturan platform.** Setiap media sosial punya ketentuan sendiri tentang interaksi tidak organik. Pesan dalam jumlah wajar dan bertahap jauh lebih aman daripada lonjakan besar dalam sekejap.",
+          "**Akun harus publik.** Pesanan ke akun privat atau link yang salah biasanya gagal atau tidak bisa dibatalkan. Periksa ulang target sebelum memesan."
+        ] },
+        { "t": "h2", "x": "Cara memilih SMM panel Indonesia yang aman" },
+        { "t": "ol", "items": [
+          "**Harga terlihat sebelum membayar.** Panel yang baik menampilkan harga per 1.000 dan total biaya sebelum pesanan dibuat.",
+          "**Status bisa dipantau sendiri.** Ada riwayat pesanan dan halaman cek status, bukan sekadar janji lewat chat.",
+          "**Metode deposit jelas.** Pembayaran lewat kanal resmi seperti QRIS atau virtual account lebih mudah dilacak.",
+          "**Ada kontak dukungan.** Saat ada pesanan bermasalah, kamu butuh tempat bertanya yang benar-benar menjawab.",
+          "**Keterangan layanan jujur.** Waktu mulai, kecepatan, dan garansi ditulis apa adanya, bukan hanya kata instan dan permanen."
+        ] },
+        { "t": "h2", "x": "Mengenal Boosteryuk sebagai SMM panel" },
+        { "t": "p", "x": "Boosteryuk adalah SMM panel Indonesia yang kami kelola untuk kebutuhan media sosial sehari-hari: dari followers dan likes sampai views dan anggota grup. Pesanan dibuat dari saldo akun, statusnya bisa dicek di [Riwayat Pesanan](/riwayat-pesanan) maupun halaman [Cek Status](/cek-status), dan tim dukungan bisa dihubungi lewat halaman [Support](/support)." },
+        { "t": "p", "x": "Selain layanan SMM, Boosteryuk juga menyediakan [Sewa Agen AI](/artikel/apa-itu-agent-ai) untuk membalas pelanggan WhatsApp secara otomatis, paket [Plus](/plus) dengan harga layanan yang lebih murah, serta paket EXTRA bagi yang ingin membuka panel sendiri lewat [child panel](/artikel/apa-itu-child-panel)." },
+        { "t": "cta", "title": "Lihat layanan yang sedang aktif", "x": "Daftar layanan dan harga per 1.000 diperbarui otomatis. Pilih platform, cek keterangannya, lalu pesan dari saldo akun.", "href": "/layanan", "label": "Buka daftar layanan" }
+      ],
+      "faq": [
+        { "q": "Apakah memakai SMM panel itu legal?", "a": "Membeli layanan pemasaran media sosial bukan tindakan melanggar hukum. Namun setiap platform punya aturan sendiri tentang interaksi tidak organik, jadi gunakan secara wajar dan bertahap." },
+        { "q": "Apakah akun saya bisa diblokir?", "a": "Layanan SMM tidak membutuhkan password akunmu, hanya link atau username. Risiko terbesar justru datang dari lonjakan angka yang tidak wajar, jadi pesan dalam jumlah masuk akal dan perhatikan kecepatan layanan." },
+        { "q": "Berapa lama pesanan diproses?", "a": "Tergantung layanan. Ada yang mulai dalam hitungan menit, ada yang beberapa jam. Perkiraan waktu dan kecepatan biasanya tertulis di keterangan layanan." },
+        { "q": "Kenapa jumlah followers bisa turun setelah pesanan selesai?", "a": "Sebagian akun yang dipakai penyedia bisa dihapus atau dinonaktifkan oleh platform. Pilih layanan bergaransi isi ulang jika kamu ingin jumlahnya lebih stabil." },
+        { "q": "Apakah saldo bisa dicairkan kembali?", "a": "Saldo di SMM panel umumnya dipakai untuk pesanan berikutnya, termasuk saldo dari pesanan yang dibatalkan. Isi saldo sesuai kebutuhan agar tidak mengendap." }
+      ],
+      "related": ["cara-meningkatkan-followers-tiktok", "apa-itu-child-panel", "apa-itu-agent-ai"]
+    },
+    {
+      "slug": "cara-meningkatkan-followers-tiktok",
+      "category": "TikTok",
+      "title": "Cara Meningkatkan Followers TikTok secara Organik dan Terukur",
+      "seoTitle": "Cara Meningkatkan Followers TikTok: Strategi Organik & Terukur",
+      "description": "Strategi menambah followers TikTok: memperbaiki profil, pola konten yang ditonton sampai habis, jadwal unggah, membaca analitik, dan kapan dorongan awal dari SMM panel masuk akal.",
+      "excerpt": "Langkah praktis memperbaiki profil, membuat konten yang ditonton sampai habis, membaca analitik, dan memakai dorongan awal secara wajar.",
+      "thumbnail": "/artikel/cara-meningkatkan-followers-tiktok.jpg",
+      "thumbAlt": "Ilustrasi layar ponsel dengan video vertikal dan grafik penonton yang naik",
+      "published": "2026-11-14",
+      "updated": "2026-11-14",
+      "blocks": [
+        { "t": "p", "x": "Followers TikTok tidak datang dari satu trik. Yang membuat akun tumbuh adalah gabungan antara profil yang jelas, video yang ditonton sampai selesai, dan konsistensi. Artikel ini merangkum langkah yang bisa langsung kamu terapkan, plus penjelasan jujur tentang kapan dorongan dari SMM panel membantu dan kapan justru sia-sia." },
+        { "t": "h2", "x": "Mulai dari profil yang langsung bisa dipahami" },
+        { "t": "p", "x": "Orang memutuskan untuk follow dalam beberapa detik setelah membuka profilmu. Pastikan tiga hal ini terjawab tanpa perlu menggulir:" },
+        { "t": "ul", "items": [
+          "**Siapa kamu atau apa tokomu.** Foto profil yang jelas dan nama yang mudah diingat.",
+          "**Apa yang akan mereka dapat.** Satu kalimat di bio, misalnya resep 5 menit setiap hari atau tips merawat sepatu putih.",
+          "**Bukti bahwa akun ini aktif.** Video terbaru yang rapi dan, bila ada, video yang disematkan sebagai perkenalan."
+        ] },
+        { "t": "h2", "x": "Konten yang ditonton sampai habis" },
+        { "t": "p", "x": "TikTok membagikan video ke lebih banyak orang jika penonton pertamanya bertahan lama. Karena itu, fokuskan energi pada bagian awal dan alur video." },
+        { "t": "h3", "x": "Tiga detik pertama" },
+        { "t": "p", "x": "Buka video dengan hasil akhir, pertanyaan, atau masalah yang dirasakan penonton. Hindari pembuka panjang seperti salam atau perkenalan yang tidak memberi alasan untuk tetap menonton." },
+        { "t": "h3", "x": "Satu video, satu pesan" },
+        { "t": "p", "x": "Video yang mencoba membahas banyak hal cenderung ditinggalkan di tengah. Pecah topik besar menjadi seri. Selain lebih mudah dicerna, seri membuat penonton punya alasan untuk follow agar tidak ketinggalan bagian berikutnya." },
+        { "t": "h3", "x": "Teks dan suara yang membantu" },
+        { "t": "p", "x": "Banyak orang menonton tanpa suara. Tambahkan teks di layar untuk poin penting, dan gunakan audio yang sedang ramai jika memang cocok dengan isi videomu, bukan sekadar ikut tren." },
+        { "t": "h2", "x": "Konsisten dengan jadwal yang realistis" },
+        { "t": "p", "x": "Mengunggah setiap hari selama seminggu lalu berhenti sebulan biasanya kalah dari tiga video per minggu yang konsisten. Pilih ritme yang sanggup kamu jaga, lalu siapkan beberapa video cadangan untuk hari sibuk." },
+        { "t": "h2", "x": "Baca analitik, bukan perasaan" },
+        { "t": "p", "x": "Aktifkan akun bisnis atau kreator agar bisa melihat analitik. Perhatikan beberapa angka berikut:" },
+        { "t": "table", "head": ["Angka", "Artinya", "Yang bisa dilakukan"], "rows": [
+          ["Rata-rata durasi tonton", "Seberapa lama orang bertahan", "Perbaiki pembuka dan pangkas bagian yang bertele-tele"],
+          ["Penonton dari For You", "Seberapa luas video dibagikan", "Ulangi format video yang angkanya tinggi"],
+          ["Profil dikunjungi", "Minat setelah menonton", "Perjelas bio dan video yang disematkan"],
+          ["Followers baru per video", "Video mana yang mengubah penonton jadi pengikut", "Buat lanjutan dari topik tersebut"]
+        ] },
+        { "t": "h2", "x": "Kapan dorongan dari SMM panel masuk akal" },
+        { "t": "p", "x": "Akun yang benar-benar kosong sering kesulitan meyakinkan penonton pertama. Di tahap ini, sebagian kreator dan penjual memakai [SMM panel](/artikel/apa-itu-smm-panel) untuk memberi dorongan awal, misalnya views atau likes pada video terbaik, agar akun tidak terlihat sepi." },
+        { "t": "p", "x": "Gunakan dengan prinsip berikut agar tetap sehat:" },
+        { "t": "ul", "items": [
+          "**Dorong video yang memang bagus.** Angka tambahan tidak menyelamatkan video yang ditinggalkan penonton di detik ketiga.",
+          "**Pesan dalam jumlah wajar dan bertahap.** Lonjakan besar dalam semenit terlihat tidak alami, baik bagi penonton maupun sistem.",
+          "**Pakai akun publik dan link yang benar.** Pesanan ke akun privat atau link yang keliru biasanya gagal.",
+          "**Tetap utamakan konten.** Dorongan awal hanya membuka pintu. Yang membuat orang follow tetap isi videomu."
+        ] },
+        { "t": "note", "x": "Layanan TikTok di Boosteryuk menampilkan harga per 1.000, batas minimal dan maksimal, serta keterangan kecepatan sebelum kamu memesan. Baca keterangan itu untuk memilih layanan yang sesuai tahap akunmu." },
+        { "t": "h2", "x": "Kesalahan yang paling sering memperlambat pertumbuhan" },
+        { "t": "ul", "items": [
+          "Menghapus video yang sepi di hari pertama. Beberapa video baru ramai setelah beberapa hari.",
+          "Berganti topik setiap minggu sehingga penonton bingung akun ini sebenarnya tentang apa.",
+          "Mengabaikan komentar. Membalas komentar dengan video adalah cara murah untuk mendapat ide konten berikutnya.",
+          "Hanya mengejar angka followers tanpa memperhatikan apakah penonton bertahan dan kembali."
+        ] },
+        { "t": "cta", "title": "Lihat layanan TikTok", "x": "Views, likes, dan followers TikTok dengan harga per 1.000 yang terlihat sebelum memesan. Dibayar dari saldo akun.", "href": "/layanan/tiktok", "label": "Buka layanan TikTok" }
+      ],
+      "faq": [
+        { "q": "Berapa kali sebaiknya mengunggah video TikTok?", "a": "Tidak ada angka pasti. Yang lebih penting adalah konsistensi. Tiga sampai lima video per minggu yang terjaga biasanya lebih baik daripada unggahan setiap hari yang berhenti di tengah jalan." },
+        { "q": "Apakah membeli followers TikTok membuat video FYP?", "a": "Tidak otomatis. Peluang masuk For You lebih ditentukan oleh seberapa lama penonton bertahan dan berinteraksi. Dorongan awal hanya membantu akun tidak terlihat sepi." },
+        { "q": "Layanan apa yang paling aman untuk akun baru?", "a": "Mulailah dari views atau likes dalam jumlah kecil pada video terbaikmu, dengan kecepatan bertahap. Hindari lonjakan followers besar pada akun yang baru dibuat." }
+      ],
+      "related": ["apa-itu-smm-panel", "apa-itu-agent-ai", "apa-itu-child-panel"]
+    },
+    {
+      "slug": "apa-itu-child-panel",
+      "category": "Bisnis Reseller",
+      "title": "Apa Itu Child Panel? Cara Kerja dan Cara Memulai Bisnis Reseller SMM",
+      "seoTitle": "Apa Itu Child Panel SMM? Cara Kerja & Cara Memulai",
+      "description": "Penjelasan child panel SMM: perbedaannya dengan panel utama, cara kerja markup dan pendapatan, kelebihan dan batasannya, serta cara membuat child panel di Boosteryuk.",
+      "excerpt": "Child panel memungkinkan kamu membuka SMM panel dengan nama dan harga sendiri tanpa mengurus server dan penyedia. Begini cara kerjanya.",
+      "thumbnail": "/artikel/apa-itu-child-panel.jpg",
+      "thumbAlt": "Ilustrasi panel utama yang terhubung ke beberapa panel turunan dengan merek berbeda",
+      "published": "2026-11-14",
+      "updated": "2026-11-14",
+      "blocks": [
+        { "t": "p", "x": "Banyak orang yang rutin memesan layanan SMM akhirnya bertanya: kenapa tidak sekalian menjual ulang? Masalahnya, membangun SMM panel sendiri berarti mengurus website, server, sistem pembayaran, dan koneksi ke penyedia. **Child panel** hadir untuk memotong semua pekerjaan itu." },
+        { "t": "h2", "x": "Pengertian child panel" },
+        { "t": "p", "x": "Child panel adalah SMM panel turunan yang berjalan di atas panel utama. Tampilannya milikmu, dengan nama, logo, warna, dan harga yang kamu tentukan, tetapi katalog layanan, pemrosesan pesanan, dan infrastrukturnya ditangani panel utama." },
+        { "t": "p", "x": "Bagi pelangganmu, child panel terlihat seperti toko mandiri. Mereka mendaftar, mengisi saldo, dan memesan di alamat panelmu. Kamu cukup fokus pada pemasaran dan melayani pelanggan." },
+        { "t": "h2", "x": "Perbedaan child panel dan panel utama" },
+        { "t": "table", "head": ["Aspek", "Panel utama", "Child panel"], "rows": [
+          ["Koneksi ke penyedia", "Dikelola sendiri", "Memakai milik panel utama"],
+          ["Server dan pemeliharaan", "Tanggung jawab pemilik", "Ditangani panel utama"],
+          ["Nama, logo, dan tema", "Bebas", "Bebas diatur pemilik child panel"],
+          ["Harga jual", "Bebas", "Harga panel utama ditambah markup pilihanmu"],
+          ["Modal awal", "Tinggi", "Rendah, cukup biaya langganan"]
+        ] },
+        { "t": "h2", "x": "Bagaimana pendapatan child panel dihitung" },
+        { "t": "p", "x": "Pendapatan datang dari **markup**, yaitu persentase yang kamu tambahkan di atas harga panel utama. Contohnya, jika sebuah layanan berharga Rp10.000 di panel utama dan kamu memasang markup 20%, pelangganmu membayar Rp12.000. Selisih Rp2.000 tercatat sebagai pendapatanmu." },
+        { "t": "h3", "x": "Kenapa markup dihitung di server" },
+        { "t": "p", "x": "Harga final dihitung oleh server, bukan oleh tampilan di browser pelanggan. Dengan begitu, harga tidak bisa diakali dan pendapatan tercatat sesuai pesanan yang benar-benar dibayar. Pesanan yang dibatalkan tidak ikut dihitung." },
+        { "t": "h3", "x": "Pencairan pendapatan" },
+        { "t": "p", "x": "Di Boosteryuk, pendapatan child panel bisa dicairkan dari menu Withdraw di admin panel tokomu. Pencairan ke DANA tidak dikenai biaya, dan pendapatan dari pesanan yang belum selesai baru bisa dicairkan setelah masa tahan singkat untuk melindungi dari pembatalan." },
+        { "t": "h2", "x": "Kelebihan dan batasan yang perlu dipertimbangkan" },
+        { "t": "h3", "x": "Kelebihan" },
+        { "t": "ul", "items": [
+          "Bisa mulai berjualan dalam hitungan menit tanpa keahlian teknis.",
+          "Tidak perlu mengurus server, keamanan, dan koneksi ke penyedia.",
+          "Merek sendiri: subdomain, logo, judul, warna, slider, dan video beranda bisa diatur.",
+          "Laporan pesanan, aktivitas pengguna, dan pendapatan tersedia di satu halaman admin."
+        ] },
+        { "t": "h3", "x": "Batasan" },
+        { "t": "ul", "items": [
+          "Katalog layanan mengikuti panel utama, jadi kamu tidak bisa menambah penyedia sendiri.",
+          "Markup yang terlalu tinggi membuat pelanggan membandingkan dan pindah. Tentukan harga dengan wajar.",
+          "Pelanggan tetap butuh dilayani. Child panel menghilangkan urusan teknis, bukan urusan layanan pelanggan."
+        ] },
+        { "t": "h2", "x": "Cara membuat child panel di Boosteryuk" },
+        { "t": "ol", "items": [
+          "Masuk ke akun Boosteryuk, lalu buka halaman [Upgrade](/plus) dan pilih paket **EXTRA**.",
+          "Isi pengaturan panel: subdomain, nama toko, logo, judul, warna tema, slider, dan markup harga.",
+          "Bayar dari saldo. Panel langsung aktif di alamat subdomain yang kamu pilih.",
+          "Kelola pesanan, pengguna, markup, dan pencairan dari menu Admin Panel Toko di panelmu."
+        ] },
+        { "t": "p", "x": "Paket EXTRA berlangganan bulanan dengan harga khusus untuk bulan pertama bagi pengguna yang baru upgrade, dan sudah termasuk keuntungan paket Plus. Detail harga terbaru selalu tertera di halaman Upgrade." },
+        { "t": "note", "x": "Selain layanan SMM, child panel juga bisa menjual Sewa Agen AI dan Order Nomor OTP dengan markup terpisah. Setiap jenis layanan punya pengaturan persentase sendiri." },
+        { "t": "cta", "title": "Buka child panel sendiri", "x": "Pilih paket EXTRA, atur nama dan tampilan panelmu, lalu mulai berjualan dari subdomain sendiri.", "href": "/plus", "label": "Lihat paket EXTRA" }
+      ],
+      "faq": [
+        { "q": "Apakah saya butuh hosting atau server sendiri untuk child panel?", "a": "Tidak. Child panel berjalan di infrastruktur panel utama. Kamu hanya mengatur tampilan, harga, dan melayani pelanggan." },
+        { "q": "Bagaimana jika langganan child panel habis?", "a": "Panel tidak bisa diakses pelanggan sampai diperpanjang. Pendapatan yang sudah tercatat tetap aman dan tetap bisa diajukan pencairannya." },
+        { "q": "Bisakah saya mengganti subdomain setelah panel dibuat?", "a": "Subdomain dikunci setelah panel aktif agar link yang sudah kamu sebarkan tidak rusak. Pilih nama yang singkat dan mudah diingat sejak awal." }
+      ],
+      "related": ["apa-itu-smm-panel", "apa-itu-agent-ai", "cara-meningkatkan-followers-tiktok"]
+    },
+    {
+      "slug": "panduan-vps-untuk-pemula",
+      "category": "Teknologi",
+      "title": "Panduan VPS untuk Pemula: Pengertian, Fungsi, dan Cara Memilih Spesifikasi",
+      "seoTitle": "Panduan VPS untuk Pemula: Pengertian, Fungsi & Cara Memilih",
+      "description": "Panduan VPS untuk pemula: perbedaan VPS dengan shared hosting, fungsi umum VPS, cara membaca spesifikasi CPU, RAM, dan penyimpanan, memilih lokasi server, serta langkah keamanan awal.",
+      "excerpt": "Apa itu VPS, kapan kamu membutuhkannya, cara membaca spesifikasi, memilih lokasi server, dan langkah keamanan pertama setelah server menyala.",
+      "thumbnail": "/artikel/panduan-vps-untuk-pemula.jpg",
+      "thumbAlt": "Ilustrasi rak server dengan tiga mesin virtual yang terpisah",
+      "published": "2026-11-14",
+      "updated": "2026-11-14",
+      "blocks": [
+        { "t": "p", "x": "Cepat atau lambat, banyak proyek online membutuhkan tempat yang lebih fleksibel daripada hosting biasa: bot yang harus menyala 24 jam, aplikasi dengan kebutuhan khusus, atau website yang trafiknya mulai berat. Di titik itulah orang mulai mengenal **VPS**. Panduan ini membahas dasarnya tanpa istilah yang berlebihan." },
+        { "t": "h2", "x": "Apa itu VPS" },
+        { "t": "p", "x": "VPS adalah singkatan dari **Virtual Private Server**. Satu server fisik dibagi menjadi beberapa mesin virtual. Setiap mesin virtual punya sistem operasi, CPU, RAM, dan penyimpanan sendiri yang tidak dipakai bersama pengguna lain. Kamu mendapat akses penuh (root), sehingga bebas memasang aplikasi apa pun." },
+        { "t": "h3", "x": "Perbedaan VPS dengan shared hosting" },
+        { "t": "table", "head": ["Aspek", "Shared hosting", "VPS"], "rows": [
+          ["Sumber daya", "Dipakai bersama banyak situs", "Dialokasikan khusus untukmu"],
+          ["Akses", "Terbatas lewat panel hosting", "Akses root penuh"],
+          ["Aplikasi", "Umumnya PHP dan database standar", "Bebas: Node.js, Python, bot, Docker, dan lainnya"],
+          ["Pengelolaan", "Diurus penyedia hosting", "Sebagian besar diurus sendiri"],
+          ["Cocok untuk", "Website sederhana", "Aplikasi, bot, dan layanan yang harus selalu menyala"]
+        ] },
+        { "t": "h2", "x": "Fungsi VPS yang paling umum" },
+        { "t": "ul", "items": [
+          "Menjalankan bot WhatsApp, Telegram, atau Discord yang harus aktif terus-menerus.",
+          "Menjalankan aplikasi web dengan Node.js, Python, atau framework lain yang tidak didukung shared hosting.",
+          "Menyimpan dan menjalankan database terpisah dari website.",
+          "Lingkungan uji coba untuk belajar Linux, Docker, atau deployment.",
+          "VPN atau proxy pribadi untuk kebutuhan kerja."
+        ] },
+        { "t": "h2", "x": "Cara membaca spesifikasi VPS" },
+        { "t": "h3", "x": "CPU" },
+        { "t": "p", "x": "Jumlah vCPU menentukan berapa banyak pekerjaan yang bisa diproses bersamaan. Untuk bot sederhana atau website kecil, 1 vCPU biasanya cukup. Aplikasi yang melayani banyak permintaan sekaligus akan terasa lebih lega dengan 2 vCPU atau lebih." },
+        { "t": "h3", "x": "RAM" },
+        { "t": "p", "x": "RAM sering menjadi batas pertama yang terasa. Sistem operasi Linux sendiri memakai sebagian RAM. Sebagai patokan awal, 1 GB cukup untuk satu bot ringan, sedangkan 2 sampai 4 GB lebih nyaman untuk website dengan database atau beberapa aplikasi sekaligus." },
+        { "t": "h3", "x": "Penyimpanan" },
+        { "t": "p", "x": "Pilih penyimpanan SSD atau NVMe karena jauh lebih cepat daripada harddisk biasa. Kapasitas 20 sampai 40 GB umumnya cukup untuk aplikasi dan log, kecuali kamu menyimpan banyak file media." },
+        { "t": "h3", "x": "Bandwidth dan kuota trafik" },
+        { "t": "p", "x": "Bandwidth adalah kecepatan koneksi, sedangkan kuota trafik adalah total data yang boleh keluar masuk per bulan. Untuk bot dan website kecil, kuota beberapa ratus GB per bulan sudah sangat cukup." },
+        { "t": "h2", "x": "Memilih lokasi server" },
+        { "t": "p", "x": "Semakin dekat server dengan penggunamu, semakin kecil jeda (latensi). Untuk pengguna di Indonesia, lokasi Singapura atau Jakarta biasanya memberi respons paling cepat. Lokasi yang lebih jauh tetap bisa dipakai, tetapi jeda tambahan akan terasa pada aplikasi yang interaktif." },
+        { "t": "h2", "x": "Langkah keamanan pertama setelah VPS menyala" },
+        { "t": "ol", "items": [
+          "Perbarui sistem operasi segera, misalnya dengan **apt update** dan **apt upgrade** di Ubuntu.",
+          "Buat pengguna biasa dan hentikan kebiasaan bekerja sebagai root.",
+          "Gunakan SSH key, lalu matikan login dengan password.",
+          "Aktifkan firewall dan buka hanya port yang benar-benar dipakai.",
+          "Jadwalkan cadangan data secara rutin dan uji cara memulihkannya."
+        ] },
+        { "t": "note", "x": "Kalau tujuanmu hanya memiliki chatbot WhatsApp yang membalas pelanggan otomatis, kamu tidak harus menyewa dan merawat VPS sendiri. Layanan seperti Sewa Agen AI sudah berjalan di server yang dikelola penyedianya." },
+        { "t": "cta", "title": "Butuh bot WhatsApp tanpa mengurus server?", "x": "Agen AI Boosteryuk berjalan di server kami. Kamu cukup memilih paket, mengisi data, lalu menautkan nomor WhatsApp.", "href": "/artikel/apa-itu-agent-ai", "label": "Baca tentang Agen AI" }
+      ],
+      "faq": [
+        { "q": "Apakah pemula bisa memakai VPS?", "a": "Bisa, asal bersedia belajar dasar perintah Linux. Mulailah dari spesifikasi kecil, ikuti langkah keamanan dasar, dan biasakan membuat cadangan." },
+        { "q": "VPS atau shared hosting untuk website toko?", "a": "Untuk website toko sederhana, shared hosting atau layanan siap pakai biasanya lebih praktis. VPS lebih cocok jika kamu butuh aplikasi khusus atau bot yang menyala terus." },
+        { "q": "Berapa RAM yang dibutuhkan untuk bot WhatsApp?", "a": "Satu bot ringan umumnya berjalan nyaman di 1 GB RAM. Jika menjalankan beberapa bot atau fitur berat seperti pemrosesan media, siapkan 2 GB atau lebih." }
+      ],
+      "related": ["apa-itu-agent-ai", "apa-itu-smm-panel", "apa-itu-child-panel"]
+    },
+    {
+      "slug": "apa-itu-agent-ai",
+      "category": "Otomatisasi",
+      "title": "Apa Itu Agen AI WhatsApp? Fungsi, Contoh Penggunaan, dan Cara Menyewanya",
+      "seoTitle": "Apa Itu Agen AI WhatsApp? Fungsi, Contoh & Cara Sewa",
+      "description": "Penjelasan agen AI WhatsApp: bedanya dengan auto-reply biasa, fitur yang umum dipakai toko online, contoh percakapan, batasannya, dan langkah menyewa Agen AI di Boosteryuk.",
+      "excerpt": "Agen AI membalas pelanggan WhatsApp dengan bahasa alami, menjaga grup, dan mencatat pesanan. Ini cara kerjanya dan kapan kamu membutuhkannya.",
+      "thumbnail": "/artikel/apa-itu-agent-ai.jpg",
+      "thumbAlt": "Ilustrasi percakapan WhatsApp antara pelanggan dan agen AI yang membalas otomatis",
+      "published": "2026-11-14",
+      "updated": "2026-11-14",
+      "blocks": [
+        { "t": "p", "x": "Toko online kecil sering kehilangan pembeli karena satu alasan sederhana: chat tidak terbalas tepat waktu. Pemilik sedang mengemas pesanan, tidur, atau sekadar kewalahan. **Agen AI WhatsApp** dibuat untuk menutup celah itu dengan membalas pelanggan kapan pun, dengan bahasa yang wajar." },
+        { "t": "h2", "x": "Pengertian agen AI" },
+        { "t": "p", "x": "Agen AI adalah program yang terhubung ke nomor WhatsApp dan memakai model bahasa untuk memahami pesan masuk, lalu membalasnya sesuai informasi yang kamu berikan. Berbeda dengan chatbot menu yang hanya mengenali kata kunci tertentu, agen AI bisa menjawab pertanyaan yang ditulis dengan berbagai cara." },
+        { "t": "h3", "x": "Bedanya dengan auto-reply biasa" },
+        { "t": "table", "head": ["Aspek", "Auto-reply biasa", "Agen AI"], "rows": [
+          ["Cara memahami pesan", "Mencocokkan kata kunci", "Memahami maksud kalimat"],
+          ["Bentuk balasan", "Teks tetap yang sama", "Disesuaikan dengan pertanyaan"],
+          ["Pertanyaan di luar skenario", "Sering tidak terjawab", "Bisa dijawab jika informasinya tersedia"],
+          ["Tugas tambahan", "Terbatas", "Bisa menjaga grup, mencatat pengguna, hingga menerima pesanan"]
+        ] },
+        { "t": "h2", "x": "Fitur yang umum dipakai" },
+        { "t": "ul", "items": [
+          "**Auto respon** untuk menjawab pertanyaan harga, stok, jam operasional, dan cara order.",
+          "**Jaga grup** untuk menghapus spam dan link yang tidak diinginkan di grup WhatsApp.",
+          "**Auto order** untuk mencatat pesanan pelanggan langsung dari percakapan.",
+          "**Database pengguna** untuk menyimpan data pelanggan yang pernah menghubungi.",
+          "**Multimedia** untuk mengirim gambar katalog atau dokumen.",
+          "**Payment gateway** agar pelanggan bisa membayar tanpa harus transfer manual."
+        ] },
+        { "t": "h2", "x": "Contoh penggunaan sehari-hari" },
+        { "t": "h3", "x": "Toko online" },
+        { "t": "p", "x": "Pelanggan bertanya apakah ukuran M masih ada pukul sebelas malam. Agen AI menjawab sesuai data stok yang kamu isi, menyebutkan harga, dan menjelaskan cara memesan. Pagi harinya kamu tinggal memproses pesanan yang sudah tercatat." },
+        { "t": "h3", "x": "Admin komunitas" },
+        { "t": "p", "x": "Grup jual beli sering dibanjiri link penipuan. Fitur jaga grup menghapus pesan semacam itu tanpa kamu harus memantau grup setiap saat." },
+        { "t": "h3", "x": "Penyedia jasa" },
+        { "t": "p", "x": "Penyedia jasa seperti servis elektronik atau les privat bisa memakai agen AI untuk menjawab pertanyaan berulang tentang tarif dan jadwal, sehingga waktu admin dipakai untuk pertanyaan yang benar-benar butuh manusia." },
+        { "t": "h2", "x": "Batasan yang perlu kamu tahu" },
+        { "t": "ul", "items": [
+          "Agen AI hanya sebaik informasi yang kamu berikan. Data harga dan stok yang usang akan menghasilkan jawaban yang keliru.",
+          "Untuk keluhan sensitif atau negosiasi khusus, tetap sediakan jalur ke admin manusia.",
+          "Nomor yang dipakai sebaiknya nomor khusus bisnis, bukan nomor pribadi yang juga dipakai untuk keluarga."
+        ] },
+        { "t": "h2", "x": "Cara menyewa Agen AI di Boosteryuk" },
+        { "t": "ol", "items": [
+          "Buka halaman [Sewa Agen AI](/sewa-agen-ai) dan pilih platform WhatsApp.",
+          "Pilih paket sesuai kebutuhan, lalu isi nama agen, nomor WhatsApp, dan durasi sewa.",
+          "Bayar dari saldo akun. Kode tautan dikirim ke email kamu.",
+          "Tautkan nomor WhatsApp dalam 10 menit. Jika waktu tautan habis, saldo otomatis dikembalikan.",
+          "Pantau agen yang aktif beserta tanggal jatuh temponya di halaman Agen AI Saya."
+        ] },
+        { "t": "table", "head": ["Paket", "Harga per bulan", "Cocok untuk"], "rows": [
+          ["Starter", "Rp10.000", "Mencoba agen AI dengan fitur dasar"],
+          ["Medium", "Rp35.000", "Toko yang mulai ramai dan butuh fitur lebih lengkap"],
+          ["Bisnis", "Rp75.000", "Bisnis yang butuh semua fitur, termasuk payment gateway"]
+        ] },
+        { "t": "note", "x": "Harga di atas adalah harga di Boosteryuk saat artikel ini diperbarui. Harga di child panel dapat berbeda karena pemilik panel menetapkan markup sendiri." },
+        { "t": "cta", "title": "Coba Agen AI untuk WhatsApp tokomu", "x": "Mulai dari paket Starter, tautkan nomor WhatsApp, dan biarkan agen membalas pelanggan saat kamu sibuk.", "href": "/sewa-agen-ai", "label": "Sewa Agen AI" }
+      ],
+      "faq": [
+        { "q": "Apakah nomor WhatsApp saya aman?", "a": "Agen ditautkan lewat fitur perangkat tertaut WhatsApp, sama seperti WhatsApp Web. Kamu tetap bisa melihat dan memutus perangkat tertaut dari ponselmu kapan saja." },
+        { "q": "Bagaimana jika gagal menautkan nomor?", "a": "Waktu tautan dibatasi 10 menit. Jika nomor tidak tertaut sampai waktunya habis, pesanan dibatalkan dan saldo dikembalikan otomatis." },
+        { "q": "Apakah bisa memakai WhatsApp Business?", "a": "Bisa. Menggunakan nomor khusus bisnis justru disarankan agar percakapan pelanggan terpisah dari chat pribadi." }
+      ],
+      "related": ["apa-itu-smm-panel", "apa-itu-child-panel", "panduan-vps-untuk-pemula"]
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 const LINKS = [
   { to: '/layanan', label: 'Layanan' },
   { to: '/cek-status', label: 'Cek Status' },
+  { to: '/artikel', label: 'Artikel' },
   { to: '/about', label: 'Tentang' },
   { to: '/terms', label: 'Syarat' },
   { to: '/privacy', label: 'Privasi' },
