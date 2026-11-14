@@ -5,7 +5,8 @@
  * Resp: { ok, agents: [ { order_id, paket, status, state, harga, durasi_bulan, dibeli, jatuh_tempo,
  *                         sisa_hari, nomor_bot, nama_ai, nomor_pemilik, ewallet, nama_toko,
  *                         payment_gateway, platform } ] }
- *   state: 'aktif' (WA tertaut) | 'menunggu' (belum tertaut) | 'kedaluwarsa'
+ *   state: 'aktif' (WA tertaut) | 'menunggu' (belum tertaut, sisa_tunggu = detik tersisa) | 'kedaluwarsa'
+ *   Order yang menunggu tautan lebih dari 10 menit TIDAK ditampilkan (sudah/akan direfund).
  * Juga mengecek/menjadwalkan email pengingat jatuh tempo agen user ini (agent_reminder.php).
  */
 header("Access-Control-Allow-Origin: *");
@@ -31,6 +32,14 @@ if (!$uid) {
 }
 if (!$uid) reply(['ok' => false, 'message' => 'Token tidak valid'], 401);
 
+// Batas waktu menautkan WhatsApp (sama dengan VPS: bot dihentikan bila 10 menit belum tertaut).
+const AGENT_LINK_WAIT = 10 * 60;
+const AGENT_LINK_GRACE = 60; // toleransi selisih jam server
+
+// Sinkron dulu SEBELUM daftar dibuat: tertaut → 'selesai', waktu habis → 'batal' + saldo dikembalikan.
+require_once __DIR__ . '/agent_lifecycle.php';
+try { agent_sync_user($conn, (int)$uid); } catch (Throwable $e) { /* VPS tidak terjangkau: daftar tetap tampil */ }
+
 $ext = riwayat_ensure_columns($conn);
 $cols = $ext
     ? "order_id, service_name, quantity, price, status, UNIX_TIMESTAMP(created_at) AS ts, order_type, paket, durasi_bulan, jatuh_tempo, target, detail"
@@ -50,6 +59,10 @@ foreach ($rows as $r) {
     $paket = $r['paket'] ?? null;
     if (!$paket && preg_match('/Agen AI WhatsApp\s+(\w+)/i', $r['service_name'], $m)) $paket = $m[1];
     $expired = $due && $due < $now;
+    $waiting = !$expired && $r['status'] !== 'selesai';
+    $waitLeft = $waiting ? ((int)$r['ts'] + AGENT_LINK_WAIT) - $now : null;
+    // Menunggu tautan tapi waktu tunggu sudah habis → tidak ditampilkan (saldo dikembalikan oleh agent_lifecycle).
+    if ($waiting && $waitLeft < -AGENT_LINK_GRACE) continue;
     $agents[] = [
         'order_id'        => $r['order_id'],
         'nama_layanan'    => $r['service_name'],
@@ -68,14 +81,12 @@ foreach ($rows as $r) {
         'nama_toko'       => $d['nama_toko'] ?? null,
         'payment_gateway' => isset($d['payment_gateway']) ? (bool)$d['payment_gateway'] : (strtolower((string)$paket) === 'bisnis'),
         'platform'        => $d['platform'] ?? 'whatsapp',
+        'sisa_tunggu'     => $waiting ? max(0, $waitLeft) : null, // detik tersisa untuk menautkan
     ];
 }
 
 // pengingat jatuh tempo agen milik user ini (tanpa cron) — dijalankan setelah respons terkirim
 agent_reminder_after_response(function () use ($conn, $uid) {
-    // order agen yang waktu tautnya habis → refund saldo di DB (user yang sudah menutup halaman pairing)
-    require_once __DIR__ . '/agent_lifecycle.php';
-    agent_sync_user($conn, $uid);
     agent_reminder_check_user($conn, $uid);
 });
 reply(['ok' => true, 'agents' => $agents]);

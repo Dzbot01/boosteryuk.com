@@ -65,7 +65,7 @@ export default function ExtraSetupPage() {
         return { ok: r.ok, available: r.available, message: r.message };
       },
       save: async (input, isFirst) => {
-        const body = { name: input.name, config: input.config, markup_smm_pct: input.markup_smm_pct, markup_agent_pct: input.markup_agent_pct };
+        const body = { name: input.name, config: input.config, markup_smm_pct: input.markup_smm_pct, markup_agent_pct: input.markup_agent_pct, markup_otp_pct: input.markup_otp_pct };
         // Panel belum ada → BAYAR paket EXTRA sekaligus membuat panel dengan pengaturan ini.
         if (isFirst && !panel && !createdId.current) {
           if (balance < price) return { ok: false, message: `Saldo tidak cukup. Butuh ${rupiah(price)} — silakan deposit dulu.` };

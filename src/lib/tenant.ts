@@ -38,6 +38,8 @@ export interface Tenant {
   hostname: string;
   markup_smm_pct: number;
   markup_agent_pct: number;
+  /** Markup Order Nomor (OTP) % di atas harga OTP web utama. */
+  markup_otp_pct?: number;
   config: TenantConfig;
 }
 

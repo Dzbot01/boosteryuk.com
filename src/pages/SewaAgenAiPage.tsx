@@ -641,14 +641,32 @@ function L({ label, children }: { label: string; children: React.ReactNode }) {
 /** Daftar Agen AI milik user: aktif (tertaut) dan yang masih menunggu tautan. */
 function MyActiveAgents({ refreshKey, onOpen }: { refreshKey: string; onOpen: () => void }) {
   const [agents, setAgents] = useState<MyAgent[] | null>(null);
+  const [loadedAt, setLoadedAt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     let alive = true;
-    getMyAgents().then((r) => alive && setAgents(r.ok ? r.agents.filter((a) => a.state !== 'kedaluwarsa') : []));
+    getMyAgents().then((r) => {
+      if (!alive) return;
+      setAgents(r.ok ? r.agents.filter((a) => a.state !== 'kedaluwarsa') : []);
+      setLoadedAt(Date.now());
+    });
     return () => {
       alive = false;
     };
   }, [refreshKey]);
-  if (!agents || agents.length === 0) return null;
+  const hasWaiting = !!agents?.some((a) => a.state === 'menunggu');
+  useEffect(() => {
+    if (!hasWaiting) return;
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [hasWaiting]);
+  // Sisa waktu tautan dihitung mundur di browser; yang habis langsung hilang dari daftar.
+  const leftOf = (a: MyAgent) => (a.state === 'menunggu' && a.sisa_tunggu != null ? a.sisa_tunggu - Math.floor((now - loadedAt) / 1000) : null);
+  const visible = (agents || []).filter((a) => {
+    const left = leftOf(a);
+    return left === null || left > 0;
+  });
+  if (visible.length === 0) return null;
   const tgl = (ms: number | null) => (ms ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(ms) : '—');
   return (
     <Reveal>
@@ -658,8 +676,9 @@ function MyActiveAgents({ refreshKey, onOpen }: { refreshKey: string; onOpen: ()
           <button onClick={onOpen} className="text-[12.5px] font-bold text-emerald-600 hover:underline dark:text-emerald-400">Lihat semua</button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          {agents.slice(0, 6).map((a) => {
+          {visible.slice(0, 6).map((a) => {
             const aktif = a.state === 'aktif';
+            const left = leftOf(a);
             return (
               <button
                 key={a.order_id}
@@ -677,6 +696,11 @@ function MyActiveAgents({ refreshKey, onOpen }: { refreshKey: string; onOpen: ()
                       {aktif ? 'Aktif' : 'Menunggu tautan'}
                     </span>
                     {aktif && <span className="text-[11px] text-slate-400">Jatuh tempo {tgl(a.jatuh_tempo)}</span>}
+                    {left !== null && (
+                      <span className="text-[11px] tabular-nums text-amber-600">
+                        Sisa waktu tautan {String(Math.floor(left / 60)).padStart(2, '0')}:{String(left % 60).padStart(2, '0')}
+                      </span>
+                    )}
                   </span>
                 </span>
               </button>

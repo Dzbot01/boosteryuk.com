@@ -29,6 +29,7 @@ export interface Draft {
   status: 'active' | 'suspended';
   markup_smm_pct: number;
   markup_agent_pct: number;
+  markup_otp_pct: number;
   owner_email: string;
   config: TenantConfig;
   slides: SlideDraft[];
@@ -43,6 +44,7 @@ export const emptyDraft = (): Draft => ({
   status: 'active',
   markup_smm_pct: 10,
   markup_agent_pct: 10,
+  markup_otp_pct: 10,
   owner_email: '',
   config: { brandName: '', brandSuffix: '', headerTagline: 'SMM Panel', footerText: '', themePreset: 'cyan', voice: 'welcome' },
   slides: [],
@@ -57,6 +59,7 @@ export function toDraft(p: ChildPanel): Draft {
     status: p.status,
     markup_smm_pct: Number(p.markup_smm_pct) || 0,
     markup_agent_pct: Number(p.markup_agent_pct) || 0,
+    markup_otp_pct: Number(p.markup_otp_pct) || 0,
     owner_email: p.owner_email || '',
     config: { ...c },
     slides: (c.slides || []).map((s) => ({ image: s.image, title: s.title, subtitle: s.subtitle })),
@@ -169,6 +172,7 @@ export function PanelEditor({
       status: d.status,
       markup_smm_pct: Number(d.markup_smm_pct) || 0,
       markup_agent_pct: Number(d.markup_agent_pct) || 0,
+      markup_otp_pct: Number(d.markup_otp_pct) || 0,
       owner_email: d.owner_email.trim(),
       config: { ...config, slides: slides.filter((s) => s.image).map((s) => ({ image: s.image, title: s.title, subtitle: s.subtitle })) },
     });
@@ -460,6 +464,13 @@ export function PanelEditor({
                 <input className={inp} type="number" min={0} max={300} step={0.5} value={d.markup_agent_pct} onChange={(e) => setD({ ...d, markup_agent_pct: Number(e.target.value) })} />
                 <span className="mt-1 block text-[11.5px] text-slate-500">
                   Contoh: Starter {rupiah(10000)} → {rupiah(Math.ceil(10000 * (1 + (Number(d.markup_agent_pct) || 0) / 100)))} /bulan
+                </span>
+              </label>
+              <label className="block">
+                <span className={lbl}>Order Nomor OTP (%)</span>
+                <input className={inp} type="number" min={0} max={300} step={0.5} value={d.markup_otp_pct} onChange={(e) => setD({ ...d, markup_otp_pct: Number(e.target.value) })} />
+                <span className="mt-1 block text-[11.5px] text-slate-500">
+                  Di atas harga OTP web utama. Contoh: {rupiah(3600)} → {rupiah(Math.ceil((3600 * (1 + (Number(d.markup_otp_pct) || 0) / 100)) / 100) * 100)}
                 </span>
               </label>
             </div>

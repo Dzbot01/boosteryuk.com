@@ -73,6 +73,11 @@ function cp_ensure_schema($conn) {
         $hasExp = $conn->query("SHOW COLUMNS FROM child_panels LIKE 'expires_at'");
         if ($hasExp && $hasExp->num_rows === 0) $conn->query("ALTER TABLE child_panels ADD COLUMN expires_at DATETIME NULL COMMENT 'masa aktif (paket EXTRA)'");
     } catch (Throwable $e) { /* abaikan: resolver tetap jalan tanpa kolom ini */ }
+    // Markup Order Nomor (OTP) — persen di atas harga jual OTP web utama.
+    try {
+        $hasOtp = $conn->query("SHOW COLUMNS FROM child_panels LIKE 'markup_otp_pct'");
+        if ($hasOtp && $hasOtp->num_rows === 0) $conn->query("ALTER TABLE child_panels ADD COLUMN markup_otp_pct DECIMAL(6,2) NOT NULL DEFAULT 0 AFTER markup_agent_pct");
+    } catch (Throwable $e) { /* abaikan */ }
     // Pesanan yang dibuat lewat child panel (dasar perhitungan pendapatan reseller).
     $conn->query("CREATE TABLE IF NOT EXISTS child_panel_orders (
         id             INT AUTO_INCREMENT PRIMARY KEY,
@@ -188,6 +193,7 @@ function cp_public($row, $hostname) {
         'hostname'         => $hostname,
         'markup_smm_pct'   => (float)$row['markup_smm_pct'],
         'markup_agent_pct' => (float)$row['markup_agent_pct'],
+        'markup_otp_pct'   => (float)($row['markup_otp_pct'] ?? 0),
         'config'           => (object)$cfg,
     ];
 }
@@ -215,7 +221,7 @@ function cp_resolve($conn, $hostname = null) {
 /** Harga setelah markup child panel. Tidak pernah di bawah harga dasar. */
 function cp_apply_markup($basePrice, $tenant, $kind) {
     if (!$tenant) return (float)$basePrice;
-    $pct = $kind === 'agent' ? $tenant['markup_agent_pct'] : $tenant['markup_smm_pct'];
+    $pct = $kind === 'agent' ? $tenant['markup_agent_pct'] : ($kind === 'otp' ? ($tenant['markup_otp_pct'] ?? 0) : $tenant['markup_smm_pct']);
     $pct = max(0, min(CP_MAX_MARKUP, (float)$pct));
     return (float)ceil($basePrice * (1 + $pct / 100));
 }

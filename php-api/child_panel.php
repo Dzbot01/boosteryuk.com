@@ -9,7 +9,7 @@
  *   ping                                       → catat kunjungan, balas is_owner (admin ke-2?)
  *   record_order {order_id}                    → catat pesanan SMM (harga dari riwayat_pesanan milik user)
  * Admin ke-2 / pemilik panel (owner_user_id) atau admin utama:
- *   owner_summary | owner_orders | owner_users | owner_set_markup {markup_smm_pct, markup_agent_pct}
+ *   owner_summary | owner_orders | owner_users | owner_set_markup {markup_smm_pct, markup_agent_pct, markup_otp_pct}
  * Pemilik panel (paket EXTRA) dari web utama: my_panel | my_save {panel:{name, config, markup_*}} |
  *   my_upload {slot, data} | my_video_sign {ext, size}   — hanya panel miliknya; subdomain/status tetap.
  * Pencairan pendapatan (pemilik panel, dari web utama ATAU subdomain): my_wd_info | my_withdraw {withdraw:{method,
@@ -105,8 +105,9 @@ if (in_array($action, ['my_panel', 'my_save', 'my_upload', 'my_video_sign', 'my_
         $name = cp_str($p['name'] ?? $mine['name'], 80) ?: $mine['name'];
         $mSmm = max(0, min(CP_MAX_MARKUP, round((float)($p['markup_smm_pct'] ?? $mine['markup_smm_pct']), 2)));
         $mAgent = max(0, min(CP_MAX_MARKUP, round((float)($p['markup_agent_pct'] ?? $mine['markup_agent_pct']), 2)));
+        $mOtp = max(0, min(CP_MAX_MARKUP, round((float)($p['markup_otp_pct'] ?? ($mine['markup_otp_pct'] ?? 0)), 2)));
         $config = json_encode(cp_clean_config($p['config'] ?? []), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        cp_q($conn, "UPDATE child_panels SET name = ?, markup_smm_pct = ?, markup_agent_pct = ?, config = ? WHERE id = ?", 'sddsi', $name, $mSmm, $mAgent, $config, $pid)->close();
+        cp_q($conn, "UPDATE child_panels SET name = ?, markup_smm_pct = ?, markup_agent_pct = ?, markup_otp_pct = ?, config = ? WHERE id = ?", 'sdddsi', $name, $mSmm, $mAgent, $mOtp, $config, $pid)->close();
         cp_out(['ok' => true, 'id' => $pid, 'hostname' => $mine['hostname'], 'url' => 'https://' . $mine['hostname']]);
     }
     if ($action === 'my_upload') {
@@ -188,7 +189,7 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
         $u = $st->get_result()->fetch_assoc();
         $st->close();
         cp_out(['ok' => true, 'panel' => ['name' => $tenant['name'], 'hostname' => $tenant['hostname'],
-            'markup_smm_pct' => $tenant['markup_smm_pct'], 'markup_agent_pct' => $tenant['markup_agent_pct']],
+            'markup_smm_pct' => $tenant['markup_smm_pct'], 'markup_agent_pct' => $tenant['markup_agent_pct'], 'markup_otp_pct' => $tenant['markup_otp_pct']],
             'all' => $q(''), 'month' => $q("AND o.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"), 'today' => $q("AND o.created_at >= CURDATE()"),
             'balance' => cp_wd_balance($conn, $pid),
             'users' => ['total' => (int)$u['n'], 'active7d' => (int)$u['aktif']]]);
@@ -226,8 +227,9 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
     if ($action === 'owner_set_markup') {
         $mSmm = max(0, min(CP_MAX_MARKUP, round((float)($in['markup_smm_pct'] ?? 0), 2)));
         $mAgent = max(0, min(CP_MAX_MARKUP, round((float)($in['markup_agent_pct'] ?? 0), 2)));
-        cp_q($conn, "UPDATE child_panels SET markup_smm_pct = ?, markup_agent_pct = ? WHERE id = ?", 'ddi', $mSmm, $mAgent, $pid)->close();
-        cp_out(['ok' => true, 'markup_smm_pct' => $mSmm, 'markup_agent_pct' => $mAgent]);
+        $mOtp = max(0, min(CP_MAX_MARKUP, round((float)($in['markup_otp_pct'] ?? ($tenant['markup_otp_pct'] ?? 0)), 2)));
+        cp_q($conn, "UPDATE child_panels SET markup_smm_pct = ?, markup_agent_pct = ?, markup_otp_pct = ? WHERE id = ?", 'dddi', $mSmm, $mAgent, $mOtp, $pid)->close();
+        cp_out(['ok' => true, 'markup_smm_pct' => $mSmm, 'markup_agent_pct' => $mAgent, 'markup_otp_pct' => $mOtp]);
     }
 }
 
@@ -335,6 +337,7 @@ try {
         $status = ($p['status'] ?? 'active') === 'suspended' ? 'suspended' : 'active';
         $mSmm = max(0, min(CP_MAX_MARKUP, round((float)($p['markup_smm_pct'] ?? 0), 2)));
         $mAgent = max(0, min(CP_MAX_MARKUP, round((float)($p['markup_agent_pct'] ?? 0), 2)));
+        $mOtp = max(0, min(CP_MAX_MARKUP, round((float)($p['markup_otp_pct'] ?? 0), 2)));
         $config = json_encode(cp_clean_config($p['config'] ?? []), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         $owner = null;
@@ -348,12 +351,12 @@ try {
 
         $conn->begin_transaction();
         if ($id > 0) {
-            cp_q($conn, "UPDATE child_panels SET name=?, status=?, markup_smm_pct=?, markup_agent_pct=?, config=?, owner_user_id=? WHERE id=?",
-                'ssddsii', $name, $status, $mSmm, $mAgent, $config, $owner, $id)->close();
+            cp_q($conn, "UPDATE child_panels SET name=?, status=?, markup_smm_pct=?, markup_agent_pct=?, markup_otp_pct=?, config=?, owner_user_id=? WHERE id=?",
+                'ssdddsii', $name, $status, $mSmm, $mAgent, $mOtp, $config, $owner, $id)->close();
             cp_q($conn, "DELETE FROM child_panel_domains WHERE child_panel_id = ? AND is_primary = 1", 'i', $id)->close();
         } else {
-            cp_q($conn, "INSERT INTO child_panels (name, status, markup_smm_pct, markup_agent_pct, config, owner_user_id) VALUES (?,?,?,?,?,?)",
-                'ssddsi', $name, $status, $mSmm, $mAgent, $config, $owner)->close();
+            cp_q($conn, "INSERT INTO child_panels (name, status, markup_smm_pct, markup_agent_pct, markup_otp_pct, config, owner_user_id) VALUES (?,?,?,?,?,?,?)",
+                'ssdddsi', $name, $status, $mSmm, $mAgent, $mOtp, $config, $owner)->close();
             $id = (int)$conn->insert_id;
         }
         cp_q($conn, "INSERT INTO child_panel_domains (child_panel_id, hostname, is_primary) VALUES (?,?,1)", 'is', $id, cp_host_of($sub))->close();

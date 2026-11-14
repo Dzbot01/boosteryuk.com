@@ -113,6 +113,8 @@ export interface MyAgent {
   nama_toko: string | null;
   payment_gateway: boolean;
   platform: string;
+  /** Detik tersisa untuk menautkan WhatsApp (hanya state 'menunggu'). */
+  sisa_tunggu?: number | null;
 }
 
 /** Daftar Agen AI user yang login. Juga memicu email pengingat jatuh tempo di server. */

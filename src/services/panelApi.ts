@@ -28,7 +28,7 @@ export interface PanelTotals {
   profit: number;
 }
 export interface PanelSummary {
-  panel: { name: string; hostname: string; markup_smm_pct: number; markup_agent_pct: number };
+  panel: { name: string; hostname: string; markup_smm_pct: number; markup_agent_pct: number; markup_otp_pct?: number };
   all: PanelTotals;
   month: PanelTotals;
   today: PanelTotals;
@@ -36,7 +36,7 @@ export interface PanelSummary {
 }
 export interface PanelOrder {
   order_id: string;
-  kind: 'smm' | 'agent';
+  kind: 'smm' | 'agent' | 'otp';
   service_name: string;
   quantity: number;
   price: number;
@@ -66,8 +66,8 @@ export const panelApi = {
   summary: () => call<PanelSummary>('owner_summary'),
   orders: (limit = 100) => call<{ orders?: PanelOrder[] }>('owner_orders', { limit }),
   users: () => call<{ users?: PanelUser[] }>('owner_users'),
-  setMarkup: (markup_smm_pct: number, markup_agent_pct: number) =>
-    call<{ markup_smm_pct?: number; markup_agent_pct?: number }>('owner_set_markup', { markup_smm_pct, markup_agent_pct }),
+  setMarkup: (markup_smm_pct: number, markup_agent_pct: number, markup_otp_pct: number) =>
+    call<{ markup_smm_pct?: number; markup_agent_pct?: number; markup_otp_pct?: number }>('owner_set_markup', { markup_smm_pct, markup_agent_pct, markup_otp_pct }),
 };
 
 const ownerCache = new Map<string, boolean>();

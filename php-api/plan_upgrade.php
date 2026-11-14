@@ -193,8 +193,9 @@ try {
             $config = json_encode(cp_clean_config($cfgIn), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             if (isset($in['markup_smm_pct'])) $MARKUP_SMM = max(0, min(CP_MAX_MARKUP, round((float)$in['markup_smm_pct'], 2)));
             if (isset($in['markup_agent_pct'])) $MARKUP_AGENT = max(0, min(CP_MAX_MARKUP, round((float)$in['markup_agent_pct'], 2)));
-            cp_q($conn, "INSERT INTO child_panels (owner_user_id, name, status, markup_smm_pct, markup_agent_pct, config, expires_at) VALUES (?,?, 'active', ?, ?, ?, ?)",
-                'isddss', (int)$uid, $name, $MARKUP_SMM ?? $MARKUP_DEFAULT, $MARKUP_AGENT ?? $MARKUP_DEFAULT, $config, $until)->close();
+            $MARKUP_OTP = isset($in['markup_otp_pct']) ? max(0, min(CP_MAX_MARKUP, round((float)$in['markup_otp_pct'], 2))) : $MARKUP_DEFAULT;
+            cp_q($conn, "INSERT INTO child_panels (owner_user_id, name, status, markup_smm_pct, markup_agent_pct, markup_otp_pct, config, expires_at) VALUES (?,?, 'active', ?, ?, ?, ?, ?)",
+                'isdddss', (int)$uid, $name, $MARKUP_SMM ?? $MARKUP_DEFAULT, $MARKUP_AGENT ?? $MARKUP_DEFAULT, $MARKUP_OTP, $config, $until)->close();
             $pid = (int)$conn->insert_id;
             $newPanelId = $pid;
             cp_q($conn, "INSERT INTO child_panel_domains (child_panel_id, hostname, is_primary) VALUES (?, ?, 1)", 'is', $pid, $sub . '.' . CP_ROOT_DOMAIN)->close();

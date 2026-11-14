@@ -131,7 +131,7 @@ export default function PanelAdminPage() {
                 <div><dt className="text-[11.5px] text-slate-400">Omzet bulan ini</dt><dd className="font-semibold">{rupiah(summary.month.omzet)}</dd></div>
                 <div><dt className="text-[11.5px] text-slate-400">Total pesanan</dt><dd className="font-semibold">{summary.all.orders}</dd></div>
                 <div><dt className="text-[11.5px] text-slate-400">Total omzet</dt><dd className="font-semibold">{rupiah(summary.all.omzet)}</dd></div>
-                <div><dt className="text-[11.5px] text-slate-400">Markup saat ini</dt><dd className="font-semibold">SMM {summary.panel.markup_smm_pct}% · Agen AI {summary.panel.markup_agent_pct}%</dd></div>
+                <div><dt className="text-[11.5px] text-slate-400">Markup saat ini</dt><dd className="font-semibold">SMM {summary.panel.markup_smm_pct}% · Agen AI {summary.panel.markup_agent_pct}% · OTP {summary.panel.markup_otp_pct ?? 0}%</dd></div>
               </dl>
               <p className="mt-3 text-[11.5px] text-slate-500">
                 Pendapatan = harga yang dibayar user di panel ini − harga asli Boosteryuk (pesanan dibatalkan tidak dihitung).{' '}
@@ -169,7 +169,7 @@ export default function PanelAdminPage() {
                   <td className="px-4 py-3"><p className="font-semibold text-slate-800 dark:text-slate-100">{o.name || '—'}</p><p className="text-[11px] text-slate-400">{o.email}</p></td>
                   <td className="max-w-[240px] px-4 py-3">
                     <p className="truncate font-semibold text-slate-800 dark:text-slate-100" title={o.service_name}>{o.service_name}</p>
-                    <p className="text-[11px] text-slate-400">{o.kind === 'agent' ? 'Agen AI' : 'SMM'} · #{o.order_id}</p>
+                    <p className="text-[11px] text-slate-400">{o.kind === 'agent' ? 'Agen AI' : o.kind === 'otp' ? 'Nomor OTP' : 'SMM'} · #{o.order_id}</p>
                   </td>
                   <td className="px-4 py-3 text-right font-semibold">{rupiah(o.price)}</td>
                   <td className="px-4 py-3 text-right text-slate-500">{rupiah(o.base_price)}</td>
@@ -229,17 +229,19 @@ export default function PanelAdminPage() {
 function MarkupForm({ summary, onSaved }: { summary: PanelSummary; onSaved: (s: PanelSummary) => void }) {
   const [smm, setSmm] = useState(String(summary.panel.markup_smm_pct));
   const [agent, setAgent] = useState(String(summary.panel.markup_agent_pct));
+  const [otp, setOtp] = useState(String(summary.panel.markup_otp_pct ?? 0));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const save = async () => {
     setSaving(true);
     setMsg(null);
-    const r = await panelApi.setMarkup(Number(smm) || 0, Number(agent) || 0);
+    const r = await panelApi.setMarkup(Number(smm) || 0, Number(agent) || 0, Number(otp) || 0);
     setSaving(false);
     if (!r.ok) return setMsg({ ok: false, text: r.message || 'Gagal menyimpan.' });
     setSmm(String(r.markup_smm_pct));
     setAgent(String(r.markup_agent_pct));
-    onSaved({ ...summary, panel: { ...summary.panel, markup_smm_pct: r.markup_smm_pct ?? 0, markup_agent_pct: r.markup_agent_pct ?? 0 } });
+    setOtp(String(r.markup_otp_pct ?? 0));
+    onSaved({ ...summary, panel: { ...summary.panel, markup_smm_pct: r.markup_smm_pct ?? 0, markup_agent_pct: r.markup_agent_pct ?? 0, markup_otp_pct: r.markup_otp_pct ?? 0 } });
     setMsg({ ok: true, text: 'Markup tersimpan. Harga di panel langsung mengikuti setelah halaman dimuat ulang.' });
   };
   const inp = 'h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] outline-none focus:border-cyan-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white';
@@ -258,6 +260,11 @@ function MarkupForm({ summary, onSaved }: { summary: PanelSummary; onSaved: (s: 
           <span className="mb-1 block text-[11.5px] font-semibold text-slate-500">Sewa Agen AI (%)</span>
           <input className={inp} type="number" min={0} max={300} step={0.5} value={agent} onChange={(e) => setAgent(e.target.value)} />
           <span className="mt-1 block text-[11.5px] text-slate-500">Contoh: Starter {rupiah(10000)} → {rupiah(ex(10000, agent))}</span>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[11.5px] font-semibold text-slate-500">Order Nomor OTP (%)</span>
+          <input className={inp} type="number" min={0} max={300} step={0.5} value={otp} onChange={(e) => setOtp(e.target.value)} />
+          <span className="mt-1 block text-[11.5px] text-slate-500">Contoh: {rupiah(3600)} → {rupiah(Math.ceil(ex(3600, otp) / 100) * 100)}</span>
         </label>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-3">

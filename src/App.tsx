@@ -10,6 +10,8 @@ const CekStatusPage = lazy(() => import('./pages/CekStatusPage'));
 // import + route di bawah bila ingin ditampilkan kembali.
 // const OrderNomorGuidePage = lazy(() => import('./pages/OrderNomorGuidePage'));
 // const OrderNomorPage = lazy(() => import('./pages/OrderNomorPage'));
+// Order Nomor OTP realtime (bayar saldo) — ditampilkan di menu CHILD PANEL.
+const OrderOtpPage = lazy(() => import('./pages/OrderOtpPage'));
 const RiwayatPage = lazy(() => import('./pages/RiwayatPage'));
 const HubungiPage = lazy(() => import('./pages/HubungiPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
@@ -75,6 +77,7 @@ export default function App() {
           {/* Order Nomor disembunyikan dari UI (kode dipertahankan):
           <Route path="otp-service/panduan" element={<OrderNomorGuidePage />} />
           <Route path="otp-service" element={<ProtectedRoute><OrderNomorPage /></ProtectedRoute>} /> */}
+          <Route path="otp-service" element={<ProtectedRoute><OrderOtpPage /></ProtectedRoute>} />
           {/* Checkout lama digantikan halaman Upgrade (/plus) */}
           <Route path="upgrade-plus" element={<Navigate to="/plus" replace />} />
           <Route path="ordervps" element={<ProtectedRoute><OrderVpsPage /></ProtectedRoute>} />

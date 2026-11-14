@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   Globe,
   Shield,
+  Smartphone,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -132,9 +133,13 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
 
   const AUTH_REQUIRED = ['layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
 
-  const combined = user
-   ? [baseMenu[0], baseMenu[1], baseMenu[2],...authMenu,...baseMenu.slice(3)]
+  // Child panel: menu "Order Nomor" (OTP) tampil setelah "Buat Pesanan".
+  const base = IS_CHILD_PANEL
+    ? [baseMenu[0], baseMenu[1], baseMenu[2], { id: 'nokos' as PageId, icon: Smartphone, label: 'Order Nomor', desc: 'Nomor OTP WhatsApp, Telegram, dll' }, ...baseMenu.slice(3)]
     : baseMenu;
+  const combined = user
+   ? [base[0], base[1], base[2],...authMenu,...base.slice(3)]
+    : base;
 
   const menuItems = isAdmin
    ? []

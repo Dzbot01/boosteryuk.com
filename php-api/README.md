@@ -215,3 +215,26 @@ Aturan saldo (`cp_wd_balance`, tabel `child_panel_withdrawals`):
   admin hanya bisa memproses yang masih `pending` (anti diproses dua kali).
 - Biaya: DANA Rp0, OVO/GoPay/ShopeePay Rp1.000, bank Rp2.500 (`CP_WD_METHODS`).
 - Email: memakai `resend_key` di `agent_config.php` (isi di server); tanpa key → lewat Worker email.
+
+### Order Nomor OTP (child panel) — `otp.php`, `otp_config.php`
+Halaman `/otp-service` (menu **Order Nomor**, hanya di child panel). Alur sama dengan bot Paimon:
+layanan → negara → pilih harga (stok realtime) → **bayar pakai saldo** → nomor tampil → kode OTP masuk
+otomatis (cek tiap 5 detik, maks 15 menit) → batal/timeout/stok habis = saldo dikembalikan di DATABASE.
+- Harga jual sama dengan bot: `ceil((usd×kurs + max(usd×kurs×20%, Rp1.000)) / 100) × 100`.
+  Child panel: + `markup_otp_pct` (kolom baru `child_panels`, diatur admin utama / pemilik panel).
+- Nama provider tidak pernah dikirim ke browser; error provider diterjemahkan (detail di `otp_log.txt`).
+- Batal hanya merefund bila provider mengonfirmasi (`ACCESS_CANCEL`); 2 menit pertama ditolak provider.
+- Tabel `otp_orders` dibuat otomatis; order juga masuk `riwayat_pesanan` (proses → selesai/batal).
+- **Isi `api_key` di `otp_config.php` di server** (sama dengan apiKey di settings.js bot). Jangan commit key.
+
+### `order.php` versi aman (+ `order_price.php`)
+- Harga order SMM dihitung server: tarif provider (daftar layanan, cache 10 menit) + Rp4.425/1000
+  (Plus Rp1.000) × markup child panel. Kiriman `price=1` ditolak. ID layanan tak dikenal ditolak.
+  Bila daftar layanan provider gagal dimuat → harga kiriman dipakai sebagai cadangan + dicatat di
+  `order_price_log.txt`. Cek: `/api/order_price.php?check=<id layanan>`.
+- Saldo dipotong atomik; pendapatan child panel dicatat di server; API key Resend diambil dari
+  `agent_config.php` (`resend_key`) — tidak lagi ditulis di file.
+
+### Agen AI menunggu tautan
+`my_agents.php` menyinkronkan status VPS dulu (refund bila waktu habis), lalu TIDAK menampilkan order
+yang menunggu tautan > 10 menit. Yang masih menunggu menampilkan hitung mundur sisa waktu tautan.

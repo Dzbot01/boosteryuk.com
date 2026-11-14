@@ -10,6 +10,7 @@ export interface ChildPanel {
   status: 'active' | 'suspended';
   markup_smm_pct: number;
   markup_agent_pct: number;
+  markup_otp_pct?: number;
   owner_email: string | null;
   created_at: string;
   config: TenantConfig;
@@ -22,6 +23,7 @@ export interface ChildPanelInput {
   status: 'active' | 'suspended';
   markup_smm_pct: number;
   markup_agent_pct: number;
+  markup_otp_pct?: number;
   owner_email?: string;
   config: TenantConfig;
 }
@@ -77,7 +79,7 @@ export interface MyPanel extends Omit<ChildPanel, 'owner_email' | 'created_at'> 
 
 export const ownerPanelApi = {
   mine: () => call<{ panel?: MyPanel | null }>('my_panel'),
-  save: (panel: { name: string; config: TenantConfig; markup_smm_pct: number; markup_agent_pct: number }) =>
+  save: (panel: { name: string; config: TenantConfig; markup_smm_pct: number; markup_agent_pct: number; markup_otp_pct?: number }) =>
     call<{ id?: number; hostname?: string; url?: string }>('my_save', { panel }),
   upload: (slot: string, data: string) => call<{ ref?: string }>('my_upload', { slot, data }),
   videoSign: (ext: string, size: number) => call<{ upload_url?: string; public_url?: string; max_mb?: number }>('my_video_sign', { ext, size }),
