@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Settings, Server, Shield, ArrowUpRight, DollarSign, Globe, Banknote, Crown } from 'lucide-react';
+import { Settings, Server, Shield, ArrowUpRight, DollarSign, Globe, Banknote, Crown, ClipboardList, Users, Wallet } from 'lucide-react';
 import { nexspaceApi } from '../../services/nexspaceApi';
 import { withdrawApi } from '../../services/childPanelApi';
 import Reveal from '../../components/Reveal';
@@ -9,10 +9,31 @@ import { useSiteSettings } from '../../context/SiteSettingsContext';
 
 const CARDS = [
   {
+    path: '/admin/orders',
+    icon: ClipboardList,
+    title: 'Data Pesanan',
+    desc: 'Pesanan semua user lengkap dengan data user; refill & cek status pesanan SMM.',
+    color: 'from-cyan-600 to-blue-700',
+  },
+  {
+    path: '/admin/users',
+    icon: Users,
+    title: 'Data User',
+    desc: 'Semua user di database: tambah / kurangi saldo dan edit data user.',
+    color: 'from-indigo-500 to-indigo-700',
+  },
+  {
+    path: '/admin/deposit',
+    icon: Wallet,
+    title: 'Data Deposit',
+    desc: '10 deposit terbaru semua user, realtime dari database.',
+    color: 'from-violet-500 to-fuchsia-700',
+  },
+  {
     path: '/admin/profit',
     icon: DollarSign,
     title: 'My Profit',
-    desc: 'Ringkasan uang masuk dari user & uang keluar ke provider.',
+    desc: 'Penghasilan markup SMM, transaksi, deposit masuk, dan saldo provider.',
     color: 'from-emerald-500 to-emerald-700',
   },
   {

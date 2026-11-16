@@ -134,6 +134,11 @@ $stmt->bind_param("issids", $user_id, $provider_order_id, $serviceName, $quantit
 $stmt->execute();
 $stmt->close();
 
+// 6a. Penghasilan markup (harga web − harga asli provider) untuk Admin → My Profit.
+if (isset($calc['cost'], $calc['base']) && $calc['base'] !== null) {
+    bk_record_profit($conn, $provider_order_id, $user_id, $service, $quantity, $calc['cost'], $calc['base'], $price);
+}
+
 // 6b. CHILD PANEL: catat pendapatan panel (harga dibayar − harga web utama) di server.
 if (!empty($calc['tenant']) && $calc['base'] !== null && function_exists('cp_record_order')) {
     try {

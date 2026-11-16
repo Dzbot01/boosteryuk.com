@@ -31,6 +31,9 @@ const LayananDetailPage = lazy(() => import('./pages/LayananDetailPage'));
 const NexSpacePage = lazy(() => import('./pages/NexSpacePage'));
 const NexSpacePortalPage = lazy(() => import('./pages/NexSpacePortalPage'));
 const AdminNexSpacePage = lazy(() => import('./pages/admin/AdminNexSpacePage'));
+const AdminOrdersPage = lazy(() => import('./pages/admin/AdminOrdersPage'));
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
+const AdminDepositPage = lazy(() => import('./pages/admin/AdminDepositPage'));
 const PlaygroundPage = lazy(() => import('./pages/PlaygroundPage'));
 const SewaAgenAiPage = lazy(() => import('./pages/SewaAgenAiPage'));
 const OverviewPage = lazy(() => import('./pages/OverviewPage'));
@@ -98,6 +101,9 @@ export default function App() {
           <Route path="admin/broadcast" element={<ProtectedRoute adminOnly><AdminBroadcastPage /></ProtectedRoute>} />
           <Route path="admin/website" element={<ProtectedRoute adminOnly><AdminWebsitePage /></ProtectedRoute>} />
           <Route path="admin/child-panel" element={<ProtectedRoute adminOnly><AdminChildPanelPage /></ProtectedRoute>} />
+          <Route path="admin/orders" element={<ProtectedRoute adminOnly><AdminOrdersPage /></ProtectedRoute>} />
+          <Route path="admin/users" element={<ProtectedRoute adminOnly><AdminUsersPage /></ProtectedRoute>} />
+          <Route path="admin/deposit" element={<ProtectedRoute adminOnly><AdminDepositPage /></ProtectedRoute>} />
           <Route path="admin/nexspace" element={<ProtectedRoute adminOnly><AdminNexSpacePage /></ProtectedRoute>} />
           <Route path="admin/withdraw" element={<ProtectedRoute adminOnly><AdminWithdrawPage /></ProtectedRoute>} />
           <Route path="admin/server" element={<ProtectedRoute adminOnly><AdminServerPage /></ProtectedRoute>} />

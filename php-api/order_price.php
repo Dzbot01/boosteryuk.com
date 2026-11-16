@@ -95,7 +95,40 @@ function bk_order_price($conn, $userId, $serviceId, $qty, $apiId, $apiKey, $base
     $base = round(($qty / 1000) * $perK);
     $perKPanel = $tenant ? cp_apply_markup($perK, $tenant, 'smm') : $perK;
     $price = round(($qty / 1000) * $perKPanel);
-    return ['price' => (float)$price, 'base' => (float)min($base, $price), 'tenant' => $tenant, 'unknown' => false];
+    $cost = round(($qty / 1000) * $rates[(string)$serviceId], 2); // harga asli provider (tanpa markup apa pun)
+    return ['price' => (float)$price, 'base' => (float)min($base, $price), 'cost' => (float)min($cost, $base), 'tenant' => $tenant, 'unknown' => false];
+
+}
+
+/**
+ * Catat penghasilan markup satu order SMM (dipakai Admin → My Profit).
+ *   cost   = harga asli provider, base = harga web utama, price = dibayar user (bisa + markup child panel)
+ *   markup = base − cost  → penghasilan admin utama (markup child panel milik pemilik panel, tidak dihitung di sini)
+ */
+function bk_record_profit($conn, $orderId, $userId, $serviceId, $qty, $cost, $base, $price) {
+    try {
+        $conn->query("CREATE TABLE IF NOT EXISTS smm_order_profit (
+            id         INT AUTO_INCREMENT PRIMARY KEY,
+            order_id   VARCHAR(64) NOT NULL,
+            user_id    INT NOT NULL,
+            service_id VARCHAR(32) NULL,
+            quantity   INT NOT NULL,
+            cost       DECIMAL(15,2) NOT NULL COMMENT 'harga asli provider',
+            base_price DECIMAL(15,2) NOT NULL COMMENT 'harga web utama',
+            price      DECIMAL(15,2) NOT NULL COMMENT 'dibayar user',
+            markup     DECIMAL(15,2) NOT NULL COMMENT 'base_price - cost',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_order (order_id, user_id),
+            KEY idx_time (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $markup = round($base - $cost, 2);
+        $st = $conn->prepare("INSERT IGNORE INTO smm_order_profit (order_id, user_id, service_id, quantity, cost, base_price, price, markup) VALUES (?,?,?,?,?,?,?,?)");
+        $sid = (string)$serviceId; $q = (int)$qty;
+        $st->bind_param('sisidddd', $orderId, $userId, $sid, $q, $cost, $base, $price, $markup);
+        $st->execute();
+        $st->close();
+    } catch (Throwable $e) { /* pencatatan profit gagal tidak membatalkan order */ }
+
 }
 
 /* ---- cek manual: /api/order_price.php?check=123&qty=1000 (tanpa login; hanya menampilkan tarif) ---- */

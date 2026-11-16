@@ -255,3 +255,22 @@ yang menunggu tautan > 10 menit. Yang masih menunggu menampilkan hitung mundur s
 Versi di repo ini menolak sesi kedaluwarsa dan MEMATIKAN mode POST (dulu siapa pun bisa menulis pesanan palsu);
 riwayat ditulis server oleh order.php, agent_order.php, nexspace.php, otp.php, plan_upgrade.php.
 Halaman Riwayat mengenali jenis pesanan dari awalan ID (NX…, OTP…, AI…, UP…) dan menampilkan filter jenis.
+
+### Admin: Data Pesanan, Data User, Data Deposit, My Profit — `admin_data.php`
+Hanya role admin (dicek di DB). Aksi: `orders`, `order_status`, `users`, `user_update`, `user_balance`, `profit`, `deposits`.
+- **Data Pesanan** (`/admin/orders`): semua `riwayat_pesanan` + nama/username/email user, filter jenis/status, cari;
+  ikon Refill & Cek status (provider) untuk pesanan SMM; status bisa disesuaikan (saldo tidak berubah otomatis).
+- **Data User** (`/admin/users`): tambah/kurangi saldo (wajib catatan, tidak bisa minus, tercatat di `admin_balance_log`),
+  edit nama/username/email/HP/role/Plus. Admin tidak bisa mencabut role admin dirinya sendiri.
+- **My Profit** (`/admin/profit`): Penghasilan = markup SMM = harga jual web − harga asli provider, dicatat per order oleh
+  `order.php` ke `smm_order_profit` (order lama diperkirakan Rp4.425/1000, ditandai estimasi); transaksi; deposit masuk;
+  saldo provider (`balance.php`). Markup child panel milik pemilik panel, tidak dihitung.
+- **Data Deposit** (`/admin/deposit`): 10 deposit terbaru (tabel `deposits` + top up manual admin), diperbarui tiap 15 detik.
+
+### Deposit Tripay — `callback.php` (versi aman) + `deposit_lib.php`
+- Setiap pembayaran PAID dicatat ke tabel `deposits` (merchant_ref UNIK) dalam satu transaksi dengan penambahan saldo →
+  callback ganda/bersamaan tidak bisa menambah saldo dua kali. Riwayat lama `tripay_log.txt` diimpor otomatis (tanpa
+  menambah saldo lagi). `tripay_raw.txt` / `tripay_log.txt` tetap ditulis.
+- Secret dibaca dari **`callback_config.php`** (buat dari `callback_config.example.php`, tidak di-commit) — harus sama dengan
+  `CALLBACK_SECRET` di Worker. Tanpa file ini semua callback ditolak (saldo tidak bertambah).
+- Worker (repo Boosteryuk, PR #9) kini memverifikasi signature Tripay sebelum meneruskan callback.

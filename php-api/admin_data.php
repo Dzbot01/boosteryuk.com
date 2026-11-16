@@ -1,0 +1,328 @@
+<?php
+/**
+ * admin_data.php — data untuk Admin Panel utama (HANYA role admin; dicek di database).
+ * POST JSON {token, action, ...}:
+ *   orders        {q?, type?, status?, page?}      → pesanan semua user + nama/username/email
+ *   order_status  {id, status}                     → ubah status pesanan (pending|proses|selesai|batal) — tanpa mengubah saldo
+ *   users         {q?, page?}                      → semua user
+ *   user_update   {id, name?, username?, email?, phone?, role?, plus?}
+ *   user_balance  {id, amount, note}               → tambah (+) / kurangi (−) saldo, tercatat di admin_balance_log
+ *   profit                                         → penghasilan markup SMM, transaksi, deposit masuk
+ *   deposits      {limit?}                         → deposit terbaru semua user (maks 10)
+ *
+ * Penghasilan = markup = harga web utama − harga asli provider, per order SMM (tabel smm_order_profit, diisi order.php).
+ * Order lama yang belum tercatat diperkirakan dari markup tetap Rp4.425/1000 dan ditandai "estimasi".
+ * Deposit: tabel `deposits` (ditulis callback.php, riwayat lama diimpor dari tripay_log.txt) + top up manual admin.
+ */
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+error_reporting(0);
+
+require 'configdb.php';
+require_once __DIR__ . '/child_panel_lib.php'; // cp_q, cp_require_admin, cp_str
+if (isset($conn) && $conn instanceof mysqli) $conn->set_charset('utf8mb4');
+
+function ad_out($d, $c = 200) { http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); exit; }
+set_exception_handler(function ($e) { ad_out(['ok' => false, 'message' => 'Kesalahan server: ' . $e->getMessage()], 500); });
+
+$in = json_decode(file_get_contents('php://input'), true);
+if (!is_array($in)) ad_out(['ok' => false, 'message' => 'Body JSON tidak valid.'], 400);
+$adminId = cp_require_admin($conn, $in['token'] ?? '', function ($m, $c) { ad_out(['ok' => false, 'message' => $c === 403 ? 'Hanya admin yang boleh membuka halaman ini.' : $m], $c); });
+$action = (string)($in['action'] ?? '');
+const AD_PAGE = 25;
+
+/* ---------- util skema ---------- */
+function ad_cols($conn, $table) {
+    static $cache = [];
+    if (isset($cache[$table])) return $cache[$table];
+    $out = [];
+    try {
+        $r = $conn->query("SHOW COLUMNS FROM `$table`");
+        while ($r && ($c = $r->fetch_assoc())) $out[strtolower($c['Field'])] = strtolower($c['Type']);
+    } catch (Throwable $e) { /* tabel tidak ada */ }
+    return $cache[$table] = $out;
+}
+function ad_pick($cols, $cands) { foreach ($cands as $c) if (isset($cols[$c])) return $c; return null; }
+function ad_like($q) { return '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%'; }
+
+function ad_log_schema($conn) {
+    $conn->query("CREATE TABLE IF NOT EXISTS admin_balance_log (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        user_id    INT NOT NULL,
+        admin_id   INT NOT NULL,
+        amount     DECIMAL(15,2) NOT NULL COMMENT '+ tambah, - kurangi',
+        balance_after DECIMAL(15,2) NOT NULL,
+        note       VARCHAR(255) NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_user (user_id), KEY idx_time (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+/** Jenis pesanan dari awalan ID / nama (sama dengan halaman Riwayat). SQL CASE untuk filter. */
+const AD_TYPE_SQL = "CASE
+    WHEN r.order_id LIKE 'NX%' OR r.service_name LIKE 'NexSpace%' THEN 'nexspace'
+    WHEN r.order_id LIKE 'OTP%' OR r.service_name LIKE 'Nomor OTP%' THEN 'otp'
+    WHEN r.order_id REGEXP '^AI[0-9]{6}' OR r.service_name LIKE '%Agen AI%' THEN 'agent_ai'
+    WHEN r.order_id REGEXP '^UP[0-9]' OR r.service_name LIKE '%Boosteryuk Plus%' OR r.service_name LIKE '%Boosteryuk EXTRA%' THEN 'upgrade'
+    ELSE 'smm' END";
+
+function ad_user_select($conn) {
+    $c = ad_cols($conn, 'users');
+    return "u.name AS user_name, " . (isset($c['username']) ? 'u.username' : 'NULL') . " AS username, u.email AS user_email";
+}
+
+/* ===================== PESANAN ===================== */
+if ($action === 'orders') {
+    $where = ['1=1']; $types = ''; $args = [];
+    $q = trim((string)($in['q'] ?? ''));
+    if ($q !== '') {
+        $uc = ad_cols($conn, 'users');
+        $un = isset($uc['username']) ? ' OR u.username LIKE ?' : '';
+        $where[] = "(r.order_id LIKE ? OR r.service_name LIKE ? OR u.name LIKE ? OR u.email LIKE ?$un)";
+        $n = $un ? 5 : 4;
+        $types .= str_repeat('s', $n);
+        for ($i = 0; $i < $n; $i++) $args[] = ad_like($q);
+    }
+    $status = (string)($in['status'] ?? '');
+    if (in_array($status, ['pending', 'proses', 'selesai', 'batal'], true)) { $where[] = 'r.status = ?'; $types .= 's'; $args[] = $status; }
+    $type = (string)($in['type'] ?? '');
+    if (in_array($type, ['smm', 'agent_ai', 'nexspace', 'otp', 'upgrade'], true)) { $where[] = '(' . AD_TYPE_SQL . ') = ?'; $types .= 's'; $args[] = $type; }
+    $w = implode(' AND ', $where);
+    $page = max(1, (int)($in['page'] ?? 1));
+    $off = ($page - 1) * AD_PAGE;
+
+    $st = cp_q($conn, "SELECT COUNT(*) n, COALESCE(SUM(CASE WHEN r.status <> 'batal' THEN r.price END),0) omzet
+                       FROM riwayat_pesanan r LEFT JOIN users u ON u.id = r.user_id WHERE $w", $types, ...$args);
+    $tot = $st->get_result()->fetch_assoc(); $st->close();
+    $hasProfit = (bool)ad_cols($conn, 'smm_order_profit');
+    $st = cp_q($conn, "SELECT r.id, r.order_id, r.user_id, r.service_name, r.quantity, r.price, r.status, UNIX_TIMESTAMP(r.created_at)*1000 AS created_at,
+                              (" . AD_TYPE_SQL . ") AS type, " . ad_user_select($conn) . "
+                       FROM riwayat_pesanan r LEFT JOIN users u ON u.id = r.user_id
+                       WHERE $w ORDER BY r.id DESC LIMIT " . AD_PAGE . " OFFSET $off", $types, ...$args);
+    $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC); $st->close();
+    // markup per order (bila tercatat) — query terpisah agar aman dari beda collation
+    $markups = [];
+    if ($hasProfit && $rows) {
+        $ids = array_values(array_unique(array_map(fn($r) => (int)$r['user_id'], $rows)));
+        $res = $conn->query("SELECT order_id, user_id, cost, markup FROM smm_order_profit WHERE user_id IN (" . implode(',', $ids) . ") ORDER BY id DESC LIMIT 2000");
+        while ($res && ($m = $res->fetch_assoc())) $markups[$m['user_id'] . '|' . $m['order_id']] = $m;
+    }
+    foreach ($rows as &$r) {
+        $r['id'] = (int)$r['id']; $r['user_id'] = (int)$r['user_id']; $r['quantity'] = (int)$r['quantity'];
+        $r['price'] = (float)$r['price']; $r['created_at'] = (int)$r['created_at'];
+        $m = $markups[$r['user_id'] . '|' . $r['order_id']] ?? null;
+        $r['cost'] = $m ? (float)$m['cost'] : null; $r['markup'] = $m ? (float)$m['markup'] : null;
+    }
+    unset($r);
+    ad_out(['ok' => true, 'orders' => $rows, 'total' => (int)$tot['n'], 'omzet' => (float)$tot['omzet'], 'page' => $page, 'per_page' => AD_PAGE]);
+}
+
+if ($action === 'order_status') {
+    $status = (string)($in['status'] ?? '');
+    if (!in_array($status, ['pending', 'proses', 'selesai', 'batal'], true)) ad_out(['ok' => false, 'message' => 'Status tidak valid.'], 400);
+    $st = cp_q($conn, "UPDATE riwayat_pesanan SET status = ? WHERE id = ?", 'si', $status, (int)($in['id'] ?? 0));
+    $st->close();
+    ad_out(['ok' => true, 'message' => 'Status pesanan diperbarui (saldo user tidak berubah).']);
+}
+
+/* ===================== USER ===================== */
+function ad_user_row($conn, $u) {
+    $c = ad_cols($conn, 'users');
+    $plusCol = ad_pick($c, ['plus_active', 'is_plus']);
+    $phoneCol = ad_pick($c, ['phone', 'whatsapp', 'no_hp', 'nomor']);
+    return ['id' => (int)$u['id'], 'name' => $u['name'] ?? '', 'username' => $u['username'] ?? null, 'email' => $u['email'] ?? '',
+        'phone' => $phoneCol ? ($u[$phoneCol] ?? null) : null, 'has_phone' => (bool)$phoneCol, 'has_username' => isset($c['username']),
+        'role' => $u['role'] ?? 'user', 'balance' => (float)($u['balance'] ?? 0), 'plus' => $plusCol ? (bool)$u[$plusCol] : false, 'has_plus' => (bool)$plusCol,
+        'created_at' => $u['created_at'] ?? null, 'orders' => isset($u['orders']) ? (int)$u['orders'] : null, 'spend' => isset($u['spend']) ? (float)$u['spend'] : null];
+}
+
+if ($action === 'users') {
+    $c = ad_cols($conn, 'users');
+    $where = '1=1'; $types = ''; $args = [];
+    $q = trim((string)($in['q'] ?? ''));
+    if ($q !== '') {
+        $parts = ['u.name LIKE ?', 'u.email LIKE ?']; $n = 2;
+        if (isset($c['username'])) { $parts[] = 'u.username LIKE ?'; $n++; }
+        if (ctype_digit($q)) { $parts[] = 'u.id = ?'; }
+        $where = '(' . implode(' OR ', $parts) . ')';
+        $types = str_repeat('s', $n); for ($i = 0; $i < $n; $i++) $args[] = ad_like($q);
+        if (ctype_digit($q)) { $types .= 'i'; $args[] = (int)$q; }
+    }
+    $page = max(1, (int)($in['page'] ?? 1)); $off = ($page - 1) * AD_PAGE;
+    $st = cp_q($conn, "SELECT COUNT(*) n, COALESCE(SUM(u.balance),0) saldo FROM users u WHERE $where", $types, ...$args);
+    $tot = $st->get_result()->fetch_assoc(); $st->close();
+    $st = cp_q($conn, "SELECT u.*, (SELECT COUNT(*) FROM riwayat_pesanan r WHERE r.user_id = u.id) AS orders,
+                              (SELECT COALESCE(SUM(r.price),0) FROM riwayat_pesanan r WHERE r.user_id = u.id AND r.status <> 'batal') AS spend
+                       FROM users u WHERE $where ORDER BY u.id DESC LIMIT " . AD_PAGE . " OFFSET $off", $types, ...$args);
+    $rows = array_map(fn($u) => ad_user_row($conn, $u), $st->get_result()->fetch_all(MYSQLI_ASSOC)); $st->close();
+    ad_out(['ok' => true, 'users' => $rows, 'total' => (int)$tot['n'], 'total_balance' => (float)$tot['saldo'], 'page' => $page, 'per_page' => AD_PAGE]);
+}
+
+if ($action === 'user_update') {
+    $id = (int)($in['id'] ?? 0);
+    $st = cp_q($conn, "SELECT * FROM users WHERE id = ? LIMIT 1", 'i', $id);
+    $u = $st->get_result()->fetch_assoc(); $st->close();
+    if (!$u) ad_out(['ok' => false, 'message' => 'User tidak ditemukan.'], 404);
+    $c = ad_cols($conn, 'users');
+    $set = []; $types = ''; $args = [];
+    if (isset($in['name'])) { $v = cp_str($in['name'], 80); if (mb_strlen($v) < 2) ad_out(['ok' => false, 'message' => 'Nama minimal 2 karakter.'], 400); $set[] = 'name = ?'; $types .= 's'; $args[] = $v; }
+    if (isset($in['email'])) {
+        $v = strtolower(trim((string)$in['email']));
+        if (!filter_var($v, FILTER_VALIDATE_EMAIL)) ad_out(['ok' => false, 'message' => 'Email tidak valid.'], 400);
+        $st = cp_q($conn, "SELECT id FROM users WHERE email = ? AND id <> ? LIMIT 1", 'si', $v, $id);
+        if ($st->get_result()->fetch_assoc()) ad_out(['ok' => false, 'message' => 'Email sudah dipakai user lain.'], 409);
+        $st->close(); $set[] = 'email = ?'; $types .= 's'; $args[] = $v;
+    }
+    if (isset($in['username']) && isset($c['username'])) {
+        $v = trim((string)$in['username']);
+        if (!preg_match('/^[A-Za-z0-9_. -]{2,40}$/', $v)) ad_out(['ok' => false, 'message' => 'Username 2–40 karakter (huruf, angka, titik, garis bawah).'], 400);
+        $set[] = 'username = ?'; $types .= 's'; $args[] = $v;
+    }
+    $phoneCol = ad_pick($c, ['phone', 'whatsapp', 'no_hp', 'nomor']);
+    if (isset($in['phone']) && $phoneCol) { $set[] = "`$phoneCol` = ?"; $types .= 's'; $args[] = mb_substr(preg_replace('/[^0-9+]/', '', (string)$in['phone']), 0, 20); }
+    if (isset($in['role'])) {
+        $v = $in['role'] === 'admin' ? 'admin' : 'user';
+        if ($id === (int)$adminId && $v !== 'admin') ad_out(['ok' => false, 'message' => 'Tidak bisa mencabut role admin dari akun sendiri.'], 400);
+        $set[] = 'role = ?'; $types .= 's'; $args[] = $v;
+    }
+    $plusCol = ad_pick($c, ['plus_active', 'is_plus']);
+    if (isset($in['plus']) && $plusCol) { $set[] = "`$plusCol` = ?"; $types .= 'i'; $args[] = $in['plus'] ? 1 : 0; }
+    if (!$set) ad_out(['ok' => false, 'message' => 'Tidak ada perubahan.'], 400);
+    $types .= 'i'; $args[] = $id;
+    cp_q($conn, "UPDATE users SET " . implode(', ', $set) . " WHERE id = ?", $types, ...$args)->close();
+    $st = cp_q($conn, "SELECT * FROM users WHERE id = ? LIMIT 1", 'i', $id);
+    ad_out(['ok' => true, 'user' => ad_user_row($conn, $st->get_result()->fetch_assoc()), 'message' => 'Data user tersimpan.']);
+}
+
+if ($action === 'user_balance') {
+    $id = (int)($in['id'] ?? 0);
+    $amount = round((float)($in['amount'] ?? 0));
+    $note = cp_str($in['note'] ?? '', 255);
+    if ($amount == 0 || abs($amount) > 100000000) ad_out(['ok' => false, 'message' => 'Nominal tidak valid (maks Rp100.000.000 per transaksi).'], 400);
+    if (mb_strlen($note) < 3) ad_out(['ok' => false, 'message' => 'Isi catatan (alasan penambahan/pengurangan saldo).'], 400);
+    ad_log_schema($conn);
+    $conn->begin_transaction();
+    try {
+        // Pengurangan tidak boleh membuat saldo minus.
+        $st = cp_q($conn, "UPDATE users SET balance = balance + ? WHERE id = ? AND balance + ? >= 0", 'did', $amount, $id, $amount);
+        $ok = $st->affected_rows === 1; $st->close();
+        if (!$ok) { $conn->rollback(); ad_out(['ok' => false, 'message' => 'User tidak ditemukan atau saldo tidak cukup untuk dikurangi.'], 400); }
+        $bal = (float)cp_q($conn, "SELECT balance FROM users WHERE id = ?", 'i', $id)->get_result()->fetch_assoc()['balance'];
+        cp_q($conn, "INSERT INTO admin_balance_log (user_id, admin_id, amount, balance_after, note) VALUES (?,?,?,?,?)", 'iidds', $id, (int)$adminId, $amount, $bal, $note)->close();
+        $conn->commit();
+    } catch (Throwable $e) { $conn->rollback(); ad_out(['ok' => false, 'message' => 'Gagal mengubah saldo.'], 500); }
+    ad_out(['ok' => true, 'balance' => $bal, 'message' => ($amount > 0 ? 'Saldo ditambah ' : 'Saldo dikurangi ') . 'Rp' . number_format(abs($amount), 0, ',', '.') . '.']);
+}
+
+/* ===================== DEPOSIT (tabel deposits, diisi callback.php) ===================== */
+require_once __DIR__ . '/deposit_lib.php';
+const AD_PAID_SQL = "('paid')";
+function ad_deposit_source($conn) {
+    static $src = false;
+    if ($src !== false) return $src;
+    try { dep_schema($conn); dep_import_log($conn); } catch (Throwable $e) { return $src = null; }
+    return $src = ['table' => 'deposits', 'amount' => 'amount', 'user_id' => 'user_id', 'email' => null, 'status' => 'status',
+        'time' => 'paid_at', 'ref' => 'merchant_ref', 'method' => 'method', 'id' => 'id'];
+}
+
+function ad_deposit_stats($conn) {
+    $s = ad_deposit_source($conn);
+    $out = ['source' => $s ? $s['table'] : null, 'today' => 0.0, 'month' => 0.0, 'all' => 0.0, 'count_month' => 0];
+    if ($s && $s['time']) {
+        $paid = $s['status'] ? "LOWER(CAST(`{$s['status']}` AS CHAR)) IN " . AD_PAID_SQL : '1=1';
+        $a = "`{$s['amount']}`"; $t = "`{$s['time']}`";
+        $r = $conn->query("SELECT COALESCE(SUM(CASE WHEN $t >= CURDATE() THEN $a END),0) today,
+                                  COALESCE(SUM(CASE WHEN $t >= DATE_FORMAT(NOW(),'%Y-%m-01') THEN $a END),0) month,
+                                  COALESCE(SUM($t >= DATE_FORMAT(NOW(),'%Y-%m-01')),0) cm, COALESCE(SUM($a),0) allsum
+                           FROM `{$s['table']}` WHERE $paid")->fetch_assoc();
+        $out = ['source' => $s['table'], 'today' => (float)$r['today'], 'month' => (float)$r['month'], 'all' => (float)$r['allsum'], 'count_month' => (int)$r['cm']];
+    }
+    // top up manual admin (hanya penambahan)
+    if (ad_cols($conn, 'admin_balance_log')) {
+        $r = $conn->query("SELECT COALESCE(SUM(CASE WHEN created_at >= CURDATE() THEN amount END),0) today,
+                                  COALESCE(SUM(CASE WHEN created_at >= DATE_FORMAT(NOW(),'%Y-%m-01') THEN amount END),0) month, COALESCE(SUM(amount),0) allsum
+                           FROM admin_balance_log WHERE amount > 0")->fetch_assoc();
+        $out['manual'] = ['today' => (float)$r['today'], 'month' => (float)$r['month'], 'all' => (float)$r['allsum']];
+    }
+    return $out;
+}
+
+if ($action === 'deposits') {
+    $limit = max(1, min(10, (int)($in['limit'] ?? 10)));
+    $rows = [];
+    $s = ad_deposit_source($conn);
+    $uc = ad_cols($conn, 'users'); $un = isset($uc['username']) ? 'u.username' : 'NULL';
+    if ($s) {
+        $join = "LEFT JOIN users u ON u.id = d.`user_id`";
+        $sel = fn($k, $as) => $s[$k] ? "d.`{$s[$k]}` AS $as" : "NULL AS $as";
+        $order = "d.`paid_at` DESC, d.`id`";
+        try {
+            $res = $conn->query("SELECT " . $sel('amount', 'amount') . ", " . $sel('status', 'status') . ", " . $sel('time', 'time') . ", " . $sel('ref', 'ref') . ", " . $sel('method', 'method') . ",
+                                        u.name AS user_name, $un AS username, u.email AS user_email
+                                 FROM `{$s['table']}` d $join ORDER BY $order DESC LIMIT $limit");
+            while ($res && ($r = $res->fetch_assoc())) $rows[] = ['source' => 'gateway', 'amount' => (float)$r['amount'], 'status' => $r['status'], 'time' => $r['time'], 'ref' => $r['ref'],
+                'method' => $r['method'], 'user_name' => $r['user_name'], 'username' => $r['username'], 'user_email' => $r['user_email'], 'note' => null];
+        } catch (Throwable $e) { $s = null; }
+    }
+    if (ad_cols($conn, 'admin_balance_log')) {
+        $res = $conn->query("SELECT l.amount, l.created_at, l.note, u.name AS user_name, $un AS username, u.email AS user_email
+                             FROM admin_balance_log l LEFT JOIN users u ON u.id = l.user_id WHERE l.amount > 0 ORDER BY l.id DESC LIMIT $limit");
+        while ($res && ($r = $res->fetch_assoc())) $rows[] = ['source' => 'manual', 'amount' => (float)$r['amount'], 'status' => 'paid', 'time' => $r['created_at'], 'ref' => null,
+            'method' => 'Manual admin', 'user_name' => $r['user_name'], 'username' => $r['username'], 'user_email' => $r['user_email'], 'note' => $r['note']];
+    }
+    usort($rows, fn($a, $b) => strcmp((string)$b['time'], (string)$a['time']));
+    ad_out(['ok' => true, 'deposits' => array_slice($rows, 0, $limit), 'source_table' => $s ? $s['table'] : null, 'stats' => ad_deposit_stats($conn), 'server_time' => date('Y-m-d H:i:s')]);
+}
+
+/* ===================== PROFIT ===================== */
+if ($action === 'profit') {
+    // 1) markup tercatat (pesanan batal tidak dihitung) — status dicek di PHP agar aman dari beda collation
+    $rec = ['today' => 0.0, 'month' => 0.0, 'all' => 0.0, 'orders' => 0, 'cost' => 0.0];
+    $recorded = [];
+    if (ad_cols($conn, 'smm_order_profit')) {
+        $batal = [];
+        $res = $conn->query("SELECT user_id, order_id FROM riwayat_pesanan WHERE status = 'batal'");
+        while ($res && ($r = $res->fetch_assoc())) $batal[$r['user_id'] . '|' . $r['order_id']] = true;
+        $res = $conn->query("SELECT user_id, order_id, cost, markup, UNIX_TIMESTAMP(created_at) ts FROM smm_order_profit");
+        $t0 = strtotime('today'); $m0 = strtotime(date('Y-m-01'));
+        while ($res && ($r = $res->fetch_assoc())) {
+            $k = $r['user_id'] . '|' . $r['order_id'];
+            $recorded[$k] = true;
+            if (isset($batal[$k])) continue;
+            $mk = (float)$r['markup'];
+            $rec['all'] += $mk; $rec['cost'] += (float)$r['cost']; $rec['orders']++;
+            if ($r['ts'] >= $m0) $rec['month'] += $mk;
+            if ($r['ts'] >= $t0) $rec['today'] += $mk;
+        }
+    }
+    // 2) estimasi order SMM lama (belum tercatat): markup tetap Rp4.425 per 1000, maksimal sebesar harga
+    $est = ['today' => 0.0, 'month' => 0.0, 'all' => 0.0, 'orders' => 0];
+    $trx = ['smm' => ['n' => 0, 'omzet' => 0.0], 'lain' => ['n' => 0, 'omzet' => 0.0], 'today' => ['n' => 0, 'omzet' => 0.0], 'month' => ['n' => 0, 'omzet' => 0.0], 'batal' => 0];
+    $res = $conn->query("SELECT r.user_id, r.order_id, r.quantity, r.price, r.status, UNIX_TIMESTAMP(r.created_at) ts, (" . AD_TYPE_SQL . ") AS type FROM riwayat_pesanan r");
+    $t0 = strtotime('today'); $m0 = strtotime(date('Y-m-01'));
+    while ($res && ($r = $res->fetch_assoc())) {
+        if ($r['status'] === 'batal') { $trx['batal']++; continue; }
+        $price = (float)$r['price'];
+        $g = $r['type'] === 'smm' ? 'smm' : 'lain';
+        $trx[$g]['n']++; $trx[$g]['omzet'] += $price;
+        if ($r['ts'] >= $m0) { $trx['month']['n']++; $trx['month']['omzet'] += $price; }
+        if ($r['ts'] >= $t0) { $trx['today']['n']++; $trx['today']['omzet'] += $price; }
+        if ($r['type'] === 'smm' && !isset($recorded[$r['user_id'] . '|' . $r['order_id']])) {
+            $mk = min($price, round((int)$r['quantity'] / 1000 * 4425));
+            $est['all'] += $mk; $est['orders']++;
+            if ($r['ts'] >= $m0) $est['month'] += $mk;
+            if ($r['ts'] >= $t0) $est['today'] += $mk;
+        }
+    }
+    $users = $conn->query("SELECT COUNT(*) n, COALESCE(SUM(balance),0) saldo FROM users")->fetch_assoc();
+    ad_out(['ok' => true, 'income' => ['recorded' => $rec, 'estimated' => $est,
+            'today' => $rec['today'] + $est['today'], 'month' => $rec['month'] + $est['month'], 'all' => $rec['all'] + $est['all']],
+        'transactions' => $trx, 'deposits' => ad_deposit_stats($conn),
+        'users' => ['total' => (int)$users['n'], 'balance' => (float)$users['saldo']], 'server_time' => date('Y-m-d H:i:s')]);
+}
+
+ad_out(['ok' => false, 'message' => 'Aksi tidak dikenal.'], 400);
