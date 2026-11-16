@@ -249,3 +249,9 @@ yang menunggu tautan > 10 menit. Yang masih menunggu menampilkan hitung mundur s
 - Banner di bawah header semua halaman selama pesanan Pro belum diambil (pintu masuk ke portal).
 - Password Pro disimpan terenkripsi AES-256-GCM; kunci `nexspace_secret.php` dibuat otomatis di server (jangan
   dihapus, tidak di-commit). Harga Started di `nexspace_config.php` masih usulan — ubah sesuai keinginan.
+
+### Riwayat pesanan semua jenis — `riwayat.php`
+`GET riwayat.php?token=` → semua baris `riwayat_pesanan` milik user (maks 500) + `type`
+(`smm | agent_ai | nexspace | otp | upgrade`, dari awalan ID: NX…, OTP…, AI…, UP…). Halaman Riwayat Pesanan
+memakai endpoint ini (cadangan: endpoint lama cekidku.my.id) dan menampilkan filter jenis, status sesuai jenis,
+serta link ke halaman terkait. Token kedaluwarsa ditolak (validasi lewat `getUserIdByToken`).
