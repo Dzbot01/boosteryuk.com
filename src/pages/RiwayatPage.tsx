@@ -68,7 +68,7 @@ const TYPE_META: Record<OrderType, { label: string; icon: typeof Bot; to: string
   otp: { label: 'Nomor OTP', icon: Smartphone, to: '/otp-service', hint: 'Lihat nomor & kode OTP' },
   upgrade: { label: 'Upgrade', icon: Sparkles, to: '/plus', hint: 'Lihat paket Upgrade' },
 };
-/** Jenis pesanan dari awalan ID / nama layanan (sama dengan php-api/riwayat.php; dipakai juga untuk data lama). */
+/** Jenis pesanan dari awalan ID / nama layanan (NX… / OTP… / AI… / UP…). */
 function typeOf(orderId: string, name: string): OrderType {
   const n = name.toLowerCase();
   if (/^NX[0-9A-Z]/.test(orderId) || n.startsWith('nexspace')) return 'nexspace';
@@ -128,9 +128,9 @@ export default function RiwayatPage() {
       setLoadErr('');
       const q = `?token=${encodeURIComponent(token)}&t=${Date.now()}`;
       try {
-        // Sumber utama: riwayat.php (semua jenis pesanan). Cadangan: endpoint lama.
+        // riwayat_pesanan.php berisi semua jenis pesanan; jenisnya dikenali dari awalan ID (typeOf).
         let list: OrderFromDB[];
-        try { list = await get(`${MAIN_API}/riwayat.php${q}`); }
+        try { list = await get(`${MAIN_API}/riwayat_pesanan.php${q}`); }
         catch { list = await get(`https://cekidku.my.id/api/riwayat_pesanan.php${q}`); }
         if (alive) setOrders(list);
       } catch {
