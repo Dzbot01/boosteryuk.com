@@ -13,6 +13,7 @@ const SAME_ORIGIN_API_HOSTS = new Set([`app.${ROOT}`]);
 
 function detectChild(): string | null {
   if (typeof window === 'undefined') return null;
+  
   const injected = (window as unknown as { __CHILD_PANEL__?: string }).__CHILD_PANEL__;
   if (typeof injected === 'string' && /^[a-z0-9-]{1,32}$/.test(injected)) return injected;
   const m = window.location.hostname.toLowerCase().match(/^([a-z0-9-]+)\.boosteryuk\.com$/);
