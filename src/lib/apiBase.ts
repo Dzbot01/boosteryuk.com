@@ -5,7 +5,7 @@
 //   tanpa CORS dan memakai cookie keamanan hosting milik subdomain itu sendiri.
 
 const ROOT = 'boosteryuk.com';
-const NOT_CHILD = new Set(['www', 'api', 'wa-origin']);
+const NOT_CHILD = new Set(['www', 'api', 'wa-origin', 'app']);
 
 function detectChild(): string | null {
   if (typeof window === 'undefined') return null;
