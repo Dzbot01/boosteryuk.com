@@ -143,7 +143,7 @@ const rupiah = (n?: number | null) =>
  *  - Mode OFF (desktop, ≥lg): rail ikon di tepi kiri (64px). Dashboard untuk tamu: disembunyikan.
  *  - Mode ON: panel penuh (272px) yang "keluar" dari rail (width melebar) — bukan layer terpisah.
  *  - Mobile (<lg): overlay penuh dari kiri (translate-x), seperti biasa.
- *  - DESKTOP: tidak ada tombol toggle terpisah — kursor diarahkan ke ikon-ikon menu (mode off) → panel otomatis terbuka (hover); klik di mana saja / Esc menutup.
+ *  - DESKTOP: tidak ada tombol toggle terpisah — kursor diarahkan ke ikon-ikon menu (mode off) → panel otomatis terbuka (hover); klik di LUAR panel / Esc menutup (klik di dalam panel berfungsi normal).
  *  Catatan: header tampil di semua ukuran; di MOBILE header memuat logo + judul brand, di DESKTOP header tanpa logo/judul (hanya Playground).
  *           Ikon profil, saldo, Pengaturan akun & Keluar berada di footer side menu ini. Playground tetap di header.
  */
@@ -160,19 +160,22 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
   const railVisible = !onDashboard || !!user;
   const stripVisible = isOpen || railVisible;
 
-  // Esc menutup menu + klik di mana saja menutup menu (desktop) + kunci scroll body selama terbuka (mobile saja).
+  // Esc menutup menu + klik di LUAR panel menutup menu (desktop) + kunci scroll body selama terbuka (mobile saja).
   useEffect(() => {
     if (!isOpen) return;
     const lockScroll = window.matchMedia('(max-width: 1023px)').matches;
     const original = document.body.style.overflow;
     if (lockScroll) document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    // Klik di mana saja → otomatis tutup. Abaikan klik pada toggle itu sendiri (toggle menangani sendiri).
-    // Desktop saja — di mobile penutupan lewat scrim (panel overlay penuh).
+    // Klik DI LUAR panel → otomatis tutup. Klik DI DALAM panel dibiarkan berjalan normal
+    // (menu/aksi di dalam panel bekerja & biasanya menutup panel sendiri setelah navigasi),
+    // sehingga klik pada item menu tidak "tertelan" oleh fungsi tutup. Desktop saja —
+    // di mobile penutupan lewat scrim (panel overlay penuh).
     const onMouseDown = (e: MouseEvent) => {
       if (!window.matchMedia('(min-width: 1024px)').matches) return;
       const t = e.target as HTMLElement | null;
       if (t?.closest('[data-by-menu-toggle]')) return;
+      if (t?.closest('[data-by-side-panel]')) return;
       onClose();
     };
     window.addEventListener('keydown', onKey);
@@ -186,7 +189,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
 
   // Khusus DESKTOP: kursor diarahkan ke ikon-ikon menu (mode OFF / rail) → panel otomatis terbuka,
   // perilakunya sama seperti saat membuka lewat tombol — tetapi cukup dengan mengarahkan kursor.
-  // (menutup: klik di mana saja / Esc)
+  // (menutup: klik di luar panel / Esc)
   const openOnHover = () => {
     if (isOpen) return;
     if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px) and (hover: hover)').matches) {
@@ -425,7 +428,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
           ) : (
             <>
               <button
-                onClick={() => navigate('/pengaturan-akun')}
+                onClick={() => { navigate('/pengaturan-akun'); onClose(); }}
                 title="Pengaturan akun"
                 aria-label="Pengaturan akun"
                 className={`flex h-11 w-11 items-center justify-center rounded-xl font-display text-[12px] font-extrabold text-white transition-transform hover:scale-105 ${avatarGrad}`}
@@ -468,6 +471,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
              Kursor masuk ke ikon-ikon menu (mode off) → otomatis terbuka (hover, bukan klik). ===== */}
       <aside
         aria-hidden={!stripVisible}
+        data-by-side-panel
         onMouseEnter={openOnHover}
         className={`fixed left-0 top-0 z-40 hidden h-full flex-col overflow-hidden border-r border-slate-200 bg-white shadow-none transition-[width,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 lg:flex ${
           isOpen ? 'w-[272px] shadow-2xl shadow-slate-900/20 dark:shadow-black/40' : 'w-16'
@@ -478,6 +482,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
 
       {/* ===== MOBILE/TABLET: overlay dari kiri (selalu panel penuh) ===== */}
       <aside
+        data-by-side-panel
         className={`fixed left-0 top-0 z-50 flex h-full w-[82%] max-w-[272px] flex-col border-r border-slate-200 bg-white shadow-2xl shadow-slate-900/20 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-black/40 lg:hidden ${
           isOpen? 'translate-x-0' : '-translate-x-full'
         }`}
