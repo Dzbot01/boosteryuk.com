@@ -25,8 +25,6 @@ import {
   BookOpen,
   ClipboardList,
   Users,
-  Wand2,
-  Menu,
   Crown,
 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -35,6 +33,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { usePanelOwner } from '../services/panelApi';
 import { IS_CHILD_PANEL } from '../lib/apiBase';
+import HamburgerToggle from './HamburgerToggle';
 
 export type PageId =
   | 'home'
@@ -146,7 +145,8 @@ const rupiah = (n?: number | null) =>
  *  - Mode ON: panel penuh (272px) yang "keluar" dari rail (width melebar) — bukan layer terpisah.
  *  - Mobile (<lg): overlay penuh dari kiri (translate-x), seperti biasa.
  * Tombol side menu desktop ada di pojok kiri (di samping rail) dan ikut bergeser ke kanan saat panel terbuka.
- * Desktop tidak lagi memakai header — Playground & profil dipindah ke dalam panel/rail ini.
+ * Catatan: header (transparan→glass, tanpa logo/judul brand) hanya memuat tombol Playground;
+ *           ikon profil, saldo, Pengaturan akun & Keluar kembali berada di footer side menu ini.
  */
 export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
   const { user, isAdmin, logout } = useAuth();
@@ -160,20 +160,39 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
   // Aturan rail (mode off) di desktop: tampil bila user sudah login ATAU di halaman selain dashboard.
   const railVisible = !onDashboard || !!user;
   const stripVisible = isOpen || railVisible;
-  const onPlayground = pathname === '/playground';
 
-  // Esc menutup menu + kunci scroll body selama terbuka.
+  // Esc menutup menu + klik di mana saja menutup menu (desktop) + kunci scroll body selama terbuka (mobile saja).
   useEffect(() => {
     if (!isOpen) return;
+    const lockScroll = window.matchMedia('(max-width: 1023px)').matches;
     const original = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (lockScroll) document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    // Klik di mana saja → otomatis tutup. Abaikan klik pada toggle itu sendiri (toggle menangani sendiri).
+    // Desktop saja — di mobile penutupan lewat scrim (panel overlay penuh).
+    const onMouseDown = (e: MouseEvent) => {
+      if (!window.matchMedia('(min-width: 1024px)').matches) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('[data-by-menu-toggle]')) return;
+      onClose();
+    };
     window.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onMouseDown);
     return () => {
-      document.body.style.overflow = original;
+      if (lockScroll) document.body.style.overflow = original;
       window.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onMouseDown);
     };
   }, [isOpen, onClose]);
+
+  // Khusus DESKTOP: kursor masuk ke tombol side menu → panel otomatis terbuka.
+  // (menutup: klik di mana saja / tombol / Esc)
+  const openOnHover = () => {
+    if (isOpen) return;
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px) and (hover: hover)').matches) {
+      onToggle?.();
+    }
+  };
 
   const AUTH_REQUIRED = ['layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
 
@@ -201,10 +220,6 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
       return;
     }
     navigate(ROUTE_PATH[id]);
-    onClose();
-  };
-  const goPlayground = () => {
-    navigate('/playground');
     onClose();
   };
   const logoutAndHome = () => {
@@ -254,25 +269,6 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
             {isAdmin && <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Admin Panel</p>}
           </div>
         )}
-      </div>
-
-      {/* Playground — pinned (desktop tidak lagi punya header, jadi ada di sini) */}
-      <div className={`mt-1 shrink-0 px-3 ${expanded ? '' : 'flex justify-center px-0'}`}>
-        <button
-          onClick={goPlayground}
-          title="Playground"
-          aria-label="Playground"
-          aria-current={onPlayground ? 'page' : undefined}
-          className={expanded ? expandedRow(onPlayground) : railRow(onPlayground)}
-        >
-          <Wand2 className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-          {expanded && (
-            <span className="min-w-0 flex-1">
-              <span className="block text-[13px] font-semibold leading-tight">Playground</span>
-              <span className={`block truncate text-[11px] ${onPlayground ? 'opacity-70' : 'text-slate-400 dark:text-slate-500'}`}>Hook, caption & suara AI</span>
-            </span>
-          )}
-        </button>
       </div>
 
       {/* Nav */}
@@ -393,7 +389,7 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
         )}
       </nav>
 
-      {/* Footer: profil akun (pengganti header desktop) + keluar */}
+      {/* Footer: profil akun (dikembalikan seperti semula — profil di side menu; Playground tetap terpisah di header) + keluar */}
       <div className={`shrink-0 border-t border-slate-200 dark:border-slate-700/60 ${expanded ? 'p-3' : 'flex flex-col items-center gap-1 p-2'}`}>
         {user ? (
           expanded ? (
@@ -459,18 +455,17 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
 
   return (
     <>
-      {/* ===== Toggle side menu (DESKTOP saja) — pojok kiri di samping rail; ikut bergeser ke kanan saat panel terbuka ===== */}
-      <button
-        onClick={onToggle}
-        aria-label={isOpen ? 'Tutup menu' : 'Buka menu'}
-        aria-expanded={isOpen}
-        title={isOpen ? 'Tutup menu' : 'Buka menu'}
-        className={`fixed top-3 z-50 hidden h-11 w-11 items-center justify-center rounded-xl border border-slate-200/70 bg-white/85 text-slate-800 shadow-md backdrop-blur-md transition-[left,transform,colors] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-blue-600 active:scale-95 dark:border-slate-700/60 dark:bg-slate-900/75 dark:text-slate-100 dark:hover:text-blue-400 lg:flex ${
-          isOpen ? 'left-[280px]' : 'left-[72px]'
+      {/* ===== Toggle side menu (DESKTOP saja) — hamburger animasi (Uiverse/talhabangyal), tanpa card;
+             pojok kiri di samping rail, ikut bergeser ke kanan saat terbuka, z di bawah modal (z-[60]+). ===== */}
+      <HamburgerToggle
+        open={isOpen}
+        onToggle={() => onToggle?.()}
+        label={isOpen ? 'Tutup menu' : 'Buka menu'}
+        onMouseEnter={openOnHover}
+        className={`fixed top-3 z-30 hidden h-11 w-11 text-slate-800 transition-[left,color] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-blue-600 dark:text-slate-100 dark:hover:text-blue-400 lg:inline-flex ${
+          isOpen ? 'left-[280px]' : railVisible ? 'left-[72px]' : 'left-3'
         }`}
-      >
-        <Menu className="h-6 w-6" strokeWidth={2.2} />
-      </button>
+      />
 
       {/* ===== Scrim — hanya mobile/tablet ===== */}
       <div
