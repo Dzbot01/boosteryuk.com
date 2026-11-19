@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { sendOtpEmail, genOtp } from '../services/otp';
+import { sendOtpEmail, genOtp, otpVerifRateCheck, otpVerifRateRecord, otpVerifRateStatus, fmtCooldown } from '../services/otp';
 import {
   User,
   Mail,
@@ -37,21 +37,57 @@ export default function PengaturanAkunPage() {
   const [verifSuccess, setVerifSuccess] = useState(false);
   const [verifError, setVerifError] = useState('');
   const [otpSending, setOtpSending] = useState(false);
+  // Cooldown progresif untuk tombol 'Verifikasi' (ke-2→1 mnt, ke-3→5 mnt, ke-4→30 mnt, ke-5+→24 jam)
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [cooldownTick, setCooldownTick] = useState(() => Date.now());
   const sentCode = useRef<string | null>(null);
   const sentAt = useRef<number>(0);
 
   // Minta OTP verifikasi email ke email user yang terdaftar (via worker Resend).
+  // Cooldown progresif berlaku di sini: semakin sering diminta, semakin lama tunggunya.
   const requestEmailOtp = async () => {
     setVerifError('');
     if (!user?.email) { setVerifError('Email tidak ditemukan.'); return; }
+    const gate = otpVerifRateCheck(user.email);
+    if (!gate.allowed) {
+      setCooldownUntil(gate.blockedUntil ?? null);
+      setVerifError(gate.message || 'Terlalu banyak permintaan OTP. Coba lagi nanti.');
+      return;
+    }
     setOtpSending(true);
     const code = genOtp();
     const r = await sendOtpEmail(user.email, code);
     setOtpSending(false);
     setShowOtp(true);
-    if (r.ok) { sentCode.current = code; sentAt.current = Date.now(); }
-    else { setVerifError(r.error || 'Gagal mengirim OTP.'); }
+    if (r.ok) {
+      sentCode.current = code;
+      sentAt.current = Date.now();
+      const rl = otpVerifRateRecord(user.email);
+      setCooldownUntil(rl.blockedUntil > Date.now() ? rl.blockedUntil : null);
+    } else {
+      setVerifError(r.error || 'Gagal mengirim OTP.');
+    }
   };
+
+  // Muat sisa cooldown dari localStorage saat halaman dibuka / email berubah (tahan reload).
+  useEffect(() => {
+    if (!user?.email) return;
+    const st = otpVerifRateStatus(user.email);
+    setCooldownUntil(st.blockedUntil > Date.now() ? st.blockedUntil : null);
+  }, [user?.email]);
+
+  // Tick tiap detik selama cooldown aktif; berhenti sendiri saat habis.
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    setCooldownTick(Date.now());
+    const t = window.setInterval(() => setCooldownTick(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [cooldownUntil]);
+  useEffect(() => {
+    if (cooldownUntil && cooldownTick >= cooldownUntil) setCooldownUntil(null);
+  }, [cooldownTick, cooldownUntil]);
+
+  const cooldownLeft = cooldownUntil ? Math.max(0, cooldownUntil - cooldownTick) : 0;
 
   // Sync form dengan data user dari context/API
   useEffect(() => {
@@ -247,13 +283,22 @@ export default function PengaturanAkunPage() {
               ) : (
                 <button
                   onClick={requestEmailOtp}
-                  disabled={otpSending}
-                  className="shrink-0 rounded-lg bg-cyan-600 px-3 py-2 text-[12px] font-bold text-white transition-all hover:bg-cyan-700 active:scale-95 disabled:opacity-60"
+                  disabled={otpSending || cooldownLeft > 0}
+                  className="shrink-0 rounded-lg bg-cyan-600 px-3 py-2 font-mono text-[12px] font-bold tabular-nums text-white transition-all hover:bg-cyan-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-cyan-600"
                 >
-                  {otpSending ? 'Mengirim...' : 'Verifikasi'}
+                  {cooldownLeft > 0 ? `Tunggu ${fmtCooldown(cooldownLeft)}` : otpSending ? 'Mengirim...' : 'Verifikasi'}
                 </button>
               )}
             </div>
+
+            {!emailVerified && (
+              <p className="text-[10.5px] font-medium leading-relaxed text-slate-400 dark:text-slate-500">
+                Cooldown progresif — permintaan ke-2 → 1 menit, ke-3 → 5 menit, ke-4 → 30 menit, ke-5 dst → 24 jam.
+              </p>
+            )}
+            {verifError && !showOtp && (
+              <p className="text-[12px] font-semibold text-rose-600 dark:text-rose-400">{verifError}</p>
+            )}
 
             {!emailVerified && showOtp && (
               <div className="animate-fade-in space-y-3 rounded-xl border border-cyan-200 bg-cyan-50/40 p-4 dark:border-cyan-800/40 dark:bg-cyan-900/15">

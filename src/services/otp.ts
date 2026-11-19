@@ -84,3 +84,74 @@ export function otpRateRecord(email: string): void {
   else if (rl.attempts === 2) rl.blockedUntil = now + 10 * 60 * 1000;     // ke-2: 10 menit
   writeRL(email, rl);
 }
+
+/* -------- Rate limit OTP verifikasi email (Pengaturan Akun) --------
+   Tangga progresif per email (disimpan di localStorage):
+   ke-2 → 1 menit · ke-3 → 5 menit · ke-4 → 30 menit · ke-5+ → 24 jam.
+   Setelah blok 24 jam berakhir, siklus direset. */
+const VR_KEY = (email: string) => `by_otp_vrl:${email.trim().toLowerCase()}`;
+
+function vrCooldownMs(attempts: number): number {
+  if (attempts <= 1) return 0;
+  if (attempts === 2) return 1 * 60_000;
+  if (attempts === 3) return 5 * 60_000;
+  if (attempts === 4) return 30 * 60_000;
+  return 24 * 60 * 60 * 1000; // ke-5 dan seterusnya: 24 jam
+}
+function readVR(email: string): RL {
+  try {
+    const r = JSON.parse(localStorage.getItem(VR_KEY(email)) || '');
+    if (r && typeof r.attempts === 'number' && typeof r.blockedUntil === 'number') return r;
+  } catch { /* abaikan */ }
+  return { attempts: 0, blockedUntil: 0 };
+}
+function writeVR(email: string, rl: RL) {
+  try { localStorage.setItem(VR_KEY(email), JSON.stringify(rl)); } catch { /* abaikan */ }
+}
+/** Siklus 24 jam yang sudah selesai direset agar pengguna bisa mulai lagi. */
+function normalizeVR(rl: RL, now: number): RL {
+  if (rl.attempts >= 5 && now >= rl.blockedUntil) return { attempts: 0, blockedUntil: 0 };
+  return rl;
+}
+
+/** Cek apakah boleh minta OTP verifikasi sekarang (tidak ada side effect). */
+export function otpVerifRateCheck(email: string): { allowed: boolean; message?: string; blockedUntil?: number } {
+  const now = Date.now();
+  const rl = normalizeVR(readVR(email), now);
+  if (now < rl.blockedUntil) {
+    return {
+      allowed: false,
+      blockedUntil: rl.blockedUntil,
+      message: `Terlalu banyak permintaan OTP. Coba lagi dalam ${fmtWait(rl.blockedUntil - now)}.`,
+    };
+  }
+  return { allowed: true, blockedUntil: 0 };
+}
+
+/** Catat 1 permintaan OTP verifikasi sukses & terapkan cooldown sesuai tangga progresif. */
+export function otpVerifRateRecord(email: string): RL {
+  const now = Date.now();
+  const rl = normalizeVR(readVR(email), now);
+  rl.attempts += 1;
+  const cd = vrCooldownMs(rl.attempts);
+  rl.blockedUntil = cd > 0 ? now + cd : 0;
+  writeVR(email, rl);
+  return rl;
+}
+
+/** Status cooldown saat ini — dipakai untuk menampilkan countdown (tahan reload). */
+export function otpVerifRateStatus(email: string): { attempts: number; blockedUntil: number } {
+  const now = Date.now();
+  const rl = normalizeVR(readVR(email), now);
+  return { attempts: rl.attempts, blockedUntil: rl.blockedUntil };
+}
+
+/** Format sisa cooldown untuk tombol: mm:ss, atau jam bila ≥ 1 jam. */
+export function fmtCooldown(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}j ${String(m).padStart(2, '0')}m`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
