@@ -267,6 +267,7 @@ export function PanelEditor({
                   />
                   <span className="shrink-0 bg-slate-50 px-2.5 text-[12px] font-semibold leading-10 text-slate-500 dark:bg-slate-800">.{ROOT}</span>
                 </div>
+                {subLocked && <p className="mt-1 text-[11.5px] text-slate-500">Subdomain permanen dan tidak dapat diubah.</p>}
                 {subState && <span className={`mt-1 block text-[11.5px] font-semibold ${subState.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{subState.msg}</span>}
               </label>
               {!owner && (

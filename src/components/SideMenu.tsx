@@ -214,7 +214,9 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
           (item) =>
            !HIDDEN_USER_ITEMS.includes(item.id) &&
             item.id!== HIDDEN_PROFILE_ITEM &&
-            (!AUTH_REQUIRED.includes(item.id) || user!== null),
+            (!AUTH_REQUIRED.includes(item.id) || user!== null) &&
+            // Child panel: sembunyikan menu "Upgrade" (upsell tidak relevan di panel kloning).
+            !(IS_CHILD_PANEL && item.id === 'plus'),
         );
 
   const handleNav = (id: PageId) => {
