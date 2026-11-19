@@ -354,6 +354,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     setVar('--by-accent-dark', acc ? lighten(acc, 0.35) : null);
     setVar('--by-accent-hero', acc ? lighten(acc, 0.5) : null);
     setVar('--by-menu', HEX.test(effective.menuActive) ? effective.menuActive : null);
+    setVar('--by-menu-dark', HEX.test(effective.menuActive) ? lighten(effective.menuActive, 0.35) : null);
     setVar('--by-header', HEX.test(effective.headerTint) ? effective.headerTint : null);
   }, [effective.brandAccent, effective.menuActive, effective.headerTint]);
 

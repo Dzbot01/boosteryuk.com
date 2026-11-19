@@ -196,14 +196,23 @@ const refresh = async () => {
 
   // Google Sign-In (GSI): credential = ID token dari tombol Google. Diverifikasi
   // server-side oleh google_auth.php (cek signature via Google + aud = GOOGLE_CLIENT_ID).
+  // google_auth.php tidak bisa dihubungi / error HTTP (502, PHP down, body bukan JSON)
+  // → pesan ramah yang sama dipakai di modal; error validasi dari PHP (JSON) diteruskan apa adanya.
   const loginWithGoogle = async (credential: string) => {
+    const MSG_PINTU_TUTUP = 'Ups Pintu ditutup, silakan cobalagi dalam beberapa saat.';
     try{
       const res = await fetch(`${API_URL}/google_auth.php`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ credential })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null); // 502/PHP down → body bukan JSON
+      if (!res.ok || !data) {
+        // PHP merespons JSON (mis. 401 token ditolak) → teruskan pesannya; selain itu anggap server bermasalah.
+        return (data && typeof data === 'object')
+          ? { ok: false, ...data }
+          : { ok: false, message: MSG_PINTU_TUTUP };
+      }
       if(data.ok && data.token){
         localStorage.setItem('token', data.token);
         setUser({ ...data.user, token: data.token });
@@ -213,7 +222,7 @@ const refresh = async () => {
       }
       return data;
     }catch{
-      return {ok: false, message: 'Gagal konek ke server'};
+      return {ok: false, message: MSG_PINTU_TUTUP};
     }
   }
 

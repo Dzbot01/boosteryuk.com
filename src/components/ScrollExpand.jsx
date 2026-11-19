@@ -29,6 +29,7 @@ const ScrollExpand = ({
   overlayScrim = 0.45,
   useWindowScroll = false,
   enabled = true,
+  lockScrollUntilComplete = false,
   children,
   className = '',
   style,
@@ -43,6 +44,11 @@ const ScrollExpand = ({
   const overlayRef = useRef(null);
   const scrimRef = useRef(null);
   const hintRef = useRef(null);
+  // Scroll-lock: progres animasi terakhir yang diterapkan + posisi scroll maksimum
+  // selama animasi belum selesai (scroll di bawah track diblokir sampai ekspansi penuh).
+  const progressRef = useRef(0);
+  const maxScrollRef = useRef(0);
+  const lastTouchYRef = useRef(null);
 
   const propsRef = useRef({});
   propsRef.current = {
@@ -56,10 +62,12 @@ const ScrollExpand = ({
     smoothing,
     overlayScrim,
     useWindowScroll,
-    enabled
+    enabled,
+    lockScrollUntilComplete
   };
 
   const applyProgress = useCallback(p => {
+    progressRef.current = p;
     const frame = frameRef.current;
     const media = mediaRef.current;
     if (!frame || !media) return;
@@ -117,6 +125,7 @@ const ScrollExpand = ({
       if (stageH <= 0) return;
       stage.style.height = `${stageH}px`;
       track.style.height = `${stageH * (1 + Math.max(0, c.scrollDistance) + Math.max(0, c.holdDistance))}px`;
+      maxScrollRef.current = Math.max(0, stageH * (Math.max(0, c.scrollDistance) + Math.max(0, c.holdDistance)));
 
       const w = root.clientWidth || stageH;
       stage.style.setProperty('--se-title-size', `${clamp(w * 0.075, 20, 84)}px`);
@@ -186,6 +195,50 @@ const ScrollExpand = ({
       ro.disconnect();
     };
   }, [applyProgress, useWindowScroll]);
+
+  // Scroll-lock sampai animasi ekspansi selesai: selama progres < 1, roda mouse / sentuhan /
+  // keyboard tidak bisa membawa halaman melewati akhir track animasi (halaman hanya bisa
+  // discroll ke bawah penuh setelah animasi tuntas).
+  useEffect(() => {
+    if (!lockScrollUntilComplete || !useWindowScroll) return undefined;
+    const isLocked = () => propsRef.current.enabled !== false && progressRef.current < 0.999;
+    const onWheel = (e) => {
+      if (isLocked() && e.deltaY > 0 && window.scrollY >= maxScrollRef.current - 1) e.preventDefault();
+    };
+    const onTouchStart = (e) => { lastTouchYRef.current = e.touches?.[0]?.clientY ?? null; };
+    const onTouchMove = (e) => {
+      const y = e.touches?.[0]?.clientY ?? null;
+      const last = lastTouchYRef.current;
+      lastTouchYRef.current = y;
+      if (!isLocked()) return;
+      // jari bergerak ke atas = halaman discroll ke bawah
+      if (y !== null && last !== null && y < last && window.scrollY >= maxScrollRef.current - 1) e.preventDefault();
+    };
+    const onKeyDown = (e) => {
+      if (!isLocked() || window.scrollY < maxScrollRef.current - 1) return;
+      const t = e.target;
+      if (t instanceof HTMLElement) {
+        const tag = t.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable) return;
+      }
+      if (e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === 'End') e.preventDefault();
+    };
+    const onScroll = () => {
+      if (isLocked() && window.scrollY > maxScrollRef.current) window.scrollTo(0, maxScrollRef.current);
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [lockScrollUntilComplete, useWindowScroll]);
 
   const media =
     mediaType === 'video' ? (

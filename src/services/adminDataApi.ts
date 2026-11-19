@@ -1,4 +1,4 @@
-// Data admin utama (php-api/admin_data.php): pesanan semua user, user, profit markup, deposit.
+// Data admin utama (php-api/admin_data.php): pesanan semua user, user, profit (SMM + Agen AI + Upgrade), deposit.
 import { MAIN_API } from '../lib/apiBase';
 
 const API = `${MAIN_API}/admin_data.php`;
@@ -36,6 +36,7 @@ export interface AdminOrder {
   user_email: string | null;
   cost: number | null;
   markup: number | null;
+  target: string | null;
 }
 export interface AdminUser {
   id: number;
@@ -55,7 +56,18 @@ export interface AdminUser {
 }
 export interface Period { today: number; month: number; all: number }
 export interface ProfitData {
-  income: Period & { recorded: Period & { orders: number; cost: number }; estimated: Period & { orders: number } };
+  income: Period & {
+    /** Markup SMM tercatat (tabel smm_order_profit). */
+    recorded: Period & { orders: number; cost: number };
+    /** Estimasi markup order SMM lama, Rp4.425/1000. */
+    estimated: Period & { orders: number };
+    /** Markup SMM (recorded + estimated). */
+    smm: Period & { orders: number };
+    /** Sewa Agen AI (harga dasar paket; tanpa markup child panel). */
+    agent_ai: Period & { orders: number };
+    /** Upgrade Boosteryuk Plus & EXTRA (harga penuh). */
+    upgrade: Period & { orders: number };
+  };
   transactions: { smm: { n: number; omzet: number }; lain: { n: number; omzet: number }; today: { n: number; omzet: number }; month: { n: number; omzet: number }; batal: number };
   deposits: Period & { source: string | null; count_month: number; manual?: Period };
   users: { total: number; balance: number };

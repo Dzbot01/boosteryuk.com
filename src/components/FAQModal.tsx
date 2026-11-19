@@ -52,9 +52,10 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
     <>
       <div className="fixed inset-0 z-50 animate-fade-in bg-slate-900/40 backdrop-blur-[3px]" onClick={onClose} />
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-0 sm:px-6">
-        <div className="flex max-h-[82vh] w-full max-w-md animate-slide-up sm:max-w-xl flex-col overflow-hidden rounded-t-3xl border-t border-slate-200 bg-white shadow-2xl shadow-slate-900/30 dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-black/40 sm:mb-6 sm:rounded-3xl sm:border">
-          <div className="flex justify-center pt-3 sm:hidden">
+      {/* Selalu nempel di tepi bawah layar (bukan mengambang) — di semua ukuran layar. */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-0">
+        <div className="flex max-h-[82vh] w-full max-w-md animate-slide-up sm:max-w-xl flex-col overflow-hidden rounded-t-3xl border-t border-slate-200 bg-white shadow-2xl shadow-slate-900/30 dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-black/40">
+          <div className="flex justify-center pt-3">
             <span className="h-1.5 w-10 rounded-full bg-slate-200 dark:bg-slate-700" />
           </div>
 

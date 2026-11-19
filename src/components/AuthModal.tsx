@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
-import { useGoogleClientId } from '../context/GoogleClientIdContext';
+import { useGoogleClientId, useGoogleClientIdError } from '../context/GoogleClientIdContext';
 import { boostyVoice } from '../services/boostyVoice';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 
@@ -26,6 +26,7 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
   const { loginWithGoogle } = useAuth();
   const { voiceMode } = useSiteSettings();
   const googleClientId = useGoogleClientId();
+  const googleLoadError = useGoogleClientIdError();
   const navigate = useNavigate();
 
   const [error, setError] = useState('');
@@ -82,9 +83,9 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
         boostyVoice.stop();
         setError(res.message || 'Login Google gagal');
       }
-    } catch (err: any) {
+    } catch {
       boostyVoice.stop();
-      setError('Gagal konek ke server: ' + (err?.message || 'Coba lagi'));
+      setError('Ups Pintu ditutup, silakan cobalagi dalam beberapa saat.');
     } finally {
       setLoading(false);
     }
@@ -139,6 +140,10 @@ export default function AuthModal({ open, onClose, onSuccess, initialMode = 'log
                 />
               )}
             </div>
+          ) : googleLoadError ? (
+            <p className="authflip-error w-full" role="alert">
+              Ups Pintu ditutup, silakan cobalagi dalam beberapa saat.
+            </p>
           ) : (
             <p className="authflip-error w-full">
               Login Google belum dikonfigurasi di server (GOOGLE_CLIENT_ID kosong). Silakan coba lagi nanti.

@@ -38,18 +38,20 @@ const root = createRoot(rootElement);
 function Root() {
   // null = sedang memuat, '' = gagal/belum dikonfigurasi (app tetap jalan; tombol Google menampilkan pesan).
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const [googleLoadError, setGoogleLoadError] = useState(false);
 
   // Client ID Google diambil DULU dari PHP (google_auth.php?action=client_id) — satu-satunya
   // tempat yang boleh membaca .env di server. Client ID boleh diekspos ke browser; Client Secret tidak pernah keluar dari server.
   useEffect(() => {
     let alive = true;
     fetch(`${MAIN_API}/google_auth.php?action=client_id&t=${Date.now()}`, { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((j) => {
+      .then(async (res) => {
+        const j = await res.json().catch(() => null); // 502/PHP down → body bukan JSON
         if (!alive) return;
+        if (!res.ok || !j) { setGoogleLoadError(true); setGoogleClientId(''); return; }
         setGoogleClientId(j?.ok && typeof j.clientId === 'string' && j.clientId ? j.clientId : '');
       })
-      .catch(() => alive && setGoogleClientId(''));
+      .catch(() => { if (alive) { setGoogleLoadError(true); setGoogleClientId(''); } });
     return () => {
       alive = false;
     };
@@ -60,7 +62,7 @@ function Root() {
   }
 
   const tree = (
-    <GoogleClientIdProvider clientId={googleClientId}>
+    <GoogleClientIdProvider clientId={googleClientId} loadError={googleLoadError}>
       <LanguageProvider>
         <ThemeProvider>
           <SiteSettingsProvider>

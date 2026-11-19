@@ -859,6 +859,9 @@ body {
   background-color: var(--by-menu);
   box-shadow: 0 4px 6px -1px color-mix(in srgb, var(--by-menu) 25%, transparent);
 }
+/* Item menu aktif: TANPA card/latar — hanya warna teks mengikuti tema (Pengaturan Website → Tema). */
+.by-menu-text { color: var(--by-menu); }
+.dark .by-menu-text { color: var(--by-menu-dark, var(--by-menu)); }
 /* Header kartu kaca dengan warna kustom: tetap transparan + blur. */
 .by-header-tint { background-color: color-mix(in srgb, var(--by-header) 55%, transparent); }
 .dark .by-header-tint { background-color: color-mix(in srgb, var(--by-header) 30%, rgb(15 23 42 / 0.6)); }
