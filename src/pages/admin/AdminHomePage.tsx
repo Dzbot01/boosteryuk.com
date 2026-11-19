@@ -53,7 +53,7 @@ const CARDS = [
   {
     path: '/admin/withdraw',
     icon: Banknote,
-    title: 'Withdraw Request',
+    title: 'Request Withdraw Child Panel',
     desc: 'Pencairan pendapatan pemilik child panel: detail tujuan transfer, tandai dibayar / tolak.',
     color: 'from-amber-500 to-orange-600',
   },

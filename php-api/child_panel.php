@@ -10,8 +10,9 @@
  *   record_order {order_id}                    → catat pesanan SMM (harga dari riwayat_pesanan milik user)
  * Admin ke-2 / pemilik panel (owner_user_id) atau admin utama:
  *   owner_summary | owner_orders | owner_users | owner_set_markup {markup_smm_pct, markup_agent_pct, markup_otp_pct}
- * Pemilik panel (paket EXTRA) dari web utama: my_panel | my_save {panel:{name, config, markup_*}} |
+ * Pemilik panel (paket EXTRA) dari web utama ATAU subdomain panel: my_panel | my_save {panel:{name, config, markup_*}} |
  *   my_upload {slot, data} | my_video_sign {ext, size}   — hanya panel miliknya; subdomain/status tetap.
+ *   (dari subdomain, target panel = panel yang sedang dibuka — header X-Child-Panel — bukan panel pertama)
  * Pencairan pendapatan (pemilik panel, dari web utama ATAU subdomain): my_wd_info | my_withdraw {withdraw:{method,
  *   bank_name?, account_number, account_name, amount}} → email Resend ke admin utama.
  * Admin utama — Withdraw Request: wd_list {status} | wd_detail {id} | wd_update {id, status:'paid'|'rejected', note}
@@ -93,15 +94,32 @@ $in = json_decode(file_get_contents('php://input'), true);
 if (!is_array($in)) cp_out(['ok' => false, 'message' => 'Body JSON tidak valid.'], 400);
 $action = (string)($in['action'] ?? '');
 
-/* ---------- Pengaturan child panel MILIK SENDIRI (pemilik paket EXTRA), dari web utama ---------- */
+/* ---------- Pengaturan panel sendiri dari web utama / panel yang sedang dibuka ---------- */
 if (in_array($action, ['my_panel', 'my_save', 'my_upload', 'my_video_sign', 'my_wd_info', 'my_withdraw'], true)) {
     $uid = cp_user_id($conn, $in['token'] ?? '');
     if (!$uid) cp_out(['ok' => false, 'message' => 'Sesi tidak valid. Silakan login ulang.'], 401);
-    $st = cp_q($conn, "SELECT p.*, d.hostname FROM child_panels p
-                       LEFT JOIN child_panel_domains d ON d.child_panel_id = p.id AND d.is_primary = 1
-                       WHERE p.owner_user_id = ? ORDER BY p.id ASC LIMIT 1", 'i', (int)$uid);
-    $mine = $st->get_result()->fetch_assoc();
-    $st->close();
+    // Dipanggil dari SUBDOMAIN child panel (header X-Child-Panel): pakai panel yang sedang dibuka
+    // (asalkan pemanggil pemilik panel itu / admin utama) — bukan panel pertama milik user.
+    // Dipanggil dari web utama: tetap pakai panel pertama milik user (perilaku awal).
+    $host = cp_request_host();
+    $tenant = $host ? cp_resolve($conn, $host) : null;
+    if ($host && !$tenant) cp_out(['ok' => false, 'message' => 'Child panel tidak aktif atau tidak ditemukan.'], 404);
+    if ($tenant && !cp_is_owner($conn, $tenant, $uid)) cp_out(['ok' => false, 'message' => 'Hanya pemilik panel ini yang boleh melakukan aksi ini.'], 403);
+    $mine = null;
+    if ($tenant && cp_is_owner($conn, $tenant, $uid)) {
+        $st = cp_q($conn, "SELECT p.*, d.hostname FROM child_panels p
+                           LEFT JOIN child_panel_domains d ON d.child_panel_id = p.id AND d.is_primary = 1
+                           WHERE p.id = ? LIMIT 1", 'i', (int)$tenant['id']);
+        $mine = $st->get_result()->fetch_assoc() ?: null;
+        $st->close();
+    }
+    if (!$host) {
+        $st = cp_q($conn, "SELECT p.*, d.hostname FROM child_panels p
+                           LEFT JOIN child_panel_domains d ON d.child_panel_id = p.id AND d.is_primary = 1
+                           WHERE p.owner_user_id = ? ORDER BY p.id ASC LIMIT 1", 'i', (int)$uid);
+        $mine = $st->get_result()->fetch_assoc();
+        $st->close();
+    }
     if ($action === 'my_panel') {
         if (!$mine) cp_out(['ok' => true, 'panel' => null]);
         $pub = cp_public($mine, $mine['hostname']);

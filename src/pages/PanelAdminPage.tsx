@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, ShoppingBag, Users, Percent, Wallet, Banknote, TrendingUp, RefreshCw, Loader2, Check, CircleAlert, ShieldOff } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { BarChart3, ShoppingBag, Users, Percent, Wallet, Banknote, TrendingUp, RefreshCw, Loader2, Check, CircleAlert, ShieldOff, Paintbrush, X } from 'lucide-react';
 import Seo from '../components/Seo';
 import WithdrawPanel from '../components/childpanel/WithdrawPanel';
 import { useAuth } from '../context/AuthContext';
 import { IS_CHILD_PANEL } from '../lib/apiBase';
 import { panelApi, usePanelOwner, type PanelOrder, type PanelSummary, type PanelUser } from '../services/panelApi';
+import { PanelEditor, toDraft, type Draft, type PanelEditorApi } from '../components/childpanel/PanelEditor';
+import { ownerPanelApi, type MyPanel } from '../services/childPanelApi';
+import { planApi } from '../services/planApi';
 
 const rupiah = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
 const waktu = (s: string) => {
@@ -33,6 +36,51 @@ export default function PanelAdminPage() {
   const [orders, setOrders] = useState<PanelOrder[] | null>(null);
   const [users, setUsers] = useState<PanelUser[] | null>(null);
   const [err, setErr] = useState('');
+  // Modal Pengaturan Website (logo, tema, slider, video, footer …) — subdomain terkunci.
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorLoading, setEditorLoading] = useState(false);
+  const [myPanel, setMyPanel] = useState<MyPanel | null | undefined>(undefined);
+  const [notice, setNotice] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const editorApi: PanelEditorApi = useMemo(() => ({
+    check: async (sub: string) => {
+      const r = await planApi.checkSubdomain(sub);
+      return { ok: r.ok, available: r.available, message: r.message };
+    },
+    save: async (input) => {
+      // Panel sudah ada — tidak ada pembayaran, langsung simpan pengaturan panel.
+      const r = await ownerPanelApi.save({ name: input.name, config: input.config, markup_smm_pct: input.markup_smm_pct, markup_agent_pct: input.markup_agent_pct, markup_otp_pct: input.markup_otp_pct });
+      return { ok: r.ok, id: r.id, message: r.message, url: r.url, hostname: r.hostname };
+    },
+    upload: (_id: number, slot: string, data: string) => ownerPanelApi.upload(slot, data),
+    videoSign: (_id: number, ext: string, size: number) => ownerPanelApi.videoSign(ext, size),
+  }), []);
+
+  const initialDraft: Draft | null = useMemo(
+    () => (myPanel ? toDraft({ ...myPanel, owner_email: null, created_at: '' }) : null),
+    [myPanel],
+  );
+
+  const openEditor = async () => {
+    setEditorLoading(true);
+    setNotice(null);
+    const r = await ownerPanelApi.mine();
+    setEditorLoading(false);
+    if (!r.ok || !r.panel) {
+      setNotice({ ok: false, msg: r.message || 'Gagal memuat pengaturan panel.' });
+      return;
+    }
+    setMyPanel(r.panel);
+    setEditorOpen(true);
+  };
+
+  // Auto-dismiss toast notifikasi
+  useEffect(() => {
+    if (!notice || notice.ok) return;
+    const t = window.setTimeout(() => setNotice(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [notice]);
+
 
   const load = useCallback(async () => {
     setErr('');
@@ -69,9 +117,14 @@ export default function PanelAdminPage() {
           <h1 className="text-[22px] font-bold text-slate-900 dark:text-white">{summary?.panel.name || 'Memuat…'}</h1>
           {summary && <p className="text-[12.5px] text-slate-500">{summary.panel.hostname}</p>}
         </div>
-        <button onClick={() => void load()} aria-label="Muat ulang" className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
-          <RefreshCw className={`h-4 w-4 ${owner === null || (!summary && !err) ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => void openEditor()} disabled={editorLoading} aria-label="Pengaturan Website" className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[12.5px] font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            {editorLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paintbrush className="h-4 w-4" />} Pengaturan Website
+          </button>
+          <button onClick={() => void load()} aria-label="Muat ulang" className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
+            <RefreshCw className={`h-4 w-4 ${owner === null || (!summary && !err) ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 flex gap-1.5 overflow-x-auto" role="tablist">
@@ -220,6 +273,37 @@ export default function PanelAdminPage() {
       {tab === 'withdraw' && (
         <div className="mt-4">
           <WithdrawPanel />
+        </div>
+      )}
+
+      {/* Modal Pengaturan Website — seperti saat pembuatan child panel (paket EXTRA), tanpa merubah subdomain */}
+      {editorOpen && initialDraft && (
+        <PanelEditor
+          key="pengaturan-website"
+          initial={initialDraft}
+          api={editorApi}
+          mode="owner"
+          variant="modal"
+          title="Pengaturan Website"
+          submitLabel="Simpan perubahan"
+          onClose={() => setEditorOpen(false)}
+          onSaved={(_res, msg) => {
+            setEditorOpen(false);
+            setNotice({ ok: true, msg: `${msg} Muat ulang halaman untuk menerapkan tema/logo di halaman ini.` });
+            void load();
+            void ownerPanelApi.mine().then((r) => { if (r.ok && r.panel) setMyPanel(r.panel); });
+          }}
+        />
+      )}
+
+      {/* Toast notifikasi */}
+      {notice && (
+        <div role="status" className="fixed bottom-24 left-1/2 z-[85] flex w-[min(92vw,420px)] -translate-x-1/2 items-start gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] shadow-lg dark:border-slate-700 dark:bg-slate-900">
+          {notice.ok ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.8} /> : <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />}
+          <div className="flex-1 text-slate-700 dark:text-slate-200"><p>{notice.msg}</p>{notice.ok && <button onClick={() => window.location.reload()} className="mt-1 font-semibold text-cyan-700 underline dark:text-cyan-400">Muat ulang sekarang</button>}</div>
+          <button onClick={() => setNotice(null)} aria-label="Tutup" className="text-slate-400 hover:text-slate-700">
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
     </div>

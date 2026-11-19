@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Banknote, X, Check, CircleAlert, Loader2, Copy, ExternalLink, RefreshCw, MailWarning } from 'lucide-react';
+import { ArrowLeft, X, Check, CircleAlert, Loader2, Copy, ExternalLink, RefreshCw, MailWarning } from 'lucide-react';
 import Reveal from '../../components/Reveal';
 import Seo from '../../components/Seo';
 import { WD_STATUS } from '../../components/childpanel/WithdrawPanel';
@@ -31,14 +31,15 @@ export default function AdminWithdrawPage() {
   const [openId, setOpenId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const load = useCallback(async (f: Filter) => {
-    setErr('');
-    setRows(null);
+  const load = useCallback(async (f: Filter, quiet = false) => {
+    if (!quiet) { setErr(''); setRows(null); }
     const r = await withdrawApi.list(f);
     if (!r.ok) {
+      if (quiet) return;
       setRows([]);
       return setErr(r.message || 'Gagal memuat permintaan withdraw.');
     }
+    setErr('');
     setRows(r.requests || []);
     if (r.counts) setCounts(r.counts);
     if (r.totals) setTotals(r.totals);
@@ -46,6 +47,10 @@ export default function AdminWithdrawPage() {
 
   useEffect(() => {
     void load(filter);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load(filter, true);
+    }, 30_000);
+    return () => window.clearInterval(timer);
   }, [filter, load]);
 
   useEffect(() => {
@@ -57,8 +62,8 @@ export default function AdminWithdrawPage() {
   const card = 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/60 dark:bg-slate-800/80';
 
   return (
-    <div className="mx-auto max-w-4xl px-4 pb-32 pt-10 sm:px-6">
-      <Seo title="Withdraw Request" noindex />
+    <div className="mx-auto max-w-6xl px-4 pb-32 pt-10 sm:px-6">
+      <Seo title="Request Withdraw Child Panel" noindex />
       <Reveal>
         <button
           onClick={() => navigate('/admin')}
@@ -70,9 +75,9 @@ export default function AdminWithdrawPage() {
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-[28px] font-extrabold tracking-tight text-slate-900 dark:text-white">Withdraw Request</h1>
+          <h1 className="font-display text-[28px] font-extrabold tracking-tight text-slate-900 dark:text-white">Request Withdraw Child Panel</h1>
           <p className="mt-1 text-[13.5px] text-slate-500 dark:text-slate-400">
-            Pencairan pendapatan markup pemilik child panel. Transfer manual, lalu tandai <b>Sudah dibayar</b>.
+            Tabel pencairan pendapatan child panel. Klik baris untuk detail & proses — transfer manual, lalu tandai <b>Sudah dibayar</b> atau <b>Tolak</b>.
           </p>
         </div>
         <button onClick={() => void load(filter)} aria-label="Muat ulang" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
@@ -117,24 +122,64 @@ export default function AdminWithdrawPage() {
           </div>
         )}
         {rows?.length === 0 && !err && <div className={`${card} py-10 text-center text-[13.5px] text-slate-500`}>Tidak ada permintaan di kategori ini.</div>}
-        {rows?.map((w) => (
-          <button key={w.id} onClick={() => setOpenId(w.id)} className={`${card} flex w-full flex-wrap items-center gap-4 text-left transition hover:border-cyan-300 hover:shadow-md`}>
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30">
-              <Banknote className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="flex flex-wrap items-center gap-2 text-[14.5px] font-bold text-slate-900 dark:text-white">
-                {rupiah(w.net_amount)} · {w.method_label}
-                <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${WD_STATUS[w.status].cls}`}>{WD_STATUS[w.status].label}</span>
-              </p>
-              <p className="truncate text-[12.5px] text-slate-600 dark:text-slate-300">
-                {w.panel_name || 'Panel #' + w.child_panel_id} · {w.owner_name || '—'} ({w.owner_email || '—'})
-              </p>
-              <p className="text-[11.5px] text-slate-400">#{w.id} · {waktu(w.created_at)}</p>
-            </div>
-            <span className="text-[12px] font-bold text-cyan-700 dark:text-cyan-400">Detail</span>
-          </button>
-        ))}
+        {rows && rows.length > 0 && (
+          <div className={`${card} overflow-x-auto p-0`}>
+            <table className="w-full min-w-[900px] text-left text-[12.5px]">
+              <thead className="border-b border-slate-100 bg-slate-50/70 text-[10.5px] uppercase tracking-wider text-slate-400 dark:border-slate-700 dark:bg-slate-800/40">
+                <tr>
+                  <th className="px-4 py-3">Subdomain</th>
+                  <th className="px-4 py-3">Email pemilik</th>
+                  <th className="px-4 py-3 text-right">Nominal</th>
+                  <th className="px-4 py-3">Tanggal</th>
+                  <th className="px-4 py-3">Alamat pencairan</th>
+                  <th className="px-4 py-3">Status / aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {rows.map((w) => {
+                  const tujuan = `${w.method_label}${w.bank_name ? ' · ' + w.bank_name : ''} · ${w.account_number}`;
+                  return (
+                    <tr key={w.id} onClick={() => setOpenId(w.id)} className="cursor-pointer align-top transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                      <td className="px-4 py-3">
+                        <p className="font-bold text-slate-800 dark:text-slate-100">{w.panel_name || `Panel #${w.child_panel_id}`}</p>
+                        {w.hostname ? (
+                          <a
+                            href={`https://${w.hostname}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-0.5 inline-flex items-center gap-1 text-[11.5px] font-semibold text-cyan-700 hover:underline dark:text-cyan-400"
+                          >
+                            {w.hostname} <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : (
+                          <p className="mt-0.5 text-[11.5px] text-slate-400">—</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-slate-800 dark:text-slate-100">{w.owner_name || '—'}</p>
+                        <p className="mt-0.5 max-w-[200px] truncate text-[11.5px] text-slate-400" title={w.owner_email || ''}>{w.owner_email || '—'}</p>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <p className="font-bold text-slate-900 dark:text-white">{rupiah(w.net_amount)}</p>
+                        <p className="mt-0.5 text-[10.5px] font-normal text-slate-400">dari {rupiah(w.amount)}</p>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-500" title={`#${w.id}`}>{waktu(w.created_at)}</td>
+                      <td className="max-w-[240px] px-4 py-3">
+                        <p className="truncate font-semibold text-slate-800 dark:text-slate-100" title={`${tujuan} a.n. ${w.account_name}`}>{tujuan}</p>
+                        <p className="mt-0.5 text-[11px] text-slate-400">a.n. {w.account_name}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${WD_STATUS[w.status].cls}`}>{WD_STATUS[w.status].label}</span>
+                        <button onClick={(e) => { e.stopPropagation(); setOpenId(w.id); }} className="mt-2 block font-semibold text-cyan-700 underline dark:text-cyan-400" aria-label={`Detail withdraw #${w.id}`}>Detail</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {openId !== null && (
