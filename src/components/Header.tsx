@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import HamburgerToggle from './HamburgerToggle';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 
@@ -26,13 +26,15 @@ function useScrolled(threshold = SCROLL_THRESHOLD) {
 }
 
 interface HeaderProps {
-  /** Toggle buka/tutup side menu (dipakai hamburger mobile/tablet). */
+  /** Toggle buka/tutup side menu (dipakai hamburger). */
   onToggleMenu: () => void;
   /** State menu terbuka — menggerakkan animasi hamburger. */
   menuOpen: boolean;
+  /** Paksa hamburger tampil di DESKTOP juga — dipakai saat rail disembunyikan (tamu di dashboard). */
+  showMenuOnDesktop?: boolean;
 }
 
-export default function Header({ onToggleMenu, menuOpen }: HeaderProps) {
+export default function Header({ onToggleMenu, menuOpen, showMenuOnDesktop = false }: HeaderProps) {
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
   const scrolled = useScrolled();
@@ -55,8 +57,23 @@ export default function Header({ onToggleMenu, menuOpen }: HeaderProps) {
           : 'border-transparent bg-transparent shadow-none'
       }`}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-end px-4 py-3 sm:px-6">
-        {/* Sisi kiri sengaja kosong — brand & navigasi ada di side menu / rail ikon; header hanya aksi kanan. */}
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+        {/* Brand — HANYA mobile/tablet (versi awal). Di desktop: tidak dipakai; navigasi lewat rail/hover & Playground. */}
+        <Link to="/" aria-label={`${settings.brandName}${settings.brandSuffix} — Beranda`} className="flex min-w-0 items-center gap-2 lg:hidden">
+          <img src={settings.logoUrl} alt={`${settings.brandName}${settings.brandSuffix}`} className="h-9 w-9 shrink-0 object-contain" />
+          <span className="min-w-0 leading-tight">
+            <span className="block font-display text-[17px] font-extrabold leading-none tracking-tight">
+              <span className="by-accent">{settings.brandName}</span>
+              <span className={onHeroTop ? 'text-white' : 'text-black dark:text-white'}>{settings.brandSuffix}</span>
+            </span>
+            {settings.headerTagline && (
+              <span className={`mt-1 block max-w-[140px] truncate text-[9px] font-semibold uppercase tracking-[0.14em] ${onHeroTop ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                {settings.headerTagline}
+              </span>
+            )}
+          </span>
+        </Link>
+        {/* Sisi kiri DESKTOP sengaja kosong — brand & navigasi ada di rail ikon (hover untuk membuka panel). */}
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
@@ -69,12 +86,12 @@ export default function Header({ onToggleMenu, menuOpen }: HeaderProps) {
             <span className="text-silver-shine">Playground</span>
           </button>
 
-          {/* Hamburger — hanya mobile/tablet (desktop pakai tombol side menu pojok kiri) */}
+          {/* Hamburger — mobile/tablet; di DESKTOP tampil hanya saat rail disembunyikan (tamu di dashboard) */}
           <HamburgerToggle
             open={menuOpen}
             onToggle={onToggleMenu}
             label={menuOpen ? 'Tutup menu' : 'Buka menu'}
-            className={`h-11 w-11 lg:hidden ${onHeroTop ? 'text-white' : 'text-slate-700 dark:text-slate-200'}`}
+            className={`h-11 w-11 ${showMenuOnDesktop ? '' : 'lg:hidden'} ${onHeroTop ? 'text-white' : 'text-slate-700 dark:text-slate-200'}`}
           />
         </div>
       </div>
