@@ -6,17 +6,17 @@
  *
  * ===================== CARA PASANG (sekali saja) =====================
  * 1. Buat project di https://console.cloud.google.com/ → APIs & Services → Credentials.
- * 2. Create Credentials → OAuth client ID → Application type: **Web application**.
- * 3. Isi **Authorized JavaScript origins** (BUKAN redirect URI — alur GSI tidak memakai
+ * 2. Create Credentials → OAuth client ID → Application type: Web application.
+ * 3. Isi Authorized JavaScript origins (BUKAN redirect URI — alur GSI tidak memakai
  *    redirect):
  *      - https://boosteryuk.com
  *      - https://www.boosteryuk.com
  *      - https://app.boosteryuk.com      (bila UI juga di Cloudflare app.boosteryuk.com)
  *      - https://<nama>.boosteryuk.com   (per child panel yang ingin memakai tombol Google;
  *                                         origin tidak mendukung wildcard)
- *    "Authorized redirect URIs" BOLEH DIBIARKAN KOSONG. Redirect ke halaman **/overview**
+ *    "Authorized redirect URIs" BOLEH DIBIARKAN KOSONG. Redirect ke halaman /overview
  *    setelah login dilakukan di frontend (sama seperti logic login lama: navigate('/overview')).
- * 4. Buat file **api/.env** di server (JANGAN di-commit, jangan dibagikan):
+ * 4. Buat file api/.env di server (JANGAN di-commit, jangan dibagikan):
  *      GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
  *      GOOGLE_CLIENT_SECRET=xxxx
  *    (Client Secret saat ini tidak dipakai oleh alur ID-token client-side; disimpan untuk
