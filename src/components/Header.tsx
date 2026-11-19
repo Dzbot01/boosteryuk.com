@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, Wallet, Settings, LogOut, ChevronRight, Crown, AtSign } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
@@ -66,7 +66,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <header
-      className={`fixed left-0 right-0 top-0 z-30 w-full border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out lg:hidden ${
+      className={`fixed left-0 right-0 top-0 z-30 w-full border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out ${
         scrolled
           ? isPlayground
             ? 'border-emerald-300/50 bg-emerald-500/20 shadow-[0_8px_24px_-16px_rgba(5,120,80,0.45)] backdrop-blur-xl backdrop-saturate-150 dark:border-emerald-700/50 dark:bg-emerald-900/35'
@@ -76,24 +76,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
           : 'border-transparent bg-transparent shadow-none'
       }`}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        {/* Brand */}
-        <Link to={isAdmin? '/admin' : '/'} className="group flex items-center gap-3">
-          <img
-            src={settings.logoUrl}
-            alt={settings.brandName + settings.brandSuffix}
-            className="h-10 w-10 shrink-0 object-contain drop-shadow-sm transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105"
-          />
-          <span className="leading-none">
-            <span className="block font-display text-[19px] font-extrabold tracking-tight">
-              <span className={onHeroTop ? 'by-accent-hero' : 'by-accent'}>{settings.brandName}</span>
-              <span className={onHeroTop ? 'text-white' : 'text-black dark:text-white'}>{settings.brandSuffix}</span>
-            </span>
-            <span className={`mt-1 block text-[10px] font-semibold uppercase tracking-[0.16em] ${onHeroTop ? 'text-slate-300' : 'text-slate-400 dark:text-slate-500'}`}>
-              {isAdmin? 'Admin Panel' : settings.headerTagline || 'SMM Panel'}
-            </span>
-          </span>
-        </Link>
+      <div className="mx-auto flex max-w-6xl items-center justify-end px-4 py-3 sm:px-6">
+        {/* Sisi kiri sengaja kosong — brand & navigasi ada di side menu (desktop) / rail ikon; header hanya aksi kanan. */}
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
@@ -195,11 +179,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </div>
           )}
 
-          {/* Hamburger */}
+          {/* Hamburger — hanya mobile/tablet (desktop pakai tombol side menu pojok kiri) */}
           <button
             onClick={onMenuClick}
             aria-label="Buka menu"
-            className={`group relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 hover:text-blue-600 active:scale-95 ${onHeroTop ? 'text-white' : 'text-slate-700 dark:text-slate-200 dark:hover:text-blue-400'}`}
+            className={`group relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 hover:text-blue-600 active:scale-95 lg:hidden ${onHeroTop ? 'text-white' : 'text-slate-700 dark:text-slate-200 dark:hover:text-blue-400'}`}
           >
             <Menu className="h-6 w-6" strokeWidth={2.2} />
             {/* FIX/UI: ikon menu tanpa card (border/bg/shadow dihapus) */}

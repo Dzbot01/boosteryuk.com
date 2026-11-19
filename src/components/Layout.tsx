@@ -34,10 +34,10 @@ export default function Layout() {
       </div>
 
       <Header onMenuClick={() => setMenuOpen(true)} />
-      {/* Aksesoris tema (ketupat, lentera, dll) menggantung di bawah header — desktop: tanpa header */}
+      {/* Aksesoris tema (ketupat, lentera, dll) menggantung di bawah header */}
       <HeaderOrnament />
-      {/* spacer for fixed header (mobile/tablet) — desktop: tanpa header */}
-      <div className="h-[60px] lg:hidden" />
+      {/* spacer for fixed header */}
+      <div className="h-[60px]" />
       {/* Pintu masuk kembali ke Portal Server NexSpace Pro (pesanan belum diambil) */}
       <NexSpaceBanner />
 
