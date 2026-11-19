@@ -14,6 +14,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useOrderHistory } from '../context/OrderHistoryContext';
 import AiAssistantCard from './AiAssistantCard';
+import LinkPreview from './LinkPreview';
 import { applyMarkup, formatRate, fetchServices, isCustomCommentService, type ServiceItem } from '../services/servicesApi';
 import { placeOrder } from '../services/checkoutApi';
 import { brandForCategory, brandIconUrl } from '../constants';
@@ -558,6 +559,8 @@ const handleOrder = async () => {
             className="h-11 w-full rounded-xl border bg-white px-3.5 text-[13.5px] outline-none transition-colors focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/10 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
             style={{ borderColor: COLOR.border }}
           />
+          {/* Pratinjau tautan target (otomatis hilang bila bukan URL / tidak ada pratinjau) */}
+          <LinkPreview target={target} />
         </FormSection>
 
         {/* Custom Comments field */}

@@ -1,5 +1,4 @@
 import {
-  X,
   Home,
   History,
   Phone,
@@ -188,23 +187,18 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
         <div className="relative overflow-hidden bg-gradient-to-br from-cyan-700 via-cyan-600 to-cyan-900 px-5 pb-6 pt-5">
           <div className="absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10 blur-xl" />
           <div className="bg-dots absolute inset-0 opacity-20" />
-          <div className="relative flex items-start justify-between">
+          <div className="relative">
             {/* UI: logo & nama brand di atas menu dihapus; diganti satu judul pertanyaan. */}
-            <div className="min-w-0 pr-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100/80">
-                {isAdmin? 'Admin Panel' : 'Menu'}
-              </p>
-              <h2 className="mt-1 font-display text-[19px] font-extrabold leading-snug text-white">
+            <div className="min-w-0">
+              {isAdmin && (
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100/80">
+                  Admin Panel
+                </p>
+              )}
+              <h2 className={`${isAdmin ? 'mt-1 ' : ''}font-display text-[19px] font-extrabold leading-snug text-white`}>
                 Apa yang sedang kamu butuhkan?
               </h2>
             </div>
-            <button
-              onClick={onClose}
-              aria-label="Tutup menu"
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 text-white transition-all duration-200 hover:bg-white/30 active:scale-90"
-            >
-              <X className="h-4 w-4" strokeWidth={2.4} />
-            </button>
           </div>
 
         </div>
@@ -381,7 +375,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
           )}
           <p className="mt-2 text-center text-[10px] font-medium text-slate-300 dark:text-slate-600">
             {settings.brandName}
-            {settings.brandSuffix} v1.0.0
+            {settings.brandSuffix} v1.2
           </p>
         </div>
       </aside>
