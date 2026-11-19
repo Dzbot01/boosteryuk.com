@@ -11,3 +11,9 @@ dist-ssr
 # Rahasia server (dibuat otomatis di hosting, jangan di-commit)
 php-api/nexspace_secret.php
 php-api/callback_config.php
+
+# Rahasia Google OAuth (.env lokal & .env yang di-upload ke hosting di folder api/)
+.env
+.env.*
+php-api/.env
+!.env.example
