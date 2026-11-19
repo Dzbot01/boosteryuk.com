@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Calculator as CalcIcon, X } from 'lucide-react';
 
 /**
- * Floating calculator — a small vertical "kalkulator" tab hidden on the left
- * edge. Pulling it out reveals a white calculator card with expression display.
+ * Floating calculator — a small vertical "kalkulator" tab on the right edge.
+ * Pulling it out reveals a white calculator card with expression display.
  */
 export default function Calculator() {
   const [open, setOpen] = useState(false);
@@ -106,11 +106,11 @@ export default function Calculator() {
 
   return (
     <>
-      {/* Hidden pull-tab on the left edge */}
+      {/* Hidden pull-tab on the right edge */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="Buka kalkulator"
-        className={`fixed left-0 top-1/2 z-40 -translate-y-1/2 rounded-r-xl border border-l-0 border-slate-200 bg-white py-3 pl-2 pr-1.5 text-slate-600 shadow-md transition-all duration-300 hover:text-cyan-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 ${
+        className={`fixed right-0 top-1/2 z-40 -translate-y-1/2 rounded-l-xl border border-r-0 border-slate-200 bg-white py-3 pl-1.5 pr-2 text-slate-600 shadow-md transition-all duration-300 hover:text-cyan-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 ${
           open ? 'pointer-events-none opacity-0' : 'opacity-100'
         }`}
         style={{ writingMode: 'vertical-rl' }}
@@ -123,11 +123,11 @@ export default function Calculator() {
 
       {/* Calculator card */}
       <div
-        className={`fixed left-0 top-1/2 z-40 -translate-y-1/2 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          open ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed right-0 top-1/2 z-40 -translate-y-1/2 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="ml-2 w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/20 dark:border-slate-700 dark:bg-slate-900">
+        <div className="mr-2 w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/20 dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CalcIcon className="h-4 w-4 text-cyan-600 dark:text-cyan-400" strokeWidth={2.2} />
