@@ -20,6 +20,7 @@ error_reporting(0);
 require 'config.php';
 require 'configdb.php';
 require_once __DIR__ . '/order_price.php';
+require_once __DIR__ . '/riwayat_schema.php'; // kolom target (link SMM) — riwayat_ensure_columns / riwayat_target_width
 
 $data = json_decode(file_get_contents("php://input"), true);
 
@@ -128,11 +129,29 @@ if(!$curl_error && is_array($parsed) && ($parsed['status'] ?? false) === true){
 }
 if (!$provider_order_id) $provider_order_id = 'ORD-' . time() . '-' . $user_id;
 
-// 6. SIMPAN RIWAYAT
-$stmt = $conn->prepare("INSERT INTO riwayat_pesanan (user_id, order_id, service_name, quantity, price, status) VALUES (?,?,?,?,?,?)");
-$stmt->bind_param("issids", $user_id, $provider_order_id, $serviceName, $quantity, $price, $final_status);
-$stmt->execute();
-$stmt->close();
+// 6. SIMPAN RIWAYAT — target (link yang diinput user) ikut disimpan bila kolom tersedia.
+try { riwayat_ensure_columns($conn); } catch (Throwable $e) { /* hosting tanpa ALTER → lanjut tanpa target */ }
+$tw = 0;
+try { $tw = riwayat_target_width($conn); } catch (Throwable $e) { $tw = 0; }
+$saved = false;
+if ($tw > 0) {
+    try {
+        $targetVal = mb_substr($link, 0, $tw);
+        $stmt = $conn->prepare("INSERT INTO riwayat_pesanan (user_id, order_id, service_name, quantity, price, status, target) VALUES (?,?,?,?,?,?,?)");
+        $stmt->bind_param("issidss", $user_id, $provider_order_id, $serviceName, $quantity, $price, $final_status, $targetVal);
+        $stmt->execute();
+        $stmt->close();
+        $saved = true;
+    } catch (Throwable $e) {
+        $saved = false; // mis. kolom target masih 100 char di instalasi lama & link lebih panjang → fallback di bawah
+    }
+}
+if (!$saved) {
+    $stmt = $conn->prepare("INSERT INTO riwayat_pesanan (user_id, order_id, service_name, quantity, price, status) VALUES (?,?,?,?,?,?)");
+    $stmt->bind_param("issids", $user_id, $provider_order_id, $serviceName, $quantity, $price, $final_status);
+    $stmt->execute();
+    $stmt->close();
+}
 
 // 6a. Penghasilan markup (harga web − harga asli provider) untuk Admin → My Profit.
 if (isset($calc['cost'], $calc['base']) && $calc['base'] !== null) {

@@ -119,6 +119,30 @@ const HIDDEN_PROFILE_ITEM = 'profil';
 
 export { baseMenu, authMenu };
 
+/** Tombol ikon di rail kiri (desktop, tampil hanya saat side menu tertutup). */
+function RailButton({ icon: Icon, label, active, onClick }: {
+  icon: typeof Home;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      aria-current={active ? 'page' : undefined}
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors duration-200 ${
+        active
+          ? 'by-menu-text'
+          : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+      }`}
+    >
+      <Icon className="h-[21px] w-[21px]" strokeWidth={2} />
+    </button>
+  );
+}
+
 const ADMIN_MENU = [
   { id: 'orders' as const, icon: ClipboardList, label: 'Data Pesanan', desc: 'Pesanan semua user', path: '/admin/orders' },
   { id: 'users' as const, icon: Users, label: 'Data User', desc: 'Saldo & data user', path: '/admin/users' },
@@ -178,13 +202,80 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
         onClick={onClose}
       />
 
+      {/* ===== Rail ikon (desktop saja): saat side menu TERTUTUP, hanya ikon menu yang tampil di tepi kiri —
+             tempat yang sama dari mana side menu meluncur keluar. ===== */}
+      <div
+        aria-hidden={isOpen}
+        className={`fixed left-0 top-0 z-40 hidden h-full w-16 flex-col items-center border-r border-slate-200 bg-white py-3 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 lg:flex ${
+          isOpen ? 'pointer-events-none invisible -translate-x-full' : 'visible translate-x-0'
+        }`}
+      >
+        <button
+          onClick={() => navigate(isAdmin ? '/admin' : '/')}
+          aria-label="Beranda"
+          title="Beranda"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          <img src={settings.logoUrl} alt={settings.brandName + settings.brandSuffix} className="h-8 w-8 object-contain" />
+        </button>
+        <div className="my-2 h-px w-8 shrink-0 bg-slate-200 dark:bg-slate-700/70" />
+
+        <nav className="flex min-h-0 w-full flex-1 flex-col items-center gap-1 overflow-y-auto px-2.5" aria-label="Navigasi ikon">
+          {isAdmin &&
+            ADMIN_MENU.map((item) => (
+              <RailButton
+                key={item.id}
+                icon={item.icon}
+                label={item.label}
+                active={pathname === item.path || pathname.startsWith(item.path)}
+                onClick={() => navigate(item.path)}
+              />
+            ))}
+
+          {!isAdmin && isPanelOwner && (
+            <RailButton
+              icon={Shield}
+              label="Admin Panel Toko"
+              active={pathname.startsWith('/panel-admin')}
+              onClick={() => navigate('/panel-admin')}
+            />
+          )}
+
+          {!isAdmin &&
+            menuItems.map((item) => (
+              <RailButton
+                key={item.id}
+                icon={item.icon}
+                label={item.label}
+                active={item.id !== 'pengaturan' && pathname === ROUTE_PATH[item.id]}
+                onClick={() => handleNav(item.id)}
+              />
+            ))}
+        </nav>
+
+        {user && (
+          <button
+            onClick={() => {
+              logout();
+              onClose();
+              navigate('/');
+            }}
+            aria-label="Keluar"
+            title="Keluar"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20"
+          >
+            <LogOut className="h-5 w-5" strokeWidth={2} />
+          </button>
+        )}
+      </div>
+
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-full w-[85%] max-w-[320px] flex-col border-r border-slate-200 bg-white shadow-2xl shadow-slate-900/20 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-black/40 ${
+        className={`fixed left-0 top-0 z-50 flex h-full w-[82%] max-w-[272px] flex-col border-r border-slate-200 bg-white shadow-2xl shadow-slate-900/20 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-black/40 ${
           isOpen? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Header */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-cyan-700 via-cyan-600 to-cyan-900 px-5 pb-6 pt-5">
+        <div className="relative overflow-hidden bg-gradient-to-br from-cyan-700 via-cyan-600 to-cyan-900 px-4 pb-5 pt-4">
           <div className="absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10 blur-xl" />
           <div className="bg-dots absolute inset-0 opacity-20" />
           <div className="relative">
@@ -195,7 +286,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                   Admin Panel
                 </p>
               )}
-              <h2 className={`${isAdmin ? 'mt-1 ' : ''}font-display text-[19px] font-extrabold leading-snug text-white`}>
+              <h2 className={`${isAdmin ? 'mt-1 ' : ''}font-display text-[17px] font-extrabold leading-snug text-white`}>
                 Apa yang sedang kamu butuhkan?
               </h2>
             </div>
@@ -204,7 +295,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 overflow-y-auto px-2.5 py-3">
           <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
             {isAdmin? 'Admin Menu' : 'Navigasi'}
           </p>
@@ -222,28 +313,20 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                         navigate(item.path);
                         onClose();
                       }}
-                      className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 ${
+                      className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors duration-200 ${
                         isActive
-                         ? 'by-menu-active text-white'
+                         ? 'by-menu-text'
                           : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
                       }`}
                     >
-                      <span
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
-                          isActive
-                           ? 'bg-white/20'
-                            : 'bg-slate-100 group-hover:bg-white dark:bg-slate-800 dark:group-hover:bg-slate-700'
-                        }`}
-                      >
-                        <Icon className="h-[17px] w-[17px]" strokeWidth={1.9} />
-                      </span>
+                      <Icon className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[13.5px] font-semibold leading-tight">
+                        <span className="block text-[13px] font-semibold leading-tight">
                           {item.label}
                         </span>
                         <span
                           className={`block truncate text-[11px] ${
-                            isActive? 'text-cyan-100/80' : 'text-slate-400 dark:text-slate-500'
+                            isActive? 'opacity-70' : 'text-slate-400 dark:text-slate-500'
                           }`}
                         >
                           {item.desc}
@@ -263,10 +346,10 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                 navigate('/panel-admin');
                 onClose();
               }}
-              className={`mb-3 flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+              className={`mb-3 flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors ${
                 pathname.startsWith('/panel-admin')
-                  ? 'by-menu-active border-transparent text-white'
-                  : 'border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
+                  ? 'by-menu-text'
+                  : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
               }`}
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -292,9 +375,9 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                     <li key={item.id}>
                       <button
                         onClick={() => handleNav(item.id)}
-                        className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 ${
+                        className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors duration-200 ${
                           isActive
-                           ? 'by-menu-active text-white'
+                           ? 'by-menu-text'
                             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
                         } ${item.neon? 'neon-menu-item active' : ''}`}
                       >
@@ -315,7 +398,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                           </span>
                           <span
                             className={`block truncate text-[11px] ${
-                              isActive? 'text-cyan-100/80' : 'text-slate-400 dark:text-slate-500'
+                              isActive? 'opacity-70' : 'text-slate-400 dark:text-slate-500'
                             }`}
                           >
                             {item.desc}

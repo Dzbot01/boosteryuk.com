@@ -7,11 +7,13 @@
  *   users         {q?, page?}                      → semua user
  *   user_update   {id, name?, username?, email?, phone?, role?, plus?}
  *   user_balance  {id, amount, note}               → tambah (+) / kurangi (−) saldo, tercatat di admin_balance_log
- *   profit                                         → penghasilan markup SMM, transaksi, deposit masuk
+ *   profit                                         → penghasilan (SMM + Agen AI + Upgrade), transaksi, deposit masuk
  *   deposits      {limit?}                         → deposit terbaru semua user (maks 10)
  *
- * Penghasilan = markup = harga web utama − harga asli provider, per order SMM (tabel smm_order_profit, diisi order.php).
- * Order lama yang belum tercatat diperkirakan dari markup tetap Rp4.425/1000 dan ditandai "estimasi".
+ * Penghasilan = markup SMM (harga web utama − harga asli provider, per order SMM; tabel smm_order_profit, diisi order.php)
+ *             + sewa Agen AI (harga dasar paket; tanpa markup child panel — itu milik pemilik panel)
+ *             + paket Upgrade Boosteryuk Plus & EXTRA (harga penuh — tanpa biaya provider).
+ * Order lama yang belum tercatat diperkirakan dari markup tetap Rp4.425/1000 dan ditandai "estimasi". Pesanan batal tidak dihitung.
  * Deposit: tabel `deposits` (ditulis callback.php, riwayat lama diimpor dari tripay_log.txt) + top up manual admin.
  */
 header('Access-Control-Allow-Origin: *');
@@ -78,12 +80,16 @@ function ad_user_select($conn) {
 /* ===================== PESANAN ===================== */
 if ($action === 'orders') {
     $where = ['1=1']; $types = ''; $args = [];
+    $rc = ad_cols($conn, 'riwayat_pesanan');
+    $targetSel = isset($rc['target']) ? 'r.target' : 'NULL';
     $q = trim((string)($in['q'] ?? ''));
     if ($q !== '') {
         $uc = ad_cols($conn, 'users');
         $un = isset($uc['username']) ? ' OR u.username LIKE ?' : '';
-        $where[] = "(r.order_id LIKE ? OR r.service_name LIKE ? OR u.name LIKE ? OR u.email LIKE ?$un)";
+        $tg = isset($rc['target']) ? ' OR r.target LIKE ?' : '';
+        $where[] = "(r.order_id LIKE ? OR r.service_name LIKE ? OR u.name LIKE ? OR u.email LIKE ?$un$tg)";
         $n = $un ? 5 : 4;
+        $n += $tg ? 1 : 0;
         $types .= str_repeat('s', $n);
         for ($i = 0; $i < $n; $i++) $args[] = ad_like($q);
     }
@@ -100,7 +106,7 @@ if ($action === 'orders') {
     $tot = $st->get_result()->fetch_assoc(); $st->close();
     $hasProfit = (bool)ad_cols($conn, 'smm_order_profit');
     $st = cp_q($conn, "SELECT r.id, r.order_id, r.user_id, r.service_name, r.quantity, r.price, r.status, UNIX_TIMESTAMP(r.created_at)*1000 AS created_at,
-                              (" . AD_TYPE_SQL . ") AS type, " . ad_user_select($conn) . "
+                              (" . AD_TYPE_SQL . ") AS type, $targetSel AS target, " . ad_user_select($conn) . "
                        FROM riwayat_pesanan r LEFT JOIN users u ON u.id = r.user_id
                        WHERE $w ORDER BY r.id DESC LIMIT " . AD_PAGE . " OFFSET $off", $types, ...$args);
     $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC); $st->close();
@@ -114,6 +120,7 @@ if ($action === 'orders') {
     foreach ($rows as &$r) {
         $r['id'] = (int)$r['id']; $r['user_id'] = (int)$r['user_id']; $r['quantity'] = (int)$r['quantity'];
         $r['price'] = (float)$r['price']; $r['created_at'] = (int)$r['created_at'];
+        $r['target'] = isset($r['target']) && $r['target'] !== null ? (string)$r['target'] : null;
         $m = $markups[$r['user_id'] . '|' . $r['order_id']] ?? null;
         $r['cost'] = $m ? (float)$m['cost'] : null; $r['markup'] = $m ? (float)$m['markup'] : null;
     }
@@ -301,8 +308,13 @@ if ($action === 'profit') {
     }
     // 2) estimasi order SMM lama (belum tercatat): markup tetap Rp4.425 per 1000, maksimal sebesar harga
     $est = ['today' => 0.0, 'month' => 0.0, 'all' => 0.0, 'orders' => 0];
+    // 3) penghasilan Agen AI & Upgrade (Plus & EXTRA): tanpa backfill (harga penuh = penghasilan;
+    //    untuk pesanan via child panel, markup panel milik pemilik panel → dipakai harga dasar (harga_dasar) saja).
+    $agent = ['today' => 0.0, 'month' => 0.0, 'all' => 0.0, 'orders' => 0];
+    $upg   = ['today' => 0.0, 'month' => 0.0, 'all' => 0.0, 'orders' => 0];
     $trx = ['smm' => ['n' => 0, 'omzet' => 0.0], 'lain' => ['n' => 0, 'omzet' => 0.0], 'today' => ['n' => 0, 'omzet' => 0.0], 'month' => ['n' => 0, 'omzet' => 0.0], 'batal' => 0];
-    $res = $conn->query("SELECT r.user_id, r.order_id, r.quantity, r.price, r.status, UNIX_TIMESTAMP(r.created_at) ts, (" . AD_TYPE_SQL . ") AS type FROM riwayat_pesanan r");
+    $hasDetail = isset(ad_cols($conn, 'riwayat_pesanan')['detail']);
+    $res = $conn->query("SELECT r.user_id, r.order_id, r.quantity, r.price, r.status, UNIX_TIMESTAMP(r.created_at) ts, (" . AD_TYPE_SQL . ") AS type" . ($hasDetail ? ", r.detail" : "") . " FROM riwayat_pesanan r");
     $t0 = strtotime('today'); $m0 = strtotime(date('Y-m-01'));
     while ($res && ($r = $res->fetch_assoc())) {
         if ($r['status'] === 'batal') { $trx['batal']++; continue; }
@@ -316,11 +328,32 @@ if ($action === 'profit') {
             $est['all'] += $mk; $est['orders']++;
             if ($r['ts'] >= $m0) $est['month'] += $mk;
             if ($r['ts'] >= $t0) $est['today'] += $mk;
+        } elseif ($r['type'] === 'agent_ai') {
+            // Harga dasar agen (tanpa markup child panel) = penghasilan panel utama; fallback: harga dibayar user.
+            $earn = $price;
+            if ($hasDetail && !empty($r['detail'])) {
+                $dj = json_decode((string)$r['detail'], true);
+                if (is_array($dj) && isset($dj['harga_dasar']) && is_numeric($dj['harga_dasar']) && (float)$dj['harga_dasar'] > 0) {
+                    $earn = (float)$dj['harga_dasar'];
+                }
+            }
+            $agent['all'] += $earn; $agent['orders']++;
+            if ($r['ts'] >= $m0) $agent['month'] += $earn;
+            if ($r['ts'] >= $t0) $agent['today'] += $earn;
+        } elseif ($r['type'] === 'upgrade') {
+            $upg['all'] += $price; $upg['orders']++;
+            if ($r['ts'] >= $m0) $upg['month'] += $price;
+            if ($r['ts'] >= $t0) $upg['today'] += $price;
         }
     }
     $users = $conn->query("SELECT COUNT(*) n, COALESCE(SUM(balance),0) saldo FROM users")->fetch_assoc();
-    ad_out(['ok' => true, 'income' => ['recorded' => $rec, 'estimated' => $est,
-            'today' => $rec['today'] + $est['today'], 'month' => $rec['month'] + $est['month'], 'all' => $rec['all'] + $est['all']],
+    // Penghasilan = markup SMM + sewa Agen AI + paket Upgrade (Plus & EXTRA). Pesanan batal tidak dihitung.
+    $smm = ['today' => $rec['today'] + $est['today'], 'month' => $rec['month'] + $est['month'], 'all' => $rec['all'] + $est['all'], 'orders' => $rec['orders'] + $est['orders']];
+    ad_out(['ok' => true, 'income' => ['recorded' => $rec, 'estimated' => $est, 'smm' => $smm,
+            'agent_ai' => $agent, 'upgrade' => $upg,
+            'today' => $smm['today'] + $agent['today'] + $upg['today'],
+            'month' => $smm['month'] + $agent['month'] + $upg['month'],
+            'all' => $smm['all'] + $agent['all'] + $upg['all']],
         'transactions' => $trx, 'deposits' => ad_deposit_stats($conn),
         'users' => ['total' => (int)$users['n'], 'balance' => (float)$users['saldo']], 'server_time' => date('Y-m-d H:i:s')]);
 }

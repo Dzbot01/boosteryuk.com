@@ -63,14 +63,13 @@ export default function PlaygroundPage() {
         </>
       ) : (
       <div className="mx-auto max-w-5xl px-4 pb-32 pt-24 sm:px-6">
-        {/* Tombol menu terpisah — pojok KIRI atas, di bawah header (ikon polos tanpa card) */}
+        {/* Tombol menu — pojok KIRI atas, di bawah header (hitam, tanpa teks, ukuran sama dengan hamburger header) */}
         <button
           onClick={() => setDrawerOpen(true)}
           aria-label="Menu Playground"
-          className="mb-4 inline-flex items-center gap-2 text-emerald-600 transition-colors hover:text-emerald-700 active:scale-95 dark:text-emerald-400"
+          className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-black transition-all hover:text-slate-600 active:scale-95 dark:text-white dark:hover:text-slate-300"
         >
           <MenuIcon className="h-6 w-6" strokeWidth={2.2} />
-          <span className="text-[13px] font-bold">Menu</span>
         </button>
 
         {/* Judul menu aktif */}
@@ -153,14 +152,13 @@ export default function PlaygroundPage() {
 function OverviewHero({ onOpenMenu }: { onOpenMenu: () => void }) {
   return (
     <section className="relative -mt-[60px] w-full">
-      {/* Tombol menu mengambang di atas animasi (di bawah header) */}
+      {/* Tombol menu mengambang di atas animasi (di bawah header) — hitam, tanpa teks, ukuran sama dengan hamburger header */}
       <button
         onClick={onOpenMenu}
         aria-label="Menu Playground"
-        className="absolute left-4 top-[72px] z-10 inline-flex items-center gap-2 text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-transform hover:scale-105 active:scale-95 sm:left-6"
+        className="absolute left-4 top-[72px] z-10 flex h-11 w-11 items-center justify-center rounded-xl bg-black/85 text-white shadow-lg backdrop-blur-sm transition-all hover:bg-black active:scale-95 sm:left-6"
       >
         <MenuIcon className="h-6 w-6" strokeWidth={2.4} />
-        <span className="text-[13px] font-bold">Menu</span>
       </button>
 
       <ScrollExpand
@@ -177,6 +175,7 @@ function OverviewHero({ onOpenMenu }: { onOpenMenu: () => void }) {
         holdDistance={0}
         smoothing={0.1}
         overlayScrim={0.45}
+        lockScrollUntilComplete
         enabled
       >
         <h2 className="font-display text-3xl font-black tracking-tight text-white sm:text-5xl">Playground Boosteryuk</h2>

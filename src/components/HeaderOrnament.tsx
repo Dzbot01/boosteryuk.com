@@ -10,7 +10,7 @@ export default function HeaderOrnament() {
   const set = findOrnamentSet(settings.headerOrnament);
   if (!set) return null;
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-[60px] z-[29] h-0">
+    <div aria-hidden className="pointer-events-none fixed left-0 right-0 top-[60px] z-[29] h-0 lg:left-16">
       {set.items.map((it, i) => (
         <div
           key={i}

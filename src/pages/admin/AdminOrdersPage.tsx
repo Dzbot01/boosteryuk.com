@@ -102,12 +102,13 @@ export default function AdminOrdersPage() {
       {err && <p role="alert" className="mt-4 flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700 dark:bg-rose-950/40"><CircleAlert className="h-4 w-4" /> {err}</p>}
 
       <div className={`${adminCard} mt-4 overflow-x-auto p-0`}>
-        <table className="w-full min-w-[980px] text-left text-[12.5px]">
+        <table className="w-full min-w-[1200px] text-left text-[12.5px]">
           <thead className="border-b border-slate-100 bg-slate-50/70 text-[10.5px] uppercase tracking-wider text-slate-400 dark:border-slate-700 dark:bg-slate-800/40">
             <tr>
               <th className="px-4 py-3">Waktu</th>
               <th className="px-4 py-3">User</th>
               <th className="px-4 py-3">Layanan</th>
+              <th className="px-4 py-3">Target</th>
               <th className="px-4 py-3">ID Pesanan</th>
               <th className="px-4 py-3 text-right">Jumlah</th>
               <th className="px-4 py-3 text-right">Harga</th>
@@ -117,8 +118,8 @@ export default function AdminOrdersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
-            {rows === null && <tr><td colSpan={9} className="px-4 py-8 text-center text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></td></tr>}
-            {rows?.length === 0 && !err && <tr><td colSpan={9} className="px-4 py-8 text-center text-slate-400">Tidak ada pesanan.</td></tr>}
+            {rows === null && <tr><td colSpan={10} className="px-4 py-8 text-center text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></td></tr>}
+            {rows?.length === 0 && !err && <tr><td colSpan={10} className="px-4 py-8 text-center text-slate-400">Tidak ada pesanan.</td></tr>}
             {rows?.map((o) => {
               const pid = providerId(o);
               return (
@@ -128,9 +129,18 @@ export default function AdminOrdersPage() {
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{o.username || o.user_name || `#${o.user_id}`}</p>
                     <p className="text-[11px] text-slate-400">{o.user_name && o.username ? `${o.user_name} · ` : ''}{o.user_email || '—'}</p>
                   </td>
-                  <td className="max-w-[260px] px-4 py-3">
-                    <p className="line-clamp-2 font-semibold text-slate-800 dark:text-slate-100" title={o.service_name}>{o.service_name}</p>
+                  <td className="min-w-[260px] break-words px-4 py-3">
+                    {/* Seluruh teks layanan ditampilkan (tanpa clamp/truncation) */}
+                    <p className="whitespace-pre-line font-semibold text-slate-800 dark:text-slate-100">{o.service_name}</p>
                     <span className="mt-1 inline-block rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-300">{TYPE_LABEL[o.type]}</span>
+                  </td>
+                  <td className="min-w-[200px] max-w-[320px] break-all px-4 py-3">
+                    {/* Target persis seperti yang diinput user (link SMM / nomor WA agen / hostname VPS) */}
+                    {o.target
+                      ? (/^https?:\/\//i.test(o.target)
+                          ? <a href={o.target} target="_blank" rel="noreferrer noopener" className="font-medium text-cyan-700 hover:underline dark:text-cyan-400">{o.target}</a>
+                          : <span className="font-medium text-slate-700 dark:text-slate-200">{o.target}</span>)
+                      : <span className="text-slate-300 dark:text-slate-600">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <button type="button" onClick={() => void navigator.clipboard?.writeText(o.order_id).then(() => { setCopied(o.id); window.setTimeout(() => setCopied(0), 1200); })} className="inline-flex items-center gap-1 font-mono text-[12px] font-bold text-slate-600 hover:text-cyan-700 dark:text-slate-300" title="Salin ID">

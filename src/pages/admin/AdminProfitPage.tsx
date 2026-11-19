@@ -33,9 +33,10 @@ function Card({ icon: Icon, tone, label, value, sub, children }: {
 }
 
 /**
- * My Profit: penghasilan (markup SMM), transaksi, deposit masuk, saldo provider.
- * Penghasilan = harga jual web utama − harga asli provider, dari setiap transaksi SMM user
- * (contoh: provider Rp10.000 → dijual Rp12.000 → penghasilan Rp2.000).
+ * My Profit: penghasilan (SMM + Agen AI + Upgrade), transaksi, deposit masuk, saldo provider.
+ * Penghasilan = markup SMM (harga jual web utama − harga asli provider) + sewa Agen AI (harga dasar paket)
+ *             + Upgrade Boosteryuk Plus & EXTRA (harga penuh). Contoh markup SMM:
+ * provider Rp10.000 → dijual Rp12.000 → penghasilan Rp2.000.
  */
 export default function AdminProfitPage() {
   const [d, setD] = useState<ProfitData | null>(null);
@@ -54,22 +55,30 @@ export default function AdminProfitPage() {
 
   const inc = d?.income;
   const est = inc?.estimated.orders ?? 0;
+  const smmInc = inc?.smm ?? (inc ? { today: inc.recorded.today + inc.estimated.today, month: inc.recorded.month + inc.estimated.month, all: inc.recorded.all + inc.estimated.all, orders: inc.recorded.orders + inc.estimated.orders } : undefined);
+  const agentInc = inc?.agent_ai ?? { today: 0, month: 0, all: 0, orders: 0 };
+  const upgradeInc = inc?.upgrade ?? { today: 0, month: 0, all: 0, orders: 0 };
   const dep = d?.deposits;
   const trx = d?.transactions;
 
   return (
-    <AdminShell title="My Profit" desc="Penghasilan dari markup layanan SMM, transaksi, deposit masuk, dan saldo provider." loading={!d && !err} onRefresh={() => void load()}>
+    <AdminShell title="My Profit" desc="Penghasilan dari SMM (markup), sewa Agen AI, dan paket Upgrade — transaksi, deposit masuk, dan saldo provider." loading={!d && !err} onRefresh={() => void load()}>
       {err && <p role="alert" className="mt-5 flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700 dark:bg-rose-950/40"><CircleAlert className="h-4 w-4" /> {err}</p>}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <Card icon={TrendingUp} tone="bg-emerald-600" label="Penghasilan" value={inc ? rupiah(inc.month) : null} sub="Markup SMM bulan ini (harga jual − harga provider)">
-          {inc && (
+        <Card icon={TrendingUp} tone="bg-emerald-600" label="Penghasilan" value={inc ? rupiah(inc.month) : null} sub="SMM (markup) + Agen AI + Upgrade bulan ini">
+          {inc && smmInc && (
             <>
               <Row k="Hari ini" v={rupiah(inc.today)} />
               <Row k="Bulan ini" v={rupiah(inc.month)} />
               <Row k="Total" v={rupiah(inc.all)} strong />
-              <Row k="Dari pesanan tercatat" v={`${inc.recorded.orders} pesanan · ${rupiah(inc.recorded.all)}`} />
+              <Row k="· dari Markup SMM (bulan ini)" v={rupiah(smmInc.month)} />
+              <Row k="· dari Sewa Agen AI (bulan ini)" v={rupiah(agentInc.month)} />
+              <Row k="· dari Upgrade Plus & EXTRA (bulan ini)" v={rupiah(upgradeInc.month)} />
+              <Row k="Markup SMM tercatat" v={`${inc.recorded.orders} pesanan · ${rupiah(inc.recorded.all)}`} />
               {est > 0 && <Row k="Estimasi pesanan lama" v={`${est} pesanan · ${rupiah(inc.estimated.all)}`} />}
+              <Row k="Agen AI (total)" v={`${agentInc.orders} pesanan · ${rupiah(agentInc.all)}`} />
+              <Row k="Upgrade Plus & EXTRA (total)" v={`${upgradeInc.orders} pesanan · ${rupiah(upgradeInc.all)}`} />
             </>
           )}
         </Card>
@@ -114,7 +123,9 @@ export default function AdminProfitPage() {
       <p className="mt-5 flex gap-2 rounded-xl bg-slate-100 px-4 py-3 text-[12px] leading-relaxed text-slate-600 dark:bg-slate-800 dark:text-slate-300">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
-          Penghasilan dihitung dari setiap pesanan SMM: <b>harga jual web − harga asli provider</b> (mis. provider Rp10.000 dijual Rp12.000 → Rp2.000).
+          Penghasilan = <b>markup SMM</b> (harga jual web − harga asli provider, mis. provider Rp10.000 dijual Rp12.000 → Rp2.000)
+          + <b>sewa Agen AI</b> (harga dasar paket per bulan × durasi)
+          + <b>Upgrade Plus &amp; EXTRA</b> (harga penuh paket).
           Pesanan batal tidak dihitung. Markup child panel adalah milik pemilik panel dan tidak termasuk di sini.
           {est > 0 && ' Pesanan lama sebelum pencatatan otomatis diperkirakan dengan markup tetap Rp4.425 per 1.000.'}
         </span>

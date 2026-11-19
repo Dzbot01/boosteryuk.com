@@ -12,7 +12,7 @@ const RIWAYAT_EXTRA_COLUMNS = [
     'paket'        => "VARCHAR(50) NULL COMMENT 'Starter / Medium / Bisnis / paket VPS'",
     'durasi_bulan' => "TINYINT UNSIGNED NULL COMMENT 'lama sewa (bulan)'",
     'jatuh_tempo'  => "DATETIME NULL COMMENT 'akhir masa aktif layanan sewa'",
-    'target'       => "VARCHAR(100) NULL COMMENT 'nomor WhatsApp agen / hostname VPS'",
+    'target'       => "VARCHAR(2048) NULL COMMENT 'target/link pesanan (SMM), nomor WhatsApp agen, hostname VPS'",
     'detail'       => "TEXT NULL COMMENT 'JSON info tambahan (nama AI, platform, dll)'",
     'updated_at'   => "TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP",
 ];
@@ -43,7 +43,35 @@ function riwayat_ensure_columns($conn) {
         // index untuk hitung layanan aktif per user
         try { $conn->query("ALTER TABLE riwayat_pesanan ADD INDEX idx_user_type_due (user_id, order_type, jatuh_tempo)"); } catch (\Throwable $e) { /* opsional */ }
     }
+    // Perlebar kolom target (masih VARCHAR(100) di instalasi lama) agar muat URL pesanan SMM.
+    // Sekali saja per request; bila hosting melarang ALTER MODIFY, tetap VARCHAR(100) dan link dipotong saat INSERT.
+    try {
+        $res = $conn->query("SHOW COLUMNS FROM riwayat_pesanan LIKE 'target'");
+        $r = $res ? $res->fetch_assoc() : null;
+        if ($r && preg_match('/^(?:var)?char\((\d+)\)/i', (string)$r['Type'], $m) && (int)$m[1] < 2048) {
+            $conn->query("ALTER TABLE riwayat_pesanan MODIFY COLUMN `target` VARCHAR(2048) NULL COMMENT 'target/link pesanan (SMM), nomor WhatsApp agen, hostname VPS'");
+        }
+    } catch (\Throwable $e) { /* abaikan — target tetap VARCHAR(100), link dipotong saat INSERT */ }
     return $ready = $ok;
+}
+
+/**
+ * Lebar (maks.) kolom `target`. Dipakai saat INSERT pesanan SMM agar link panjang tidak
+ * menggagalkan query di hosting yang kolomnya masih VARCHAR(100) (instalasi lama).
+ * @return int lebar kolom, atau 0 bila kolom tidak ada.
+ */
+function riwayat_target_width($conn) {
+    static $w = null;
+    if ($w !== null) return $w;
+    $w = 0;
+    try {
+        $res = $conn->query("SHOW COLUMNS FROM riwayat_pesanan LIKE 'target'");
+        $r = $res ? $res->fetch_assoc() : null;
+        if (!$r) return $w;
+        $w = 2048; // tipe non-varchar (mis. TEXT) tidak punya (n) → anggap longgar
+        if (preg_match('/\((\d+)\)/', (string)$r['Type'], $m)) $w = max(1, (int)$m[1]);
+    } catch (\Throwable $e) { $w = 0; }
+    return $w;
 }
 
 /** Tebak jenis pesanan untuk baris lama yang belum punya order_type. */
