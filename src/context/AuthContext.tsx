@@ -43,6 +43,8 @@ type AuthContextType = {
   loading: boolean;
   isAdmin: boolean;
   login: (username: string, password: string) => Promise<{ok: boolean, message?: string}>;
+  /** Login/daftar via Google (ID token dari Google Identity Services) -> google_auth.php. */
+  loginWithGoogle: (credential: string) => Promise<{ok: boolean, message?: string}>;
   register: (username: string, email: string, password: string) => Promise<{ok: boolean, message?: string}>;
   logout: () => void;
   refresh: () => Promise<void>;
@@ -192,6 +194,29 @@ const refresh = async () => {
     }
   }
 
+  // Google Sign-In (GSI): credential = ID token dari tombol Google. Diverifikasi
+  // server-side oleh google_auth.php (cek signature via Google + aud = GOOGLE_CLIENT_ID).
+  const loginWithGoogle = async (credential: string) => {
+    try{
+      const res = await fetch(`${API_URL}/google_auth.php`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ credential })
+      });
+      const data = await res.json();
+      if(data.ok && data.token){
+        localStorage.setItem('token', data.token);
+        setUser({ ...data.user, token: data.token });
+        void fetchPlan(data.token).then((plan) => {
+          if (plan) setUser((u) => (u ? { ...u, plan, plusActive: u.plusActive || plan.plus } : u));
+        });
+      }
+      return data;
+    }catch{
+      return {ok: false, message: 'Gagal konek ke server'};
+    }
+  }
+
   const register = async (username: string, email: string, password: string) => {
     try{
       const res = await fetch(`${API_URL}/register.php`, {
@@ -243,7 +268,7 @@ const refresh = async () => {
     setUser(null);
   }
 
-  return <AuthContext.Provider value={{user, loading, isAdmin, login, register, logout, refresh, updateUser, topUp, activatePlus}}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{user, loading, isAdmin, login, loginWithGoogle, register, logout, refresh, updateUser, topUp, activatePlus}}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {
