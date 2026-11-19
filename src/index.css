@@ -984,3 +984,47 @@ body {
 @keyframes byBubbleMoveLeft { 0% { transform: translate(0, 0); } 25% { transform: translate(-100%, 0); } 50% { transform: translate(100%, -50%); } 75% { transform: translate(-50%, 50%); } 100% { transform: translate(0, 0); } }
 @keyframes byBubbleMoveUp { 0% { transform: translate(0, 0); } 25% { transform: translate(0, -100%); } 50% { transform: translate(50%, 50%); } 75% { transform: translate(-50%, -50%); } 100% { transform: translate(0, 0); } }
 @media (prefers-reduced-motion: reduce) { .by-bubble-layer { animation: none !important; } }
+
+/* ===== Toggle side menu — animated hamburger (Uiverse.io by talhabangyal), tanpa card ===== */
+.by-hamburger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.by-hamburger input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.by-hamburger svg {
+  width: 2.6rem;
+  height: 2.6rem;
+  display: block;
+  overflow: visible;
+  transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.by-hamburger .by-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+  transition:
+    stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1),
+    stroke-dashoffset 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.by-hamburger .by-line-top-bottom { stroke-dasharray: 12 63; }
+.by-hamburger input:checked + svg { transform: rotate(-45deg); }
+.by-hamburger input:checked + svg .by-line-top-bottom { stroke-dasharray: 20 300; stroke-dashoffset: -32.42; }
+.by-hamburger input:focus-visible + svg { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  .by-hamburger svg, .by-hamburger .by-line { transition: none; }
+}

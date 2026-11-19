@@ -48,7 +48,7 @@ export default function HomePage() {
     <>
       <Seo bareOnHome jsonLd={HOME_JSONLD} />
       {/* ================= HERO LAYER ================= */}
-      <section className="relative isolate -mt-[60px] overflow-hidden">
+      <section className="relative isolate -mt-[68px] overflow-hidden">
         {/* Hero background — tema abu-abu + art peta dunia. Gambar DITANAM sebagai data-URI
             di CSS (.hero-map) sehingga TIDAK MUNGKIN 404 walau aset tak ikut ter-upload.
             Base grey sebagai jaring pengaman; overlay hanya menggelapkan sisi kiri (teks). */}

@@ -25,7 +25,7 @@ import {
   BookOpen,
   ClipboardList,
   Users,
-  Menu,
+  Crown,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -33,6 +33,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { usePanelOwner } from '../services/panelApi';
 import { IS_CHILD_PANEL } from '../lib/apiBase';
+import HamburgerToggle from './HamburgerToggle';
 
 export type PageId =
   | 'home'
@@ -135,13 +136,17 @@ const ADMIN_MENU = [
   { id: 'server' as const, icon: Server, label: 'Server Panel', desc: 'Ping provider', path: '/admin/server' },
 ];
 
+const rupiah = (n?: number | null) =>
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(n) || 0);
+
 /**
  * Side menu unified — SATU komponen satu UI dengan dua mode tampilan:
  *  - Mode OFF (desktop, ≥lg): rail ikon di tepi kiri (64px). Dashboard untuk tamu: disembunyikan.
  *  - Mode ON: panel penuh (272px) yang "keluar" dari rail (width melebar) — bukan layer terpisah.
  *  - Mobile (<lg): overlay penuh dari kiri (translate-x), seperti biasa.
  * Tombol side menu desktop ada di pojok kiri (di samping rail) dan ikut bergeser ke kanan saat panel terbuka.
- * Catatan: header kembali ada (berisi Playground & ikon profil), namun TANPA logo/judul brand.
+ * Catatan: header (transparan→glass, tanpa logo/judul brand) hanya memuat tombol Playground;
+ *           ikon profil, saldo, Pengaturan akun & Keluar kembali berada di footer side menu ini.
  */
 export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
   const { user, isAdmin, logout } = useAuth();
@@ -156,18 +161,38 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
   const railVisible = !onDashboard || !!user;
   const stripVisible = isOpen || railVisible;
 
-  // Esc menutup menu + kunci scroll body selama terbuka.
+  // Esc menutup menu + klik di mana saja menutup menu (desktop) + kunci scroll body selama terbuka (mobile saja).
   useEffect(() => {
     if (!isOpen) return;
+    const lockScroll = window.matchMedia('(max-width: 1023px)').matches;
     const original = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (lockScroll) document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    // Klik di mana saja → otomatis tutup. Abaikan klik pada toggle itu sendiri (toggle menangani sendiri).
+    // Desktop saja — di mobile penutupan lewat scrim (panel overlay penuh).
+    const onMouseDown = (e: MouseEvent) => {
+      if (!window.matchMedia('(min-width: 1024px)').matches) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('[data-by-menu-toggle]')) return;
+      onClose();
+    };
     window.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onMouseDown);
     return () => {
-      document.body.style.overflow = original;
+      if (lockScroll) document.body.style.overflow = original;
       window.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onMouseDown);
     };
   }, [isOpen, onClose]);
+
+  // Khusus DESKTOP: kursor masuk ke tombol side menu → panel otomatis terbuka.
+  // (menutup: klik di mana saja / tombol / Esc)
+  const openOnHover = () => {
+    if (isOpen) return;
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px) and (hover: hover)').matches) {
+      onToggle?.();
+    }
+  };
 
   const AUTH_REQUIRED = ['layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
 
@@ -216,6 +241,11 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
         ? 'by-menu-text'
         : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200'
     }`;
+
+  const initials = user?.initials ?? 'U';
+  const avatarGrad = user?.plusActive
+    ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 ring-2 ring-amber-300 dark:ring-amber-400'
+    : 'bg-gradient-to-br from-cyan-500 to-cyan-700';
 
   /* ===== konten panel — expanded (panel/mobile) atau collapsed (rail desktop) ===== */
   const renderPanel = (expanded: boolean) => (
@@ -359,36 +389,58 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
         )}
       </nav>
 
-      {/* Footer: keluar (profil ada di header) + versi */}
+      {/* Footer: profil akun (dikembalikan seperti semula — profil di side menu; Playground tetap terpisah di header) + keluar */}
       <div className={`shrink-0 border-t border-slate-200 dark:border-slate-700/60 ${expanded ? 'p-3' : 'flex flex-col items-center gap-1 p-2'}`}>
         {user ? (
           expanded ? (
             <div className="space-y-1.5">
+              <div className="flex items-center gap-2.5 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5 dark:border-slate-700/60 dark:bg-slate-800/50">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-extrabold text-white ${avatarGrad}`}>
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1.5 truncate text-[12.5px] font-bold text-slate-800 dark:text-slate-100">
+                    <span className="truncate">{user.name ?? 'User'}</span>
+                    {user.plusActive && <Crown className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />}
+                  </p>
+                  <p className="truncate text-[10.5px] font-semibold text-slate-400 dark:text-slate-500">{user.username ? `@${user.username}` : user.email}</p>
+                  <p className="truncate font-display text-[12px] font-extrabold text-cyan-700 dark:text-cyan-400">{rupiah(user.balance)}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { navigate('/pengaturan-akun'); onClose(); }}
+                className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-[13px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <Settings className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
+                Pengaturan akun
+              </button>
               <button
                 onClick={logoutAndHome}
-                className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-[13.5px] font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20"
+                className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-[13px] font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center">
-                  <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate leading-tight">Keluar</span>
-                  {user.email && <span className="block truncate text-[11px] font-medium text-slate-400 dark:text-slate-500">{user.email}</span>}
-                </span>
+                <LogOut className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
+                Keluar
               </button>
-              <p className="text-center text-[10px] font-medium text-slate-300 dark:text-slate-600">
-                {settings.brandName}{settings.brandSuffix} v1.2
-              </p>
             </div>
           ) : (
-            <button
-              onClick={logoutAndHome}
-              title="Keluar"
-              aria-label="Keluar"
-              className="flex h-11 w-11 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20"
-            >
-              <LogOut className="h-5 w-5" strokeWidth={2} />
-            </button>
+            <>
+              <button
+                onClick={() => navigate('/pengaturan-akun')}
+                title="Pengaturan akun"
+                aria-label="Pengaturan akun"
+                className={`flex h-11 w-11 items-center justify-center rounded-xl font-display text-[12px] font-extrabold text-white transition-transform hover:scale-105 ${avatarGrad}`}
+              >
+                {initials}
+              </button>
+              <button
+                onClick={logoutAndHome}
+                title="Keluar"
+                aria-label="Keluar"
+                className="flex h-11 w-11 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20"
+              >
+                <LogOut className="h-5 w-5" strokeWidth={2} />
+              </button>
+            </>
           )
         ) : (
           expanded && (
@@ -403,18 +455,17 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
 
   return (
     <>
-      {/* ===== Toggle side menu (DESKTOP saja) — pojok kiri di samping rail; ikut bergeser ke kanan saat panel terbuka ===== */}
-      <button
-        onClick={onToggle}
-        aria-label={isOpen ? 'Tutup menu' : 'Buka menu'}
-        aria-expanded={isOpen}
-        title={isOpen ? 'Tutup menu' : 'Buka menu'}
-        className={`fixed top-3 z-50 hidden h-11 w-11 items-center justify-center rounded-xl border border-slate-200/70 bg-white/85 text-slate-800 shadow-md backdrop-blur-md transition-[left,transform,colors] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-blue-600 active:scale-95 dark:border-slate-700/60 dark:bg-slate-900/75 dark:text-slate-100 dark:hover:text-blue-400 lg:flex ${
-          isOpen ? 'left-[280px]' : 'left-[72px]'
+      {/* ===== Toggle side menu (DESKTOP saja) — hamburger animasi (Uiverse/talhabangyal), tanpa card;
+             pojok kiri di samping rail, ikut bergeser ke kanan saat terbuka, z di bawah modal (z-[60]+). ===== */}
+      <HamburgerToggle
+        open={isOpen}
+        onToggle={() => onToggle?.()}
+        label={isOpen ? 'Tutup menu' : 'Buka menu'}
+        onMouseEnter={openOnHover}
+        className={`fixed top-3 z-30 hidden h-11 w-11 text-slate-800 transition-[left,color] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-blue-600 dark:text-slate-100 dark:hover:text-blue-400 lg:inline-flex ${
+          isOpen ? 'left-[280px]' : railVisible ? 'left-[72px]' : 'left-3'
         }`}
-      >
-        <Menu className="h-6 w-6" strokeWidth={2.2} />
-      </button>
+      />
 
       {/* ===== Scrim — hanya mobile/tablet ===== */}
       <div

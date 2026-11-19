@@ -33,11 +33,11 @@ export default function Layout() {
         <div className="absolute bottom-0 left-1/2 h-[380px] w-[820px] -translate-x-1/2 rounded-full bg-sky-100/60 blur-[100px] dark:bg-white/[0.03]" />
       </div>
 
-      <Header onMenuClick={() => setMenuOpen(true)} />
+      <Header onToggleMenu={() => setMenuOpen((v) => !v)} menuOpen={menuOpen} />
       {/* Aksesoris tema (ketupat, lentera, dll) menggantung di bawah header */}
       <HeaderOrnament />
       {/* spacer for fixed header */}
-      <div className="h-[60px]" />
+      <div className="h-[68px]" />
       {/* Pintu masuk kembali ke Portal Server NexSpace Pro (pesanan belum diambil) */}
       <NexSpaceBanner />
 
