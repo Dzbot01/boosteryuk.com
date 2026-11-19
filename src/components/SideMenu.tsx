@@ -33,7 +33,6 @@ import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { usePanelOwner } from '../services/panelApi';
 import { IS_CHILD_PANEL } from '../lib/apiBase';
-import HamburgerToggle from './HamburgerToggle';
 
 export type PageId =
   | 'home'
@@ -85,8 +84,8 @@ const ROUTE_PATH: Record<PageId, string> = {
 interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  /** Toggle buka/tutup (dipakai tombol side menu desktop di pojok kiri). */
-  onToggle?: () => void;
+  /** Buka saja (hover rail di desktop). */
+  onOpen?: () => void;
 }
 
 const baseMenu: {
@@ -144,11 +143,11 @@ const rupiah = (n?: number | null) =>
  *  - Mode OFF (desktop, ≥lg): rail ikon di tepi kiri (64px). Dashboard untuk tamu: disembunyikan.
  *  - Mode ON: panel penuh (272px) yang "keluar" dari rail (width melebar) — bukan layer terpisah.
  *  - Mobile (<lg): overlay penuh dari kiri (translate-x), seperti biasa.
- * Tombol side menu desktop ada di pojok kiri (di samping rail) dan ikut bergeser ke kanan saat panel terbuka.
- * Catatan: header (transparan→glass, tanpa logo/judul brand) hanya memuat tombol Playground;
- *           ikon profil, saldo, Pengaturan akun & Keluar kembali berada di footer side menu ini.
+ *  - DESKTOP: tidak ada tombol toggle terpisah — kursor diarahkan ke ikon-ikon menu (mode off) → panel otomatis terbuka (hover); klik di mana saja / Esc menutup.
+ *  Catatan: header tampil di semua ukuran; di MOBILE header memuat logo + judul brand, di DESKTOP header tanpa logo/judul (hanya Playground).
+ *           Ikon profil, saldo, Pengaturan akun & Keluar berada di footer side menu ini. Playground tetap di header.
  */
-export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
+export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
   const { user, isAdmin, logout } = useAuth();
   const { settings } = useSiteSettings();
   // Child panel: pemilik panel (admin ke-2) mendapat menu Admin Panel Toko.
@@ -185,12 +184,13 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
     };
   }, [isOpen, onClose]);
 
-  // Khusus DESKTOP: kursor masuk ke tombol side menu → panel otomatis terbuka.
-  // (menutup: klik di mana saja / tombol / Esc)
+  // Khusus DESKTOP: kursor diarahkan ke ikon-ikon menu (mode OFF / rail) → panel otomatis terbuka,
+  // perilakunya sama seperti saat membuka lewat tombol — tetapi cukup dengan mengarahkan kursor.
+  // (menutup: klik di mana saja / Esc)
   const openOnHover = () => {
     if (isOpen) return;
     if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px) and (hover: hover)').matches) {
-      onToggle?.();
+      onOpen?.();
     }
   };
 
@@ -455,19 +455,7 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
 
   return (
     <>
-      {/* ===== Toggle side menu (DESKTOP saja) — hamburger animasi (Uiverse/talhabangyal), tanpa card;
-             pojok kiri di samping rail, ikut bergeser ke kanan saat terbuka, z di bawah modal (z-[60]+). ===== */}
-      <HamburgerToggle
-        open={isOpen}
-        onToggle={() => onToggle?.()}
-        label={isOpen ? 'Tutup menu' : 'Buka menu'}
-        onMouseEnter={openOnHover}
-        className={`fixed top-3 z-30 hidden h-11 w-11 text-slate-800 transition-[left,color] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-blue-600 dark:text-slate-100 dark:hover:text-blue-400 lg:inline-flex ${
-          isOpen ? 'left-[280px]' : railVisible ? 'left-[72px]' : 'left-3'
-        }`}
-      />
-
-      {/* ===== Scrim — hanya mobile/tablet ===== */}
+      {/* Scrim — hanya mobile/tablet */}
       <div
         className={`fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[3px] transition-opacity duration-300 lg:hidden ${
           isOpen? 'opacity-100' : 'pointer-events-none opacity-0'
@@ -476,9 +464,11 @@ export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
       />
 
       {/* ===== DESKTOP: rail ikon ↔ panel side menu — SATU panel yang melebar (bukan dua layer terpisah).
-             Mode off: rail 64px (ikon saja). Mode on: melebar 272px (sidebar penuh). ===== */}
+             Mode off: rail 64px (ikon saja). Mode on: melebar 272px (sidebar penuh).
+             Kursor masuk ke ikon-ikon menu (mode off) → otomatis terbuka (hover, bukan klik). ===== */}
       <aside
         aria-hidden={!stripVisible}
+        onMouseEnter={openOnHover}
         className={`fixed left-0 top-0 z-40 hidden h-full flex-col overflow-hidden border-r border-slate-200 bg-white shadow-none transition-[width,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 lg:flex ${
           isOpen ? 'w-[272px] shadow-2xl shadow-slate-900/20 dark:shadow-black/40' : 'w-16'
         } ${stripVisible ? 'translate-x-0 visible' : 'pointer-events-none invisible -translate-x-full'}`}

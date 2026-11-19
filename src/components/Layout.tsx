@@ -33,7 +33,7 @@ export default function Layout() {
         <div className="absolute bottom-0 left-1/2 h-[380px] w-[820px] -translate-x-1/2 rounded-full bg-sky-100/60 blur-[100px] dark:bg-white/[0.03]" />
       </div>
 
-      <Header onToggleMenu={() => setMenuOpen((v) => !v)} menuOpen={menuOpen} />
+      <Header onToggleMenu={() => setMenuOpen((v) => !v)} menuOpen={menuOpen} showMenuOnDesktop={!railVisible} />
       {/* Aksesoris tema (ketupat, lentera, dll) menggantung di bawah header */}
       <HeaderOrnament />
       {/* spacer for fixed header */}
@@ -44,7 +44,7 @@ export default function Layout() {
       <SideMenu
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}
-        onToggle={() => setMenuOpen((v) => !v)}
+        onOpen={() => setMenuOpen(true)}
       />
 
       <div className="flex-1">
