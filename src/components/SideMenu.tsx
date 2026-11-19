@@ -25,7 +25,11 @@ import {
   BookOpen,
   ClipboardList,
   Users,
+  Wand2,
+  Menu,
+  Crown,
 } from 'lucide-react';
+import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
@@ -82,6 +86,8 @@ const ROUTE_PATH: Record<PageId, string> = {
 interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Toggle buka/tutup (dipakai tombol side menu desktop di pojok kiri). */
+  onToggle?: () => void;
 }
 
 const baseMenu: {
@@ -119,30 +125,6 @@ const HIDDEN_PROFILE_ITEM = 'profil';
 
 export { baseMenu, authMenu };
 
-/** Tombol ikon di rail kiri (desktop, tampil hanya saat side menu tertutup). */
-function RailButton({ icon: Icon, label, active, onClick }: {
-  icon: typeof Home;
-  label: string;
-  active?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      aria-current={active ? 'page' : undefined}
-      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors duration-200 ${
-        active
-          ? 'by-menu-text'
-          : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200'
-      }`}
-    >
-      <Icon className="h-[21px] w-[21px]" strokeWidth={2} />
-    </button>
-  );
-}
-
 const ADMIN_MENU = [
   { id: 'orders' as const, icon: ClipboardList, label: 'Data Pesanan', desc: 'Pesanan semua user', path: '/admin/orders' },
   { id: 'users' as const, icon: Users, label: 'Data User', desc: 'Saldo & data user', path: '/admin/users' },
@@ -155,14 +137,43 @@ const ADMIN_MENU = [
   { id: 'server' as const, icon: Server, label: 'Server Panel', desc: 'Ping provider', path: '/admin/server' },
 ];
 
-export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
+const rupiah = (n?: number | null) =>
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(n) || 0);
+
+/**
+ * Side menu unified — SATU komponen satu UI dengan dua mode tampilan:
+ *  - Mode OFF (desktop, ≥lg): rail ikon di tepi kiri (64px). Dashboard untuk tamu: disembunyikan.
+ *  - Mode ON: panel penuh (272px) yang "keluar" dari rail (width melebar) — bukan layer terpisah.
+ *  - Mobile (<lg): overlay penuh dari kiri (translate-x), seperti biasa.
+ * Tombol side menu desktop ada di pojok kiri (di samping rail) dan ikut bergeser ke kanan saat panel terbuka.
+ * Desktop tidak lagi memakai header — Playground & profil dipindah ke dalam panel/rail ini.
+ */
+export default function SideMenu({ isOpen, onClose, onToggle }: SideMenuProps) {
   const { user, isAdmin, logout } = useAuth();
   const { settings } = useSiteSettings();
   // Child panel: pemilik panel (admin ke-2) mendapat menu Admin Panel Toko.
   const isPanelOwner = usePanelOwner(user?.token) === true && IS_CHILD_PANEL;
   const navigate = useNavigate();
   const location = useLocation();
-  const pathname = location?.pathname || "/";
+  const pathname = location?.pathname || '/';
+  const onDashboard = pathname === '/';
+  // Aturan rail (mode off) di desktop: tampil bila user sudah login ATAU di halaman selain dashboard.
+  const railVisible = !onDashboard || !!user;
+  const stripVisible = isOpen || railVisible;
+  const onPlayground = pathname === '/playground';
+
+  // Esc menutup menu + kunci scroll body selama terbuka.
+  useEffect(() => {
+    if (!isOpen) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = original;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isOpen, onClose]);
 
   const AUTH_REQUIRED = ['layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
 
@@ -192,203 +203,158 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
     navigate(ROUTE_PATH[id]);
     onClose();
   };
+  const goPlayground = () => {
+    navigate('/playground');
+    onClose();
+  };
+  const logoutAndHome = () => {
+    logout();
+    onClose();
+    navigate('/');
+  };
 
-  return (
+  /* ===== kelas baris menu (expanded = panel | collapsed = rail ikon) ===== */
+  const expandedRow = (active: boolean, extra = '') =>
+    `flex w-full shrink-0 items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors duration-200 ${
+      active
+        ? 'by-menu-text'
+        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+    } ${extra}`;
+  const railRow = (active: boolean) =>
+    `flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors duration-200 ${
+      active
+        ? 'by-menu-text'
+        : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+    }`;
+
+  const initials = user?.initials ?? 'U';
+  const avatarGrad = user?.plusActive
+    ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 ring-2 ring-amber-300 dark:ring-amber-400'
+    : 'bg-gradient-to-br from-cyan-500 to-cyan-700';
+
+  /* ===== konten panel — expanded (panel/mobile) atau collapsed (rail desktop) ===== */
+  const renderPanel = (expanded: boolean) => (
     <>
-      <div
-        className={`fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[3px] transition-opacity duration-300 ${
-          isOpen? 'opacity-100' : 'pointer-events-none opacity-0'
-        }`}
-        onClick={onClose}
-      />
-
-      {/* ===== Rail ikon (desktop saja): saat side menu TERTUTUP, hanya ikon menu yang tampil di tepi kiri —
-             tempat yang sama dari mana side menu meluncur keluar. ===== */}
-      <div
-        aria-hidden={isOpen}
-        className={`fixed left-0 top-0 z-40 hidden h-full w-16 flex-col items-center border-r border-slate-200 bg-white py-3 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 lg:flex ${
-          isOpen ? 'pointer-events-none invisible -translate-x-full' : 'visible translate-x-0'
-        }`}
-      >
+      {/* Logo / brand */}
+      <div className={`flex shrink-0 items-center gap-2.5 px-3 pt-3 ${expanded ? '' : 'justify-center px-0'}`}>
         <button
-          onClick={() => navigate(isAdmin ? '/admin' : '/')}
+          onClick={() => { navigate(isAdmin ? '/admin' : '/'); onClose(); }}
           aria-label="Beranda"
           title="Beranda"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
         >
           <img src={settings.logoUrl} alt={settings.brandName + settings.brandSuffix} className="h-8 w-8 object-contain" />
         </button>
-        <div className="my-2 h-px w-8 shrink-0 bg-slate-200 dark:bg-slate-700/70" />
-
-        <nav className="flex min-h-0 w-full flex-1 flex-col items-center gap-1 overflow-y-auto px-2.5" aria-label="Navigasi ikon">
-          {isAdmin &&
-            ADMIN_MENU.map((item) => (
-              <RailButton
-                key={item.id}
-                icon={item.icon}
-                label={item.label}
-                active={pathname === item.path || pathname.startsWith(item.path)}
-                onClick={() => navigate(item.path)}
-              />
-            ))}
-
-          {!isAdmin && isPanelOwner && (
-            <RailButton
-              icon={Shield}
-              label="Admin Panel Toko"
-              active={pathname.startsWith('/panel-admin')}
-              onClick={() => navigate('/panel-admin')}
-            />
-          )}
-
-          {!isAdmin &&
-            menuItems.map((item) => (
-              <RailButton
-                key={item.id}
-                icon={item.icon}
-                label={item.label}
-                active={item.id !== 'pengaturan' && pathname === ROUTE_PATH[item.id]}
-                onClick={() => handleNav(item.id)}
-              />
-            ))}
-        </nav>
-
-        {user && (
-          <button
-            onClick={() => {
-              logout();
-              onClose();
-              navigate('/');
-            }}
-            aria-label="Keluar"
-            title="Keluar"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20"
-          >
-            <LogOut className="h-5 w-5" strokeWidth={2} />
-          </button>
+        {expanded && (
+          <div className="min-w-0">
+            <p className="font-display text-[16px] font-extrabold leading-none tracking-tight">
+              <span className="by-accent">{settings.brandName}</span>
+              <span className="text-black dark:text-white">{settings.brandSuffix}</span>
+            </p>
+            {isAdmin && <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Admin Panel</p>}
+          </div>
         )}
       </div>
 
-      <aside
-        className={`fixed left-0 top-0 z-50 flex h-full w-[82%] max-w-[272px] flex-col border-r border-slate-200 bg-white shadow-2xl shadow-slate-900/20 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-black/40 ${
-          isOpen? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        {/* Header */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-cyan-700 via-cyan-600 to-cyan-900 px-4 pb-5 pt-4">
-          <div className="absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10 blur-xl" />
-          <div className="bg-dots absolute inset-0 opacity-20" />
-          <div className="relative">
-            {/* UI: logo & nama brand di atas menu dihapus; diganti satu judul pertanyaan. */}
-            <div className="min-w-0">
-              {isAdmin && (
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100/80">
-                  Admin Panel
-                </p>
-              )}
-              <h2 className={`${isAdmin ? 'mt-1 ' : ''}font-display text-[17px] font-extrabold leading-snug text-white`}>
-                Apa yang sedang kamu butuhkan?
-              </h2>
-            </div>
-          </div>
+      {/* Playground — pinned (desktop tidak lagi punya header, jadi ada di sini) */}
+      <div className={`mt-1 shrink-0 px-3 ${expanded ? '' : 'flex justify-center px-0'}`}>
+        <button
+          onClick={goPlayground}
+          title="Playground"
+          aria-label="Playground"
+          aria-current={onPlayground ? 'page' : undefined}
+          className={expanded ? expandedRow(onPlayground) : railRow(onPlayground)}
+        >
+          <Wand2 className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+          {expanded && (
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] font-semibold leading-tight">Playground</span>
+              <span className={`block truncate text-[11px] ${onPlayground ? 'opacity-70' : 'text-slate-400 dark:text-slate-500'}`}>Hook, caption & suara AI</span>
+            </span>
+          )}
+        </button>
+      </div>
 
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-2.5 py-3">
+      {/* Nav */}
+      <nav className={`min-h-0 flex-1 overflow-y-auto px-3 py-2 ${expanded ? '' : 'px-0'}`} aria-label="Navigasi">
+        {expanded && (
           <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
             {isAdmin? 'Admin Menu' : 'Navigasi'}
           </p>
+        )}
 
-          {/* Admin menus */}
-          {isAdmin && (
-            <ul className="space-y-1">
-              {ADMIN_MENU.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.path || pathname.startsWith(item.path);
-                return (
-                  <li key={item.id}>
-                    <button
-                      onClick={() => {
-                        navigate(item.path);
-                        onClose();
-                      }}
-                      className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors duration-200 ${
-                        isActive
-                         ? 'by-menu-text'
-                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
-                      }`}
-                    >
-                      <Icon className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
+        {/* Admin menus */}
+        {isAdmin && (
+          <ul className={`space-y-1 ${expanded ? '' : 'flex flex-col items-center'}`}>
+            {ADMIN_MENU.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.path || pathname.startsWith(item.path);
+              return (
+                <li key={item.id}>
+                  <button
+                    onClick={() => { navigate(item.path); onClose(); }}
+                    title={item.label}
+                    aria-label={item.label}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`${expanded ? expandedRow(isActive) : railRow(isActive)}`}
+                  >
+                    <Icon className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
+                    {expanded && (
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[13px] font-semibold leading-tight">
-                          {item.label}
-                        </span>
-                        <span
-                          className={`block truncate text-[11px] ${
-                            isActive? 'opacity-70' : 'text-slate-400 dark:text-slate-500'
-                          }`}
-                        >
+                        <span className="block text-[13px] font-semibold leading-tight">{item.label}</span>
+                        <span className={`block truncate text-[11px] ${isActive? 'opacity-70' : 'text-slate-400 dark:text-slate-500'}`}>
                           {item.desc}
                         </span>
                       </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
-          {/* Admin ke-2 (pemilik child panel) */}
-          {!isAdmin && isPanelOwner && (
-            <button
-              onClick={() => {
-                navigate('/panel-admin');
-                onClose();
-              }}
-              className={`mb-3 flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors ${
-                pathname.startsWith('/panel-admin')
-                  ? 'by-menu-text'
-                  : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
-              }`}
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <Shield className="h-[17px] w-[17px]" strokeWidth={1.9} />
-              </span>
+        {/* Admin ke-2 (pemilik child panel) */}
+        {!isAdmin && isPanelOwner && (
+          <button
+            onClick={() => { navigate('/panel-admin'); onClose(); }}
+            title="Admin Panel Toko"
+            aria-label="Admin Panel Toko"
+            className={expanded
+              ? `${expandedRow(pathname.startsWith('/panel-admin'))} mb-1`
+              : `${railRow(pathname.startsWith('/panel-admin'))} mb-1`}
+          >
+            <Shield className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
+            {expanded && (
               <span className="min-w-0 flex-1">
-                <span className="block text-[13.5px] font-semibold leading-tight">Admin Panel Toko</span>
+                <span className="block text-[13px] font-semibold leading-tight">Admin Panel Toko</span>
                 <span className="block truncate text-[11px] opacity-70">Pendapatan, pesanan & user panel</span>
               </span>
-            </button>
-          )}
+            )}
+          </button>
+        )}
 
-          {/* User menus */}
-          {!isAdmin && (
-            <>
-              <ul className="space-y-1">
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    item.id!== 'pengaturan' &&
-                    pathname === ROUTE_PATH[item.id];
-                  return (
-                    <li key={item.id}>
-                      <button
-                        onClick={() => handleNav(item.id)}
-                        className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors duration-200 ${
-                          isActive
-                           ? 'by-menu-text'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
-                        } ${item.neon? 'neon-menu-item active' : ''}`}
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center">
-                          <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
-                        </span>
+        {/* User menus */}
+        {!isAdmin && (
+          <>
+            <ul className={`space-y-1 ${expanded ? '' : 'flex flex-col items-center'}`}>
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = item.id!== 'pengaturan' && pathname === ROUTE_PATH[item.id];
+                return (
+                  <li key={item.id} className={expanded ? '' : 'flex justify-center'}>
+                    <button
+                      onClick={() => handleNav(item.id)}
+                      title={item.label}
+                      aria-label={item.label}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`${expanded ? expandedRow(isActive) : railRow(isActive)} ${item.neon&& expanded? 'neon-menu-item active' : ''}`}
+                    >
+                      <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+                      {expanded && (
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-2">
-                            <span className="block text-[13.5px] font-semibold leading-tight">
-                              {item.label}
-                            </span>
+                            <span className="block text-[13px] font-semibold leading-tight">{item.label}</span>
                             {item.tag && (
                               <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                                 <Construction className="h-2.5 w-2.5" />
@@ -396,32 +362,24 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                               </span>
                             )}
                           </span>
-                          <span
-                            className={`block truncate text-[11px] ${
-                              isActive? 'opacity-70' : 'text-slate-400 dark:text-slate-500'
-                            }`}
-                          >
+                          <span className={`block truncate text-[11px] ${isActive? 'opacity-70' : 'text-slate-400 dark:text-slate-500'}`}>
                             {item.desc}
                           </span>
                         </span>
-                        {item.badge && (
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                              isActive
-                               ? 'bg-white text-cyan-700 dark:bg-slate-900'
-                                : 'bg-cyan-50 text-cyan-600 ring-1 ring-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400 dark:ring-cyan-700/40'
-                            }`}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                      )}
+                      {expanded && item.badge && (
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isActive ? 'bg-cyan-600 text-white' : 'bg-cyan-50 text-cyan-600 ring-1 ring-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400 dark:ring-cyan-700/40'}`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
 
-              <div className="mt-5 rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50 to-white p-4 dark:border-cyan-800/30 dark:from-cyan-900/20 dark:to-slate-900">
+            {expanded && (
+              <div className="mt-4 rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50 to-white p-3.5 dark:border-cyan-800/30 dark:from-cyan-900/20 dark:to-slate-900">
                 <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-400">
                   <Sparkles className="h-4 w-4" strokeWidth={2.3} />
                   <p className="text-[12px] font-bold">Tips booster</p>
@@ -430,37 +388,116 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                   Simpan ID pesanan setelah checkout agar mudah dilacak kapan saja.
                 </p>
               </div>
-            </>
-          )}
-        </nav>
+            )}
+          </>
+        )}
+      </nav>
 
-        {/* Footer */}
-        <div className="border-t border-slate-200 p-3 dark:border-slate-700/60">
-          {user && (
-            <button
-              onClick={() => {
-                logout();
-                onClose();
-                navigate('/');
-              }}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-semibold text-rose-600 transition-all duration-200 hover:bg-rose-50 active:scale-[0.98] dark:text-rose-400 dark:hover:bg-rose-900/20"
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center">
-                <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate leading-tight">Keluar</span>
-                <span className="block truncate text-[11px] font-medium text-slate-400 dark:text-slate-500">
-                  {user.email}
-                </span>
-              </span>
-            </button>
-          )}
-          <p className="mt-2 text-center text-[10px] font-medium text-slate-300 dark:text-slate-600">
-            {settings.brandName}
-            {settings.brandSuffix} v1.2
-          </p>
-        </div>
+      {/* Footer: profil akun (pengganti header desktop) + keluar */}
+      <div className={`shrink-0 border-t border-slate-200 dark:border-slate-700/60 ${expanded ? 'p-3' : 'flex flex-col items-center gap-1 p-2'}`}>
+        {user ? (
+          expanded ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2.5 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5 dark:border-slate-700/60 dark:bg-slate-800/50">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-extrabold text-white ${avatarGrad}`}>
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1.5 truncate text-[12.5px] font-bold text-slate-800 dark:text-slate-100">
+                    <span className="truncate">{user.name ?? 'User'}</span>
+                    {user.plusActive && <Crown className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />}
+                  </p>
+                  <p className="truncate text-[10.5px] font-semibold text-slate-400 dark:text-slate-500">{user.username ? `@${user.username}` : user.email}</p>
+                  <p className="truncate font-display text-[12px] font-extrabold text-cyan-700 dark:text-cyan-400">{rupiah(user.balance)}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { navigate('/pengaturan-akun'); onClose(); }}
+                className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-[13px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <Settings className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
+                Pengaturan akun
+              </button>
+              <button
+                onClick={logoutAndHome}
+                className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-[13px] font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20"
+              >
+                <LogOut className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
+                Keluar
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate('/pengaturan-akun')}
+                title="Pengaturan akun"
+                aria-label="Pengaturan akun"
+                className={`flex h-11 w-11 items-center justify-center rounded-xl font-display text-[12px] font-extrabold text-white transition-transform hover:scale-105 ${avatarGrad}`}
+              >
+                {initials}
+              </button>
+              <button
+                onClick={logoutAndHome}
+                title="Keluar"
+                aria-label="Keluar"
+                className="flex h-11 w-11 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20"
+              >
+                <LogOut className="h-5 w-5" strokeWidth={2} />
+              </button>
+            </>
+          )
+        ) : (
+          expanded && (
+            <p className="text-center text-[10px] font-medium text-slate-300 dark:text-slate-600">
+              {settings.brandName}{settings.brandSuffix} v1.2
+            </p>
+          )
+        )}
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* ===== Toggle side menu (DESKTOP saja) — pojok kiri di samping rail; ikut bergeser ke kanan saat panel terbuka ===== */}
+      <button
+        onClick={onToggle}
+        aria-label={isOpen ? 'Tutup menu' : 'Buka menu'}
+        aria-expanded={isOpen}
+        title={isOpen ? 'Tutup menu' : 'Buka menu'}
+        className={`fixed top-3 z-50 hidden h-11 w-11 items-center justify-center rounded-xl border border-slate-200/70 bg-white/85 text-slate-800 shadow-md backdrop-blur-md transition-[left,transform,colors] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-blue-600 active:scale-95 dark:border-slate-700/60 dark:bg-slate-900/75 dark:text-slate-100 dark:hover:text-blue-400 lg:flex ${
+          isOpen ? 'left-[280px]' : 'left-[72px]'
+        }`}
+      >
+        <Menu className="h-6 w-6" strokeWidth={2.2} />
+      </button>
+
+      {/* ===== Scrim — hanya mobile/tablet ===== */}
+      <div
+        className={`fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[3px] transition-opacity duration-300 lg:hidden ${
+          isOpen? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={onClose}
+      />
+
+      {/* ===== DESKTOP: rail ikon ↔ panel side menu — SATU panel yang melebar (bukan dua layer terpisah).
+             Mode off: rail 64px (ikon saja). Mode on: melebar 272px (sidebar penuh). ===== */}
+      <aside
+        aria-hidden={!stripVisible}
+        className={`fixed left-0 top-0 z-40 hidden h-full flex-col overflow-hidden border-r border-slate-200 bg-white shadow-none transition-[width,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 lg:flex ${
+          isOpen ? 'w-[272px] shadow-2xl shadow-slate-900/20 dark:shadow-black/40' : 'w-16'
+        } ${stripVisible ? 'translate-x-0 visible' : 'pointer-events-none invisible -translate-x-full'}`}
+      >
+        {renderPanel(isOpen)}
+      </aside>
+
+      {/* ===== MOBILE/TABLET: overlay dari kiri (selalu panel penuh) ===== */}
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-full w-[82%] max-w-[272px] flex-col border-r border-slate-200 bg-white shadow-2xl shadow-slate-900/20 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-black/40 lg:hidden ${
+          isOpen? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {renderPanel(true)}
       </aside>
     </>
   );

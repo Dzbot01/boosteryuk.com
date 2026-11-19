@@ -924,3 +924,63 @@ body {
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
 }
+
+/* ===== Tombol "Cek Status Pesanan" — animasi bubble (Uiverse.io, diadaptasi, prefix .by-) ===== */
+.by-bubble-button {
+  position: relative;
+  padding: 14px 42px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  overflow: hidden;
+  background: transparent;
+  display: inline-block;
+  z-index: 1;
+  transition: transform 0.2s ease;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.by-bubble-label { position: relative; z-index: 15; font-family: inherit; }
+.by-bubble-button:active { transform: scale(0.96); }
+.by-bubble-button::before {
+  content: "";
+  background: rgb(0 0 0);
+  border-radius: inherit;
+  height: calc(100% - 4px);
+  width: calc(100% - 4px);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 12;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: all 0.5s ease;
+}
+.by-bubble-button:hover::before { opacity: 1; transform: scale(1); }
+
+.by-bubble-layer {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  filter: blur(10px);
+  z-index: 0;
+}
+.by-bubble-1 { background: #ff007f; top: -20%; left: -10%; animation: byBubbleMoveUpRight 6s ease-in-out infinite; }
+.by-bubble-2 { background: #ff6a00; top: 0%; left: 10%; animation: byBubbleMoveDownLeft 5s ease-in-out infinite; animation-delay: 1s; }
+.by-bubble-3 { background: #ffcc00; top: 20%; left: 50%; animation: byBubbleMoveRight 4s ease-in-out infinite; animation-delay: 2s; }
+.by-bubble-4 { background: #00fff0; top: -20%; left: 70%; animation: byBubbleMoveUpLeft 7s ease-in-out infinite; animation-delay: 3s; }
+.by-bubble-5 { background: #9d00ff; top: 30%; left: -10%; animation: byBubbleMoveDownRight 3s ease-in-out infinite; animation-delay: 4s; }
+.by-bubble-6 { background: #ff007f; top: -10%; left: 30%; animation: byBubbleMoveLeft 8s ease-in-out infinite; animation-delay: 0.5s; }
+.by-bubble-7 { background: #ff6a00; top: 40%; left: 60%; animation: byBubbleMoveUp 6s ease-in-out infinite; animation-delay: 1.5s; }
+
+@keyframes byBubbleMoveUpRight { 0% { transform: translate(0, 0); } 25% { transform: translate(100%, -100%); } 50% { transform: translate(-50%, 50%); } 75% { transform: translate(50%, -50%); } 100% { transform: translate(0, 0); } }
+@keyframes byBubbleMoveDownLeft { 0% { transform: translate(0, 0); } 25% { transform: translate(-100%, 100%); } 50% { transform: translate(50%, -50%); } 75% { transform: translate(-50%, 50%); } 100% { transform: translate(0, 0); } }
+@keyframes byBubbleMoveRight { 0% { transform: translate(0, 0); } 25% { transform: translate(100%, 0); } 50% { transform: translate(-100%, 50%); } 75% { transform: translate(50%, -50%); } 100% { transform: translate(0, 0); } }
+@keyframes byBubbleMoveUpLeft { 0% { transform: translate(0, 0); } 25% { transform: translate(-100%, -100%); } 50% { transform: translate(50%, 50%); } 75% { transform: translate(-50%, -50%); } 100% { transform: translate(0, 0); } }
+@keyframes byBubbleMoveDownRight { 0% { transform: translate(0, 0); } 25% { transform: translate(100%, 100%); } 50% { transform: translate(-50%, -50%); } 75% { transform: translate(50%, 50%); } 100% { transform: translate(0, 0); } }
+@keyframes byBubbleMoveLeft { 0% { transform: translate(0, 0); } 25% { transform: translate(-100%, 0); } 50% { transform: translate(100%, -50%); } 75% { transform: translate(-50%, 50%); } 100% { transform: translate(0, 0); } }
+@keyframes byBubbleMoveUp { 0% { transform: translate(0, 0); } 25% { transform: translate(0, -100%); } 50% { transform: translate(50%, 50%); } 75% { transform: translate(-50%, -50%); } 100% { transform: translate(0, 0); } }
+@media (prefers-reduced-motion: reduce) { .by-bubble-layer { animation: none !important; } }
