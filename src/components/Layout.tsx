@@ -9,10 +9,14 @@ import Footer from './Footer';
 import HeaderOrnament from './HeaderOrnament';
 import SessionGuard from './SessionGuard';
 import NexSpaceBanner from './NexSpaceBanner';
+import { useAuth } from '../context/AuthContext';
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
+  const { user } = useAuth();
+  // Mode off (rail ikon) di desktop: sembunyi di dashboard untuk tamu; tampil bila sudah login / di halaman lain.
+  const railVisible = pathname === '/' ? !!user : true;
 
   // Reset scroll position when the route changes (except for in-page anchors).
   useEffect(() => {
@@ -20,7 +24,7 @@ export default function Layout() {
   }, [pathname]);
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-x-clip bg-[#eef1f5] text-slate-900 transition-colors duration-300 dark:bg-[#0a0a0b] dark:text-slate-100 lg:pl-16">
+    <div className={`relative flex min-h-screen flex-col overflow-x-clip bg-[#eef1f5] text-slate-900 transition-[background-color,border-color,color,padding] duration-300 dark:bg-[#0a0a0b] dark:text-slate-100 ${railVisible ? 'lg:pl-16' : 'lg:pl-0'}`}>
       {/* ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-grid dark:opacity-40" />
@@ -30,16 +34,17 @@ export default function Layout() {
       </div>
 
       <Header onMenuClick={() => setMenuOpen(true)} />
-      {/* Aksesoris tema (ketupat, lentera, dll) menggantung di bawah header */}
+      {/* Aksesoris tema (ketupat, lentera, dll) menggantung di bawah header — desktop: tanpa header */}
       <HeaderOrnament />
-      {/* spacer for fixed header */}
-      <div className="h-[60px]" />
+      {/* spacer for fixed header (mobile/tablet) — desktop: tanpa header */}
+      <div className="h-[60px] lg:hidden" />
       {/* Pintu masuk kembali ke Portal Server NexSpace Pro (pesanan belum diambil) */}
       <NexSpaceBanner />
 
       <SideMenu
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}
+        onToggle={() => setMenuOpen((v) => !v)}
       />
 
       <div className="flex-1">

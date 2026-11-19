@@ -151,7 +151,7 @@ export default function PlaygroundPage() {
    ========================================================= */
 function OverviewHero({ onOpenMenu }: { onOpenMenu: () => void }) {
   return (
-    <section className="relative -mt-[60px] w-full">
+    <section className="relative -mt-[60px] w-full lg:mt-0">
       {/* Tombol menu mengambang di atas animasi (di bawah header) — hitam, tanpa teks, ukuran sama dengan hamburger header */}
       <button
         onClick={onOpenMenu}

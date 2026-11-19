@@ -6,8 +6,6 @@ import {
   Star,
   UserRound,
   Shield,
-  Search,
-  ArrowRight,
 } from 'lucide-react';
 import { useState } from 'react';
 import Reveal from '../components/Reveal';
@@ -50,7 +48,7 @@ export default function HomePage() {
     <>
       <Seo bareOnHome jsonLd={HOME_JSONLD} />
       {/* ================= HERO LAYER ================= */}
-      <section className="relative isolate -mt-[60px] overflow-hidden">
+      <section className="relative isolate -mt-[60px] overflow-hidden lg:mt-0">
         {/* Hero background — tema abu-abu + art peta dunia. Gambar DITANAM sebagai data-URI
             di CSS (.hero-map) sehingga TIDAK MUNGKIN 404 walau aset tak ikut ter-upload.
             Base grey sebagai jaring pengaman; overlay hanya menggelapkan sisi kiri (teks). */}
@@ -133,18 +131,17 @@ export default function HomePage() {
               </div>
             </div>
             
-            {/* CTA — cek status */}
+            {/* CTA — cek status (tombol bubble animasi, tanpa ikon kaca pembesar) */}
             <div className="mt-7">
-              <button
-                onClick={() => navigate('/cek-status')}
-                className="group inline-flex h-12 items-center gap-2 rounded-2xl bg-blue-600 px-6 text-[14px] font-bold text-white shadow-lg shadow-blue-600/25 transition-all hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-600/30 active:scale-[0.98]"
-              >
-                <Search className="h-4 w-4" strokeWidth={2.4} />
-                Cek Status Pesanan
-                <ArrowRight
-                  className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
-                  strokeWidth={2.4}
-                />
+              <button onClick={() => navigate('/cek-status')} className="by-bubble-button" aria-label="Cek Status Pesanan">
+                <span className="by-bubble-layer by-bubble-1" />
+                <span className="by-bubble-layer by-bubble-2" />
+                <span className="by-bubble-layer by-bubble-3" />
+                <span className="by-bubble-layer by-bubble-4" />
+                <span className="by-bubble-layer by-bubble-5" />
+                <span className="by-bubble-layer by-bubble-6" />
+                <span className="by-bubble-layer by-bubble-7" />
+                <span className="by-bubble-label">Cek Status Pesanan</span>
               </button>
             </div>
 
