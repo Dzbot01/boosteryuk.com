@@ -1,43 +1,7 @@
 <?php
-/**
- * google_auth.php — Login / Daftar HANYA dengan Google (GSI / ID token).
- *
- * Upload ke: https://boosteryuk.com/api/google_auth.php  (satu folder dengan configdb.php)
- *
- * ===================== CARA PASANG (sekali saja) =====================
- * 1. Buat project di https://console.cloud.google.com/ → APIs & Services → Credentials.
- * 2. Create Credentials → OAuth client ID → Application type: Web application.
- * 3. Isi Authorized JavaScript origins (BUKAN redirect URI — alur GSI tidak memakai
- *    redirect):
- *      - https://boosteryuk.com
- *      - https://www.boosteryuk.com
- *      - https://app.boosteryuk.com      (bila UI juga di Cloudflare app.boosteryuk.com)
- *      - https://<nama>.boosteryuk.com   (per child panel yang ingin memakai tombol Google;
- *                                         origin tidak mendukung wildcard)
- *    "Authorized redirect URIs" BOLEH DIBIARKAN KOSONG. Redirect ke halaman /overview
- *    setelah login dilakukan di frontend (sama seperti logic login lama: navigate('/overview')).
- * 4. Buat file api/.env di server (JANGAN di-commit, jangan dibagikan):
- *      GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
- *      GOOGLE_CLIENT_SECRET=xxxx
- *    (Client Secret saat ini tidak dipakai oleh alur ID-token client-side; disimpan untuk
- *     kebutuhan server-side di masa depan. Yang WAJIB benar adalah GOOGLE_CLIENT_ID —
- *     dipakai untuk mengecek aud token.)
- *    Tanpa file .env, endpoint ini akan menjawab ok:false.
- * 5. Tes: buka  https://boosteryuk.com/api/google_auth.php?action=client_id
- *    → {"ok":true,"clientId":"xxxx.apps.googleusercontent.com"}
- *
- * ===================== ENDPOINT =====================
- * GET  ?action=client_id   -> { ok:true, clientId:"..." }        (publik; rahasia tidak diekspos)
- * POST { credential }      -> verifikasi ID token ke Google → cari/buat user dari email Google
- *                             → buat sesi di tabel `sessions` → { ok:true, token, user:{...} }
- *                             Format `user` sama seperti yang diharapkan frontend (me.php-style).
- *
- * Catatan keamanan:
- *  - ID token diverifikasi lewat https://oauth2.googleapis.com/tokeninfo (signature, exp, iss)
- *    dan `aud` HARUS persis sama dengan GOOGLE_CLIENT_ID. Gagal = token ditolak.
- *  - Email user Google bersifat terverifikasi (email_verified) → boleh dijadikan identitas.
- *  - Password akun Google-managed di-isi acak (tidak bisa dipakai login password).
- *  - Client Secret tidak pernah keluar dari server / tidak pernah dikirim ke browser.
+/** Google OAuth redirect terpusat + endpoint ID-token legacy.
+ * Redirect URI tunggal: https://boosteryuk.com/api/google_auth.php?action=callback
+ * Lihat docs/google-central-login.md. Secret hanya di .env server.
  */
 
 ob_start();
@@ -53,12 +17,16 @@ function out($d, $s = 200) {
     echo json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
+set_exception_handler(function ($e) {
+    if (!empty($GLOBALS['oauthExchange']) && isset($GLOBALS['sdb'])) oauth_rollback($GLOBALS['sdb']);
+    out(['ok'=>false,'message'=>'Login tidak dapat diproses. Coba ulang atau hubungi admin.'],500);
+});
 register_shutdown_function(function () {
     $e = error_get_last();
     if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
         while (ob_get_level()) ob_end_clean();
         if (!headers_sent()) { http_response_code(200); header('Content-Type: application/json; charset=utf-8'); }
-        echo json_encode(['ok' => false, 'message' => 'PHP error: ' . $e['message']]);
+        echo json_encode(['ok' => false, 'message' => 'Terjadi kesalahan server saat login. Silakan coba lagi.']);
     }
 });
 
@@ -98,7 +66,7 @@ function env_val($key) {
 }
 
 $GOOGLE_CLIENT_ID     = env_val('GOOGLE_CLIENT_ID');
-$GOOGLE_CLIENT_SECRET = env_val('GOOGLE_CLIENT_SECRET'); // disimpan sesuai kebutuhan; tidak dipakai alur GSI
+$GOOGLE_CLIENT_SECRET = env_val('GOOGLE_CLIENT_SECRET'); // wajib untuk redirect flow server-side
 
 /* ===================== GET ?action=client_id (publik) ===================== */
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'client_id') {
@@ -106,13 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'client_
     out(['ok' => true, 'clientId' => $GOOGLE_CLIENT_ID]);
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') out(['ok' => false, 'message' => 'Metode tidak didukung.'], 405);
-if (!$GOOGLE_CLIENT_ID) out(['ok' => false, 'message' => 'GOOGLE_CLIENT_ID belum di-set di .env server.']);
-
 $in = json_decode(file_get_contents('php://input'), true);
-if (!is_array($in)) out(['ok' => false, 'message' => 'Body JSON tidak valid.'], 400);
-$credential = trim((string)($in['credential'] ?? ''));
-if ($credential === '' || strlen($credential) > 8192) out(['ok' => false, 'message' => 'Credential Google tidak ada / tidak valid.'], 400);
+if (!is_array($in)) $in = [];
 
 /* ===================== Koneksi DB (pakai configdb.php, pola sama spt site_settings.php) ===================== */
 if (!is_file(__DIR__ . '/configdb.php')) out(['ok' => false, 'message' => 'configdb.php tidak ditemukan di folder api.']);
@@ -141,7 +104,7 @@ function q_exec($db, $sql, $params = []) {
     $st = $db->prepare($sql);
     if (!$st) throw new Exception('Query gagal: ' . $db->error);
     if ($params) $st->bind_param(str_repeat('s', count($params)), ...$params);
-    $st->execute();
+    if (!$st->execute()) throw new Exception('Query gagal.');
     return $st;
 }
 function q_row($db, $sql, $params = []) {
@@ -189,6 +152,13 @@ function http_get_json($url, $timeout = 10) {
     return is_array($json) ? $json : null;
 }
 
+require_once __DIR__ . '/google_oauth_flow.php';
+if (!$oauthExchange) {
+if (!$oauthCallback) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') out(['ok'=>false,'message'=>'Metode tidak didukung.'],405);
+    $credential = trim((string)($in['credential'] ?? ''));
+    if (!$GOOGLE_CLIENT_ID || !$credential || strlen($credential)>8192) out(['ok'=>false,'message'=>'Credential Google tidak valid.'],400);
+}
 $tokenInfo = http_get_json('https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($credential));
 if (!$tokenInfo) out(['ok' => false, 'message' => 'Token Google tidak dapat diverifikasi. Coba login ulang.']);
 
@@ -205,6 +175,7 @@ if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) out(['ok' => fa
 if (!($emailVerified === true || $emailVerified === 1 || $emailVerified === '1' || $emailVerified === 'true')) {
     out(['ok' => false, 'message' => 'Email akun Google belum terverifikasi.']);
 }
+if ($oauthCallback && !hash_equals($oauthState['nonce'], (string)($tokenInfo['nonce'] ?? ''))) out(['ok'=>false,'message'=>'Nonce Google tidak cocok.'],400);
 $googleSub = (string)($tokenInfo['sub'] ?? '');
 $googleName = trim((string)($tokenInfo['name'] ?? $tokenInfo['given_name'] ?? ''));
 $firstName = $googleName !== '' ? $googleName : explode('@', $email)[0];
@@ -256,13 +227,23 @@ if (!$user) {
     } catch (Throwable $e) {
         // Bisa kalah race (email kembar) → coba baca lagi.
         $user = q_row($sdb, "SELECT * FROM `users` WHERE LOWER(email) = LOWER(?) LIMIT 1", [$email]);
-        if (!$user) out(['ok' => false, 'message' => 'Gagal membuat akun: ' . $e->getMessage()]);
+        if (!$user) out(['ok' => false, 'message' => 'Gagal membuat akun. Silakan coba lagi.']);
     }
 }
 
 if (!$user) out(['ok' => false, 'message' => 'Gagal memuat data user.']);
+} // end Google identity verification / account lookup (exchange already loaded the user)
+$firstName = $firstName ?? (string)($user['name'] ?? $user['username'] ?? 'User');
+$email = $email ?? (string)$user['email'];
 $uid = $user['id'] ?? null;
 if (!$uid) out(['ok' => false, 'message' => 'ID user tidak ditemukan.']);
+
+if ($oauthCallback) {
+    if (!oauth_host_allowed($sdb,$oauthState['return_host'])) out(['ok'=>false,'message'=>'Panel tujuan tidak aktif.'],400);
+    $grant = bin2hex(random_bytes(32));
+    q_exec($sdb, 'INSERT INTO google_oauth_grants (token_hash,user_id,return_host,challenge,expires_at) VALUES (?,?,?,?,DATE_ADD(NOW(), INTERVAL 1 MINUTE))', [hash('sha256',$grant),$uid,$oauthState['return_host'],$oauthState['challenge']]);
+    oauth_redirect('https://'.$oauthState['return_host'].'/auth/finish?token='.rawurlencode($grant));
+}
 
 /* ===================== Buat sesi login (tabel `sessions`) ===================== */
 $sessionCols = table_columns($sdb, 'sessions'); // token, user_id, expires_at
@@ -273,8 +254,10 @@ try {
     } else {
         q_exec($sdb, "INSERT INTO `sessions` (token, user_id) VALUES (?, ?)", [$token, (string)$uid]);
     }
+    if ($oauthExchange) oauth_commit($sdb);
 } catch (Throwable $e) {
-    out(['ok' => false, 'message' => 'Gagal membuat sesi login: ' . $e->getMessage()]);
+    if ($oauthExchange) oauth_rollback($sdb);
+    out(['ok' => false, 'message' => 'Gagal membuat sesi login. Coba lagi.']);
 }
 
 /* ===================== Response (format diharapkan frontend AuthContext) ===================== */
