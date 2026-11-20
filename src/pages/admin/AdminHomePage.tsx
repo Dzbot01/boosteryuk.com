@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Settings, Server, Shield, ArrowUpRight, DollarSign, Globe, Banknote, Crown, ClipboardList, Users, Wallet } from 'lucide-react';
+import { Gift, Settings, Server, Shield, ArrowUpRight, DollarSign, Globe, Banknote, Crown, ClipboardList, Users, Wallet } from 'lucide-react';
 import { nexspaceApi } from '../../services/nexspaceApi';
 import { withdrawApi } from '../../services/childPanelApi';
 import Reveal from '../../components/Reveal';
@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
 
 const CARDS = [
+  {path:'/admin/events',icon:Gift,title:'Kelola Event',desc:'Atur jadwal, hitung mundur dan status event.',color:'from-violet-600 to-fuchsia-600'},
   {
     path: '/admin/orders',
     icon: ClipboardList,

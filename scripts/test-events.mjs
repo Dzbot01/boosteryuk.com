@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+async function module(path) { const {outputFiles} = await build({entryPoints:[path],bundle:true,format:'esm',write:false}); return import('data:text/javascript;base64,'+Buffer.from(outputFiles[0].text).toString('base64')); }
+globalThis.window = {location:{hostname:'boosteryuk.com',origin:'https://boosteryuk.com'}};
+globalThis.localStorage = {getItem:()=> 'admin-test-token'};
+const {remaining,eventStatus,eventsApi} = await module('src/services/eventsApi.ts');
+const e={id:1,title:'Test',description:'',kind:'countdown',status:'ongoing',effective_status:'ongoing',starts_at:null,ends_at:'2026-12-31T17:00:00Z'};
+const end=Date.parse(e.ends_at);
+assert.deepEqual(remaining(e.ends_at,end-90061000),{days:1,hours:1,minutes:1,seconds:1});
+assert.deepEqual(remaining(e.ends_at,end+1000),{days:0,hours:0,minutes:0,seconds:0});
+assert.equal(eventStatus(e,end-1),'ongoing');assert.equal(eventStatus(e,end),'finished');
+assert.equal(eventStatus({...e,status:'finished'},end-86400000),'finished');
+assert.equal(eventStatus({...e,starts_at:new Date(end-1000).toISOString()},end-2000),'upcoming');
+assert.equal(eventStatus({...e,starts_at:new Date(end-1000).toISOString()},end-1000),'ongoing');
+assert.equal(eventStatus({...e,status:'upcoming',effective_status:'upcoming',ends_at:null},end),'upcoming');
+const {clampEventPosition:clamp}=await module('src/lib/eventPosition.ts');
+assert.deepEqual(clamp({x:-500,y:-500},390,844),{x:8,y:36});
+assert.deepEqual(clamp({x:900,y:1000},390,844),{x:318,y:754});
+assert.deepEqual(clamp({x:100,y:400},390,844),{x:100,y:400});
+let calls=0;
+globalThis.fetch=async(url,options)=>{calls++;assert.equal(url,'https://boosteryuk.com/api/events.php');assert.equal(options.cache,'no-store');return {ok:true,json:async()=>({ok:true,events:[e]})};};
+assert.equal((await eventsApi.list()).events[0].id,1);
+globalThis.fetch=async(url,options)=>{const body=JSON.parse(options.body);assert.equal(body.token,'admin-test-token');assert.equal(body.action,'save');assert.equal(body.event.id,1);return {ok:false,json:async()=>({ok:false,message:'Hanya admin'})};};
+assert.equal((await eventsApi.save(e)).ok,false);
+globalThis.fetch=async()=>{throw new Error('offline')};assert.equal((await eventsApi.list()).ok,false);
+assert.equal(calls,1);
+console.log('PASS: countdown, expiry boundary, scheduled start, manual finished/upcoming, draggable viewport bounds, public GET, admin save auth payload, API/network errors.');
