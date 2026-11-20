@@ -31,7 +31,7 @@ function oauth_schema($db) {
     q_exec($db, 'DELETE FROM google_oauth_grants WHERE expires_at<NOW()');
 }
 function oauth_challenge($verifier) { return rtrim(strtr(base64_encode(hash('sha256',$verifier,true)), '+/', '-_'), '='); }
-$oauthAction = $_GET['action'] ?? ($in['action'] ?? '');
+$oauthAction = defined('GOOGLE_OAUTH_REQUEST_ACTION') ? GOOGLE_OAUTH_REQUEST_ACTION : ($_GET['action'] ?? ($in['action'] ?? ''));
 $oauthCallback = false; $oauthExchange = false;
 if (in_array($oauthAction, ['start','callback','exchange'], true)) {
     oauth_schema($sdb);
