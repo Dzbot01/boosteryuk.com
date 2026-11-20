@@ -1,3 +1,4 @@
+import AvatarPicker from '../components/AvatarPicker';
 import UserAvatar from '../components/UserAvatar';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -199,6 +200,8 @@ export default function PengaturanAkunPage() {
           Perubahan berhasil disimpan
         </div>
       )}
+
+      <div className="mb-6"><AvatarPicker /><a href="/profil" className="mt-3 inline-block text-xs font-semibold text-cyan-700 underline dark:text-cyan-400">Lihat halaman profil</a></div>
 
       {/* Profile data */}
       <Reveal delay={70}>

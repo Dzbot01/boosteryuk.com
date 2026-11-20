@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { MusicProvider } from './context/MusicContext';
+const ProfilPage = lazy(() => import('./pages/ProfilPage'));
 const EventsPage = lazy(() => import('./pages/EventsPage'));
 const AdminEventsPage = lazy(() => import('./pages/admin/AdminEventsPage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="auth/finish" element={<GoogleAuthPage finish />} />
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
+          <Route path="profil" element={<ProtectedRoute><ProfilPage /></ProtectedRoute>} />
           <Route path="event" element={<EventsPage />} />
           <Route path="admin/events" element={<ProtectedRoute adminOnly><AdminEventsPage /></ProtectedRoute>} />
           <Route path="cek-status" element={<CekStatusPage />} />

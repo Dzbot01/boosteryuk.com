@@ -1,3 +1,4 @@
+import { avatarPreference, type AvatarVariant } from '../services/avatarApi';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { boostyVoice } from '../services/boostyVoice';
 import { MAIN_API, IS_CHILD_PANEL } from '../lib/apiBase';
@@ -6,6 +7,7 @@ import { MAIN_API, IS_CHILD_PANEL } from '../lib/apiBase';
 const API_URL = IS_CHILD_PANEL ? MAIN_API : import.meta.env.VITE_API_URL || MAIN_API;
 
 type User = {
+  avatar_variant?: AvatarVariant;
   id: number;
   name: string;
   username: string;
@@ -46,6 +48,7 @@ type AuthContextType = {
   /** Login/daftar via Google (ID token dari Google Identity Services) -> google_auth.php. */
   loginWithGoogle: (credential: string) => Promise<{ok: boolean, message?: string}>;
   register: (username: string, email: string, password: string) => Promise<{ok: boolean, message?: string}>;
+  setAvatar: (variant: AvatarVariant) => Promise<{ok:boolean;message?:string}>;
   logout: () => void;
   refresh: () => Promise<void>;
   updateUser: (data: Partial<User> & { password?: string }) => Promise<{ok: boolean, message?: string}>;
@@ -162,8 +165,8 @@ const refresh = async () => {
       return;
     }
     
-    const plan = await fetchPlan(token);
-    setUser({ ...data.user, token, plan: plan || undefined, plusActive: !!data.user?.plusActive || !!plan?.plus });
+    const [plan, avatar] = await Promise.all([fetchPlan(token), avatarPreference(token)]);
+    setUser({ ...data.user, avatar_variant: avatar.ok ? avatar.avatar_variant : (userRef.current?.id === data.user.id ? userRef.current?.avatar_variant : 'male'), token, plan: plan || undefined, plusActive: !!data.user?.plusActive || !!plan?.plus });
   }catch(err){
     // Gangguan jaringan BUKAN berarti sesi habis: token disimpan, user dicoba lagi saat refresh berikutnya.
     console.error('Auth refresh error:', err);
@@ -183,7 +186,8 @@ const refresh = async () => {
       const data = await res.json();
       if(data.ok){
         localStorage.setItem('token', data.token);
-        setUser({ ...data.user, token: data.token });
+        const avatar = await avatarPreference(data.token);
+        setUser({ ...data.user, avatar_variant: avatar.avatar_variant || 'male', token: data.token });
         void fetchPlan(data.token).then((plan) => {
           if (plan) setUser((u) => (u ? { ...u, plan, plusActive: u.plusActive || plan.plus } : u));
         });
@@ -215,7 +219,8 @@ const refresh = async () => {
       }
       if(data.ok && data.token){
         localStorage.setItem('token', data.token);
-        setUser({ ...data.user, token: data.token });
+        const avatar = await avatarPreference(data.token);
+        setUser({ ...data.user, avatar_variant: avatar.avatar_variant || 'male', token: data.token });
         void fetchPlan(data.token).then((plan) => {
           if (plan) setUser((u) => (u ? { ...u, plan, plusActive: u.plusActive || plan.plus } : u));
         });
@@ -271,13 +276,21 @@ const refresh = async () => {
     }
   }
 
+  const setAvatar = async (variant: AvatarVariant) => {
+    const token = localStorage.getItem('token');
+    if (!token) return {ok:false,message:'Silakan login ulang.'};
+    const result = await avatarPreference(token,variant);
+    if (result.ok && result.avatar_variant && localStorage.getItem('token') === token) setUser(prev => prev ? {...prev,avatar_variant:result.avatar_variant} : null);
+    return result;
+  };
+
   const logout = () => {
     boostyVoice.stop(); // hentikan suara Guri Booster saat keluar
     localStorage.removeItem('token');
     setUser(null);
   }
 
-  return <AuthContext.Provider value={{user, loading, isAdmin, login, loginWithGoogle, register, logout, refresh, updateUser, topUp, activatePlus}}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{user, loading, isAdmin, login, loginWithGoogle, register, logout, refresh, updateUser, topUp, activatePlus, setAvatar}}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {
