@@ -415,9 +415,9 @@ function PackageCarousel({ onPick }: { onPick: (i: number) => void }) {
                   );
                 })}
               </ul>
-              <TransactionButton onClick={() => onPick(i)} className="w-full">
+              <button type="button" onClick={() => onPick(i)} className="mt-5 h-11 w-full rounded-xl bg-emerald-600 text-[14px] font-bold text-white shadow-lg shadow-emerald-600/25 transition-colors hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
                 Pilih {t.name}
-              </TransactionButton>
+              </button>
             </div>
           </div>
         ))}

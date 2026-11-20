@@ -9,7 +9,7 @@ function eg_out($data,$code=200){
  while(ob_get_level()>0)ob_end_clean();
  http_response_code($code);
  header('Content-Type: application/json; charset=utf-8');
- echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);exit;
+ echo json_encode(['api_version'=>2]+$data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);exit;
 }
 function eg_server_error(){
  if(isset($GLOBALS['conn']))try{$GLOBALS['conn']->rollback();}catch(Throwable $ignore){}
@@ -31,6 +31,9 @@ foreach(['configdb.php','child_panel_lib.php','event_game_lib.php','riwayat_sche
  }
 }
 require __DIR__.'/configdb.php';require_once __DIR__.'/child_panel_lib.php';require_once __DIR__.'/event_game_lib.php';require_once __DIR__.'/riwayat_schema.php';
+if(!defined('EG_GAME_PROTOCOL_VERSION') || EG_GAME_PROTOCOL_VERSION!==2 || !function_exists('eg_daily')){
+ eg_out(['ok'=>false,'code'=>'GAME_API_VERSION_MISMATCH','message'=>'Versi file API game tidak cocok. Upload event_game.php dan event_game_lib.php terbaru secara bersamaan.'],409);
+}
 $conn->set_charset('utf8mb4');
 $raw=file_get_contents('php://input');$in=json_decode($raw,true);if(!is_array($in)||strlen($raw)>30000)eg_out(['ok'=>false,'message'=>'Data game tidak valid.'],400);
 $uid=cp_user_id($conn,$in['token']??'');if(!$uid)eg_out(['ok'=>false,'message'=>'Silakan login ulang.'],401);
