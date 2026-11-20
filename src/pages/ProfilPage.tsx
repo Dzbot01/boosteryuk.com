@@ -60,11 +60,11 @@ export default function ProfilPage() {
       <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.3)] dark:border-slate-700/60 dark:bg-slate-800/80 sm:p-7">
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-cyan-400/15 blur-3xl" />
         <div className="relative flex flex-wrap items-center gap-5">
-          <span className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-cyan-500 to-cyan-700 font-display text-2xl font-extrabold text-white shadow-lg shadow-cyan-600/30">
-            <UserAvatar user={user}>{user.initials}</UserAvatar>
-            <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-cyan-600 shadow ring-2 ring-white dark:bg-slate-800 dark:ring-slate-800">
-              <BadgeCheck className="h-4 w-4" strokeWidth={2.6} />
-            </span>
+          <span className="relative flex h-20 w-20 shrink-0 items-center justify-center font-display text-2xl font-extrabold text-white">
+            <UserAvatar user={user} fallbackClassName="relative rounded-3xl bg-gradient-to-br from-cyan-500 to-cyan-700 shadow-lg shadow-cyan-600/30">
+              {user.initials}
+              <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-cyan-600 shadow ring-2 ring-white dark:bg-slate-800 dark:ring-slate-800"><BadgeCheck className="h-4 w-4" strokeWidth={2.6}/></span>
+            </UserAvatar>
           </span>
 
           <div className="min-w-0 flex-1">
