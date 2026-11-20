@@ -195,6 +195,7 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
     if ($action === 'record_order') {
         // Pesanan SMM: harga diambil dari riwayat_pesanan milik user ini (bukan dari browser).
         $orderId = mb_substr(trim((string)($in['order_id'] ?? '')), 0, 64);
+        if (stripos($orderId,'EVG')===0) cp_out(['ok'=>false,'message'=>'Pesanan merchant dicatat otomatis oleh server.'],400);
         if ($orderId === '') cp_out(['ok' => false, 'message' => 'order_id wajib.'], 400);
         $st = cp_q($conn, "SELECT service_name, quantity, price FROM riwayat_pesanan WHERE order_id = ? AND user_id = ? ORDER BY id DESC LIMIT 1", 'si', $orderId, (int)$uid);
         $row = $st->get_result()->fetch_assoc();
@@ -221,19 +222,21 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
         $u = $st->get_result()->fetch_assoc();
         $st->close();
         cp_out(['ok' => true, 'panel' => ['name' => $tenant['name'], 'hostname' => $tenant['hostname'],
-            'markup_smm_pct' => $tenant['markup_smm_pct'], 'markup_agent_pct' => $tenant['markup_agent_pct'], 'markup_otp_pct' => $tenant['markup_otp_pct']],
+            'markup_smm_pct' => $tenant['markup_smm_pct'], 'markup_agent_pct' => $tenant['markup_agent_pct'], 'markup_otp_pct' => $tenant['markup_otp_pct'], 'markup_event_pct'=>$tenant['markup_event_pct']],
+            'merchant' => $q("AND o.kind='event'"),
             'all' => $q(''), 'month' => $q("AND o.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"), 'today' => $q("AND o.created_at >= CURDATE()"),
             'balance' => cp_wd_balance($conn, $pid),
             'users' => ['total' => (int)$u['n'], 'active7d' => (int)$u['aktif']]]);
     }
 
     if ($action === 'owner_orders') {
+        $kindFilter=($in['kind']??'')==='event'?" AND o.kind='event'":'';
         $limit = max(1, min(200, (int)($in['limit'] ?? 50)));
         $st = cp_q($conn, "SELECT o.order_id, o.kind, o.service_name, o.quantity, o.price, o.base_price, o.profit, o.created_at,
                                   u.name, u.email, " . cp_order_status_sql($conn) . " AS status
                            FROM child_panel_orders o
                            LEFT JOIN users u ON u.id = o.user_id
-                           WHERE o.child_panel_id = ? ORDER BY o.id DESC LIMIT $limit", 'i', $pid);
+                           WHERE o.child_panel_id = ? $kindFilter ORDER BY o.id DESC LIMIT $limit", 'i', $pid);
         $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
         $st->close();
         foreach ($rows as &$r) { $r['email'] = cp_mask_email($r['email']); foreach (['price', 'base_price', 'profit'] as $k) $r[$k] = (float)$r[$k]; }
@@ -259,8 +262,14 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
         $mSmm = max(0, min(CP_MAX_MARKUP, round((float)($in['markup_smm_pct'] ?? 0), 2)));
         $mAgent = max(0, min(CP_MAX_MARKUP, round((float)($in['markup_agent_pct'] ?? 0), 2)));
         $mOtp = max(0, min(CP_MAX_MARKUP, round((float)($in['markup_otp_pct'] ?? ($tenant['markup_otp_pct'] ?? 0)), 2)));
-        cp_q($conn, "UPDATE child_panels SET markup_smm_pct = ?, markup_agent_pct = ?, markup_otp_pct = ? WHERE id = ?", 'dddi', $mSmm, $mAgent, $mOtp, $pid)->close();
-        cp_out(['ok' => true, 'markup_smm_pct' => $mSmm, 'markup_agent_pct' => $mAgent, 'markup_otp_pct' => $mOtp]);
+        $mEvent=max(0,min(CP_MAX_MARKUP,round((float)($in['markup_event_pct']??$tenant['markup_event_pct']??0),2)));
+        $conn->begin_transaction();
+        $st=cp_q($conn,'SELECT config FROM child_panels WHERE id=? FOR UPDATE','i',$pid);
+        $config=json_decode($st->get_result()->fetch_assoc()['config']??'{}',true) ?: [];$st->close();
+        $config['merchantMarkupPct']=$mEvent;
+        cp_q($conn, "UPDATE child_panels SET markup_smm_pct=?, markup_agent_pct=?, markup_otp_pct=?, config=? WHERE id=?", 'dddsi', $mSmm,$mAgent,$mOtp,json_encode($config,JSON_UNESCAPED_UNICODE),$pid)->close();
+        $conn->commit();
+        cp_out(['ok' => true, 'markup_smm_pct' => $mSmm, 'markup_agent_pct' => $mAgent, 'markup_otp_pct' => $mOtp, 'markup_event_pct'=>$mEvent]);
     }
 }
 

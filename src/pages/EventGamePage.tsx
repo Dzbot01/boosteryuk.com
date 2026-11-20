@@ -1,9 +1,12 @@
+import { useMusic } from '../context/MusicContext';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { eventGameRequest, GAME_CLOSED } from '../services/eventGameApi';
 import Seo from '../components/Seo';
 export default function EventGamePage(){
+ const {play,toggle,playing,blocked}=useMusic();
+ useEffect(()=>{play();},[play]);
  const {id}=useParams();const {user,refresh}=useAuth();const frame=useRef<HTMLIFrameElement>(null);const [channel]=useState(()=>crypto.randomUUID());const [error,setError]=useState('');const [bridgeReady,setBridgeReady]=useState(false);
  const token=user?.token;const refreshRef=useRef(refresh);refreshRef.current=refresh;
  useEffect(()=>{
@@ -28,7 +31,7 @@ export default function EventGamePage(){
       if(!entries.length||entries.length>5)throw new Error('Keranjang tidak valid.');
       for(const [item,n] of entries){if(!catalog[item]||!Number.isInteger(n)||Number(n)<1||Number(n)>100)throw new Error('Item tidak valid.');total+=catalog[item].price*Number(n);}
       if(!window.confirm(`Gunakan saldo WEBSITE sebesar Rp${total.toLocaleString('id-ID')} untuk item virtual game ini? Pembelian akan masuk Riwayat Pesanan. Bukan followers/like sosial media asli.`))throw new Error('Pembelian dibatalkan.');
-      body.cart=cart;body.request_id=m.payload.request_id;body.confirm_real_balance=true;
+      body.expected_total=total;body.cart=cart;body.request_id=m.payload.request_id;body.confirm_real_balance=true;
      }
      result=await eventGameRequest(body);
      if(typeof result.revision==='number' && (revision===null || m.action==='save' || m.action==='start'))revision=result.revision;
@@ -41,5 +44,5 @@ export default function EventGamePage(){
   };
   window.addEventListener('message',receive);setBridgeReady(true);return()=>{active=false;window.removeEventListener('message',receive);};
  },[channel,id,token]);
- return <main className="px-2 pb-28 pt-4 sm:px-6"><Seo title="Naikkan Akunmu! — Event" noindex/><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><Link to="/event" className="text-sm font-semibold text-cyan-700">← Kembali ke Event</Link><p className="text-xs text-slate-500">Merchant memakai saldo website nyata. Jika koneksi terputus saat membayar, periksa riwayat sebelum membayar ulang.</p></div>{error && <p role="alert" className="mb-3 text-sm text-rose-600">{error}</p>}{bridgeReady && <iframe ref={frame} title="Game Naikkan Akunmu!" src={`/games/naikkan-akunmu.html?v=2#channel=${channel}`} sandbox="allow-scripts allow-orientation-lock" allow="fullscreen" allowFullScreen referrerPolicy="no-referrer" className="h-[calc(100dvh-150px)] min-h-[420px] w-full rounded-xl border border-slate-200 bg-white"/>}</main>;
+ return <main className="px-2 pb-28 pt-4 sm:px-6"><Seo title="Naikkan Akunmu! — Event" noindex/><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><Link to="/event" className="text-sm font-semibold text-cyan-700">← Kembali ke Event</Link><button type="button" onClick={toggle} className="text-xs font-bold text-cyan-700">{playing?'Jeda musik':blocked?'Putar musik (ketuk untuk mulai)':'Putar musik'}</button><p className="text-xs text-slate-500">Merchant memakai saldo website nyata. Jika koneksi terputus saat membayar, periksa riwayat sebelum membayar ulang.</p></div>{error && <p role="alert" className="mb-3 text-sm text-rose-600">{error}</p>}{bridgeReady && <iframe ref={frame} title="Game Naikkan Akunmu!" src={`/games/naikkan-akunmu.html?v=3#channel=${channel}`} sandbox="allow-scripts allow-orientation-lock" allow="fullscreen" allowFullScreen referrerPolicy="no-referrer" className="h-[calc(100dvh-150px)] min-h-[420px] w-full rounded-xl border border-slate-200 bg-white"/>}</main>;
 }

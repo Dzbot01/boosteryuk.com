@@ -722,7 +722,7 @@ function renderDaily(){
  $("nbPlay").title=can?"":"Batas bermain harian habis";
  $("lbNote").textContent="Sisa bermain hari ini: "+(gameSession?.daily?.remaining??0)+"/5 • Reset pukul 00.00 WIB";
 }
-async function loadWallet(){const result=await gameRPC('get');W=result.wallet;gameSession=result;renderDaily();}
+async function loadWallet(){const result=await gameRPC('get');W=result.wallet;gameSession=result;for(const p of PROD){if(result.catalog?.[p.id])p.p=result.catalog[p.id].price;}renderDaily();if($('shop').classList.contains('show')&&!selling&&!paying){$('items').innerHTML='';buildShop();}}
 function saveWallet(){} // Inventory and bonus are exclusively written by server transactions.
 async function showLeaderboard(){
  hideAll();$("lb").classList.add("show");

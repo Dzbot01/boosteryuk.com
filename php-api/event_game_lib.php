@@ -1,5 +1,5 @@
 <?php
-const EG_GAME_PROTOCOL_VERSION = 2;
+const EG_GAME_PROTOCOL_VERSION = 3;
 const EG_PRODUCTS = [
  'f100'=>['name'=>'Followers +100','price'=>2500,'kind'=>'f','amount'=>100],
  'f500'=>['name'=>'Followers +500','price'=>9000,'kind'=>'f','amount'=>500],
@@ -26,12 +26,12 @@ function eg_schema($conn) {
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
 }
-function eg_cart($cart) {
+function eg_cart($cart,$products=EG_PRODUCTS) {
  if(!is_array($cart) || !$cart || count($cart)>5)throw new Exception('Keranjang tidak valid.');
  $clean=[];$total=0;
  foreach($cart as $id=>$qty){
-  if(!isset(EG_PRODUCTS[$id]) || !is_int($qty) || $qty<1 || $qty>100)throw new Exception('Item atau jumlah tidak valid (1–100).');
-  $clean[$id]=$qty;$total+=EG_PRODUCTS[$id]['price']*$qty;
+  if(!isset($products[$id]) || !is_int($qty) || $qty<1 || $qty>100)throw new Exception('Item atau jumlah tidak valid (1–100).');
+  $clean[$id]=$qty;$total+=$products[$id]['price']*$qty;
  }
  ksort($clean);return [$clean,$total];
 }
@@ -56,4 +56,10 @@ function eg_daily($conn,$uid) {
  $st=cp_q($conn,'SELECT plays FROM event_game_daily WHERE user_id=? AND play_date=?','is',(int)$uid,$date);
  $used=(int)($st->get_result()->fetch_assoc()['plays']??0);$st->close();
  return ['date'=>$date,'timezone'=>'Asia/Jakarta','limit'=>5,'used'=>$used,'remaining'=>max(0,5-$used)];
+}
+
+function eg_catalog($tenant){
+ $products=EG_PRODUCTS;
+ foreach($products as &$product)$product['price']=(int)cp_apply_markup($product['price'],$tenant,'event');
+ return $products;
 }

@@ -10,6 +10,9 @@ export interface TenantSlide {
 }
 
 export interface TenantConfig {
+  merchantMarkupPct?: number;
+  supportWhatsapp?: string;
+  supportEmail?: string;
   brandName?: string;
   brandSuffix?: string;
   headerTagline?: string;
@@ -40,6 +43,7 @@ export interface Tenant {
   markup_agent_pct: number;
   /** Markup Order Nomor (OTP) % di atas harga OTP web utama. */
   markup_otp_pct?: number;
+  markup_event_pct?: number;
   config: TenantConfig;
 }
 

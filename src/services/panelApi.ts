@@ -28,7 +28,8 @@ export interface PanelTotals {
   profit: number;
 }
 export interface PanelSummary {
-  panel: { name: string; hostname: string; markup_smm_pct: number; markup_agent_pct: number; markup_otp_pct?: number };
+  panel: { name: string; hostname: string; markup_smm_pct: number; markup_agent_pct: number; markup_otp_pct?: number; markup_event_pct?: number };
+  merchant?: PanelTotals;
   all: PanelTotals;
   month: PanelTotals;
   today: PanelTotals;
@@ -36,7 +37,7 @@ export interface PanelSummary {
 }
 export interface PanelOrder {
   order_id: string;
-  kind: 'smm' | 'agent' | 'otp';
+  kind: 'smm' | 'agent' | 'otp' | 'event';
   service_name: string;
   quantity: number;
   price: number;
@@ -64,10 +65,11 @@ export const panelApi = {
   /** Catat pesanan SMM di panel (server memverifikasi lewat riwayat_pesanan). */
   recordOrder: (orderId: string) => call<object>('record_order', { order_id: orderId }),
   summary: () => call<PanelSummary>('owner_summary'),
+  merchantOrders: () => call<{orders?:PanelOrder[]}>('owner_orders',{limit:200,kind:'event'}),
   orders: (limit = 100) => call<{ orders?: PanelOrder[] }>('owner_orders', { limit }),
   users: () => call<{ users?: PanelUser[] }>('owner_users'),
-  setMarkup: (markup_smm_pct: number, markup_agent_pct: number, markup_otp_pct: number) =>
-    call<{ markup_smm_pct?: number; markup_agent_pct?: number; markup_otp_pct?: number }>('owner_set_markup', { markup_smm_pct, markup_agent_pct, markup_otp_pct }),
+  setMarkup: (markup_smm_pct: number, markup_agent_pct: number, markup_otp_pct: number, markup_event_pct: number) =>
+    call<{ markup_smm_pct?: number; markup_agent_pct?: number; markup_otp_pct?: number; markup_event_pct?: number }>('owner_set_markup', { markup_smm_pct, markup_agent_pct, markup_otp_pct, markup_event_pct }),
 };
 
 const ownerCache = new Map<string, boolean>();

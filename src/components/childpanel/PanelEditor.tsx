@@ -164,6 +164,8 @@ export function PanelEditor({
     setErr('');
     if (!d.name.trim()) return setErr('Nama child panel wajib diisi.');
     if (!SUB_RE.test(d.subdomain.trim().toLowerCase())) return setErr('Subdomain tidak valid.');
+    if(cfg.supportWhatsapp && !/^[0-9]{7,15}$/.test(cfg.supportWhatsapp.replace(/[^0-9]/g,'')))return setErr('Nomor WhatsApp support harus 7–15 digit termasuk kode negara.');
+    if(cfg.supportEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cfg.supportEmail))return setErr('Email support tidak valid.');
     setSaving(true);
     const build = (config: TenantConfig, slides: SlideDraft[]): ChildPanelInput => ({
       id: d.id,
@@ -288,6 +290,7 @@ export function PanelEditor({
             </div>
           </section>
 
+          <section className={sec}><h3 className={h3}>Kontak support toko</h3><p className="text-xs text-slate-500">Kosongkan untuk memakai kontak bawaan. Nomor WhatsApp gunakan kode negara, contoh 62812…</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><label><span className={lbl}>WhatsApp support</span><input className={inp} type="tel" value={cfg.supportWhatsapp||''} onChange={e=>setCfg({supportWhatsapp:e.target.value})} placeholder="6281234567890"/></label><label><span className={lbl}>Email support</span><input className={inp} type="email" value={cfg.supportEmail||''} onChange={e=>setCfg({supportEmail:e.target.value})} placeholder="support@tokomu.com"/></label></div></section>
           {/* Brand & header */}
           <section className={sec}>
             <h3 className={h3}><Type className="h-4 w-4 text-slate-400" /> Logo, judul header & footer</h3>
@@ -369,8 +372,8 @@ export function PanelEditor({
                 <div className="hero-map absolute inset-0" style={{ backgroundImage: `url("${heroSrc}")` }} />
                 <div className="absolute inset-0 bg-gradient-to-r from-[#0e0f12]/85 via-[#0e0f12]/40 to-transparent" />
               </div>
-              <div className="mt-2 flex gap-2">
-                <ImagePicker label="Ganti gambar hero" onPick={(f) => void pickImage(f, 'hero')} />
+              <div className="mt-2 flex flex-wrap gap-2">
+                <ImagePicker label="Ganti gambar hero" onPick={(f) => void pickImage(f, 'hero')} /><button type="button" disabled={saving||imgBusy>0} onClick={async()=>{setImgBusy(n=>n+1);try{const r=await fetch('/themes/anime-new-year-fireworks.png');if(!r.ok)throw new Error('Gambar tema belum tersedia.');await pickImage(new File([await r.blob()],'anime-new-year.png',{type:'image/png'}),'hero');}catch(e){setErr(e instanceof Error?e.message:'Gagal memuat gambar.');}finally{setImgBusy(n=>n-1);}}} className="rounded-lg border px-3 py-2 text-xs font-bold">Anime Tahun Baru</button>
                 <button type="button" onClick={() => { setCfg({ hero: '' }); setD((x) => ({ ...x, pendingHero: undefined })); }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[12px] font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">
                   <RotateCcw className="h-3.5 w-3.5" /> Bawaan
                 </button>
@@ -454,7 +457,7 @@ export function PanelEditor({
 
           {/* Markup */}
           <section className={sec}>
-            <h3 className={h3}><Percent className="h-4 w-4 text-slate-400" /> Margin markup harga</h3>
+            <h3 className={h3}><Percent className="h-4 w-4 text-slate-400" /> Margin markup harga</h3><label className="mt-3 block"><span className={lbl}>Merchant Event (%)</span><input className={inp} type="number" min={0} max={300} step={0.5} value={cfg.merchantMarkupPct??0} onChange={e=>setCfg({merchantMarkupPct:Number(e.target.value)})}/><span className="text-xs text-slate-500">Selisih harga merchant masuk penghasilan toko.</span></label>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className={lbl}>Layanan SMM (%)</span>

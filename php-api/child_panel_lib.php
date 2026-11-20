@@ -1,4 +1,5 @@
 <?php
+const CP_EVENT_MERCHANT_VERSION = 1;
 /**
  * child_panel_lib.php — skema + tenant resolver Child Panel.
  *
@@ -203,6 +204,7 @@ function cp_public($row, $hostname) {
         'markup_smm_pct'   => (float)$row['markup_smm_pct'],
         'markup_agent_pct' => (float)$row['markup_agent_pct'],
         'markup_otp_pct'   => (float)($row['markup_otp_pct'] ?? 0),
+        'markup_event_pct' => (float)($cfg['merchantMarkupPct'] ?? 0),
         'config'           => (object)$cfg,
     ];
 }
@@ -230,7 +232,7 @@ function cp_resolve($conn, $hostname = null) {
 /** Harga setelah markup child panel. Tidak pernah di bawah harga dasar. */
 function cp_apply_markup($basePrice, $tenant, $kind) {
     if (!$tenant) return (float)$basePrice;
-    $pct = $kind === 'agent' ? $tenant['markup_agent_pct'] : ($kind === 'otp' ? ($tenant['markup_otp_pct'] ?? 0) : $tenant['markup_smm_pct']);
+    $pct = $kind === 'event' ? ($tenant['markup_event_pct'] ?? 0) : ($kind === 'agent' ? $tenant['markup_agent_pct'] : ($kind === 'otp' ? ($tenant['markup_otp_pct'] ?? 0) : $tenant['markup_smm_pct']));
     $pct = max(0, min(CP_MAX_MARKUP, (float)$pct));
     return (float)ceil($basePrice * (1 + $pct / 100));
 }
@@ -330,6 +332,9 @@ function cp_str($v, $max) { return mb_substr(trim(strip_tags((string)$v)), 0, $m
 function cp_clean_config($c) {
     $c = is_array($c) ? $c : [];
     $out = [
+        'merchantMarkupPct' => max(0,min(CP_MAX_MARKUP,round((float)($c['merchantMarkupPct']??0),2))),
+        'supportWhatsapp' => preg_match('/^[0-9+ ()-]{0,30}$/D',(string)($c['supportWhatsapp']??'')) ? preg_replace('/[^0-9]/','',(string)($c['supportWhatsapp']??'')) : '',
+        'supportEmail' => filter_var(trim((string)($c['supportEmail']??'')),FILTER_VALIDATE_EMAIL) ? substr(trim((string)$c['supportEmail']),0,254) : '',
         'brandName'      => cp_str($c['brandName'] ?? '', 40),
         'brandSuffix'    => cp_str($c['brandSuffix'] ?? '', 40),
         'headerTagline'  => cp_str($c['headerTagline'] ?? '', 30),

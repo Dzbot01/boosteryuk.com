@@ -9,7 +9,7 @@ function eg_out($data,$code=200){
  while(ob_get_level()>0)ob_end_clean();
  http_response_code($code);
  header('Content-Type: application/json; charset=utf-8');
- echo json_encode(['api_version'=>2]+$data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);exit;
+ echo json_encode(['api_version'=>3]+$data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);exit;
 }
 function eg_server_error(){
  if(isset($GLOBALS['conn']))try{$GLOBALS['conn']->rollback();}catch(Throwable $ignore){}
@@ -31,8 +31,8 @@ foreach(['configdb.php','child_panel_lib.php','event_game_lib.php','riwayat_sche
  }
 }
 require __DIR__.'/configdb.php';require_once __DIR__.'/child_panel_lib.php';require_once __DIR__.'/event_game_lib.php';require_once __DIR__.'/riwayat_schema.php';
-if(!defined('EG_GAME_PROTOCOL_VERSION') || EG_GAME_PROTOCOL_VERSION!==2 || !function_exists('eg_daily')){
- eg_out(['ok'=>false,'code'=>'GAME_API_VERSION_MISMATCH','message'=>'Versi file API game tidak cocok. Upload event_game.php dan event_game_lib.php terbaru secara bersamaan.'],409);
+if(!defined('EG_GAME_PROTOCOL_VERSION') || EG_GAME_PROTOCOL_VERSION!==3 || !defined('CP_EVENT_MERCHANT_VERSION') || CP_EVENT_MERCHANT_VERSION!==1 || !function_exists('eg_daily')){
+ eg_out(['ok'=>false,'code'=>'GAME_API_VERSION_MISMATCH','message'=>'Versi file API game tidak cocok. Upload event_game.php, event_game_lib.php dan child_panel_lib.php terbaru secara bersamaan.'],409);
 }
 $conn->set_charset('utf8mb4');
 $raw=file_get_contents('php://input');$in=json_decode($raw,true);if(!is_array($in)||strlen($raw)>30000)eg_out(['ok'=>false,'message'=>'Data game tidak valid.'],400);
@@ -44,11 +44,15 @@ $st=cp_q($conn,'SELECT * FROM site_events WHERE id=?','i',$eid);$event=$st->get_
 if(!$event || $event['kind']!=='game')eg_out(['ok'=>false,'message'=>'Game event tidak ditemukan.'],404);
 $active=$event['status']!=='finished' && (!$event['starts_at']||strtotime($event['starts_at'].' UTC')<=time()) && (!$event['ends_at']||strtotime($event['ends_at'].' UTC')>time()) && ($event['status']==='ongoing'||$event['starts_at']);
 if(!$active)eg_out(['ok'=>false,'message'=>'Event belum dimulai atau sudah selesai.'],403);
+$tenant=cp_resolve($conn);
+if(cp_request_host() && !$tenant)eg_out(['ok'=>false,'message'=>'Child panel tidak aktif.'],403);
+$catalog=eg_catalog($tenant);
 eg_schema($conn);
 if(in_array($action,['buy','start','use'],true)) {
  // Refuse non-transactional tables: a history failure must roll back real money as well.
  $incompatible=[];
- foreach(($action==='buy'?['users','riwayat_pesanan','event_game_players','event_game_receipts','event_game_daily']:['event_game_players','event_game_receipts','event_game_daily']) as $table){
+ $extraTables=$tenant && $action==='buy'?['child_panel_orders','child_panel_activity']:[];
+ foreach(array_merge($extraTables,($action==='buy'?['users','riwayat_pesanan','event_game_players','event_game_receipts','event_game_daily']:['event_game_players','event_game_receipts','event_game_daily'])) as $table){
   $st=cp_q($conn,'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?','s',$table);
   $engine=$st->get_result()->fetch_assoc()['ENGINE']??'';$st->close();
   if(strtoupper($engine)!=='INNODB')$incompatible[]=$table.' ('.($engine ?: 'engine tidak terbaca').')';
@@ -69,7 +73,7 @@ try {
  if(in_array($action,['start','buy','use'],true))cp_q($conn,"INSERT IGNORE INTO event_game_players (event_id,user_id,inventory,bonus) VALUES (?,?,'{}','{\"f\":0,\"l\":0,\"v\":0,\"c\":0}')",'ii',$eid,(int)$uid)->close();
  $st=cp_q($conn,'SELECT * FROM event_game_players WHERE event_id=? AND user_id=? FOR UPDATE','ii',$eid,(int)$uid);$row=$st->get_result()->fetch_assoc();$st->close();
  if(!$row){
-  if($action==='get'){ $conn->commit();eg_out(['ok'=>true,'state'=>null,'wallet'=>['bal'=>(float)$u['balance'],'inv'=>(object)[],'bonus'=>['f'=>0,'l'=>0,'v'=>0,'c'=>0]],'revision'=>-1,'user_id'=>(string)$uid,'catalog'=>EG_PRODUCTS,'daily'=>eg_daily($conn,$uid)]); }
+  if($action==='get'){ $conn->commit();eg_out(['ok'=>true,'state'=>null,'wallet'=>['bal'=>(float)$u['balance'],'inv'=>(object)[],'bonus'=>['f'=>0,'l'=>0,'v'=>0,'c'=>0]],'revision'=>-1,'user_id'=>(string)$uid,'catalog'=>$catalog,'daily'=>eg_daily($conn,$uid)]); }
   throw new Exception('Data game tidak tersedia. Muat ulang lalu mulai permainan baru.');
  }
  if($action==='get' && $row['state_json']){
@@ -115,24 +119,26 @@ try {
  if($action==='buy'||$action==='use'){
   $request=(string)($in['request_id']??'');if(!preg_match('/^[a-f0-9-]{16,64}$/D',$request))throw new Exception('ID transaksi tidak valid.');
   $cart=[];$amount=0;$item='';
-  if($action==='buy')[$cart,$amount]=eg_cart($in['cart']??null);
+  if($action==='buy'){[$cart,$amount]=eg_cart($in['cart']??null,$catalog);[, $baseAmount]=eg_cart($in['cart']??null);}
   else {$item=(string)($in['item_id']??'');if(!isset(EG_PRODUCTS[$item]))throw new Exception('Item tidak valid.');}
-  $hash=hash('sha256',json_encode([$action,$cart,$item]));
+  $hash=hash('sha256',json_encode([$action,$cart,$item,$tenant['id']??0]));
   $st=cp_q($conn,'SELECT * FROM event_game_receipts WHERE event_id=? AND user_id=? AND request_id=?','iis',$eid,(int)$uid,$request);$receipt=$st->get_result()->fetch_assoc();$st->close();
-  if($receipt){if(!hash_equals($receipt['request_hash'],$hash))throw new Exception('ID transaksi sudah dipakai untuk permintaan lain.');$order=$receipt['order_id'];}
+  if($receipt){if(!hash_equals($receipt['request_hash'],$hash) && !(!$tenant && hash_equals($receipt['request_hash'],hash('sha256',json_encode([$action,$cart,$item])))))throw new Exception('ID transaksi sudah dipakai untuk permintaan lain.');$order=$receipt['order_id'];}
   else {
    if($action==='buy'){
+    if(!isset($in['expected_total']) || (float)$in['expected_total']!==(float)$amount)throw new Exception('Harga merchant berubah. Buka ulang merchant dan konfirmasi harga terbaru.');
     if(($in['confirm_real_balance']??false)!==true)throw new Exception('Konfirmasi penggunaan saldo website diperlukan.');
     $st=cp_q($conn,'UPDATE users SET balance=balance-? WHERE id=? AND balance>=?','did',$amount,(int)$uid,$amount);$changed=$st->affected_rows;$st->close();if($changed!==1)throw new Exception('Saldo website tidak cukup.');
     $u['balance']-=$amount;$order='EVG'.strtoupper(bin2hex(random_bytes(12)));$names=[];$qty=0;
     foreach($cart as $id=>$n){$inv[$id]=($inv[$id]??0)+$n;$qty+=$n;$names[]=EG_PRODUCTS[$id]['name'].' x'.$n;}
-    $service='Event Merchant: '.implode(', ',$names);$detail=json_encode(['event_id'=>$eid,'cart'=>$cart,'request_id'=>$request,'note'=>'Item virtual game; bukan followers/like akun sosial asli.']);
+    $service='Event Merchant: '.implode(', ',$names);$detail=json_encode(['event_id'=>$eid,'child_panel_id'=>$tenant['id']??null,'harga_dasar'=>$baseAmount,'cart'=>$cart,'request_id'=>$request,'note'=>'Item virtual game; bukan followers/like akun sosial asli.']);
     cp_q($conn,"INSERT INTO riwayat_pesanan (user_id,order_id,service_name,quantity,price,status,order_type,detail) VALUES (?,?,?,?,?,'selesai','event',?)",'issids',(int)$uid,$order,$service,$qty,$amount,$detail)->close();
+    if($tenant)cp_record_order($conn,$tenant['id'],(int)$uid,$order,'event',$service,$qty,$amount,$baseAmount);
    }else{if(empty($inv[$item]))throw new Exception('Item tidak tersedia.');$inv[$item]--;$p=EG_PRODUCTS[$item];$bonus[$p['kind']]=($bonus[$p['kind']]??0)+$p['amount'];}
    cp_q($conn,'UPDATE event_game_players SET inventory=?,bonus=? WHERE event_id=? AND user_id=?','ssii',json_encode((object)$inv),json_encode((object)$bonus),$eid,(int)$uid)->close();
    cp_q($conn,'INSERT INTO event_game_receipts (event_id,user_id,request_id,request_hash,action,order_id,amount) VALUES (?,?,?,?,?,?,?)','iissssd',$eid,(int)$uid,$request,$hash,$action,$order,$amount)->close();
   }
  }
  $st=cp_q($conn,'SELECT * FROM event_game_players WHERE event_id=? AND user_id=?','ii',$eid,(int)$uid);$row=$st->get_result()->fetch_assoc();$st->close();$conn->commit();
- eg_out(['ok'=>true,'order_id'=>$order,'user_id'=>(string)$uid,'catalog'=>EG_PRODUCTS,'daily'=>eg_daily($conn,$uid)]+eg_payload($row,$u['balance']));
+ eg_out(['ok'=>true,'order_id'=>$order,'user_id'=>(string)$uid,'catalog'=>$catalog,'daily'=>eg_daily($conn,$uid)]+eg_payload($row,$u['balance']));
 }catch(Throwable $e){$conn->rollback();eg_out(['ok'=>false,'message'=>$e instanceof mysqli_sql_exception?'Transaksi gagal; saldo dan item tidak diubah.':$e->getMessage()],400);}

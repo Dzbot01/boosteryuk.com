@@ -14,8 +14,8 @@ globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.
 let reduced=false;window.matchMedia=()=>({matches:reduced});
 const dir=mkdtempSync(path.join(tmpdir(),'event-ui-'));
 try{
- const {outputFiles}=await build({stdin:{contents:"export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {default as Button} from './src/components/TransactionButton';export {default as Poster} from './src/components/EventPoster';",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',write:false,loader:{'.css':'empty'},jsx:'automatic',define:{'process.env.NODE_ENV':'"development"'}});
- const file=path.join(dir,'bundle.cjs');writeFileSync(file,outputFiles[0].text);const {createElement:h,act,createRoot,Button,Poster}=require(file);
+ const {outputFiles}=await build({stdin:{contents:"export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {default as Button} from './src/components/TransactionButton';export {default as Poster} from './src/components/EventPoster';export {MusicProvider,useMusic} from './src/context/MusicContext';",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',write:false,loader:{'.css':'empty'},jsx:'automatic',define:{'process.env.NODE_ENV':'"development"','__MUSIC_URL__':'"/music.test.mp3"'}});
+ const file=path.join(dir,'bundle.cjs');writeFileSync(file,outputFiles[0].text);const {createElement:h,act,createRoot,Button,Poster,MusicProvider,useMusic}=require(file);
  let calls=0;const root=createRoot(document.getElementById('root'));
  await act(async()=>root.render(h(Button,{onClick:()=>calls++},'Pesan')));
  const button=document.querySelector('button');
@@ -32,6 +32,21 @@ try{
  assert.equal(document.querySelector('.aesthetic-switch').textContent,'Akan hadir');assert.equal(document.querySelector('.poster-card').disabled,true);assert.ok(!document.body.textContent.includes('Rahasia'));
  await act(async()=>root.render(h(Poster,{title:'Hitung mundur tahun baru',status:'ongoing',index:1,onOpen:()=>calls++})));
  assert.equal(document.querySelector('.aesthetic-switch').textContent,'Berlangsung');await act(async()=>document.querySelector('.poster-card').click());assert.equal(calls,3);
+ let music;const audios=[];let rejectPlay=false;
+ globalThis.Audio=class extends dom.window.EventTarget{
+  paused=true;src='';plays=0;pauses=0;
+  constructor(src){super();this.src=src;audios.push(this);}
+  play(){this.plays++;if(rejectPlay)return Promise.reject(new Error('Autoplay blocked'));this.paused=false;this.dispatchEvent(new dom.window.Event('play'));return Promise.resolve();}
+  pause(){this.pauses++;this.paused=true;this.dispatchEvent(new dom.window.Event('pause'));}
+ };
+ function MusicProbe(){music=useMusic();return null;}
+ await act(async()=>root.render(h(MusicProvider,null,h(MusicProbe))));
+ assert.equal(audios.length,1);assert.equal(audios[0].loop,true);
+ await act(async()=>{music.play();music.play();});assert.equal(audios.length,1);assert.equal(music.playing,true);assert.equal(audios[0].pauses,0,'idempotent start must not toggle music off');
+ await act(async()=>music.toggle());assert.equal(music.playing,false);
+ rejectPlay=true;await act(async()=>music.play());assert.equal(music.blocked,true);
+ rejectPlay=false;await act(async()=>music.toggle());assert.equal(music.playing,true);assert.equal(music.blocked,false);
  await act(async()=>root.unmount());
- console.log('PASS: delayed single order, disable/unmount cancellation, reduced motion, native form submit, poster status/coming-soon redaction/open.');
+ assert.ok(audios[0].pauses>=2,'provider cleanup pauses audio');
+ console.log('PASS: delayed single order, disable/unmount cancellation, reduced motion, native form submit, poster status/coming-soon redaction/open, shared loop music with blocked-autoplay recovery.');
 }finally{dom.window.close();rmSync(dir,{recursive:true,force:true});}

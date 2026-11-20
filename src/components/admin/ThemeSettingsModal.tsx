@@ -149,6 +149,7 @@ export default function ThemeSettingsModal({ open, onClose }: { open: boolean; o
               >
                 <RotateCcw className="h-3.5 w-3.5" /> Gambar bawaan
               </button>
+              <button type="button" disabled={saving} onClick={async()=>{setSaving(true);setHeroErr('');try{const r=await fetch('/themes/anime-new-year-fireworks.png');if(!r.ok)throw new Error('Gambar tema belum tersedia.');await pickHero(new File([await r.blob()],'anime-new-year.png',{type:'image/png'}));}catch(e){setHeroErr(e instanceof Error?e.message:'Gagal memuat tema.');}finally{setSaving(false);}}} className="overflow-hidden rounded-lg border border-slate-200 text-left disabled:opacity-50"><img src="/themes/anime-new-year-fireworks.png" alt="Tema Anime Tahun Baru dengan kembang api" className="h-16 w-36 object-cover"/><span className="block px-2 py-1 text-xs font-bold">Anime Tahun Baru</span></button>
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => void pickHero(e.target.files?.[0])} />
             </div>
             {heroErr && <p className="mt-2 text-[12px] font-semibold text-rose-600">{heroErr}</p>}

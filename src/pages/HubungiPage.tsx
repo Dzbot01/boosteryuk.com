@@ -1,3 +1,4 @@
+import { useSupportContacts } from '../lib/useSupportContacts';
 import {
   Phone,
   Mail,
@@ -14,13 +15,11 @@ import { useState } from 'react';
 
 import Reveal from '../components/Reveal';
 import {
-  ADMIN_EMAIL,
-  ADMIN_WHATSAPP,
-  ADMIN_WHATSAPP_INTL,
   socialIconUrl,
 } from '../constants';
 
 export default function HubungiPage() {
+  const {adminEmail:ADMIN_EMAIL,display:ADMIN_WHATSAPP,whatsapp:ADMIN_WHATSAPP_INTL}=useSupportContacts();
   const [copied, setCopied] = useState<string | null>(null);
 
   const copy = (value: string) => {
