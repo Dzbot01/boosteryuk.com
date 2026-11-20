@@ -1,5 +1,6 @@
 import {
   Home,
+  Gift,
   History,
   Phone,
   LogOut,
@@ -35,6 +36,7 @@ import { usePanelOwner } from '../services/panelApi';
 import { IS_CHILD_PANEL } from '../lib/apiBase';
 
 export type PageId =
+  | 'event'
   | 'home'
   | 'cek-status'
   | 'riwayat'
@@ -59,6 +61,7 @@ export type PageId =
 
 const ROUTE_PATH: Record<PageId, string> = {
   home: '/',
+  event: '/event',
   'cek-status': '/cek-status',
   riwayat: '/riwayat-pesanan',
   hubungi: '/hubungi',
@@ -124,6 +127,7 @@ const HIDDEN_PROFILE_ITEM = 'profil';
 export { baseMenu, authMenu };
 
 const ADMIN_MENU = [
+  { id: 'events' as const, icon: Gift, label: 'Kelola Event', desc: 'Jadwal & status event', path: '/admin/events' },
   { id: 'orders' as const, icon: ClipboardList, label: 'Data Pesanan', desc: 'Pesanan semua user', path: '/admin/orders' },
   { id: 'users' as const, icon: Users, label: 'Data User', desc: 'Saldo & data user', path: '/admin/users' },
   { id: 'deposits' as const, icon: Wallet, label: 'Data Deposit', desc: 'Deposit terbaru', path: '/admin/deposit' },
@@ -288,7 +292,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
         {/* Admin menus */}
         {isAdmin && (
           <ul className={`space-y-1 ${expanded ? '' : 'flex flex-col items-center'}`}>
-            {ADMIN_MENU.filter(item => item.id !== 'withdraw' || !IS_CHILD_PANEL).map((item) => {
+            {ADMIN_MENU.filter(item => !['withdraw','events'].includes(item.id) || !IS_CHILD_PANEL).map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.path || pathname.startsWith(item.path);
               return (
@@ -393,6 +397,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
             )}
           </>
         )}
+        <button onClick={() => { navigate('/event'); onClose(); }} title="Event" aria-label="Event" className={expanded ? expandedRow(pathname === '/event') : railRow(pathname === '/event')}><Gift className="h-[17px] w-[17px] shrink-0"/>{expanded && <span className="text-[13px] font-semibold">Event</span>}</button>
       </nav>
 
       {/* Footer: profil akun (dikembalikan seperti semula — profil di side menu; Playground tetap terpisah di header) + keluar */}
