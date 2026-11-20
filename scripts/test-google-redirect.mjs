@@ -10,6 +10,7 @@ globalThis.sessionStorage = storage(); globalThis.localStorage = storage();
 let assigned = ''; let cleaned = false;
 globalThis.window = { location: { hostname: 'tolestore.boosteryuk.com', search: '', assign: url => { assigned = url; } }, history: { replaceState: () => { cleaned = true; } } };
 const m = await load('success');
+globalThis.fetch = async (endpoint, options) => { assert.equal(endpoint, 'https://boosteryuk.com/api/google_auth.php?action=oauth_status'); assert.equal(options.cache, 'no-store'); return {ok:true,json:async()=>({ok:true,protocol:1,redirect_ready:true})}; };
 await m.startGoogleLogin();
 const url = new URL(assigned); assert.equal(url.origin, 'https://boosteryuk.com'); assert.equal(url.pathname, '/auth/google'); assert.equal(url.searchParams.get('return'), 'tolestore.boosteryuk.com');
 const verifier = sessionStorage.getItem(m.GOOGLE_PROOF_KEY); assert.match(verifier, /^[a-f0-9]{64}$/);
@@ -24,3 +25,12 @@ const expired = await load('expired'); sessionStorage.setItem(m.GOOGLE_PROOF_KEY
 globalThis.fetch = async () => ({ok:false,json:async()=>({ok:false,message:'Token kedaluwarsa'})});
 await assert.rejects(expired.finishGoogleLogin(),/kedaluwarsa/);
 console.log('PASS: central URL, browser proof SHA-256, query cleanup, single exchange (StrictMode), session storage, missing proof, cancellation, expired token.');
+
+assigned = '';
+globalThis.fetch = async () => ({ok:false,json:async()=>({ok:false,message:'Metode tidak didukung.'})});
+await assert.rejects(m.startGoogleLogin(),/versi lama/); assert.equal(assigned,'');
+globalThis.fetch = async () => ({ok:true,json:async()=>({ok:true,protocol:1,redirect_ready:false,message:'Secret belum diisi'})});
+await assert.rejects(m.startGoogleLogin(),/Secret belum diisi/); assert.equal(assigned,'');
+globalThis.fetch = async () => ({ok:true,json:async()=>{throw new Error('HTML');}});
+await assert.rejects(m.startGoogleLogin(),/versi lama/); assert.equal(assigned,'');
+console.log('PASS: stale PHP, incomplete OAuth config, and HTML errors block redirect and surface actionable errors.');

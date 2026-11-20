@@ -77,6 +77,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'client_
 $in = json_decode(file_get_contents('php://input'), true);
 if (!is_array($in)) $in = [];
 
+// Capture routing before configdb.php: included legacy config files must not overwrite it.
+define('GOOGLE_OAUTH_REQUEST_ACTION', (string)($_GET['action'] ?? ($in['action'] ?? '')));
+$oauthFile = __DIR__ . '/google_oauth_flow.php';
+if (GOOGLE_OAUTH_REQUEST_ACTION === 'oauth_status' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $ready = is_file($oauthFile) && (bool)$GOOGLE_CLIENT_ID && (bool)$GOOGLE_CLIENT_SECRET;
+    out(['ok'=>true, 'protocol'=>1, 'redirect_ready'=>$ready,
+        'message'=>$ready ? 'Login redirect tersedia.' : 'Upload google_auth.php dan google_oauth_flow.php terbaru, lalu isi GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET di server.']);
+}
+if (in_array(GOOGLE_OAUTH_REQUEST_ACTION, ['start','callback','exchange'], true) && !is_file($oauthFile)) {
+    out(['ok'=>false,'message'=>'File OAuth server belum lengkap. Upload google_auth.php dan google_oauth_flow.php dari versi yang sama.'],503);
+}
+
 /* ===================== Koneksi DB (pakai configdb.php, pola sama spt site_settings.php) ===================== */
 if (!is_file(__DIR__ . '/configdb.php')) out(['ok' => false, 'message' => 'configdb.php tidak ditemukan di folder api.']);
 require_once __DIR__ . '/configdb.php';
@@ -153,6 +165,13 @@ function http_get_json($url, $timeout = 10) {
 }
 
 require_once __DIR__ . '/google_oauth_flow.php';
+// Redirect actions must never fall through into the legacy ID-token POST handler.
+if (in_array(GOOGLE_OAUTH_REQUEST_ACTION, ['start','callback'], true) && !$oauthCallback) {
+    out(['ok'=>false,'message'=>'Handler redirect OAuth tidak cocok. Upload ulang kedua file PHP OAuth terbaru dan bersihkan OPcache hosting.'],503);
+}
+if (GOOGLE_OAUTH_REQUEST_ACTION === 'exchange' && !$oauthExchange) {
+    out(['ok'=>false,'message'=>'Handler pertukaran OAuth tidak cocok. Upload ulang kedua file PHP OAuth terbaru.'],503);
+}
 if (!$oauthExchange) {
 if (!$oauthCallback) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') out(['ok'=>false,'message'=>'Metode tidak didukung.'],405);
