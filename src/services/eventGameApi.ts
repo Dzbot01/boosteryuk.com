@@ -3,6 +3,8 @@ import { MAIN_API } from '../lib/apiBase';
 type GameResponse = {
   ok: boolean;
   message?: string;
+  code?: string;
+  payment_started?: boolean;
   revision?: number;
   catalog?: Record<string, { name: string; price: number }>;
   [key: string]: unknown;
@@ -44,6 +46,8 @@ export async function eventGameRequest(body: Record<string, unknown>): Promise<G
   } catch {
     throw new Error(`Respons API game tidak valid atau terpotong (${status}). Periksa log PHP dan proxy server.${uncertain}`);
   }
-  if (!response.ok || !data.ok) throw new Error((data.message || `Permintaan game gagal (${status}).`) + (response.status >= 500 ? uncertain : ''));
+  // Only this explicit pre-transaction rejection guarantees no payment was attempted.
+  const preflightRejected = data.ok === false && data.code === 'GAME_ENGINE_NOT_READY' && data.payment_started === false;
+  if (!response.ok || !data.ok) throw new Error((data.message || `Permintaan game gagal (${status}).`) + (response.status >= 500 && !preflightRejected ? uncertain : ''));
   return data;
 }

@@ -55,3 +55,11 @@ Pembelian memakai transaksi InnoDB dengan user/player row lock, pengurangan sald
 5. Setelah respons POST `get` valid, uji saldo kurang/saldo uji, riwayat, rollback, dan retry ID sama di staging. Respons pembayaran yang hilang bisa terjadi **sesudah commit**: cek saldo/riwayat terlebih dahulu, jangan membuat pembelian baru secara membabi buta. Klien tidak otomatis retry atau beralih endpoint saat gagal.
 
 Tes penanganan respons: `node scripts/test-event-game-api.mjs` mencakup JSON sukses, kosong, HTML, challenge, 404, JSON terpotong, bentuk JSON salah, penolakan API, putus koneksi, serta satu request per panggilan (tanpa auto-retry pembayaran).
+
+## Pembelian ditolak karena tabel belum InnoDB
+
+Jika membuka API membalas JSON “Gunakan POST.” tetapi membeli membalas “tabel transaksi harus InnoDB”, routing/file API sudah terbaca; pemeriksaan engine database menghentikan permintaan **sebelum transaksi dan sebelum pengurangan saldo**. Hal ini tidak menjamin hasil permintaan lain yang sebelumnya timeout. `CREATE TABLE IF NOT EXISTS ... ENGINE=InnoDB` tidak mengonversi tabel lama yang sudah ada, misalnya `users` atau `riwayat_pesanan` berbasis MyISAM.
+
+Gunakan **`php-api/event_game_innodb_migration.sql`** di phpMyAdmin database website. File menyediakan query pemeriksaan dan perintah ALTER yang sengaja dikomentari. Export backup lengkap, hentikan sementara semua transaksi/penulisan terkait (maintenance), pastikan InnoDB didukung, lalu jalankan hanya ALTER tabel yang belum InnoDB. Jika tabel tidak muncul, pastikan database benar dan jalankan migrasi pembuatan tabel terlebih dahulu. Jika hosting melarang ALTER/InnoDB, hubungi hosting; jangan menonaktifkan pengaman di PHP atau mengganti dengan MyISAM. ALTER melakukan implicit commit dan bisa mengunci tabel, jadi jangan jalankan sambil pembayaran aktif.
+
+Upload `event_game.php` terbaru untuk melihat nama tabel dan engine yang menghalangi. Respons preflight ini memiliki `code: GAME_ENGINE_NOT_READY`, `payment_started: false`; frontend terbaru tidak menambah peringatan pembayaran ambigu pada penolakan tersebut. Timeout/HTML/HTTP 500 lain tetap memperingatkan untuk memeriksa riwayat sebelum membayar ulang. Tidak ada konversi engine otomatis dari request pengguna, penghapusan tabel, atau perubahan saldo dalam migrasi ini; tetap uji perubahan engine dan transaksi di staging sebelum produksi.
