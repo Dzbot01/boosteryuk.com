@@ -30,7 +30,7 @@ const GAP_MS = 350;
 const IDLE_PROMO_MS = 16000;
 
 const PROMOS = [
-  'eh btw deposit QRIS dapet bonus 10% lhoo, lumayan banget kan?',
+  'eh btw deposit dapet bonus 3% lhoo, lumayan banget kan?',
   'upgrade ke plus cuma 5rb, Harga TERMURAH! gas lah ya?',
   'jangan lupa klaim garansi refill 30 hari kalo turun ya kak!',
   'abis order jangan lupa selalu cek status pesanannya ya~',

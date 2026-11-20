@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ChevronRight,
   LoaderCircle,
@@ -82,13 +82,14 @@ export default function DepositPage() {
         <p className="mt-1.5 text-[13.5px] text-slate-500 dark:text-slate-400">
           Pilih metode pembayaran untuk melakukan deposit saldo.
         </p>
+        <Link to="/riwayat-deposit" className="mt-3 inline-flex rounded-xl border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-600">Riwayat Deposit &amp; invoice aktif</Link>
       </Reveal>
 
       <Reveal delay={60}>
         <div className="mt-6 flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3.5 py-1.5 text-[11.5px] font-bold text-cyan-700 dark:bg-cyan-950/40 dark:border-cyan-800/60">
             <Sparkles className="h-3.5 w-3.5" strokeWidth={2.4} />
-            Bonus deposit aktif — 10% untuk QRIS
+            Bonus deposit aktif — 3% untuk semua channel
           </div>
           {fallback ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-[10.5px] font-bold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/40">

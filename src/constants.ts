@@ -32,9 +32,9 @@ export const DEPOSIT_METHODS: DepositMethod[] = [
   {
     id: 'qris',
     label: 'QRIS',
-    desc: 'Bonus 10% · Minimal deposit Rp 1.000',
+    desc: 'Bonus 3% · Minimal deposit Rp 1.000',
     image: QRIS_IMAGE,
-    bonus: 0.1,
+    bonus: 0.03,
     min: 1000,
     max: 10_000_000,
     closed: false,
@@ -47,7 +47,7 @@ export const DEPOSIT_METHODS: DepositMethod[] = [
     label: 'Bayar Manual',
     desc: 'Perlu konfirmasi admin',
     image: QRIS_IMAGE,
-    bonus: 0.1,
+    bonus: 0.03,
     min: 10_000,
     max: 10_000_000,
     note: 'Transfer ke Virtual Account, lalu saldo masuk setelah status PAID atau dikonfirmasi admin.',
@@ -108,14 +108,11 @@ export function waLink(message: string): string {
 }
 
 /**
- * Bonus deposit per channel (0.1 = 10%).
+ * Bonus deposit per channel (0.03 = 3%).
  * Ubah di sini bila kebijakan bonus berubah.
  */
 export function getDepositBonus(code: string): number {
-  const normalized = code.toUpperCase();
-  if (normalized === 'QRIS') return 0.1;
-  if (normalized === 'MANUAL') return 0.1;
-  return 0;
+  return code.trim() ? 0.03 : 0;
 }
 
 export function formatRupiah(value: number): string {

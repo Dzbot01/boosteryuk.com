@@ -218,9 +218,9 @@ export default function ManualDepositPage() {
                 <Receipt className="h-3.5 w-3.5" strokeWidth={2.4} />
                 Total Bayar
               </p>
-              <p className="mt-1.5 text-[22px] font-black leading-none text-slate-900 dark:text-white">{formatRupiah(amount)}</p>
+              <p className="mt-1.5 text-[22px] font-black leading-none text-slate-900 dark:text-white">{formatRupiah(amount + fee)}</p>
               <p className="mt-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">
-                {fee > 0 ? `Termasuk biaya channel ${formatRupiah(fee)}` : 'Tanpa biaya channel'}
+                {fee > 0 ? `Nominal ${formatRupiah(amount)} + estimasi biaya ${formatRupiah(fee)}` : 'Tanpa biaya channel'}
               </p>
             </div>
 
