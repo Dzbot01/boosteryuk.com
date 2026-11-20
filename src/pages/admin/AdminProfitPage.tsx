@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { ArrowUpRight, Banknote, CircleAlert, Info, Landmark, ReceiptText, TrendingUp, Wallet } from 'lucide-react';
 import AdminShell, { adminCard } from './AdminShell';
 import { adminDataApi, rupiah, type ProfitData } from '../../services/adminDataApi';
-import { fetchBalance } from '../../services/balanceApi';
 
 function Row({ k, v, strong }: { k: string; v: string; strong?: boolean }) {
   return (
@@ -41,14 +40,16 @@ function Card({ icon: Icon, tone, label, value, sub, children }: {
 export default function AdminProfitPage() {
   const [d, setD] = useState<ProfitData | null>(null);
   const [err, setErr] = useState('');
+  const [alert, setAlert] = useState('');
   const [prov, setProv] = useState<{ balance: number | null; msg: string; loading: boolean }>({ balance: null, msg: '', loading: true });
 
   const load = useCallback(async () => {
     setErr('');
     setProv((p) => ({ ...p, loading: true }));
-    const [r, b] = await Promise.all([adminDataApi.profit(), fetchBalance()]);
+    const [r, b] = await Promise.all([adminDataApi.profit(), adminDataApi.providerHealth()]);
     if (!r.ok) setErr(r.message || 'Gagal memuat data profit.');
     else setD(r);
+    setAlert(b.ok && b.shortfall > 0 ? (b.alert_sent ? 'Email alert saldo kurang dikirim ke boosteryukid@gmail.com.' : 'Saldo provider kurang. Email alert dibatasi tiap 6 jam; periksa konfigurasi Resend jika email belum diterima.') : '');
     setProv({ balance: b.ok ? b.balance : null, msg: b.ok ? '' : b.message || 'Saldo provider tidak bisa dimuat.', loading: false });
   }, []);
   useEffect(() => { void load(); }, [load]);
@@ -65,6 +66,7 @@ export default function AdminProfitPage() {
     <AdminShell title="My Profit" desc="Penghasilan dari SMM (markup), sewa Agen AI, dan paket Upgrade — transaksi, deposit masuk, dan saldo provider." loading={!d && !err} onRefresh={() => void load()}>
       {err && <p role="alert" className="mt-5 flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700 dark:bg-rose-950/40"><CircleAlert className="h-4 w-4" /> {err}</p>}
 
+      {alert && <p role="status" className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">{alert}</p>}
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <Card icon={TrendingUp} tone="bg-emerald-600" label="Penghasilan" value={inc ? rupiah(inc.month) : null} sub="SMM (markup) + Agen AI + Upgrade bulan ini">
           {inc && smmInc && (

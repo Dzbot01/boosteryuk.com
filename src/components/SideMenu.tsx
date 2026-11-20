@@ -128,6 +128,7 @@ const ADMIN_MENU = [
   { id: 'users' as const, icon: Users, label: 'Data User', desc: 'Saldo & data user', path: '/admin/users' },
   { id: 'deposits' as const, icon: Wallet, label: 'Data Deposit', desc: 'Deposit terbaru', path: '/admin/deposit' },
   { id: 'childpanel' as const, icon: Globe, label: 'Child Panel', desc: 'Subdomain reseller', path: '/admin/child-panel' },
+  { id: 'withdraw' as const, icon: Wallet, label: 'Request Withdraw Child Panel', desc: 'Permintaan pencairan pendapatan', path: '/admin/withdraw' },
   { id: 'profit' as const, icon: DollarSign, label: 'My Profit', desc: 'Ringkasan keuangan', path: '/admin/profit' },
   { id: 'website' as const, icon: Settings, label: 'Pengaturan Website', desc: 'Logo, brand & musik', path: '/admin/website' },
   { id: 'broadcast' as const, icon: Megaphone, label: 'Broadcast', desc: 'Broadcasting', path: '/admin/broadcast' },
@@ -287,7 +288,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
         {/* Admin menus */}
         {isAdmin && (
           <ul className={`space-y-1 ${expanded ? '' : 'flex flex-col items-center'}`}>
-            {ADMIN_MENU.map((item) => {
+            {ADMIN_MENU.filter(item => item.id !== 'withdraw' || !IS_CHILD_PANEL).map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.path || pathname.startsWith(item.path);
               return (

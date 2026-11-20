@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Globe, ExternalLink, Pencil, Trash2, X, Check, CircleAlert,
 } from 'lucide-react';
+import ChildPanelDetail from '../../components/childpanel/ChildPanelDetail';
 import Reveal from '../../components/Reveal';
 import { childPanelApi, type ChildPanel } from '../../services/childPanelApi';
 import { PanelEditor, emptyDraft, toDraft, ROOT, type Draft, type PanelEditorApi } from '../../components/childpanel/PanelEditor';
@@ -20,6 +21,7 @@ const ADMIN_API: PanelEditorApi = {
 export default function AdminChildPanelPage() {
   const navigate = useNavigate();
   const [panels, setPanels] = useState<ChildPanel[] | null>(null);
+  const [selected, setSelected] = useState<ChildPanel | null>(null);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -96,7 +98,7 @@ export default function AdminChildPanelPage() {
         {panels?.map((p) => {
           const logo = tenantAssetUrl(p, p.config?.logo);
           return (
-            <article key={p.id} className={`${card} flex flex-wrap items-center gap-4`}>
+            <article key={p.id} onClick={() => setSelected(p)} className={`${card} flex cursor-pointer flex-wrap items-center gap-4 hover:border-cyan-400`}>
               <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-700">
                 {logo ? <img src={logo} alt="" className="h-full w-full object-contain" /> : <Globe className="h-5 w-5 text-slate-400" />}
               </span>
@@ -107,14 +109,15 @@ export default function AdminChildPanelPage() {
                     {p.status === 'active' ? 'Aktif' : 'Ditangguhkan'}
                   </span>
                 </p>
-                <a href={`https://${p.hostname}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-cyan-700 hover:underline dark:text-cyan-400">
+                <a onClick={e => e.stopPropagation()} href={`https://${p.hostname}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-cyan-700 hover:underline dark:text-cyan-400">
                   {p.hostname} <ExternalLink className="h-3 w-3" />
                 </a>
                 <p className="mt-0.5 text-[11.5px] text-slate-400">
                   Markup SMM {p.markup_smm_pct}% · Agen AI {p.markup_agent_pct}%{p.owner_email ? ` · pemilik ${p.owner_email}` : ''}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                <button onClick={() => setSelected(p)} className="text-[12px] font-semibold text-cyan-700">Detail</button>
                 <button onClick={() => setDraft(toDraft(p))} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
                   <Pencil className="h-3.5 w-3.5" /> Atur
                 </button>
@@ -126,6 +129,8 @@ export default function AdminChildPanelPage() {
           );
         })}
       </div>
+
+      {selected && <ChildPanelDetail panel={selected} onClose={() => setSelected(null)} />}
 
       {draft && (
         <PanelEditor

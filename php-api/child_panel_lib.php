@@ -31,7 +31,7 @@ function cp_q($conn, $sql, $types = '', ...$params) {
     $st = $conn->prepare($sql);
     if (!$st) throw new Exception('Query gagal: ' . $conn->error);
     if ($types !== '') $st->bind_param($types, ...$params);
-    $st->execute();
+    if (!$st->execute()) throw new Exception('Query gagal dieksekusi.');
     return $st;
 }
 
@@ -104,6 +104,15 @@ function cp_ensure_schema($conn) {
         last_action    VARCHAR(30) NULL,
         PRIMARY KEY (child_panel_id, user_id),
         KEY idx_last_seen (child_panel_id, last_seen)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $conn->query("CREATE TABLE IF NOT EXISTS child_panel_income_adjustments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        child_panel_id INT NOT NULL,
+        admin_id INT NOT NULL,
+        amount DECIMAL(15,2) NOT NULL,
+        note VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_panel (child_panel_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     // Pencairan pendapatan markup pemilik panel (diproses manual oleh admin utama).
     $conn->query("CREATE TABLE IF NOT EXISTS child_panel_withdrawals (
@@ -415,13 +424,20 @@ function cp_wd_balance($conn, $panelId) {
                        FROM child_panel_withdrawals WHERE child_panel_id = ?", 'i', (int)$panelId);
     $w = $st->get_result()->fetch_assoc();
     $st->close();
+    $st = cp_q($conn, 'SELECT COALESCE(SUM(amount),0) total FROM child_panel_income_adjustments WHERE child_panel_id = ?', 'i', (int)$panelId);
+    $adjustment = (float)$st->get_result()->fetch_assoc()['total'];
+    $st->close();
     $earned = round((float)$e['earned'], 2);
     $cleared = round((float)$e['cleared'], 2);
+    $orderHeld = round($earned - $cleared, 2);
+    $earned += $adjustment;
+    $cleared += $adjustment;
     $paid = round((float)$w['paid'], 2);
     $pending = round((float)$w['pending'], 2);
     return [
         'earned'        => $earned,                       // total pendapatan (tanpa pesanan batal)
-        'held'          => round($earned - $cleared, 2),  // menunggu pesanan selesai / masa tahan
+        'debug_credit'  => $adjustment,
+        'held'          => $orderHeld,  // menunggu pesanan selesai / masa tahan
         'paid'          => $paid,
         'pending'       => $pending,
         'pending_count' => (int)$w['pending_count'],
