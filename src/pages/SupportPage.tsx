@@ -8,12 +8,14 @@ import {
   X,
 } from 'lucide-react';
 import { InfoLayout, TextSection } from '../components/InfoLayout';
-import { SUPPORT_EMAIL, WHATSAPP_ADMIN } from '../constants';
+import { useSupportContacts } from '../lib/useSupportContacts';
 
-const WA_URL = `https://wa.me/${WHATSAPP_ADMIN.intl}`;
+
 
 /** Halaman kontak support dengan modal pemberitahuan Customer Service. */
 export default function SupportPage() {
+  const {supportEmail:SUPPORT_EMAIL,supportWhatsapp:WHATSAPP_ADMIN}=useSupportContacts();
+  const WA_URL=`https://wa.me/${WHATSAPP_ADMIN.intl}`;
   const [noticeOpen, setNoticeOpen] = useState(true);
 
   // Modal bisa ditutup dengan Escape.

@@ -113,7 +113,7 @@ export default function AdminChildPanelPage() {
                   {p.hostname} <ExternalLink className="h-3 w-3" />
                 </a>
                 <p className="mt-0.5 text-[11.5px] text-slate-400">
-                  Markup SMM {p.markup_smm_pct}% · Agen AI {p.markup_agent_pct}%{p.owner_email ? ` · pemilik ${p.owner_email}` : ''}
+                  Markup SMM {p.markup_smm_pct}% · Agen AI {p.markup_agent_pct}% · Merchant {p.config?.merchantMarkupPct||0}%{p.owner_email ? ` · pemilik ${p.owner_email}` : ''}
                 </p>
               </div>
               <div className="flex gap-2" onClick={e => e.stopPropagation()}>

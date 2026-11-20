@@ -14,9 +14,10 @@ const waktu = (s: string) => {
   const d = new Date(s.replace(' ', 'T'));
   return isNaN(d.getTime()) ? s : new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d);
 };
-type Tab = 'ringkasan' | 'pesanan' | 'user' | 'markup' | 'withdraw';
+type Tab = 'merchant' | 'ringkasan' | 'pesanan' | 'user' | 'markup' | 'withdraw';
 const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
   { id: 'ringkasan', label: 'Ringkasan', icon: BarChart3 },
+  { id: 'merchant', label: 'Penghasilan Merchant', icon: Wallet },
   { id: 'pesanan', label: 'Pesanan', icon: ShoppingBag },
   { id: 'user', label: 'Aktivitas User', icon: Users },
   { id: 'markup', label: 'Markup', icon: Percent },
@@ -33,6 +34,7 @@ export default function PanelAdminPage() {
   const owner = usePanelOwner(user?.token);
   const [tab, setTab] = useState<Tab>('ringkasan');
   const [summary, setSummary] = useState<PanelSummary | null>(null);
+  const [merchantOrders,setMerchantOrders]=useState<PanelOrder[]|null>(null);
   const [orders, setOrders] = useState<PanelOrder[] | null>(null);
   const [users, setUsers] = useState<PanelUser[] | null>(null);
   const [err, setErr] = useState('');
@@ -84,7 +86,9 @@ export default function PanelAdminPage() {
 
   const load = useCallback(async () => {
     setErr('');
-    const [s, o, u] = await Promise.all([panelApi.summary(), panelApi.orders(100), panelApi.users()]);
+    const [s, o, u, m] = await Promise.all([panelApi.summary(), panelApi.orders(100), panelApi.users(),panelApi.merchantOrders()]);
+    setMerchantOrders(m.ok?m.orders||[]:[]);
+    if(!m.ok)setErr(m.message||'Gagal memuat penghasilan merchant.');
     if (!s.ok) setErr(s.message || 'Gagal memuat data panel.');
     else setSummary(s);
     setOrders(o.ok ? o.orders || [] : []);
@@ -156,6 +160,7 @@ export default function PanelAdminPage() {
         <div className="mt-4 space-y-4">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[
+              { label: 'Penghasilan merchant', value: summary ? rupiah(summary.merchant?.profit || 0) : null, icon: Wallet },
               { label: 'Total pendapatan (markup)', value: summary ? rupiah(summary.all.profit) : null, icon: Wallet },
               { label: 'Pendapatan bulan ini', value: summary ? rupiah(summary.month.profit) : null, icon: TrendingUp },
               { label: 'Pesanan bulan ini', value: summary ? `${summary.month.orders} pesanan` : null, icon: ShoppingBag },
@@ -184,7 +189,7 @@ export default function PanelAdminPage() {
                 <div><dt className="text-[11.5px] text-slate-400">Omzet bulan ini</dt><dd className="font-semibold">{rupiah(summary.month.omzet)}</dd></div>
                 <div><dt className="text-[11.5px] text-slate-400">Total pesanan</dt><dd className="font-semibold">{summary.all.orders}</dd></div>
                 <div><dt className="text-[11.5px] text-slate-400">Total omzet</dt><dd className="font-semibold">{rupiah(summary.all.omzet)}</dd></div>
-                <div><dt className="text-[11.5px] text-slate-400">Markup saat ini</dt><dd className="font-semibold">SMM {summary.panel.markup_smm_pct}% · Agen AI {summary.panel.markup_agent_pct}% · OTP {summary.panel.markup_otp_pct ?? 0}%</dd></div>
+                <div><dt className="text-[11.5px] text-slate-400">Markup saat ini</dt><dd className="font-semibold">SMM {summary.panel.markup_smm_pct}% · Agen AI {summary.panel.markup_agent_pct}% · OTP {summary.panel.markup_otp_pct ?? 0}% · Merchant {summary.panel.markup_event_pct??0}%</dd></div>
               </dl>
               <p className="mt-3 text-[11.5px] text-slate-500">
                 Pendapatan = harga yang dibayar user di panel ini − harga asli Boosteryuk (pesanan dibatalkan tidak dihitung).{' '}
@@ -195,9 +200,9 @@ export default function PanelAdminPage() {
         </div>
       )}
 
-      {tab === 'pesanan' && (
+      {(tab === 'pesanan'||tab==='merchant') && (
         <div className={`${card} mt-4 overflow-x-auto p-0`}>
-          <table className="w-full min-w-[720px] text-left text-[12.5px]">
+          {tab==='merchant'&&<div className="p-4"><h2 className="font-bold">Penghasilan Merchant Event: {rupiah(summary?.merchant?.profit||0)}</h2><p className="text-xs text-slate-500">{summary?.merchant?.orders||0} transaksi · omzet {rupiah(summary?.merchant?.omzet||0)}. Menampilkan hingga 200 pembelian merchant terbaru.</p></div>}<table className="w-full min-w-[720px] text-left text-[12.5px]">
             <thead className="border-b border-slate-100 bg-slate-50/70 text-[10.5px] uppercase tracking-wider text-slate-400 dark:border-slate-800 dark:bg-slate-800/40">
               <tr>
                 <th className="px-4 py-3">Waktu</th>
@@ -210,19 +215,19 @@ export default function PanelAdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {orders === null && (
+              {(tab==='merchant'?merchantOrders:orders) === null && (
                 <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Memuat…</td></tr>
               )}
-              {orders?.length === 0 && (
+              {(tab==='merchant'?merchantOrders:orders)?.length === 0 && (
                 <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Belum ada pesanan dari panel ini.</td></tr>
               )}
-              {orders?.map((o) => (
+              {(tab==='merchant'?merchantOrders:orders)?.map((o) => (
                 <tr key={`${o.kind}-${o.order_id}`}>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-500">{waktu(o.created_at)}</td>
                   <td className="px-4 py-3"><p className="font-semibold text-slate-800 dark:text-slate-100">{o.name || '—'}</p><p className="text-[11px] text-slate-400">{o.email}</p></td>
                   <td className="max-w-[240px] px-4 py-3">
                     <p className="truncate font-semibold text-slate-800 dark:text-slate-100" title={o.service_name}>{o.service_name}</p>
-                    <p className="text-[11px] text-slate-400">{o.kind === 'agent' ? 'Agen AI' : o.kind === 'otp' ? 'Nomor OTP' : 'SMM'} · #{o.order_id}</p>
+                    <p className="text-[11px] text-slate-400">{o.kind === 'event' ? 'Merchant Event' : o.kind === 'agent' ? 'Agen AI' : o.kind === 'otp' ? 'Nomor OTP' : 'SMM'} · #{o.order_id}</p>
                   </td>
                   <td className="px-4 py-3 text-right font-semibold">{rupiah(o.price)}</td>
                   <td className="px-4 py-3 text-right text-slate-500">{rupiah(o.base_price)}</td>
@@ -313,19 +318,21 @@ export default function PanelAdminPage() {
 function MarkupForm({ summary, onSaved }: { summary: PanelSummary; onSaved: (s: PanelSummary) => void }) {
   const [smm, setSmm] = useState(String(summary.panel.markup_smm_pct));
   const [agent, setAgent] = useState(String(summary.panel.markup_agent_pct));
+  const [eventMarkup,setEventMarkup]=useState(String(summary.panel.markup_event_pct??0));
   const [otp, setOtp] = useState(String(summary.panel.markup_otp_pct ?? 0));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const save = async () => {
     setSaving(true);
     setMsg(null);
-    const r = await panelApi.setMarkup(Number(smm) || 0, Number(agent) || 0, Number(otp) || 0);
+    const r = await panelApi.setMarkup(Number(smm) || 0, Number(agent) || 0, Number(otp) || 0, Number(eventMarkup)||0);
     setSaving(false);
     if (!r.ok) return setMsg({ ok: false, text: r.message || 'Gagal menyimpan.' });
     setSmm(String(r.markup_smm_pct));
     setAgent(String(r.markup_agent_pct));
     setOtp(String(r.markup_otp_pct ?? 0));
-    onSaved({ ...summary, panel: { ...summary.panel, markup_smm_pct: r.markup_smm_pct ?? 0, markup_agent_pct: r.markup_agent_pct ?? 0, markup_otp_pct: r.markup_otp_pct ?? 0 } });
+    setEventMarkup(String(r.markup_event_pct??0));
+    onSaved({ ...summary, panel: { ...summary.panel, markup_smm_pct: r.markup_smm_pct ?? 0, markup_agent_pct: r.markup_agent_pct ?? 0, markup_otp_pct: r.markup_otp_pct ?? 0, markup_event_pct:r.markup_event_pct??0 } });
     setMsg({ ok: true, text: 'Markup tersimpan. Harga di panel langsung mengikuti setelah halaman dimuat ulang.' });
   };
   const inp = 'h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] outline-none focus:border-cyan-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white';
@@ -334,7 +341,7 @@ function MarkupForm({ summary, onSaved }: { summary: PanelSummary; onSaved: (s: 
     <div className="mt-4 max-w-xl rounded-xl border border-slate-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">Margin markup harga</p>
       <p className="mt-1 text-[12px] text-slate-500">Persentase ditambahkan ke harga asli Boosteryuk (0–300%). Selisihnya menjadi pendapatan panelmu.</p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2"><label><span className="mb-1 block text-[11.5px] font-semibold text-slate-500">Merchant Event (%)</span><input className={inp} type="number" min={0} max={300} step={0.5} value={eventMarkup} onChange={e=>setEventMarkup(e.target.value)}/><span className="text-xs text-slate-500">Contoh Rp2.500 → {rupiah(ex(2500,eventMarkup))}</span></label>
         <label className="block">
           <span className="mb-1 block text-[11.5px] font-semibold text-slate-500">Layanan SMM (%)</span>
           <input className={inp} type="number" min={0} max={300} step={0.5} value={smm} onChange={(e) => setSmm(e.target.value)} />

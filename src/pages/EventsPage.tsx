@@ -1,3 +1,4 @@
+import { useMusic } from '../context/MusicContext';
 import EventPoster from '../components/EventPoster';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Gift, X, Clock3 } from 'lucide-react';
@@ -5,7 +6,7 @@ import Seo from '../components/Seo';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi, EVENT_LABEL, eventStatus, type SiteEvent, type EventStatus } from '../services/eventsApi';
 export default function EventsPage() {
-  const navigate=useNavigate();
+  const navigate=useNavigate();const {play}=useMusic();
   const [rows,setRows]=useState<SiteEvent[]>([]);const [loading,setLoading]=useState(true);const [err,setErr]=useState('');const [selected,setSelected]=useState<number|null>(null);const [now,setNow]=useState(Date.now());const offset=useRef(0);
   const load=useCallback(async()=>{const r=await eventsApi.list();setLoading(false);if(!r.ok)return setErr(r.message || 'Gagal memuat event.');setErr('');setRows(r.events || []);const t=Date.parse(r.server_time || '');if(Number.isFinite(t))offset.current=t-Date.now();},[]);
   useEffect(()=>{void load();const t=window.setInterval(()=>{if(document.visibilityState==='visible')void load();},30_000);return()=>window.clearInterval(t);},[load]);
@@ -16,9 +17,9 @@ export default function EventsPage() {
   return <main className="mx-auto max-w-5xl px-4 pb-32 pt-8 sm:px-6">
     <Seo title="Event"/><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-violet-500">Momen spesial</p><h1 className="mt-1 text-3xl font-extrabold">Event</h1><p className="mt-2 text-sm text-slate-500">Temukan event yang berlangsung dan nantikan kejutan berikutnya.</p></div></div>
     {loading && <p className="mt-8 text-sm text-slate-500">Memuat event…</p>}{err && <p role="alert" className="mt-5 text-sm text-rose-600">{err} <button onClick={()=>void load()} className="underline">Coba lagi</button></p>}
-    {(['ongoing','upcoming','finished'] as EventStatus[]).map(status=><section key={status} className="mt-8"><h2 className="mb-3 text-lg font-bold">{EVENT_LABEL[status]} {status==='upcoming' && <span className="text-xs font-normal text-slate-400">/ Coming soon</span>}</h2><div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {rows.filter(e=>effective(e)===status).map(e=><EventPoster key={e.id} title={e.title} status={status} index={e.id} onOpen={()=>e.kind==='game' && status==='ongoing'?navigate(`/event/${e.id}/game`):setSelected(e.id)}/>)}
-    </div>{!loading && !err && !rows.some(e=>effective(e)===status) && <p className="text-sm text-slate-400">Belum ada event di kategori ini.</p>}</section>)}
+    <section aria-label="Daftar event" className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {[...rows].sort((a,b)=>['ongoing','upcoming','finished'].indexOf(effective(a))-['ongoing','upcoming','finished'].indexOf(effective(b)) || a.id-b.id).map(e=><EventPoster key={e.id} title={e.title} status={effective(e)} index={e.id} onOpen={()=>{if(e.kind==='game' && effective(e)==='ongoing'){play();navigate(`/event/${e.id}/game`);}else setSelected(e.id);}}/>)}
+    </section>{!loading&&!err&&!rows.length&&<p className="mt-5 text-slate-400">Belum ada event.</p>}
     {active && <EventModal event={active} status={effective(active)} onClose={closeModal}/>}
   </main>;
 }

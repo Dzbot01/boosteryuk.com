@@ -10,7 +10,7 @@ function reply(text,status=200){globalThis.fetch=async(url,init)=>{
 };}
 const get={action:'get',token:'private-token',request_id:'same-id'};
 const buy={...get,action:'buy'};
-reply(JSON.stringify({ok:true,api_version:2,daily:{limit:5,remaining:4},wallet:{bal:500},revision:2}));assert.equal((await eventGameRequest(get)).revision,2);
+reply(JSON.stringify({ok:true,api_version:3,daily:{limit:5,remaining:4},wallet:{bal:500},revision:2}));assert.equal((await eventGameRequest(get)).revision,2);
 for(const [text,status,pattern] of [
  ['',200,/Game sedang ditutup, silakan cobalagi nanti\./],['<!DOCTYPE html><html>SPA fallback</html>',200,/Game sedang ditutup, silakan cobalagi nanti\./],
  ['<html><script src="aes.js"></script>toNumbers("test")</html>',200,/Game sedang ditutup, silakan cobalagi nanti\./],
@@ -32,11 +32,13 @@ reply(JSON.stringify({ok:true,wallet:{bal:500},revision:0}));
 await assert.rejects(eventGameRequest(get),e=>e.message===GAME_API_MISMATCH);
 reply(JSON.stringify({ok:false,message:'Aksi tidak valid.'}),400);
 await assert.rejects(eventGameRequest({...get,action:'start'}),e=>e.message===GAME_API_MISMATCH);
-reply(JSON.stringify({ok:false,api_version:2,code:'GAME_API_VERSION_MISMATCH'}),409);
+reply(JSON.stringify({ok:false,api_version:3,code:'GAME_API_VERSION_MISMATCH'}),409);
 await assert.rejects(eventGameRequest(get),e=>e.message===GAME_API_MISMATCH);
-reply(JSON.stringify({ok:true,api_version:2,daily:{limit:5,remaining:5},state:{run_id:'same-id'}}));
+reply(JSON.stringify({ok:true,api_version:3,daily:{limit:5,remaining:5},state:{run_id:'same-id'}}));
 assert.equal((await eventGameRequest({...get,action:'start'})).state.run_id,'same-id');
-reply(JSON.stringify({ok:true,api_version:2}));
+reply(JSON.stringify({ok:true,api_version:3}));
 await assert.rejects(eventGameRequest(get),e=>e.message===GAME_API_MISMATCH);
-assert.equal(calls,19,'exactly one fetch per call, no automatic payment retry/fallback');
+reply(JSON.stringify({ok:true,api_version:2,daily:{limit:5,remaining:5}}));
+await assert.rejects(eventGameRequest(get),e=>e.message===GAME_API_MISMATCH);
+assert.equal(calls,20,'exactly one fetch per call, no automatic payment retry/fallback');
 console.log('PASS: game API success, empty/HTML/challenge/404/truncated/invalid responses, API rejection, network errors, exact closure message, no retries.');

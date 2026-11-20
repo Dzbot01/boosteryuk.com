@@ -110,3 +110,38 @@ Sebelum produksi: uji 5 start berhasil, start ke-6 ditolak, resume/reload tidak 
 - Di Agen AI, tahap kartu harga/pilih paket kembali memakai tombol biasa yang langsung memilih paket. Animasi transaksi tetap hanya pada “Pesan Sekarang” di tahap pengisian data, dengan jeda sebelum submit seperti sebelumnya.
 
 Tes API mencakup backend lama tanpa versi, `start` tidak dikenal, helper tidak cocok, kuota hilang, serta get/start versi baru. Tes kontrak Agen AI memastikan kartu harga tidak memakai TransactionButton dan form tetap memakainya. Pengujian langsung hosting/MySQL belum dijalankan.
+
+## Update: grid gabungan, merchant child panel, kontak, musik dan hero
+
+### Tampilan event dan musik
+
+Seluruh status kini berada dalam **satu grid** yang sama, diurutkan Berlangsung → Akan hadir → Selesai. Badge/switch poster tetap menunjukkan status, dan judul/deskripsi coming soon tetap dirahasiakan. Grid responsif: satu kolom layar sempit, dua tablet, tiga desktop.
+
+Klik poster game memanggil `MusicContext.play()` dalam gesture pengguna sebelum navigasi. Halaman game juga mencoba start untuk deep link. Ini memakai **satu Audio website yang sudah ada**, track build website, loop aktif; tidak membuat musik kedua di iframe dan tidak mengubah track. Ada tombol Putar/Jeda pada halaman game. Browser tetap dapat melarang autoplay; bila demikian pengguna perlu mengetuk Putar musik. Perilaku musik di luar halaman game tetap memakai kontrol global.
+
+### Markup dan penghasilan merchant child panel
+
+- Pengaturan markup 0–300% ada pada editor toko (admin utama/pemilik EXTRA/Pengaturan Website toko) dan tab Markup admin child panel. Disimpan dalam **JSON config existing** `child_panels.config.merchantMarkupPct`, bukan menambah kolom atau mengubah engine users.
+- Harga unit = `ceil(harga_dasar × (1 + markup/100))`; total adalah jumlah harga unit × kuantitas. Default 0%. Katalog ditentukan server berdasarkan tenant hasil resolver host/Worker existing, bukan panel ID atau harga dari browser. Panel yang tidak aktif ditolak.
+- HTML merchant menampilkan katalog harga respons API. Konfirmasi saldo berasal dari katalog server di parent; `expected_total` harus sama dengan total yang dihitung ulang saat buy. Bila harga berubah, pembelian baru ditolak sebelum potong saldo agar pengguna mengonfirmasi ulang.
+- Dalam transaksi **yang sama** dengan saldo, inventori, history dan receipt, server memanggil ledger existing `cp_record_order` dengan kind `event`: harga dibayar, harga dasar, dan selisih profit. Tabel `child_panel_orders` dan `child_panel_activity` wajib InnoDB, ikut pemeriksaan sebelum pembayaran. Tidak ada konversi engine otomatis.
+- Receipt/hash terikat tenant untuk mencegah retry lintas toko diatribusikan ke toko lain. Retry receipt sama di toko sama tidak menambah saldo potong atau pendapatan. Receipt root lama tetap dapat dibaca ulang dengan hash legacy; tidak ada backfill pendapatan untuk transaksi sebelum fitur ini.
+- Tab **Penghasilan Merchant** menampilkan total omzet/profit/jumlah transaksi merchant (semua waktu) dan hingga 200 pembelian merchant terbaru dari toko tersebut saja. Ledger juga termasuk ringkasan total dan alur withdraw existing. Histori masih ditulis ke Riwayat Pesanan pengguna seperti biasa. Endpoint `record_order` browser menolak ID EVG agar transaksi ini tidak dicatat lagi sebagai SMM.
+
+### Kontak support toko
+
+Editor toko memiliki WhatsApp dan email support di config existing (`supportWhatsapp`, `supportEmail`), disanitasi server. Gunakan nomor kode negara, contoh `62812...`; UI juga menormalkan awalan 0 menjadi 62 saat membuat link. Halaman **Kontak Support** (termasuk modalnya) dan **Hubungi** memakai konfigurasi tenant yang sedang aktif, bukan kontak toko lain. Kosong berarti fallback kontak website existing. Kontak root tidak berubah. Setelah simpan, muat ulang halaman toko untuk mengambil konfigurasi baru.
+
+### Pilihan hero
+
+Gambar lampiran asli disertakan sebagai `public/themes/anime-new-year-fireworks.png` (tidak digenerasi ulang). Pilihan **Anime Tahun Baru** tersedia di Tema Website dan editor hero child panel. Memilihnya baru membuat draft/pratinjau; klik Simpan agar dikompres dan disimpan memakai alur upload gambar DB existing. Tidak mengganti hero otomatis; tombol bawaan/upload kustom tetap ada.
+
+### Deploy dan validasi
+
+1. **Rilis bersamaan** frontend terbaru (termasuk game HTML, CSS, dan folder themes) dan `child_panel.php`, `child_panel_lib.php`, `event_game.php`, `event_game_lib.php` ke PHP `/api`. Jangan mengganti configdb.php server.
+2. Protokol game sekarang **api_version 3**, helper game versi 3 dan marker helper merchant child panel diperiksa sebelum transaksi. Ini sengaja menolak campuran PHP lama yang belum menghitung markup. Bersihkan cache hosting/proxy/OPcache bila masih melayani versi lama. Tidak ada endpoint reset cache publik.
+3. Tidak perlu SQL migrasi baru: konfigurasi memakai JSON existing dan transaksi memakai ledger child panel existing. Migrasi game/kuota sebelumnya tetap harus sudah dijalankan. Tabel transaksi game/saldo/history dan ledger/activity child panel harus InnoDB; backup dan maintenance sebelum perubahan engine manual bila diperlukan.
+4. Tes lokal: build; tes API/bridge/sesi/event/avatar/OAuth; `scripts/test-child-event.mjs` untuk propagasi katalog merchant dan kontrak sumber tenant/quote/ledger/isolation; `scripts/test-event-ui.mjs` juga menguji Audio mock tunggal, loop, pause dan pemulihan autoplay blocked. Parser PHP lulus. Kontrak sumber bukan eksekusi MySQL.
+5. **Wajib staging**: root harga dasar; dua toko markup berbeda; harga daftar/konfirmasi/potongan tepat; profit = dibayar − dasar; satu transaksi/receipt/profit saat retry ID sama; gagal insert ledger/activity harus rollback saldo/history/inventori; penolakan `expected_total` lama tidak memotong saldo; tenant inactive/akses non-owner/data toko lain ditolak; transaksi merchant tidak tercatat ulang sebagai SMM; ringkasan dan withdraw tetap benar; markup save tidak menghapus kontak/brand; kontak/hero bertahan setelah reload; grid mobile/desktop; autoplay diblokir tetap bisa diputar manual dan tidak terdengar dua track.
+
+Belum ada pengujian runtime PHP/MySQL, transaksi saldo sungguhan, atau visual/audio perangkat nyata. Belum ada deployment atau perubahan database produksi.

@@ -13,6 +13,7 @@ const MUSIC_SRC = __MUSIC_URL__; // nama file musik unik tiap build (anti-cache 
 interface MusicCtx {
   /** Whether the track is currently playing. */
   playing: boolean;
+  play: () => void;
   /** Toggle play / pause. First click starts, second click stops. */
   toggle: () => void;
   /** Whether the onboarding tooltip should be visible. */
@@ -25,6 +26,7 @@ interface MusicCtx {
 
 const MusicContext = createContext<MusicCtx>({
   playing: false,
+  play: () => {},
   toggle: () => {},
   showTooltip: false,
   dismissTooltip: () => {},
@@ -75,6 +77,13 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setInteracted(true);
   }, []);
 
+  // Idempotent start: event navigation must not toggle an already playing track off.
+  const play = useCallback(() => {
+    setShowTooltip(false);setInteracted(true);
+    const audio=audioRef.current;if(!audio)return;
+    void audio.play().then(()=>{setPlaying(true);setBlocked(false);}).catch(()=>{setPlaying(false);setBlocked(true);});
+  }, []);
+
   /* ---------- play / pause toggle ---------- */
   const toggle = useCallback(() => {
     // Any interaction with the music button permanently hides the tooltip.
@@ -85,24 +94,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     if (!audio) return;
 
     if (audio.paused) {
-      audio
-        .play()
-        .then(() => {
-          setPlaying(true);
-          setBlocked(false);
-        })
-        .catch(() => {
-          setPlaying(false);
-          setBlocked(true);
-        });
+      play();
     } else {
       audio.pause();
       setPlaying(false);
     }
-  }, []);
+  }, [play]);
 
   return (
-    <MusicContext.Provider value={{ playing, toggle, showTooltip, dismissTooltip, blocked }}>
+    <MusicContext.Provider value={{ playing, play, toggle, showTooltip, dismissTooltip, blocked }}>
       {children}
     </MusicContext.Provider>
   );

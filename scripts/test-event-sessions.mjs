@@ -26,6 +26,6 @@ const form=agent.slice(agent.indexOf('function OrderForm'),agent.indexOf('functi
 assert.doesNotMatch(packages,/<TransactionButton/);
 assert.match(packages,/<button type="button" onClick=\{\(\) => onPick\(i\)\}/);
 assert.match(form,/<TransactionButton onClick=\{props.onSubmit\}/);
-assert.match(api,/api_version['"]=>2/);
-assert.match(api,/EG_GAME_PROTOCOL_VERSION!==2/);
+assert.match(api,/api_version['"]=>3/);
+assert.match(api,/EG_GAME_PROTOCOL_VERSION!==3/);
 console.log('PASS: start RPC, double-click guard, same-ID retry/new-ID next start, server quota/session/admin isolation source contracts, shared animation CSS parity. MySQL runtime still requires staging.');
