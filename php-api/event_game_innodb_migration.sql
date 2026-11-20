@@ -5,7 +5,7 @@
 --    worker/cron terkait, bukan hanya merchant. ALTER dapat mengunci/membangun ulang tabel,
 --    memerlukan ruang disk dan izin ALTER, serta melakukan implicit COMMIT.
 -- 4. Pastikan events.sql, riwayat_pesanan_migration.sql (bila perlu), dan
---    event_game.sql sudah dijalankan. CREATE IF NOT EXISTS tidak mengubah engine tabel lama.
+--    event_game.sql (atau event_game_daily.sql untuk update) sudah dijalankan. CREATE IF NOT EXISTS tidak mengubah engine tabel lama.
 -- 5. Jalankan pemeriksaan di bawah dahulu. Jika InnoDB tidak didukung/izin ditolak,
 --    hubungi hosting atau pindahkan DB. JANGAN hapus pemeriksaan keamanan di PHP.
 
@@ -14,7 +14,7 @@ SHOW ENGINES;
 SELECT TABLE_NAME, ENGINE
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE()
-  AND TABLE_NAME IN ('users', 'riwayat_pesanan', 'event_game_players', 'event_game_receipts')
+  AND TABLE_NAME IN ('users', 'riwayat_pesanan', 'event_game_players', 'event_game_receipts', 'event_game_daily')
 ORDER BY TABLE_NAME;
 
 -- Jalankan hanya ALTER untuk tabel yang belum InnoDB, satu per satu saat maintenance.
@@ -23,12 +23,13 @@ ORDER BY TABLE_NAME;
 -- ALTER TABLE `riwayat_pesanan` ENGINE=InnoDB;
 -- ALTER TABLE `event_game_players` ENGINE=InnoDB;
 -- ALTER TABLE `event_game_receipts` ENGINE=InnoDB;
+-- ALTER TABLE `event_game_daily` ENGINE=InnoDB;
 
--- Sesudah ALTER: pastikan ada EMPAT baris dan semuanya InnoDB.
+-- Sesudah ALTER: pastikan ada LIMA baris dan semuanya InnoDB.
 -- Verifikasi jumlah baris/data/saldo terhadap backup, lalu uji transaksi di staging.
 -- Saldo turun tepat sekali, inventori dan riwayat tercatat bersama, rollback/retry ID sama aman.
 SELECT TABLE_NAME, ENGINE
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE()
-  AND TABLE_NAME IN ('users', 'riwayat_pesanan', 'event_game_players', 'event_game_receipts')
+  AND TABLE_NAME IN ('users', 'riwayat_pesanan', 'event_game_players', 'event_game_receipts', 'event_game_daily')
 ORDER BY TABLE_NAME;

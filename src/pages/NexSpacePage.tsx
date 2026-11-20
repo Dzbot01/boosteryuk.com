@@ -1,3 +1,4 @@
+import TransactionButton from '../components/TransactionButton';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -303,13 +304,13 @@ export default function NexSpacePage() {
             <Link to="/deposit" className="mt-3 block text-center text-[12.5px] font-bold text-cyan-700 underline">Saldo kurang — deposit dulu</Link>
           )}
 
-          <button
+          <TransactionButton
             onClick={() => void order()}
             disabled={busy || !plan}
-            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 text-[14px] font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900"
+            className="w-full"
           >
             {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> {isStarted ? 'Membuat server…' : 'Memproses…'}</> : <><Server className="h-4 w-4" /> Bayar {rupiah(total)}</>}
-          </button>
+          </TransactionButton>
         </aside>
       </div>
 

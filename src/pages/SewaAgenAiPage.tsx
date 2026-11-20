@@ -1,3 +1,4 @@
+import TransactionButton from '../components/TransactionButton';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, LoaderCircle, CheckCircle2, AlertCircle, Smartphone, Bot } from 'lucide-react';
@@ -414,9 +415,9 @@ function PackageCarousel({ onPick }: { onPick: (i: number) => void }) {
                   );
                 })}
               </ul>
-              <button onClick={() => onPick(i)} className="mt-5 h-11 w-full rounded-xl bg-emerald-600 text-[14px] font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 active:scale-[0.99]">
+              <TransactionButton onClick={() => onPick(i)} className="w-full">
                 Pilih {t.name}
-              </button>
+              </TransactionButton>
             </div>
           </div>
         ))}
@@ -495,9 +496,9 @@ function OrderForm(props: {
             </div>
           )}
 
-          <button onClick={props.onSubmit} className="h-12 w-full rounded-xl bg-emerald-600 text-[14px] font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 active:scale-[0.99]">
+          <TransactionButton onClick={props.onSubmit} className="w-full">
             Pesan Sekarang
-          </button>
+          </TransactionButton>
         </div>
       </div>
     </Reveal>

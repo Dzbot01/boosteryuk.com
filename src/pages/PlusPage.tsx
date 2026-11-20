@@ -1,3 +1,4 @@
+import TransactionButton from '../components/TransactionButton';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, Sparkles, Crown, Loader2, CircleAlert, ExternalLink, ShieldCheck, BadgeCheck, Globe, Headset, TrendingUp, Tag } from 'lucide-react';
@@ -291,9 +292,9 @@ function CheckoutDialog({
             <>
               <Button variant="ghost" className="h-11 rounded-xl" onClick={onClose} disabled={loading}>Batal</Button>
               {enough ? (
-                <Button className="h-11 flex-1 rounded-xl font-bold" onClick={() => void pay()} disabled={loading} aria-busy={loading}>
+                <TransactionButton className="w-full" onClick={() => void pay()} disabled={loading} aria-busy={loading}>
                   {loading && <Loader2 className="animate-spin" />} {loading ? 'Memproses…' : `Bayar ${rupiah(price)}`}
-                </Button>
+                </TransactionButton>
               ) : (
                 <Button className="h-11 flex-1 rounded-xl font-bold" onClick={onDeposit}>Saldo kurang — Deposit</Button>
               )}

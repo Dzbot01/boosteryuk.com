@@ -1,5 +1,6 @@
+import EventPoster from '../components/EventPoster';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Gift, HelpCircle, X, Clock3, CheckCircle2 } from 'lucide-react';
+import { Gift, X, Clock3 } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi, EVENT_LABEL, eventStatus, type SiteEvent, type EventStatus } from '../services/eventsApi';
@@ -15,10 +16,8 @@ export default function EventsPage() {
   return <main className="mx-auto max-w-5xl px-4 pb-32 pt-8 sm:px-6">
     <Seo title="Event"/><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-violet-500">Momen spesial</p><h1 className="mt-1 text-3xl font-extrabold">Event</h1><p className="mt-2 text-sm text-slate-500">Temukan event yang berlangsung dan nantikan kejutan berikutnya.</p></div></div>
     {loading && <p className="mt-8 text-sm text-slate-500">Memuat event…</p>}{err && <p role="alert" className="mt-5 text-sm text-rose-600">{err} <button onClick={()=>void load()} className="underline">Coba lagi</button></p>}
-    {(['ongoing','upcoming','finished'] as EventStatus[]).map(status=><section key={status} className="mt-8"><h2 className="mb-3 text-lg font-bold">{EVENT_LABEL[status]} {status==='upcoming' && <span className="text-xs font-normal text-slate-400">/ Coming soon</span>}</h2><div className="grid gap-4 lg:grid-cols-2">
-      {rows.filter(e=>effective(e)===status).map(e=>status==='upcoming'?<div key={e.id} role="img" aria-label="Event akan hadir" className="flex min-h-32 cursor-not-allowed items-center justify-center rounded-2xl border border-slate-300 bg-slate-200 text-slate-400 dark:border-slate-700 dark:bg-slate-800"><HelpCircle className="h-14 w-14" strokeWidth={1.5}/></div>:<button key={e.id} onClick={()=>e.kind==='game' && status==='ongoing'?navigate(`/event/${e.id}/game`):setSelected(e.id)} className={`min-h-32 rounded-2xl border p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${status==='ongoing'?'border-violet-300 bg-gradient-to-br from-violet-700 to-fuchsia-700 text-white':'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
-        {status==='ongoing'?<Gift className="mb-5 h-7 w-7"/>:<CheckCircle2 className="mb-5 h-7 w-7 text-emerald-500"/>}<span className="text-[10px] font-bold uppercase tracking-widest opacity-70">{EVENT_LABEL[status]}</span><h3 className="mt-1 text-lg font-bold">{e.title}</h3><p className="mt-3 text-xs opacity-70">{e.kind==='game' && status==='ongoing'?'Mainkan game →':'Lihat detail →'}</p>
-      </button>)}
+    {(['ongoing','upcoming','finished'] as EventStatus[]).map(status=><section key={status} className="mt-8"><h2 className="mb-3 text-lg font-bold">{EVENT_LABEL[status]} {status==='upcoming' && <span className="text-xs font-normal text-slate-400">/ Coming soon</span>}</h2><div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {rows.filter(e=>effective(e)===status).map(e=><EventPoster key={e.id} title={e.title} status={status} index={e.id} onOpen={()=>e.kind==='game' && status==='ongoing'?navigate(`/event/${e.id}/game`):setSelected(e.id)}/>)}
     </div>{!loading && !err && !rows.some(e=>effective(e)===status) && <p className="text-sm text-slate-400">Belum ada event di kategori ini.</p>}</section>)}
     {active && <EventModal event={active} status={effective(active)} onClose={closeModal}/>}
   </main>;

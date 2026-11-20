@@ -13,3 +13,8 @@ CREATE TABLE IF NOT EXISTS event_game_receipts (
   order_id VARCHAR(64) NULL, amount DECIMAL(15,2) NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_request(event_id,user_id,request_id)
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS event_game_daily (
+  user_id INT NOT NULL, play_date DATE NOT NULL, plays TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY(user_id,play_date)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

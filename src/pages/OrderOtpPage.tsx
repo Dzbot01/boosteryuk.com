@@ -1,3 +1,4 @@
+import TransactionButton from '../components/TransactionButton';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -299,14 +300,14 @@ export default function OrderOtpPage() {
               </div>
             </FormSection>
 
-            <button
+            <TransactionButton
               onClick={() => void order()}
               disabled={!user || !tier || ordering || balance < (tier?.harga || 0)}
               className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-bold text-white shadow-lg shadow-cyan-600/20 transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-              style={{ background: COLOR.primary }}
+
             >
               {ordering ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Memproses nomor…</> : <><ShoppingCart className="h-4 w-4" strokeWidth={2.4} /> Pesan Nomor</>}
-            </button>
+            </TransactionButton>
 
             {notice && (
               <div role="status" aria-live="polite" className={`flex items-start gap-2 rounded-xl border px-3 py-3 text-[12px] leading-relaxed ${notice.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40' : 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800/60 dark:bg-rose-950/40'}`}>
