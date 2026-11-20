@@ -47,7 +47,11 @@ async function call<T>(action: string, body: Record<string, unknown> = {}): Prom
   }
 }
 
+export interface PanelDetail { panel: { id: number; owner_email: string | null; created_at: string; extra_started: string | null; expires_at: string | null }; balance: WdBalance & {debug_credit?: number}; credits: {id: number; admin_id: number; amount: number; note: string; created_at: string}[] }
+
 export const childPanelApi = {
+  detail: (id: number) => call<PanelDetail>('admin_detail', {id}),
+  credit: (id: number, amount: number, note: string) => call<PanelDetail>('admin_income_credit', {id, amount, note}),
   list: () => call<{ panels?: ChildPanel[]; root?: string }>('list'),
   check: (subdomain: string, id?: number) => call<{ available?: boolean; hostname?: string }>('check', { subdomain, id }),
   save: (panel: ChildPanelInput) => call<{ id?: number; hostname?: string; url?: string; panels?: ChildPanel[] }>('save', { panel }),

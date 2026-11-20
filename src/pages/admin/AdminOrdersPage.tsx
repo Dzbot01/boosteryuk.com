@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, CircleAlert, Copy, Loader2, RefreshCcw, Search, SearchCheck, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, CircleAlert, Copy, Pencil, Loader2, RefreshCcw, Search, SearchCheck, X } from 'lucide-react';
 import AdminShell, { adminCard, adminInput } from './AdminShell';
 import { adminDataApi, rupiah, TYPE_LABEL, type AdminOrder, type OrderStatus } from '../../services/adminDataApi';
 import { requestRefill } from '../../services/refillApi';
@@ -73,6 +73,19 @@ export default function AdminOrdersPage() {
     setInfo(null);
   };
 
+  const editId = async (o: AdminOrder) => {
+    if (busy) return;
+    setErr('');
+    const next = window.prompt('ID provider SMM baru (angka). Perubahan juga memperbarui relasi profit dan child panel.', o.order_id)?.trim();
+    if (!next || next === o.order_id) return;
+    if (!/^\d{1,64}$/.test(next)) return setErr('ID provider harus angka, maksimal 64 digit.');
+    if (!window.confirm(`Ganti ID #${o.order_id} menjadi #${next}?`)) return;
+    setBusy(`e${o.id}`);
+    const r = await adminDataApi.setOrderId(o.id, next);
+    setBusy('');
+    if (!r.ok) return setErr(r.message || 'Gagal mengganti ID.');
+    setRows(list => list?.map(x => x.id === o.id ? {...x, order_id: r.order_id} : x) || null);
+  };
   const pages = Math.max(1, Math.ceil(total / perPage));
   const iconBtn = 'flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-30 dark:border-slate-600 dark:text-slate-300';
 
@@ -141,11 +154,14 @@ export default function AdminOrdersPage() {
                           ? <a href={o.target} target="_blank" rel="noreferrer noopener" className="font-medium text-cyan-700 hover:underline dark:text-cyan-400">{o.target}</a>
                           : <span className="font-medium text-slate-700 dark:text-slate-200">{o.target}</span>)
                       : <span className="text-slate-300 dark:text-slate-600">—</span>}
+                    {o.target && <button className="ml-2 inline-flex text-cyan-700" title="Salin target" onClick={() => void navigator.clipboard.writeText(o.target!).then(() => { setCopied(-o.id); window.setTimeout(() => setCopied(0),1200); }).catch(() => setErr('Tidak dapat menyalin target.'))}>{copied === -o.id ? <Check className="h-3.5 w-3.5"/> : <Copy className="h-3.5 w-3.5"/>}</button>}
                   </td>
                   <td className="px-4 py-3">
                     <button type="button" onClick={() => void navigator.clipboard?.writeText(o.order_id).then(() => { setCopied(o.id); window.setTimeout(() => setCopied(0), 1200); })} className="inline-flex items-center gap-1 font-mono text-[12px] font-bold text-slate-600 hover:text-cyan-700 dark:text-slate-300" title="Salin ID">
                       #{o.order_id} {copied === o.id ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3 opacity-40" />}
                     </button>
+                    {o.type === 'smm' && <button disabled={!!busy} onClick={() => void editId(o)} className="ml-2 inline-flex text-cyan-700 disabled:opacity-50" title="Ubah ID pesanan" aria-label={`Ubah ID pesanan ${o.order_id}`}><Pencil className="h-3.5 w-3.5"/></button>}
+                    {pid && <button disabled={!!busy} onClick={() => void status_(o)} className="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-cyan-700 disabled:opacity-50" title={`Cek ID ${o.order_id}`}><SearchCheck className="h-3.5 w-3.5"/> Cek</button>}
                   </td>
                   <td className="px-4 py-3 text-right font-mono">{o.quantity.toLocaleString('id-ID')}</td>
                   <td className="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-100">{rupiah(o.price)}</td>

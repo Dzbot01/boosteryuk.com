@@ -295,6 +295,34 @@ function cp_sub_taken($conn, $sub, $exceptPanelId = 0) {
 }
 
 try {
+    if ($action === 'admin_detail' || $action === 'admin_income_credit') {
+        $pid = (int)($in['id'] ?? 0);
+        $st = cp_q($conn, "SELECT p.*, d.hostname, u.email owner_email FROM child_panels p LEFT JOIN child_panel_domains d ON d.child_panel_id=p.id AND d.is_primary=1 LEFT JOIN users u ON u.id=p.owner_user_id WHERE p.id=?", 'i', $pid);
+        $panel = $st->get_result()->fetch_assoc(); $st->close();
+        if (!$panel) cp_out(['ok'=>false, 'message'=>'Panel tidak ditemukan.'],404);
+        if ($action === 'admin_income_credit') {
+            $amount = $in['amount'] ?? null;
+            $note = cp_str($in['note'] ?? '',255);
+            if (!is_numeric($amount) || !is_finite((float)$amount) || (float)$amount <= 0 || (float)$amount > 100000000 || strlen($note)<3) cp_out(['ok'=>false,'message'=>'Nominal harus 1–100.000.000 dan catatan wajib diisi.'],400);
+            $admin = cp_user_id($conn, $in['token'] ?? '');
+            $conn->begin_transaction();
+            try {
+                cp_q($conn, 'SELECT id FROM child_panels WHERE id=? FOR UPDATE', 'i', $pid)->close();
+                cp_q($conn, 'INSERT INTO child_panel_income_adjustments (child_panel_id,admin_id,amount,note) VALUES (?,?,?,?)', 'iids', $pid, (int)$admin, round((float)$amount,2), $note)->close();
+                $conn->commit();
+            } catch (Throwable $e) { $conn->rollback(); throw $e; }
+        }
+        $started = null;
+        $hasPlans = $conn->query("SHOW TABLES LIKE 'user_plans'");
+        if ($hasPlans && $hasPlans->num_rows) {
+            $st = cp_q($conn, 'SELECT extra_started FROM user_plans WHERE user_id=?', 'i', (int)$panel['owner_user_id']);
+            $started = $st->get_result()->fetch_assoc()['extra_started'] ?? null; $st->close();
+        }
+        $st = cp_q($conn, 'SELECT id,admin_id,amount,note,created_at FROM child_panel_income_adjustments WHERE child_panel_id=? ORDER BY id DESC LIMIT 50', 'i', $pid);
+        $credits = $st->get_result()->fetch_all(MYSQLI_ASSOC); $st->close();
+        cp_out(['ok'=>true,'panel'=>['id'=>$pid,'owner_email'=>$panel['owner_email'],'created_at'=>$panel['created_at'],'extra_started'=>$started,'expires_at'=>$panel['expires_at'] ?? null], 'balance'=>cp_wd_balance($conn,$pid), 'credits'=>$credits]);
+    }
+
     if ($action === 'list') cp_out(['ok' => true, 'panels' => cp_list($conn), 'root' => CP_ROOT_DOMAIN]);
 
     /* ----- Withdraw Request (pencairan pemilik child panel) ----- */

@@ -77,6 +77,60 @@ function ad_user_select($conn) {
     return "u.name AS user_name, " . (isset($c['username']) ? 'u.username' : 'NULL') . " AS username, u.email AS user_email";
 }
 
+// Saldo provider dibaca langsung di server, tidak mempercayai nominal dari browser.
+if ($action === 'provider_health') {
+    require __DIR__ . '/config.php';
+    $ch = curl_init(rtrim($BASE_URL,'/') . '/balance');
+    curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>http_build_query(['api_id'=>(int)$API_ID,'api_key'=>$API_KEY]),CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>15]);
+    $raw = curl_exec($ch); $http = curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
+    $j = json_decode((string)$raw,true);
+    $value = $j['balance'] ?? $j['data']['balance'] ?? null;
+    if ($http !== 200 || ($j['status'] ?? null) === false || !is_numeric($value) || !is_finite((float)$value) || (float)$value < 0) ad_out(['ok'=>false,'message'=>'Saldo provider tidak dapat diverifikasi.'],502);
+    $balance = (float)$value;
+    $total = (float)$conn->query('SELECT COALESCE(SUM(balance),0) total FROM users')->fetch_assoc()['total'];
+    $sent = false;
+    if ($balance < $total) {
+        $conn->query("CREATE TABLE IF NOT EXISTS admin_alert_state (name VARCHAR(64) PRIMARY KEY, sent_at DATETIME NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $lock = $conn->query("SELECT GET_LOCK('provider_balance_alert',0) acquired")->fetch_assoc();
+        if ((int)$lock['acquired'] === 1) {
+            try {
+                $row = $conn->query("SELECT sent_at FROM admin_alert_state WHERE name='provider_balance'")->fetch_assoc();
+                if (!$row || !$row['sent_at'] || strtotime($row['sent_at']) < time()-21600) {
+                    $rp = function($n) { return 'Rp'.number_format($n,0,',','.'); };
+                    $sent = cp_send_email('boosteryukid@gmail.com','ALERT: Saldo provider kurang — segera isi ulang', '<h2>Saldo provider tidak mencukupi</h2><p>Segera isi ulang saldo provider.</p><p>Saldo provider: '.$rp($balance).'<br>Total saldo semua user: '.$rp($total).'<br>Kekurangan: '.$rp($total-$balance).'</p><p>Waktu server: '.date('Y-m-d H:i:s').'</p>');
+                    if ($sent) $conn->query("INSERT INTO admin_alert_state (name,sent_at) VALUES ('provider_balance',NOW()) ON DUPLICATE KEY UPDATE sent_at=NOW()");
+                }
+            } finally { $conn->query("SELECT RELEASE_LOCK('provider_balance_alert')"); }
+        }
+    }
+    ad_out(['ok'=>true,'balance'=>$balance,'total_user_balance'=>$total,'shortfall'=>max(0,$total-$balance),'alert_sent'=>$sent]);
+}
+
+if ($action === 'order_id') {
+    $id = (int)($in['id'] ?? 0); $new = trim((string)($in['order_id'] ?? ''));
+    if (!preg_match('/^[0-9]{1,64}$/',$new)) ad_out(['ok'=>false,'message'=>'ID provider SMM harus angka (maksimal 64 digit).'],400);
+    $conn->query("CREATE TABLE IF NOT EXISTS admin_order_id_log (id INT AUTO_INCREMENT PRIMARY KEY, history_id INT NOT NULL, admin_id INT NOT NULL, old_id VARCHAR(64) NOT NULL, new_id VARCHAR(64) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $conn->begin_transaction();
+    try {
+        $st=cp_q($conn,'SELECT r.*, ('.AD_TYPE_SQL.') kind FROM riwayat_pesanan r WHERE r.id=? FOR UPDATE','i',$id);
+        $o=$st->get_result()->fetch_assoc(); $st->close();
+        if (!$o || $o['kind'] !== 'smm') { $conn->rollback(); ad_out(['ok'=>false,'message'=>'Penggantian ID provider hanya untuk pesanan SMM.'],400); }
+        $st=cp_q($conn,'SELECT id FROM riwayat_pesanan WHERE order_id=? AND id<>? LIMIT 1','si',$new,$id);
+        $duplicate=$st->get_result()->fetch_assoc(); $st->close();
+        if ($duplicate) { $conn->rollback(); ad_out(['ok'=>false,'message'=>'ID sudah digunakan pesanan lain.'],409); }
+        cp_q($conn,'UPDATE riwayat_pesanan SET order_id=? WHERE id=?','si',$new,$id)->close();
+        foreach (['smm_order_profit','child_panel_orders'] as $table) {
+            if (ad_cols($conn,$table)) {
+                $kind = $table === 'child_panel_orders' ? " AND kind='smm'" : '';
+                cp_q($conn,"UPDATE $table SET order_id=? WHERE order_id=? AND user_id=?$kind",'ssi',$new,$o['order_id'],(int)$o['user_id'])->close();
+            }
+        }
+        cp_q($conn,'INSERT INTO admin_order_id_log (history_id,admin_id,old_id,new_id) VALUES (?,?,?,?)','iiss',$id,$adminId,$o['order_id'],$new)->close();
+        $conn->commit();
+        ad_out(['ok'=>true,'order_id'=>$new]);
+    } catch (Throwable $e) { $conn->rollback(); ad_out(['ok'=>false,'message'=>'Gagal mengganti ID. Pastikan ID belum digunakan dan tabel mendukung transaksi.'],409); }
+}
+
 /* ===================== PESANAN ===================== */
 if ($action === 'orders') {
     $where = ['1=1']; $types = ''; $args = [];
