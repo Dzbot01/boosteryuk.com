@@ -1,9 +1,35 @@
 <?php
+// Keep warnings/HTML from included hosting files out of the JSON response.
+ob_start();
+ini_set('display_errors','0');
 header('Access-Control-Allow-Origin: *');header('Access-Control-Allow-Methods: POST, OPTIONS');header('Access-Control-Allow-Headers: Content-Type');header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+$egResponded=false;
+function eg_out($data,$code=200){
+ $GLOBALS['egResponded']=true;
+ while(ob_get_level()>0)ob_end_clean();
+ http_response_code($code);
+ header('Content-Type: application/json; charset=utf-8');
+ echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);exit;
+}
+function eg_server_error(){
+ if(isset($GLOBALS['conn']))try{$GLOBALS['conn']->rollback();}catch(Throwable $ignore){}
+ eg_out(['ok'=>false,'message'=>'API game belum siap. Periksa file pendukung, log PHP, dan database server. Jika sedang membeli, periksa saldo dan riwayat sebelum mencoba lagi.'],500);
+}
+set_exception_handler(function($e){error_log('event_game: '.$e->getMessage());eg_server_error();});
+register_shutdown_function(function(){
+ if(!empty($GLOBALS['egResponded']) || $_SERVER['REQUEST_METHOD']==='OPTIONS')return;
+ $last=error_get_last();
+ if($last)error_log('event_game shutdown: '.$last['message']);
+ eg_server_error();
+});
 if($_SERVER['REQUEST_METHOD']==='OPTIONS'){http_response_code(204);exit;}
-function eg_out($data,$code=200){http_response_code($code);echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);exit;}
-set_exception_handler(function($e){if(isset($GLOBALS['conn']))try{$GLOBALS['conn']->rollback();}catch(Throwable $ignore){}eg_out(['ok'=>false,'message'=>'Transaksi game belum dapat diproses. Periksa API/database lalu coba lagi.'],500);});
 if($_SERVER['REQUEST_METHOD']!=='POST')eg_out(['ok'=>false,'message'=>'Gunakan POST.'],405);
+foreach(['configdb.php','child_panel_lib.php','event_game_lib.php','riwayat_schema.php'] as $file){
+ if(!is_file(__DIR__.'/'.$file)){
+  error_log('event_game missing dependency: '.$file);
+  eg_out(['ok'=>false,'message'=>'File API game belum lengkap di server. Upload event_game.php, event_game_lib.php, child_panel_lib.php, riwayat_schema.php dan pastikan configdb.php tersedia di folder /api.'],503);
+ }
+}
 require __DIR__.'/configdb.php';require_once __DIR__.'/child_panel_lib.php';require_once __DIR__.'/event_game_lib.php';require_once __DIR__.'/riwayat_schema.php';
 $conn->set_charset('utf8mb4');
 $raw=file_get_contents('php://input');$in=json_decode($raw,true);if(!is_array($in)||strlen($raw)>30000)eg_out(['ok'=>false,'message'=>'Data game tidak valid.'],400);

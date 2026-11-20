@@ -42,3 +42,16 @@ Pembelian memakai transaksi InnoDB dengan user/player row lock, pengurangan sald
 5. Paksa kegagalan insert riwayat/receipt: saldo dan inventori harus rollback. Coba engine non-InnoDB: pembayaran harus ditolak tanpa potongan.
 6. Seret item: inventori turun satu, bonus naik sesuai katalog, reload tetap sama. Retry ID konsumsi sama tidak mengurangi lagi. Tidak ada panggilan provider atau saldo/hadiah gratis dari HTML.
 7. Pastikan order Event muncul pada filter riwayat pengguna/admin, bukan SMM atau estimasi markup SMM; checkout SMM/OTP/VPS/agen dan avatar/OAuth lama tetap bekerja.
+
+
+## Jika merchant menampilkan error JSON / HTML
+
+`Unexpected end of JSON input` berarti respons kosong/terpotong. `Unexpected token '<'` berarti respons berupa HTML (misalnya 404, fallback SPA, halaman proteksi hosting, atau output error PHP), bukan bukti saldo kurang. Penyebab spesifik perlu dilihat dari status/respons di Network dan log hosting; frontend tidak dapat memperbaiki upload atau routing server secara otomatis.
+
+1. Pastikan **backend ikut di-upload**, bukan hanya hasil build frontend. Upload versi terbaru `event_game.php`, `event_game_lib.php`, `child_panel_lib.php`, `riwayat_schema.php` ke `/api` hosting PHP; pertahankan `configdb.php` server. SQL ada di langkah Deploy di atas.
+2. Buka `/api/event_game.php` pada host API yang dipakai website (domain utama: `https://boosteryuk.com/api/event_game.php`; app/child: host masing-masing). GET seharusnya membalas **HTTP 405 JSON** `Gunakan POST.`, bukan halaman website/404. Ini hanya memeriksa file/routing, belum membuktikan koneksi DB/transaksi berhasil.
+3. Jika HTML proteksi hosting, periksa Worker/proxy yang sudah ada dan route `/api/*`; jangan arahkan API ke `index.html`. Worker app existing sudah meneruskan semua path `/api/*`, tidak memiliki allowlist endpoint game.
+4. Jika respons kosong/HTTP 500, periksa log PHP. Endpoint terbaru membuang output warning/include dari respons JSON, melaporkan file pendukung yang hilang, dan mencatat exception/fatal ke log server tanpa membocorkan detail ke browser. Ini tidak dapat menangkap error dari webserver/proxy sebelum PHP dijalankan.
+5. Setelah respons POST `get` valid, uji saldo kurang/saldo uji, riwayat, rollback, dan retry ID sama di staging. Respons pembayaran yang hilang bisa terjadi **sesudah commit**: cek saldo/riwayat terlebih dahulu, jangan membuat pembelian baru secara membabi buta. Klien tidak otomatis retry atau beralih endpoint saat gagal.
+
+Tes penanganan respons: `node scripts/test-event-game-api.mjs` mencakup JSON sukses, kosong, HTML, challenge, 404, JSON terpotong, bentuk JSON salah, penolakan API, putus koneksi, serta satu request per panggilan (tanpa auto-retry pembayaran).

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MAIN_API } from '../lib/apiBase';
+import { eventGameRequest } from '../services/eventGameApi';
 import Seo from '../components/Seo';
 export default function EventGamePage(){
  const {id}=useParams();const {user,refresh}=useAuth();const frame=useRef<HTMLIFrameElement>(null);const [channel]=useState(()=>crypto.randomUUID());const [error,setError]=useState('');const [bridgeReady,setBridgeReady]=useState(false);
@@ -29,12 +29,10 @@ export default function EventGamePage(){
       if(!window.confirm(`Gunakan saldo WEBSITE sebesar Rp${total.toLocaleString('id-ID')} untuk item virtual game ini? Pembelian akan masuk Riwayat Pesanan. Bukan followers/like sosial media asli.`))throw new Error('Pembelian dibatalkan.');
       body.cart=cart;body.request_id=m.payload.request_id;body.confirm_real_balance=true;
      }
-     const response=await fetch(`${MAIN_API}/event_game.php`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store',signal:AbortSignal.timeout(20000)});
-     result=await response.json();
-     if(!response.ok||!result.ok)throw new Error(result.message || 'Permintaan game gagal.');
+     result=await eventGameRequest(body);
      if(typeof result.revision==='number' && (revision===null || m.action==='save'))revision=result.revision;
      if(result.catalog)catalog=result.catalog;
-     if(m.action==='buy')void refreshRef.current();
+     if(m.action==='buy')void refreshRef.current().catch(()=>{if(active)setError('Pembelian berhasil, tetapi saldo header belum diperbarui. Periksa Riwayat Pesanan sebelum membeli lagi.');});
      setError('');
     }catch(e){const message=e instanceof Error?e.message:'Tidak dapat menghubungi server game.';result={ok:false,message};setError(message);}
     if(active)frame.current?.contentWindow?.postMessage({type:'boosteryuk-game-result',channel,id:m.id,result},'*');
