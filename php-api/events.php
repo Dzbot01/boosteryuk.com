@@ -25,8 +25,9 @@ function ev_schema($conn) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     // Idempotent initial events. No delete endpoint: edits are not overwritten on reload.
     $conn->query("INSERT IGNORE INTO site_events (id,title,description,kind,status,ends_at) VALUES
-        (1,'Hitung mundur tahun baru','Sambut tahun baru bersama! Hitung mundur menuju 1 Januari 2027 pukul 00.00 WIB.','countdown','ongoing','2026-12-31 17:00:00'),
+        (1,'Hitung mundur tahun baru','Mainkan Naikkan Akunmu! pada event Hitung mundur tahun baru. Merchant memakai saldo website untuk item virtual game.','game','ongoing','2026-12-31 17:00:00'),
         (2,'','','standard','upcoming',NULL)");
+    $conn->query("UPDATE site_events SET kind='game' WHERE id=1 AND kind='countdown' AND title='Hitung mundur tahun baru'");
 }
 function ev_list($conn, $admin = false) {
     $rows = [];
@@ -66,7 +67,7 @@ if ($admin && ($input['action'] ?? '') === 'save') {
     if (!is_array($e)) ev_out(['ok'=>false,'message'=>'Data event tidak valid.'],400);
     $title = cp_str($e['title'] ?? '',120); $description = cp_str($e['description'] ?? '',4000);
     $status = $e['status'] ?? ''; $kind = $e['kind'] ?? '';
-    if (!in_array($status,['upcoming','ongoing','finished'],true) || !in_array($kind,['standard','countdown'],true) || ($status !== 'upcoming' && $title === '')) ev_out(['ok'=>false,'message'=>'Isi judul, jenis dan status event yang valid.'],400);
+    if (!in_array($status,['upcoming','ongoing','finished'],true) || !in_array($kind,['standard','countdown','game'],true) || ($status !== 'upcoming' && $title === '')) ev_out(['ok'=>false,'message'=>'Isi judul, jenis dan status event yang valid.'],400);
     $start = ev_date($e['starts_at'] ?? null); $end = ev_date($e['ends_at'] ?? null);
     if (($start && $end && $end <= $start) || ($kind === 'countdown' && !$end)) ev_out(['ok'=>false,'message'=>'Batas akhir wajib untuk hitung mundur dan harus setelah waktu mulai.'],400);
     $id = (int)($e['id'] ?? 0);

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import EventLauncher from './EventLauncher';
 import Header from './Header';
 import SideMenu from './SideMenu';
 import BottomNavbar from './BottomNavbar';
@@ -66,7 +65,6 @@ export default function Layout() {
 
       {/* Floating calculator */}
       <Calculator />
-      <EventLauncher />
     </div>
   );
 }

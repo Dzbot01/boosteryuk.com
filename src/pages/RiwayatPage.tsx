@@ -60,8 +60,9 @@ function agentInfo(o: { order_id: string; service_name: string }): { title: stri
   return { title: title.trim() || 'Agen AI', due };
 }
 
-type OrderType = 'smm' | 'agent_ai' | 'nexspace' | 'otp' | 'upgrade';
+type OrderType = 'smm' | 'agent_ai' | 'nexspace' | 'otp' | 'upgrade' | 'event';
 const TYPE_META: Record<OrderType, { label: string; icon: typeof Bot; to: string | null; hint: string }> = {
+  event: {label:'Event',icon:ShoppingCart,to:'/event',hint:'Buka Event'},
   smm: { label: 'SMM', icon: ShoppingCart, to: null, hint: '' },
   agent_ai: { label: 'Agen AI', icon: Bot, to: '/agen-ai-saya', hint: 'Lihat detail Agen AI' },
   nexspace: { label: 'NexSpace', icon: Server, to: '/nexspace', hint: 'Lihat server NexSpace' },
@@ -71,6 +72,7 @@ const TYPE_META: Record<OrderType, { label: string; icon: typeof Bot; to: string
 /** Jenis pesanan dari awalan ID / nama layanan (NX… / OTP… / AI… / UP…). */
 function typeOf(orderId: string, name: string): OrderType {
   const n = name.toLowerCase();
+  if (/^EVG[0-9A-F]+$/.test(orderId) || n.startsWith('event merchant:')) return 'event';
   if (/^NX[0-9A-Z]/.test(orderId) || n.startsWith('nexspace')) return 'nexspace';
   if (/^OTP\d/.test(orderId) || n.startsWith('nomor otp')) return 'otp';
   if (/^AI\d{6,}/.test(orderId) || n.includes('agen ai')) return 'agent_ai';

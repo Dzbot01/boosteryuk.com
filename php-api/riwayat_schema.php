@@ -77,6 +77,7 @@ function riwayat_target_width($conn) {
 /** Tebak jenis pesanan untuk baris lama yang belum punya order_type. */
 function riwayat_guess_type($serviceName) {
     $n = strtolower((string)$serviceName);
+    if (strpos($n, 'event merchant:') === 0) return 'event';
     if (strpos($n, 'agen ai') !== false || strpos($n, 'ai agent') !== false) return 'agent_ai';
     if (preg_match('/\bvps\b|server vps/', $n)) return 'vps';
     return 'smm';

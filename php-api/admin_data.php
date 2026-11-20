@@ -66,6 +66,7 @@ function ad_log_schema($conn) {
 
 /** Jenis pesanan dari awalan ID / nama (sama dengan halaman Riwayat). SQL CASE untuk filter. */
 const AD_TYPE_SQL = "CASE
+    WHEN r.order_id LIKE 'EVG%' OR r.service_name LIKE 'Event Merchant:%' THEN 'event'
     WHEN r.order_id LIKE 'NX%' OR r.service_name LIKE 'NexSpace%' THEN 'nexspace'
     WHEN r.order_id LIKE 'OTP%' OR r.service_name LIKE 'Nomor OTP%' THEN 'otp'
     WHEN r.order_id REGEXP '^AI[0-9]{6}' OR r.service_name LIKE '%Agen AI%' THEN 'agent_ai'
@@ -150,7 +151,7 @@ if ($action === 'orders') {
     $status = (string)($in['status'] ?? '');
     if (in_array($status, ['pending', 'proses', 'selesai', 'batal'], true)) { $where[] = 'r.status = ?'; $types .= 's'; $args[] = $status; }
     $type = (string)($in['type'] ?? '');
-    if (in_array($type, ['smm', 'agent_ai', 'nexspace', 'otp', 'upgrade'], true)) { $where[] = '(' . AD_TYPE_SQL . ') = ?'; $types .= 's'; $args[] = $type; }
+    if (in_array($type, ['smm', 'agent_ai', 'nexspace', 'otp', 'upgrade', 'event'], true)) { $where[] = '(' . AD_TYPE_SQL . ') = ?'; $types .= 's'; $args[] = $type; }
     $w = implode(' AND ', $where);
     $page = max(1, (int)($in['page'] ?? 1));
     $off = ($page - 1) * AD_PAGE;
@@ -185,9 +186,9 @@ if ($action === 'orders') {
 if ($action === 'order_status') {
     $status = (string)($in['status'] ?? '');
     if (!in_array($status, ['pending', 'proses', 'selesai', 'batal'], true)) ad_out(['ok' => false, 'message' => 'Status tidak valid.'], 400);
-    $st = cp_q($conn, "UPDATE riwayat_pesanan SET status = ? WHERE id = ?", 'si', $status, (int)($in['id'] ?? 0));
+    $st = cp_q($conn, "UPDATE riwayat_pesanan SET status = ? WHERE id = ? AND order_id NOT LIKE 'EVG%' AND service_name NOT LIKE 'Event Merchant:%'", 'si', $status, (int)($in['id'] ?? 0));
     $st->close();
-    ad_out(['ok' => true, 'message' => 'Status pesanan diperbarui (saldo user tidak berubah).']);
+    ad_out(['ok' => true, 'message' => 'Status diperbarui bila pesanan dapat diubah (transaksi Event tetap final; saldo user tidak berubah).']);
 }
 
 /* ===================== USER ===================== */
