@@ -3,7 +3,7 @@
 ## Perubahan
 
 - Ikon Event mengambang dihapus. Event ada setelah **Cek Status Pesanan** di menu pengguna yang login (termasuk admin). Rute `/event` dan `/event/:id/game` memerlukan login.
-- Kartu lebar/landscape; tidak ada tampilan countdown. Judul “Hitung mundur tahun baru” tetap judul event. Kartu game yang berlangsung langsung membuka game HTML lampiran. Coming soon tetap menyembunyikan judul/deskripsi; event selesai membuka detail.
+- Kartu poster vertikal desain Uiverse mamyapro123 dengan status pada switch gaya; tidak ada tampilan countdown. Judul “Hitung mundur tahun baru” tetap judul event. Kartu game yang berlangsung langsung membuka game HTML lampiran. Coming soon tetap menyembunyikan judul/deskripsi; event selesai membuka detail.
 - Admin `/admin/events` dapat memilih jenis Game Naikkan Akunmu!, jadwal, dan status. Event awal id 1 dengan judul asli dan jenis lama countdown dimigrasi ke game; event lain tidak diubah. Akhir seed tetap 1 Januari 2027 00.00 WIB. GET daftar tetap publik untuk kompatibilitas, tanpa data progres pribadi.
 - Progres per `(event_id,user_id)`: username permainan, posting, followers, views, like, komentar, skor, tahapan, waktu akhir, grid, status selesai. Save berkala saat menjawab (maksimal sekali/8 detik), mulai, selesai, dan saat tab tersembunyi; bukan setiap frame. Reload mengambil DB. Konflik revisi menolak overwrite dari tab/perangkat lama. Koneksi gagal dapat kehilangan progres yang belum tersimpan; jangan menutup tab sebelum tersimpan.
 - Inventori dan bonus terpisah di DB. Merchant memakai **saldo website asli**, bukan saldo Rp10.000 bawaan HTML. Ada konfirmasi nominal dari halaman induk sebelum pembayaran. Harga ditentukan ulang server; pembelian langsung memperbarui saldo, inventori, dan Riwayat Pesanan berjenis Event dengan ID `EVG...`. Saldo juga dimuat ulang setiap 15 detik saat halaman terlihat.
@@ -15,7 +15,7 @@ Iframe sandbox tanpa `allow-same-origin`; token login hanya berada di halaman in
 
 Pembelian memakai transaksi InnoDB dengan user/player row lock, pengurangan saldo bersyarat, inventori, riwayat, dan receipt dalam satu commit. Request ID unik + hash payload membuat pengulangan **ID yang sama** tidak memotong dua kali. Retry tombol setelah timeout di halaman yang sama memakai ID sebelumnya. Konsumsi item juga idempoten. Sesudah timeout pembayaran, jangan reload dan membayar ulang sebelum memeriksa riwayat/saldo: reload dapat membuat ID baru. Tidak ada refund/prize otomatis. Status riwayat Event final dan dikecualikan dari pengubahan status manual admin; bukan order provider SMM.
 
-**Statistik kuis masih dihitung browser dan belum anti-cheat.** Server memvalidasi batas nilai dan menghitung ulang formula skor, tetapi bukan bukti jawaban sah. Leaderboard ditandai `verified:false`; hadiah menunggu verifikasi admin. Satu kesempatan per event, hasil selesai tidak bisa ditimpa; fitur grant/reset admin HTML lama tidak diaktifkan.
+**Statistik kuis masih dihitung browser dan belum anti-cheat.** Server memvalidasi batas nilai dan menghitung ulang formula skor, tetapi bukan bukti jawaban sah. Leaderboard ditandai `verified:false`; hadiah menunggu verifikasi admin. Maksimal 5 mulai permainan per akun per hari WIB, global lintas event. Resume tidak memakan jatah. Mulai baru mereset statistik kuis terakhir (bukan best score); inventori dan bonus merchant tetap. Fitur grant/reset admin HTML lama tidak dipakai.
 
 ## Deploy (belum dijalankan ke produksi)
 
@@ -35,8 +35,8 @@ Pembelian memakai transaksi InnoDB dengan user/player row lock, pengurangan sald
 
 ## Wajib lolos di staging sebelum saldo nyata
 
-1. Guest tidak melihat menu Event; pengguna/admin melihatnya tepat setelah Cek Status. Tidak ada ikon floating atau tombol memunculkannya lagi. Cek kartu mobile/desktop landscape, coming soon, modal selesai, dan rotasi game.
-2. Mulai game, jawab soal, reload: username/statistik/tahapan/grid kembali. Buka dua tab: save dari revisi lama ditolak. Hasil selesai tetap terkunci. Pengguna lain/event lain terisolasi.
+1. Guest tidak melihat menu Event; pengguna/admin melihatnya tepat setelah Cek Status. Tidak ada ikon floating atau tombol memunculkannya lagi. Cek kartu poster vertikal mobile/desktop, coming soon, modal selesai, dan rotasi game.
+2. Mulai game, jawab soal, reload: username/statistik/tahapan/grid kembali. Buka dua tab: save dari revisi lama ditolak. Save tidak boleh menimpa hasil selesai; permainan berikutnya harus melalui aksi start server. Pengguna lain/event lain terisolasi.
 3. Catat saldo awal, beli satu tiap produk. Pastikan selisih tepat harga server, inventori benar, satu riwayat Event selesai, dan saldo header diperbarui. Coba saldo kurang, kuantitas negatif/desimal/di atas 100, ID produk palsu, harga palsu, token kedaluwarsa, event upcoming/finished.
 4. Kirim dua request bersamaan dengan ID identik: hanya satu potongan/riwayat. Ulang ID dengan cart berbeda: ditolak. Dua ID berbeda dengan saldo hanya cukup satu: hanya satu berhasil. Simulasikan putus respons setelah commit, lalu retry ID sama.
 5. Paksa kegagalan insert riwayat/receipt: saldo dan inventori harus rollback. Coba engine non-InnoDB: pembayaran harus ditolak tanpa potongan.
@@ -63,3 +63,36 @@ Jika membuka API membalas JSON “Gunakan POST.” tetapi membeli membalas “ta
 Gunakan **`php-api/event_game_innodb_migration.sql`** di phpMyAdmin database website. File menyediakan query pemeriksaan dan perintah ALTER yang sengaja dikomentari. Export backup lengkap, hentikan sementara semua transaksi/penulisan terkait (maintenance), pastikan InnoDB didukung, lalu jalankan hanya ALTER tabel yang belum InnoDB. Jika tabel tidak muncul, pastikan database benar dan jalankan migrasi pembuatan tabel terlebih dahulu. Jika hosting melarang ALTER/InnoDB, hubungi hosting; jangan menonaktifkan pengaman di PHP atau mengganti dengan MyISAM. ALTER melakukan implicit commit dan bisa mengunci tabel, jadi jangan jalankan sambil pembayaran aktif.
 
 Upload `event_game.php` terbaru untuk melihat nama tabel dan engine yang menghalangi. Respons preflight ini memiliki `code: GAME_ENGINE_NOT_READY`, `payment_started: false`; frontend terbaru tidak menambah peringatan pembayaran ambigu pada penolakan tersebut. Timeout/HTML/HTTP 500 lain tetap memperingatkan untuk memeriksa riwayat sebelum membayar ulang. Tidak ada konversi engine otomatis dari request pengguna, penghapusan tabel, atau perubahan saldo dalam migrasi ini; tetap uji perubahan engine dan transaksi di staging sebelum produksi.
+
+
+## Update: 5 permainan/hari, Data Event admin, poster dan tombol transaksi
+
+### Deploy update ini
+
+- Jalankan `php-api/event_game_daily.sql` pada database website (satu tabel InnoDB baru; tidak mengubah engine/struktur users). `event_game.sql` terbaru juga sudah memuat tabel ini untuk instalasi baru.
+- Upload **bersamaan**: `event_game.php`, `event_game_lib.php`, **`event_game_admin.php`** terbaru ke `/api`, kemudian frontend hasil build termasuk HTML game dan `games/transaction-button.css`. HTML/API lama tidak boleh dicampur: versi baru mewajibkan sesi start dari server. Permainan aktif versi lama ditutup saat dimuat ulang tanpa menghapus statistik lama; pengguna dapat memulai sesi baru.
+- Tidak ada migrasi/konversi database produksi yang dijalankan dari sandbox ini. Engine users tetap tidak diubah oleh kode ini; pembayaran tetap membutuhkan InnoDB seperti sebelumnya.
+
+### Jatah harian
+
+`event_game_daily` memiliki PK `(user_id,play_date)`; tanggal ditentukan server **Asia/Jakarta**, bukan jam browser. Batas **5 kali mulai berhasil per hari, global lintas event**. Pergantian tanggal membuat jatah baru tanpa cron. Membuka game, resume, melihat leaderboard, dan membeli item tidak memakan jatah. Mulai yang gagal rollback tidak memakan jatah. Mulai lalu meninggalkan permainan tetap memakai satu jatah.
+
+Aksi `start` memakai transaksi, counter `UPDATE ... plays<5`, lock peserta dan receipt request-id. Retry ID start sama tidak menambah jatah lagi. Save memerlukan run ID server dan revisi; tidak dapat membuat ronde baru dengan save langsung atau menghidupkan sesi selesai. Counter bukan bukti anti-cheat jawaban; skor tetap belum terverifikasi. Inventori/bonus bertahan antar-ronde; statistik kuis dan skor yang ditampilkan adalah **ronde terakhir**, bukan akumulasi/best score. Sisa jatah ditampilkan di leaderboard.
+
+### Admin Data Event
+
+Klik kartu event berlangsung di `/admin/events` menuju `/admin/events/:id/data`. Tombol pensil tetap mengubah konfigurasi event. Halaman Data Event menampilkan total peserta unik yang mempunyai state game dan tabel 50 peserta/halaman: ID akun, username game, score, followers, likes, views, komentar, serta bonus merchant terpisah. Statistik tabel adalah statistik kuis, bukan bonus virtual berbayar.
+
+Endpoint memverifikasi role admin di DB, menolak akses child panel, membatasi event/user, dan memakai row lock + revision untuk edit/hapus. Admin dapat mengubah score/followers/likes/views/komentar. Score manual disimpan sebagai adjustment server, tidak ditimpa save lama; tab game lama perlu dimuat ulang. Ronde baru mulai dengan statistik baru. Penghapusan hanya menghapus row peserta event (termasuk inventori/bonus event tersebut), **tidak menghapus akun website, saldo, riwayat/receipt pembayaran, atau counter harian**. Pengguna boleh ikut lagi jika masih punya jatah. Tidak ada refund otomatis.
+
+### Tampilan
+
+- Poster event vertikal 250×360, texture/grid/orb/tape/barcode dan switch mode sesuai contoh Uiverse mamyapro123. Switch menampilkan status Indonesia (Berlangsung/Akan hadir/Selesai); klik switch mengganti gaya, klik poster membuka event. Coming soon tetap merahasiakan judul/deskripsi dan tidak bisa dibuka.
+- `TransactionButton` memakai desain Uiverse Admin12121 yang di-scope, tanpa menambah paket runtime. Dipakai di Buat Pesanan SMM, pesan OTP, NexSpace, paket/pesan Agen AI, bayar upgrade, dan bayar merchant HTML. Efek dijalankan lewat klik (termasuk touch/keyboard), menunggu **1,35 detik** sebelum menjalankan handler. Klik ganda dikunci; jika disabled/unmount sebelum selesai, handler tidak berjalan. Prefers-reduced-motion melewati animasi/dekorasi bergerak dengan jeda nol.
+- Error server 5xx (kecuali penolakan engine yang diketahui), jaringan, respons kosong/HTML/rusak, dan timeout bridge ditampilkan sebagai **Game sedang ditutup, silakan cobalagi nanti.** Validasi saldo/kuota/login tetap menggunakan pesan spesifik. Tidak ada auto-retry pembayaran. Peringatan memeriksa riwayat bila putus koneksi tetap ada sebagai teks informasi terpisah.
+
+### Validasi tambahan dan staging wajib
+
+`node scripts/test-event-sessions.mjs` menguji start RPC, guard klik ganda, reuse request-ID saat retry dan kontrak sumber quota/auth/delete. Tes ini **bukan** eksekusi transaksi MySQL. `scripts/test-event-ui.mjs` memakai jsdom khusus pengujian (instal sementara di `/tmp`, tanpa perubahan package.json) untuk delay, klik ganda, pembatalan disabled/unmount, reduced motion, submit form, status poster, dan redaksi coming soon. Pemeriksaan sintaks PHP, build, tes bridge/API/event dan regresi avatar/OAuth juga dijalankan.
+
+Sebelum produksi: uji 5 start berhasil, start ke-6 ditolak, resume/reload tidak menambah jatah, retry ID sama, dua tab bersamaan saat tersisa satu, batas 00.00 WIB, isolasi akun, edit admin vs save yang bersamaan, hapus game tanpa mengubah users/riwayat/kuota, halaman kedua peserta, non-admin ditolak, serta klik pesan hanya mengirim **satu** transaksi setelah animasi. Pengujian runtime PHP/MySQL dan visual perangkat belum dilakukan di sandbox.

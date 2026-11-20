@@ -1,3 +1,4 @@
+import TransactionButton from './TransactionButton';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
@@ -207,7 +208,7 @@ export function CustomSelect({
     return q ? options.filter((option) => option.label.toLowerCase().includes(q)) : options;
   }, [options, query]);
 
-  
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -372,7 +373,7 @@ const handleOrder = async () => {
     setOrdering(true);
     setOrderNotice(null);
     setSuccessInfo(null);
-    
+
    const result = await placeOrder({
   serviceId: selected.id, // <- ini
   serviceName: selected.name, // <- ini juga
@@ -391,11 +392,11 @@ const handleOrder = async () => {
     if (result.ok && orderIdFinal) {
       const now = new Date();
       topUp(-price);
-      setSuccessInfo({ 
-  name: captured.name, 
-  target: captured.target, 
+      setSuccessInfo({
+  name: captured.name,
+  target: captured.target,
   quantity: captured.qty, // <-- TAMBAH INI
-  at: now 
+  at: now
 });
 
       addOrder({
@@ -421,7 +422,7 @@ const handleOrder = async () => {
     }
   };
     const firstName = user?.username?.split(' ')[0] || user?.email?.split('@')[0] || 'Bos';
-    
+
   return (
   <>
    <AiAssistantCard
@@ -456,7 +457,7 @@ const handleOrder = async () => {
       </div>
 
       <div className="my-3.5 h-px w-full" style={{ background: COLOR.border }} />
-      
+
 {/* Success alert — pinned to the very top of the card */}
 
 {successInfo && (
@@ -549,7 +550,7 @@ const handleOrder = async () => {
             onChange={setServiceId}
           />
         </FormSection>
-        
+
         {/* 4. Target */}
         <FormSection label="Target (URL atau Username)">
           <input
@@ -654,11 +655,11 @@ const handleOrder = async () => {
         </label>
 
         {/* Pesan Button */}
-        <button
+        <TransactionButton
           onClick={handleOrder}
           disabled={!user || !selected || !target.trim() || qty <= 0 || ordering}
           className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-bold text-white shadow-lg shadow-cyan-600/20 transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-          style={{ background: COLOR.primary }}
+
         >
           {ordering ? (
             <>
@@ -671,7 +672,7 @@ const handleOrder = async () => {
               Pesan
             </>
           )}
-        </button>
+        </TransactionButton>
 
         {orderNotice && (
           <div

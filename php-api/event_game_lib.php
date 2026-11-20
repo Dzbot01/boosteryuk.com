@@ -19,6 +19,11 @@ function eg_schema($conn) {
   order_id VARCHAR(64) NULL, amount DECIMAL(15,2) NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_request(event_id,user_id,request_id)
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+ $conn->query("CREATE TABLE IF NOT EXISTS event_game_daily (
+  user_id INT NOT NULL, play_date DATE NOT NULL, plays TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY(user_id,play_date)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
 }
 function eg_cart($cart) {
  if(!is_array($cart) || !$cart || count($cart)>5)throw new Exception('Keranjang tidak valid.');
@@ -42,4 +47,12 @@ function eg_normalize($raw) {
  $s['end']=max(0,min((time()+3600)*1000,(float)($raw['end']??0)));$s['done']=!empty($raw['done']);$s['tiles']=[];
  foreach(array_slice(is_array($raw['tiles']??null)?$raw['tiles']:[],0,9) as $t){if(!is_array($t))continue;$s['tiles'][]=['e'=>implode('',array_slice(preg_split('//u',(string)($t['e']??'📸'),-1,PREG_SPLIT_NO_EMPTY) ?: [],0,8)),'c'=>preg_replace('/[^#a-fA-F0-9, ]/','',substr((string)($t['c']??'#555,#888'),0,40))];}
  return $s;
+}
+
+// Global per website user across events, resetting at midnight Asia/Jakarta.
+function eg_daily($conn,$uid) {
+ $date=(new DateTimeImmutable('now',new DateTimeZone('Asia/Jakarta')))->format('Y-m-d');
+ $st=cp_q($conn,'SELECT plays FROM event_game_daily WHERE user_id=? AND play_date=?','is',(int)$uid,$date);
+ $used=(int)($st->get_result()->fetch_assoc()['plays']??0);$st->close();
+ return ['date'=>$date,'timezone'=>'Asia/Jakarta','limit'=>5,'used'=>$used,'remaining'=>max(0,5-$used)];
 }
