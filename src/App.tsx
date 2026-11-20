@@ -1,3 +1,5 @@
+import { IS_CHILD_PANEL } from './lib/apiBase';
+import GoogleAuthPage from './pages/GoogleAuthPage';
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -56,6 +58,8 @@ export default function App() {
     <MusicProvider>
       <Suspense fallback={null}>
       <Routes>
+        <Route path="auth/google" element={<GoogleAuthPage />} />
+        <Route path="auth/finish" element={<GoogleAuthPage finish />} />
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="cek-status" element={<CekStatusPage />} />
@@ -70,7 +74,7 @@ export default function App() {
           <Route path="privacy" element={<PrivacyPage />} />
           <Route path="struk" element={<StrukPage />} />
           <Route path="layanan" element={<LayananPage />} />
-          <Route path="playground" element={<PlaygroundPage />} />
+          <Route path="playground" element={IS_CHILD_PANEL ? <Navigate to="/" replace /> : <PlaygroundPage />} />
           <Route path="sewa-agen-ai" element={<SewaAgenAiPage />} />
           <Route path="overview" element={<ProtectedRoute><OverviewPage /></ProtectedRoute>} />
           <Route path="upgrade/extra" element={<ProtectedRoute><ExtraSetupPage /></ProtectedRoute>} />

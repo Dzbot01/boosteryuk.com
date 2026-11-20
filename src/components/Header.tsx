@@ -1,3 +1,4 @@
+import { IS_CHILD_PANEL } from '../lib/apiBase';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import HamburgerToggle from './HamburgerToggle';
@@ -78,13 +79,13 @@ export default function Header({ onToggleMenu, menuOpen, showMenuOnDesktop = fal
         {/* Right actions */}
         <div className="flex items-center gap-2">
           {/* Playground — tetap di header (tidak ikut ke side menu); tombol teks tanpa card */}
-          <button
+          {!IS_CHILD_PANEL && <button
             onClick={() => navigate('/playground')}
             aria-label="Playground"
             className="mr-0.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[13px] font-extrabold tracking-tight transition-transform active:scale-95"
           >
             <span className="text-silver-shine">Playground</span>
-          </button>
+          </button>}
 
           {/* Hamburger — mobile/tablet; di DESKTOP tampil hanya saat rail disembunyikan (tamu di dashboard) */}
           <HamburgerToggle
