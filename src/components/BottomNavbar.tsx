@@ -111,15 +111,14 @@ export default function BottomNavbar() {
                 onClick={() => navigate('/pengaturan-akun')}
                 aria-label="Profil"
                 title="Profil"
-                className={`group relative flex h-10 w-10 items-center justify-center rounded-full font-display text-[12px] font-extrabold transition-all duration-250 active:scale-90 ${
-                  user.plusActive
+                className="group relative flex h-10 w-10 items-center justify-center rounded-full font-display text-[12px] font-extrabold transition-transform duration-250 active:scale-90 focus-visible:outline-2 focus-visible:outline-cyan-500"
+              >
+                <UserAvatar user={user} fallbackClassName={`rounded-full ${user.plusActive
                   ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/30 ring-2 ring-amber-300'
                     : profileActive
                     ? 'bg-gradient-to-br from-cyan-500 to-cyan-700 text-white shadow-md shadow-cyan-600/30'
                       : 'text-cyan-700 hover:bg-cyan-50 dark:text-cyan-400 dark:hover:bg-cyan-900/30'
-                }`}
-              >
-                <UserAvatar user={user}>{user.plusActive || profileActive? (
+                }`}>{user.plusActive || profileActive? (
                   user.initials
                 ) : (
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-100 text-cyan-700 ring-1 ring-cyan-200 transition-transform duration-300 group-hover:scale-110 dark:bg-cyan-900/40 dark:text-cyan-400 dark:ring-cyan-800/50">

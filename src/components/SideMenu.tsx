@@ -407,8 +407,8 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
           expanded ? (
             <div className="space-y-1.5">
               <div className="flex items-center gap-2.5 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5 dark:border-slate-700/60 dark:bg-slate-800/50">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-extrabold text-white ${avatarGrad}`}>
-                  <UserAvatar user={user}>{initials}</UserAvatar>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center font-display text-[13px] font-extrabold text-white">
+                  <UserAvatar user={user} fallbackClassName={`rounded-full ${avatarGrad}`}>{initials}</UserAvatar>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 truncate text-[12.5px] font-bold text-slate-800 dark:text-slate-100">
@@ -440,9 +440,9 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
                 onClick={() => { navigate('/pengaturan-akun'); onClose(); }}
                 title="Pengaturan akun"
                 aria-label="Pengaturan akun"
-                className={`flex h-11 w-11 items-center justify-center rounded-xl font-display text-[12px] font-extrabold text-white transition-transform hover:scale-105 ${avatarGrad}`}
+                className="flex h-11 w-11 items-center justify-center rounded-xl font-display text-[12px] font-extrabold text-white transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-cyan-500"
               >
-                <UserAvatar user={user}>{initials}</UserAvatar>
+                <UserAvatar user={user} fallbackClassName={`rounded-xl ${avatarGrad}`}>{initials}</UserAvatar>
               </button>
               <button
                 onClick={logoutAndHome}
