@@ -25,10 +25,6 @@ const faqs = [
     answer: 'Waktu bervariasi tergantung platform dan jumlah pesanan. Banyak pesanan mulai berjalan dalam hitungan menit, namun volume besar bisa memakan waktu lebih lama.',
   },
   {
-    question: 'Apakah ID pesanan aman dimasukkan di sini?',
-    answer: 'Ya. ID hanya dipakai untuk meminta status ke API. Kami tidak menyimpan data pesanan secara permanen di perangkat Anda.',
-  },
-  {
     question: 'Bagaimana jika pesanan berstatus canceled atau partial?',
     answer: 'Hubungi admin melalui menu Hubungi Admin. Sertakan ID pesanan agar status dapat dicek ulang dan ditindaklanjuti.',
   },

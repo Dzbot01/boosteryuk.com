@@ -3,7 +3,7 @@
  * nexspace_config.php — paket & pengaturan NexSpace (tanpa rahasia; boleh di-commit).
  * Token & alamat tunnel VPS memakai agent_config.php (sama dengan Sewa Agen AI).
  *
- * HARGA STARTED masih USULAN (belum ditentukan pemilik) — ubah 'price' sesuai keinginan.
+ * Harga Started sesuai ketentuan pemilik — ubah 'price' sesuai keinginan.
  * Harga Pro sesuai ketentuan pemilik.
  */
 return [
@@ -18,9 +18,9 @@ return [
     ],
     'plans' => [
         // ---- Started: dibuat OTOMATIS di VPS, user Linux biasa (tanpa root) ----
-        ['id' => 'started-512', 'tier' => 'started', 'name' => 'NexSpace Started 512MB', 'ram' => '512 MB', 'ram_mb' => 512,  'cpu' => '0.5 vCPU', 'cpu_pct' => 50,  'disk_gb' => 5,  'tasks' => 64,  'price' => 7000],
-        ['id' => 'started-1g',  'tier' => 'started', 'name' => 'NexSpace Started 1GB',   'ram' => '1 GB',   'ram_mb' => 1024, 'cpu' => '1 vCPU',   'cpu_pct' => 100, 'disk_gb' => 10, 'tasks' => 128, 'price' => 12000],
-        ['id' => 'started-2g',  'tier' => 'started', 'name' => 'NexSpace Started 2GB',   'ram' => '2 GB',   'ram_mb' => 2048, 'cpu' => '1 vCPU',   'cpu_pct' => 100, 'disk_gb' => 20, 'tasks' => 256, 'price' => 18000],
+        ['id' => 'started-512', 'tier' => 'started', 'name' => 'NexSpace Started 512MB', 'ram' => '512 MB', 'ram_mb' => 512,  'cpu' => '0.5 vCPU', 'cpu_pct' => 50,  'disk_gb' => 5,  'tasks' => 64,  'price' => 3000],
+        ['id' => 'started-1g',  'tier' => 'started', 'name' => 'NexSpace Started 1GB',   'ram' => '1 GB',   'ram_mb' => 1024, 'cpu' => '1 vCPU',   'cpu_pct' => 100, 'disk_gb' => 10, 'tasks' => 128, 'price' => 5000],
+        ['id' => 'started-2g',  'tier' => 'started', 'name' => 'NexSpace Started 2GB',   'ram' => '2 GB',   'ram_mb' => 2048, 'cpu' => '1 vCPU',   'cpu_pct' => 100, 'disk_gb' => 20, 'tasks' => 256, 'price' => 10000],
         // ---- Pro: disiapkan MANUAL oleh admin (akses root, boleh dijual lagi) ----
         ['id' => 'pro-1g',  'tier' => 'pro', 'name' => 'NexSpace Pro 1GB',  'ram' => '1 GB',  'cpu' => '1 vCPU', 'disk_gb' => 20,  'price' => 20000],
         ['id' => 'pro-2g',  'tier' => 'pro', 'name' => 'NexSpace Pro 2GB',  'ram' => '2 GB',  'cpu' => '2 vCPU', 'disk_gb' => 40,  'price' => 28000],

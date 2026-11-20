@@ -136,7 +136,7 @@ export interface TripayTransaction {
   pay_code: string | null;
   pay_url: string | null;
   checkout_url: string;
-  status: 'UNPAID' | 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'REFUND';
+  status: 'UNPAID' | 'PENDING' | 'PAID' | 'CANCELLED' | 'FAILED' | 'EXPIRED' | 'REFUND';
   expired_time: number;
   order_items: OrderItem[];
   instructions: Instruction[];

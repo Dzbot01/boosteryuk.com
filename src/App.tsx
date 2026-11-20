@@ -51,6 +51,7 @@ const PanelAdminPage = lazy(() => import('./pages/PanelAdminPage'));
 const ExtraSetupPage = lazy(() => import('./pages/ExtraSetupPage'));
 const PengaturanAkunPage = lazy(() => import('./pages/PengaturanAkunPage'));
 const DepositPage = lazy(() => import('./pages/DepositPage'));
+const DepositHistoryPage = lazy(() => import('./pages/DepositHistoryPage'));
 const DepositMethodPage = lazy(() => import('./pages/DepositMethodPage'));
 const AdminHomePage = lazy(() => import('./pages/admin/AdminHomePage'));
 const AdminWebsitePage = lazy(() => import('./pages/admin/AdminWebsitePage'));
@@ -96,6 +97,7 @@ export default function App() {
           {/* DEPOSIT - yang static dulu, baru yang dynamic :method */}
           <Route path="deposit/manual" element={<ManualDepositPage />} />
           <Route path="deposit" element={<ProtectedRoute><DepositPage /></ProtectedRoute>} />
+          <Route path="riwayat-deposit" element={<ProtectedRoute><DepositHistoryPage /></ProtectedRoute>} />
           <Route path="deposit/:method" element={<ProtectedRoute><DepositMethodPage /></ProtectedRoute>} />
 
           {/* Order Nomor disembunyikan dari UI (kode dipertahankan):

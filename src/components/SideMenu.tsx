@@ -30,6 +30,18 @@ import {
   Crown,
 } from 'lucide-react';
 import { useEffect } from 'react';
+
+function animateEventText(button: HTMLButtonElement) {
+  const label = button.querySelector<HTMLElement>('[data-event-label]');
+  if (!label || typeof label.animate !== 'function' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  (label.getAnimations?.() || []).forEach(animation => animation.cancel());
+  const colors = ['#00ffff', '#ff33ff', '#a3ff12', '#ffdd00', '#ff4d88', '#6c8cff'];
+  const offset = Math.floor(Math.random() * colors.length);
+  label.animate([...colors, colors[0]].map((_, index) => {
+    const color = colors[(index + offset) % colors.length];
+    return { color, textShadow: `0 0 8px ${color}, 0 0 16px ${color}` };
+  }), { duration: 1800, easing: 'linear' });
+}
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
@@ -55,6 +67,7 @@ export type PageId =
   | 'manualdepo'
   | 'support'
   | 'privacy'
+  | 'riwayat-deposit'
   | 'deposit'
   | 'overview'
   | 'sewa-agen'
@@ -75,6 +88,7 @@ const ROUTE_PATH: Record<PageId, string> = {
   overview: '/overview',
   'sewa-agen': '/sewa-agen-ai',
   deposit: '/deposit',
+  'riwayat-deposit': '/riwayat-deposit',
   plus: '/plus',
   about: '/about',
   terms: '/terms',
@@ -120,6 +134,7 @@ const baseMenu: {
 
 const authMenu: typeof baseMenu = [
   { id: 'deposit', icon: CreditCard, label: 'Deposit', desc: 'Isi ulang saldo' },
+  { id: 'riwayat-deposit', icon: History, label: 'Riwayat Deposit', desc: 'Invoice & status pembayaran' },
   { id: 'payment', icon: Wallet, label: 'Payment', desc: 'Saldo & transaksi' },
 ];
 
@@ -206,7 +221,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
     }
   };
 
-  const AUTH_REQUIRED = ['event', 'layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
+  const AUTH_REQUIRED = ['event', 'layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'riwayat-deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
 
   // Child panel: menu "Order Nomor" (OTP) tampil setelah "Buat Pesanan".
   const base = IS_CHILD_PANEL
@@ -302,7 +317,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
               return (
                 <li key={item.id}>
                   <button
-                    onClick={() => { navigate(item.path); onClose(); }}
+                    onClick={(event) => { if (item.id === 'event') { animateEventText(event.currentTarget); window.setTimeout(() => { navigate(item.path); onClose(); }, 480); return; } navigate(item.path); onClose(); }}
                     title={item.label}
                     aria-label={item.label}
                     aria-current={isActive ? 'page' : undefined}
@@ -311,7 +326,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
                     <Icon className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
                     {expanded && (
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[13px] font-semibold leading-tight">{item.label}</span>
+                        <span data-event-label={item.id === 'event' ? 'true' : undefined} className="block text-[13px] font-semibold leading-tight">{item.label}</span>
                         <span className={`block truncate text-[11px] ${isActive? 'opacity-70' : 'text-slate-400 dark:text-slate-500'}`}>
                           {item.desc}
                         </span>
@@ -354,7 +369,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
                 return (
                   <li key={item.id} className={expanded ? '' : 'flex justify-center'}>
                     <button
-                      onClick={() => handleNav(item.id)}
+                      onClick={(event) => { if (item.id === 'event') { animateEventText(event.currentTarget); window.setTimeout(() => handleNav(item.id), 480); return; } handleNav(item.id); }}
                       title={item.label}
                       aria-label={item.label}
                       aria-current={isActive ? 'page' : undefined}
@@ -364,7 +379,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
                       {expanded && (
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-2">
-                            <span className="block text-[13px] font-semibold leading-tight">{item.label}</span>
+                            <span data-event-label={item.id === 'event' ? 'true' : undefined} className="block text-[13px] font-semibold leading-tight">{item.label}</span>
                             {item.tag && (
                               <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                                 <Construction className="h-2.5 w-2.5" />

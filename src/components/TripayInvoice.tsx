@@ -29,6 +29,7 @@ const STATUS_STYLE: Record<string, { label: string; wrap: string; dot: string }>
   UNPAID: { label: 'Menunggu pembayaran', wrap: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40', dot: 'bg-amber-500' },
   PENDING: { label: 'Diproses', wrap: 'bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-950/40', dot: 'bg-sky-500' },
   PAID: { label: 'Lunas', wrap: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40', dot: 'bg-emerald-500' },
+  CANCELLED: { label: 'Batal', wrap: 'bg-rose-50 text-rose-700 ring-rose-200', dot: 'bg-rose-500' },
   FAILED: { label: 'Gagal', wrap: 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40', dot: 'bg-rose-500' },
   EXPIRED: { label: 'Kedaluwarsa', wrap: 'bg-slate-100 text-slate-600 ring-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:ring-slate-700', dot: 'bg-slate-400' },
   REFUND: { label: 'Refund', wrap: 'bg-violet-50 text-violet-700 ring-violet-200', dot: 'bg-violet-500' },
@@ -128,7 +129,7 @@ export default function TripayInvoice({
   const [, setTick] = useState(0);
   const status = STATUS_STYLE[transaction.status] ?? STATUS_STYLE.UNPAID;
   const isPaid = transaction.status === 'PAID';
-  const terminal = ['FAILED', 'EXPIRED', 'REFUND'].includes(transaction.status);
+  const terminal = ['CANCELLED', 'FAILED', 'EXPIRED', 'REFUND'].includes(transaction.status);
 
   const qrSource = transaction.qr_url || (transaction.qr_string ? qrImageUrl(transaction.qr_string) : null);
   const checkoutUrl = transaction.pay_url || transaction.checkout_url || '';
@@ -191,7 +192,7 @@ export default function TripayInvoice({
       </div>
 
       {/* ---------- COUNTDOWN ---------- */}
-      {!isPaid && (
+      {!isPaid && !terminal && (
         <div className="px-5 pt-4">
           <div
             className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 ring-1 ${
@@ -215,7 +216,7 @@ export default function TripayInvoice({
       <div className="grid gap-5 px-5 py-5 lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)]">
         {/* BLOK PEMBAYARAN */}
         <div>
-          {qrSource ? (
+          {terminal || isPaid ? <div className="rounded-xl border p-5 text-center text-sm text-slate-500">{isPaid ? 'Pembayaran selesai.' : 'Invoice tidak aktif. Jangan membayar kode atau QR lama.'}</div> : qrSource ? (
             <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:bg-slate-900 dark:border-slate-700">
               <div className="mx-auto w-fit rounded-lg bg-slate-50 p-2 ring-1 ring-slate-100 dark:bg-slate-800/60 dark:ring-slate-800">
                 <img
@@ -264,7 +265,7 @@ export default function TripayInvoice({
               {formatRupiah(totalDue)}
             </p>
             <p className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-400">
-              {formatRupiah(transaction.amount)} nominal deposit
+              {formatRupiah(depositAmount)} nominal deposit
               {(transaction.fee_customer || 0) > 0 && ` + ${formatRupiah(transaction.fee_customer)} biaya transaksi`}
             </p>
           </div>
@@ -274,10 +275,11 @@ export default function TripayInvoice({
             <AmountRow label="Biaya transaksi" value={formatRupiah(feeCustomer)} />
             <AmountRow label="Total tagihan" value={formatRupiah(totalDue)} />
             <AmountRow label="Biaya merchant" value={formatRupiah(transaction.fee_merchant)} />
+            <AmountRow label="Bonus deposit" value={formatRupiah(Math.max(0, saldoMasuk - depositAmount))} />
             <AmountRow label="Saldo masuk" value={formatRupiah(saldoMasuk)} accent />
           </div>
 
-          {checkoutUrl ? (
+          {checkoutUrl && !terminal && !isPaid ? (
             <a
               href={checkoutUrl}
               target="_blank"
@@ -292,7 +294,7 @@ export default function TripayInvoice({
           {isPaid && (
             <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-[11.5px] font-bold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40">
               <ShieldCheck className="h-4 w-4" strokeWidth={2.4} />
-              Pembayaran terverifikasi — saldo sedang diproses.
+              Pembayaran terverifikasi — saldo telah dikreditkan.
             </p>
           )}
 

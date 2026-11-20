@@ -71,6 +71,17 @@ require_once __DIR__ . '/deposit_lib.php';
 try {
     dep_schema($conn);
     dep_import_log($conn); // riwayat lama dari tripay_log.txt → mencegah ref lama diproses ulang
+    require_once __DIR__ . '/deposit_invoice_lib.php';
+    di_ready($conn);
+    $invoice = di_row($conn, $merchant_ref);
+    if ($invoice) {
+        // Secret authenticates the Worker; live Tripay detail verifies amount and identity.
+        // Also accepts late PAID after local cancellation, exactly once via deposits ledger.
+        $updated = di_sync($conn, $invoice, (string)($data['reference'] ?? ''));
+        echo json_encode(['ok'=>true, 'message'=>'Invoice synchronized', 'status'=>$updated['status']]);
+        exit;
+    }
+
     $reference = mb_substr((string)($data['reference'] ?? ''), 0, 80);
     $method = mb_substr((string)($data['payment_method'] ?? $data['payment_method_code'] ?? ''), 0, 60) ?: null;
 
@@ -99,7 +110,8 @@ try {
     $conn->commit();
 } catch (Throwable $e) {
     try { $conn->rollback(); } catch (Throwable $e2) { /* abaikan */ }
-    echo json_encode(["ok" => false, "message" => "Query fail"]);
+    http_response_code(503);
+    echo json_encode(["ok" => false, "message" => "Query fail; retry callback"]);
     exit;
 }
 
