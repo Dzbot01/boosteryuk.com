@@ -1,34 +1,44 @@
-# Event global dan ikon mengambang
+# Event dan game Naikkan Akunmu!
 
-## Deploy
+## Perubahan
 
-1. Build/deploy frontend terbaru.
-2. Upload `php-api/events.php` ke `/api`, bersama `configdb.php` server dan `child_panel_lib.php` terbaru yang sudah ada. Jangan mengganti kredensial server.
-3. Jalankan `php-api/events.sql` bila ingin menyiapkan tabel manual. Endpoint juga membuat tabel otomatis bila akun database punya izin CREATE. SQL memakai CREATE IF NOT EXISTS dan INSERT IGNORE, tidak menimpa event yang sudah diubah.
-4. Child panel memakai API melalui proxy existing. GET publik tersedia untuk semua pengunjung; POST daftar admin/simpan membutuhkan token role admin dari DB, dan ditolak jika ada header X-Child-Panel. Form admin juga dibatasi pada root domain.
+- Ikon Event mengambang dihapus. Event ada setelah **Cek Status Pesanan** di menu pengguna yang login (termasuk admin). Rute `/event` dan `/event/:id/game` memerlukan login.
+- Kartu lebar/landscape; tidak ada tampilan countdown. Judul “Hitung mundur tahun baru” tetap judul event. Kartu game yang berlangsung langsung membuka game HTML lampiran. Coming soon tetap menyembunyikan judul/deskripsi; event selesai membuka detail.
+- Admin `/admin/events` dapat memilih jenis Game Naikkan Akunmu!, jadwal, dan status. Event awal id 1 dengan judul asli dan jenis lama countdown dimigrasi ke game; event lain tidak diubah. Akhir seed tetap 1 Januari 2027 00.00 WIB. GET daftar tetap publik untuk kompatibilitas, tanpa data progres pribadi.
+- Progres per `(event_id,user_id)`: username permainan, posting, followers, views, like, komentar, skor, tahapan, waktu akhir, grid, status selesai. Save berkala saat menjawab (maksimal sekali/8 detik), mulai, selesai, dan saat tab tersembunyi; bukan setiap frame. Reload mengambil DB. Konflik revisi menolak overwrite dari tab/perangkat lama. Koneksi gagal dapat kehilangan progres yang belum tersimpan; jangan menutup tab sebelum tersimpan.
+- Inventori dan bonus terpisah di DB. Merchant memakai **saldo website asli**, bukan saldo Rp10.000 bawaan HTML. Ada konfirmasi nominal dari halaman induk sebelum pembayaran. Harga ditentukan ulang server; pembelian langsung memperbarui saldo, inventori, dan Riwayat Pesanan berjenis Event dengan ID `EVG...`. Saldo juga dimuat ulang setiap 15 detik saat halaman terlihat.
+- Item adalah **item virtual game**, bukan pengiriman followers/like ke akun media sosial asli. Bonus item ditampilkan di profil game terpisah dari statistik organik kuis; skor kompetisi mengikuti formula kuis asli, tidak ditambah bonus merchant.
 
-## Perilaku
+## Keamanan dan batasan
 
-- Halaman publik `/event`: Berlangsung, Akan hadir / Coming soon, Selesai. Event berlangsung/selesai dapat dibuka dalam modal. Card coming soon hanya abu-abu + ikon tanda tanya di tengah, tanpa judul/deskripsi dan tanpa interaksi klik. API publik ikut menyembunyikan judul/deskripsi kategori tersebut.
-- Seed: Hitung mundur tahun baru, akhir **1 Januari 2027, 00.00 WIB** (`2026-12-31 17:00:00` UTC), serta satu card coming soon kosong. Tidak ada data event fiktif di frontend saat API gagal.
-- Admin root `/admin/events` melalui menu Kelola Event pada sidebar/dashboard: tambah/ubah judul, deskripsi, jenis (informasi/hitung mundur), status, waktu mulai dan batas akhir. Tidak ada penghapusan event pada versi ini; riwayat dapat dipertahankan sebagai Selesai.
-- Form waktu WIB (UTC+7), request ISO UTC, database UTC. Hitung mundur wajib punya batas akhir; akhir harus setelah mulai. Status Selesai diprioritaskan. Selain itu, batas akhir terlewat -> Selesai; waktu mulai di masa depan -> Akan hadir, waktu mulai terlewat -> Berlangsung. Tanpa jadwal, status sepenuhnya manual. Untuk membuka kembali event selesai, ubah status dan batas akhir yang telah lewat.
-- Halaman publik memuat ulang data setiap 30 detik ketika tab terlihat. Hitung mundur dan perpindahan kategori dihitung setiap detik, dengan offset waktu server untuk mengurangi pengaruh jam browser yang tidak tepat. Tidak memerlukan cron.
-- Ikon Event muncul di bagian bawah layar secara default pada semua halaman dalam Layout (root, child, dan admin). **Halaman transport OAuth `/auth/*` sengaja tidak ditambahi widget/konten**, agar handoff token tetap minimal.
-- Ikon dapat diseret lewat mouse/touch ke atas, bawah, kiri, kanan. Batas viewport dijaga saat drag/resize; posisi disimpan pada localStorage per origin/browser. Tombol panah keyboard juga dapat memindahkan ikon saat fokus.
-- Silang kecil di atas ikon menyembunyikannya selama sesi tab (sessionStorage), termasuk saat berpindah halaman. Menu Event di sidebar tetap tersedia. Tombol Tampilkan ikon mengambang di halaman Event memunculkannya lagi.
+Iframe sandbox tanpa `allow-same-origin`; token login hanya berada di halaman induk, tidak dikirim ke HTML. Bridge memvalidasi window sumber, channel acak, aksi, dan antrean. API mengautentikasi user dan memeriksa jadwal/jenis event. Semua harga, saldo, inventori, dan konsumsi item ditulis server.
 
-## Verifikasi lokal
+Pembelian memakai transaksi InnoDB dengan user/player row lock, pengurangan saldo bersyarat, inventori, riwayat, dan receipt dalam satu commit. Request ID unik + hash payload membuat pengulangan **ID yang sama** tidak memotong dua kali. Retry tombol setelah timeout di halaman yang sama memakai ID sebelumnya. Konsumsi item juga idempoten. Sesudah timeout pembayaran, jangan reload dan membayar ulang sebelum memeriksa riwayat/saldo: reload dapat membuat ID baru. Tidak ada refund/prize otomatis. Status riwayat Event final dan dikecualikan dari pengubahan status manual admin; bukan order provider SMM.
 
-- `node scripts/test-events.mjs`: countdown, batas expired, perpindahan jadwal, override manual, clamp posisi, GET publik, payload token admin, respons ditolak, jaringan gagal.
-- `npm run build`, pemeriksaan TypeScript (dua error baseline DepositInvoicePage/PlaygroundPage), parser sintaks PHP, dan diff check.
-- Belum menguji runtime PHP/MySQL dan drag visual di perangkat live. Tidak ada perubahan database/deploy produksi yang dijalankan.
+**Statistik kuis masih dihitung browser dan belum anti-cheat.** Server memvalidasi batas nilai dan menghitung ulang formula skor, tetapi bukan bukti jawaban sah. Leaderboard ditandai `verified:false`; hadiah menunggu verifikasi admin. Satu kesempatan per event, hasil selesai tidak bisa ditimpa; fitur grant/reset admin HTML lama tidak diaktifkan.
 
-## Checklist staging
+## Deploy (belum dijalankan ke produksi)
 
-1. Root/child: buka halaman berbeda, ikon tetap ada. Drag mouse/touch ke keempat sisi, pastikan tidak membuka halaman setelah drag; klik singkat membuka `/event`.
-2. Resize/rotasi layar: ikon tidak hilang keluar viewport. Tutup silang, navigasi: tetap tersembunyi; buka menu Event dan tampilkan lagi. Cek tidak mengganggu bottom navbar/calculator/modal.
-3. Card coming soon tidak bisa diklik/tab sebagai tombol, tanpa judul; respons GET juga tidak membocorkan judul/deskripsi coming soon. Berlangsung/selesai membuka modal, Escape/klik luar/silang menutup dan mengembalikan fokus.
-4. Login admin root: ubah event/jadwal, simpan dan reload; data bertahan dan halaman publik mengikuti maksimal sekitar 30 detik. Token non-admin/guest dan POST dari child ditolak.
-5. Set batas akhir beberapa menit ke depan: countdown ke nol, otomatis pindah Selesai tanpa nilai negatif. Set waktu mulai ke depan: muncul card coming soon. Status Selesai manual tetap Selesai sebelum deadline.
-6. Simulasikan API gagal: error + coba lagi, bukan event contoh yang mengesankan tersimpan.
+1. Backup DB dan uji di staging dengan akun/saldo khusus uji.
+2. Jalankan `php-api/events.sql`, `php-api/riwayat_pesanan_migration.sql` bila kolom riwayat belum tersedia, lalu `php-api/event_game.sql`. SQL game hanya membuat dua tabel baru. Endpoint dapat menyiapkan tabel/kolom bila izin DB memungkinkan. Tabel `users`, `riwayat_pesanan`, `event_game_players`, `event_game_receipts` **wajib InnoDB**; pembayaran ditolak jika ada engine berbeda. Jangan konversi tabel produksi tanpa backup dan maintenance yang sesuai.
+3. Upload `events.php`, `event_game.php`, `event_game_lib.php`, `admin_data.php`, `riwayat_schema.php` ke folder `/api`, dengan `child_panel_lib.php` dan `configdb.php` existing tetap tersedia. Jangan mengganti kredensial.
+4. Build `npm run build`; upload isi `dist/`, termasuk `games/naikkan-akunmu.html`. Server wajib menyajikan HTML tersebut sebagai file, bukan fallback SPA. Frontend dan API harus dirilis bersama. PHP membutuhkan mysqli/mysqlnd seperti API existing; tidak membutuhkan mbstring baru.
+5. Jika lewat child panel, pastikan proxy existing meneruskan `event_game.php` ke API utama dan autentikasi bekerja. Tidak ada perubahan kredensial atau layanan Supabase.
+
+## Pengujian lokal
+
+- `node scripts/test-events.mjs`: lifecycle/tanggal event dan kontrak API.
+- `node scripts/test-event-game.mjs`: sintaks seluruh JS game, UUID fallback opaque iframe, RPC sumber/channel, respons sukses/gagal, sandbox, menu.
+- `node scripts/test-avatar.mjs`, `node scripts/test-google-redirect.mjs`: regresi fitur sebelumnya.
+- Build produksi dan parser sintaks PHP lulus. TypeScript masih memiliki dua error baseline: DepositInvoicePage unused method dan deklarasi ScrollExpand di PlaygroundPage.
+- **Belum diuji runtime PHP/MySQL atau visual perangkat/browser.** Pengujian Node bukan bukti transaksi saldo end-to-end berhasil.
+
+## Wajib lolos di staging sebelum saldo nyata
+
+1. Guest tidak melihat menu Event; pengguna/admin melihatnya tepat setelah Cek Status. Tidak ada ikon floating atau tombol memunculkannya lagi. Cek kartu mobile/desktop landscape, coming soon, modal selesai, dan rotasi game.
+2. Mulai game, jawab soal, reload: username/statistik/tahapan/grid kembali. Buka dua tab: save dari revisi lama ditolak. Hasil selesai tetap terkunci. Pengguna lain/event lain terisolasi.
+3. Catat saldo awal, beli satu tiap produk. Pastikan selisih tepat harga server, inventori benar, satu riwayat Event selesai, dan saldo header diperbarui. Coba saldo kurang, kuantitas negatif/desimal/di atas 100, ID produk palsu, harga palsu, token kedaluwarsa, event upcoming/finished.
+4. Kirim dua request bersamaan dengan ID identik: hanya satu potongan/riwayat. Ulang ID dengan cart berbeda: ditolak. Dua ID berbeda dengan saldo hanya cukup satu: hanya satu berhasil. Simulasikan putus respons setelah commit, lalu retry ID sama.
+5. Paksa kegagalan insert riwayat/receipt: saldo dan inventori harus rollback. Coba engine non-InnoDB: pembayaran harus ditolak tanpa potongan.
+6. Seret item: inventori turun satu, bonus naik sesuai katalog, reload tetap sama. Retry ID konsumsi sama tidak mengurangi lagi. Tidak ada panggilan provider atau saldo/hadiah gratis dari HTML.
+7. Pastikan order Event muncul pada filter riwayat pengguna/admin, bukan SMM atau estimasi markup SMM; checkout SMM/OTP/VPS/agen dan avatar/OAuth lama tetap bekerja.

@@ -13,10 +13,6 @@ assert.equal(eventStatus({...e,status:'finished'},end-86400000),'finished');
 assert.equal(eventStatus({...e,starts_at:new Date(end-1000).toISOString()},end-2000),'upcoming');
 assert.equal(eventStatus({...e,starts_at:new Date(end-1000).toISOString()},end-1000),'ongoing');
 assert.equal(eventStatus({...e,status:'upcoming',effective_status:'upcoming',ends_at:null},end),'upcoming');
-const {clampEventPosition:clamp}=await module('src/lib/eventPosition.ts');
-assert.deepEqual(clamp({x:-500,y:-500},390,844),{x:8,y:36});
-assert.deepEqual(clamp({x:900,y:1000},390,844),{x:318,y:754});
-assert.deepEqual(clamp({x:100,y:400},390,844),{x:100,y:400});
 let calls=0;
 globalThis.fetch=async(url,options)=>{calls++;assert.equal(url,'https://boosteryuk.com/api/events.php');assert.equal(options.cache,'no-store');return {ok:true,json:async()=>({ok:true,events:[e]})};};
 assert.equal((await eventsApi.list()).events[0].id,1);
@@ -24,4 +20,4 @@ globalThis.fetch=async(url,options)=>{const body=JSON.parse(options.body);assert
 assert.equal((await eventsApi.save(e)).ok,false);
 globalThis.fetch=async()=>{throw new Error('offline')};assert.equal((await eventsApi.list()).ok,false);
 assert.equal(calls,1);
-console.log('PASS: countdown, expiry boundary, scheduled start, manual finished/upcoming, draggable viewport bounds, public GET, admin save auth payload, API/network errors.');
+console.log('PASS: countdown, expiry boundary, scheduled start, manual finished/upcoming, public GET, admin save auth payload, API/network errors.');

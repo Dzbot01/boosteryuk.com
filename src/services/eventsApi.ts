@@ -1,6 +1,6 @@
 import { MAIN_API } from '../lib/apiBase';
 export type EventStatus = 'upcoming' | 'ongoing' | 'finished';
-export interface SiteEvent { id: number; title: string; description: string; kind: 'standard' | 'countdown'; status: EventStatus; effective_status: EventStatus; starts_at: string | null; ends_at: string | null }
+export interface SiteEvent { id: number; title: string; description: string; kind: 'standard' | 'countdown' | 'game'; status: EventStatus; effective_status: EventStatus; starts_at: string | null; ends_at: string | null }
 export type EventInput = Omit<SiteEvent, 'id' | 'effective_status'> & { id?: number };
 async function call(action?: string, event?: EventInput): Promise<{ok: boolean; message?: string; events?: SiteEvent[]; server_time?: string}> {
   try {

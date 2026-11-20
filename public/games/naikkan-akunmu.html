@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Naikkan Akunmu! - Event Boosteryuk</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap">
+<style>
+:root{--bg:#eceeff;--panel:#fff;--ink:#1b1d3a;--mut:#666a8c;--line:#d9dcf2;--acc:#6c3df0;--ok:#16a34a;--bad:#dc2626;--scr:#fff;--scrink:#111;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1021;--panel:#191c38;--ink:#f1f2ff;--mut:#9ea2c8;--line:#2c3060;--scr:#14151f;--scrink:#f3f3f7}}
+:root[data-theme="dark"]{--bg:#0e1021;--panel:#191c38;--ink:#f1f2ff;--mut:#9ea2c8;--line:#2c3060;--scr:#14151f;--scrink:#f3f3f7}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:"Nunito",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+#game{height:100%;display:grid;grid-template-columns:auto 1fr;gap:3vh 3vw;padding:2vh 3vw;align-items:center}
+/* HP */
+.phone{height:94vh;aspect-ratio:9/18;background:#0a0a0f;border-radius:4.5vh;padding:1vh;box-shadow:0 1.5vh 4vh rgba(20,20,60,.35)}
+.screen{position:relative;height:100%;background:var(--scr);color:var(--scrink);border-radius:3.6vh;overflow:hidden;display:flex;flex-direction:column;font-size:2vh}
+.notch{width:30%;height:1.6vh;background:#0a0a0f;border-radius:1vh;margin:0 auto;flex:none}
+.top{display:flex;justify-content:space-between;align-items:center;padding:.8vh 2vh;font-weight:900;font-size:2.3vh}
+.prof{display:flex;align-items:center;gap:2vh;padding:0 2vh}
+.ring{flex:none;width:10vh;height:10vh;border-radius:50%;padding:.5vh;background:conic-gradient(#f58529,#dd2a7b,#8134af,#515bd4,#f58529)}
+.ava{width:100%;height:100%;border-radius:50%;border:.5vh solid var(--scr);background:linear-gradient(135deg,#ffd36e,#ff6f91);display:grid;place-items:center;font-size:4.6vh}
+.stats{flex:1;display:flex;justify-content:space-around;text-align:center}
+.stats b{display:block;font-size:2.6vh;font-weight:900;transition:transform .2s,color .2s}
+.stats span{font-size:1.6vh;opacity:.7}
+.bio{padding:1vh 2vh;line-height:1.3}
+.bio small{display:block;opacity:.7;font-size:1.7vh}
+.btns{display:flex;gap:1vh;padding:0 2vh}
+.btns div{flex:1;text-align:center;padding:.8vh 0;border-radius:1vh;background:rgba(128,128,150,.22);font-weight:800;font-size:1.8vh}
+.btns .go{background:#4a5df9;color:#fff}
+.cur{display:flex;justify-content:space-around;margin:1.2vh 2vh 0;padding:.8vh;border-radius:1vh;background:rgba(128,128,150,.15);font-weight:800;font-size:1.8vh}
+.grid{flex:1;min-height:0;overflow:hidden;margin-top:1.2vh;display:grid;grid-template-columns:repeat(3,1fr);gap:.3vh;align-content:start;border-top:1px solid rgba(128,128,150,.3)}
+.tile{aspect-ratio:1;display:grid;place-items:center;font-size:5vh;animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+.tile.ph{background:rgba(128,128,150,.12);animation:none}
+.nav{flex:none;display:flex;justify-content:space-around;padding:1vh 0 1.2vh;border-top:1px solid rgba(128,128,150,.3);font-size:2.4vh}
+@keyframes pop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+.fl{position:absolute;bottom:22%;font-weight:900;font-size:2.8vh;pointer-events:none;animation:up 1.1s ease-out forwards;text-shadow:0 .2vh .8vh rgba(0,0,0,.35)}
+@keyframes up{to{transform:translateY(-14vh);opacity:0}}
+.hit .stats{animation:shake .35s}.hit [data-k="followers"]{color:var(--bad)}
+@keyframes shake{25%{transform:translateX(-.8vh)}75%{transform:translateX(.8vh)}}
+.bump{transform:scale(1.35);color:var(--ok)}
+/* Panel */
+.panel{height:94vh;display:flex;flex-direction:column;gap:1.8vh;min-width:0}
+.bar{display:flex;gap:1.6vh;align-items:stretch}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:2vh;padding:1.2vh 2vh;display:flex;flex-direction:column;justify-content:center}
+.chip small{font-size:1.9vh;color:var(--mut);font-weight:800}
+.chip b{font-size:4.6vh;line-height:1.1;font-weight:900}
+.chip.t{min-width:17vh}.chip.t.low b{color:var(--bad)}
+.steps{flex:1;display:flex;gap:.8vh;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:2vh;padding:1vh 1.6vh;overflow:hidden}
+.st{flex:1;text-align:center;font-size:1.8vh;font-weight:800;color:var(--mut);padding:1vh .4vh;border-radius:1.4vh;white-space:nowrap}
+.st.on{background:var(--acc);color:#fff}.st.done{opacity:.55}
+.qcard{flex:1;min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:3vh;padding:3vh 3.4vh;display:flex;flex-direction:column;gap:2.2vh}
+.qtag{font-size:2.2vh;font-weight:800;color:var(--acc)}
+.q{font-size:4.2vh;font-weight:900;line-height:1.2;margin:0}
+.opts{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:1.6vh}
+.opt{border:2px solid var(--line);background:transparent;border-radius:2vh;padding:1vh 2vh;text-align:left;font-weight:800;font-size:2.9vh;line-height:1.2;display:flex;align-items:center}
+.opt:hover:not(:disabled){border-color:var(--acc)}
+.opt.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.opt.no{background:var(--bad);border-color:var(--bad);color:#fff}
+.opt:disabled{cursor:default}
+/* Layar */
+.ov{position:fixed;inset:0;z-index:5;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:2vh;text-align:center;padding:3vh 6vw}
+.ov.show{display:flex}
+.ov h1{font-size:8vh;line-height:1;margin:0;font-weight:900}
+.ov p{font-size:3vh;margin:0;max-width:70vw;color:var(--mut);font-weight:600}
+.cta{border:0;background:var(--acc);color:#fff;font-weight:900;font-size:3.4vh;padding:1.6vh 5vh;border-radius:5vh}
+.sum{display:grid;grid-template-columns:repeat(5,auto);gap:1vh 3vh;font-size:2.6vh;font-weight:800}
+.sum small{display:block;color:var(--mut);font-size:2vh}
+.big{font-size:12vh;font-weight:900;line-height:1;color:var(--acc)}
+#rot{display:none;z-index:9}
+#start,#lb{overflow:auto}
+.plat{display:flex;gap:1.4vh;flex-wrap:wrap;justify-content:center}
+.pl{border:2px solid var(--line);background:var(--panel);border-radius:3vh;padding:1.2vh 2.4vh;font-weight:800;font-size:2.8vh}
+.pl.on{border-color:var(--acc);background:var(--acc);color:#fff}
+.pl:disabled{opacity:.45;cursor:default}
+.pl small{font-size:1.8vh;font-weight:600}
+.uname{display:none;align-items:center;gap:1vh;background:var(--panel);border:2px solid var(--line);border-radius:3vh;padding:1vh 2.4vh;font-size:max(16px,3vh);font-weight:800}
+.uname.show{display:flex}
+.uname input{border:0;background:transparent;color:inherit;font:inherit;outline:0;width:34vh}
+.cmts{position:absolute;left:1.4vh;right:1.4vh;bottom:9vh;display:flex;flex-direction:column;gap:.8vh;pointer-events:none;z-index:3}
+.cm{display:flex;gap:1vh;align-items:flex-start;background:var(--scr);color:var(--scrink);border:1px solid rgba(128,128,150,.35);border-radius:1.6vh;padding:.9vh 1.2vh;box-shadow:0 .6vh 2vh rgba(0,0,0,.3);font-size:1.7vh;line-height:1.25;animation:cin .35s ease-out}
+.cm b{display:block;font-size:1.6vh}
+.cm .a{flex:none;width:3.4vh;height:3.4vh;border-radius:50%;display:grid;place-items:center;font-size:2vh;background:linear-gradient(135deg,#ffd36e,#ff6f91)}
+@keyframes cin{from{transform:translateY(2vh);opacity:0}to{transform:none;opacity:1}}
+#lb{justify-content:flex-start;gap:1.4vh}
+#lb h1{font-size:6vh}
+.me{background:var(--acc);color:#fff;border-radius:3vh;padding:1.2vh 3vh;font-size:3vh;font-weight:900}
+.tbl{width:min(92vw,120vh);flex:1;min-height:0;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:2.4vh;padding:.6vh}
+.row{display:grid;grid-template-columns:13vh 1fr 8vh 13vh;gap:1vh;align-items:center;padding:1.1vh 2vh;font-size:2.8vh;font-weight:800;border-radius:1.6vh;text-align:left}
+.row.hd{position:sticky;top:0;background:var(--panel);color:var(--mut);font-size:2.2vh}
+.row.me{background:var(--acc);color:#fff}
+.row b{text-align:right}
+.row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk{color:var(--mut)}.row.me .rk{color:#fff}
+#lb{padding:1.6vh 3vw;gap:1vh;justify-content:flex-start}
+#lb h1{font-size:4.8vh}
+#lb p{font-size:2vh;margin:0}
+.lbtop{width:min(92vw,120vh);display:flex;align-items:center;justify-content:space-between;gap:2vw}
+.lbtop .me{font-size:2.2vh;padding:.8vh 2vh}
+.nav3{display:flex;gap:1.2vh}
+.nb{background:var(--panel);border:1px solid var(--line);border-radius:2vh;padding:.7vh 1.4vh;font-weight:800;font-size:1.7vh;display:flex;flex-direction:column;align-items:center;gap:.2vh;min-width:9vh}
+.nb span{font-size:3.2vh;line-height:1}
+.nb i{font-style:normal}
+.nb:disabled{opacity:.55;cursor:not-allowed}
+.nb[hidden]{display:none}
+.pod{width:min(50vw,70vh);height:42vh;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.2vh;align-items:end;background:var(--panel);border:1px solid var(--line);border-radius:2.4vh;padding:1vh 1.6vh 0;flex:none}
+.pc{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.pc .nm2{font-weight:900;font-size:2.2vh;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc .sc2{font-weight:800;font-size:2vh;color:var(--mut)}
+.pc.mine .nm2{color:var(--acc)}
+.bar3{width:72%;border-radius:1.4vh 1.4vh 0 0;display:flex;justify-content:center;padding-top:.6vh;font-size:3.6vh;font-weight:900;color:#fff;transition:height .6s}
+.bar3.g{background:linear-gradient(#ffd34d,#e0a100)}
+.bar3.s{background:linear-gradient(#c9d2df,#8b97a8)}
+.bar3.b{background:linear-gradient(#e6a06a,#b36a2b)}
+.row{grid-template-columns:13vh 1fr 18vh 13vh;font-size:2.4vh;padding:.8vh 2vh}
+.row.adm{grid-template-columns:1fr 14vh 14vh 15vh}
+.ah{font-size:5vh}
+.sm{font-size:2.4vh;padding:1vh 3vh;align-self:flex-start}
+.lnk{border:0;background:none;color:var(--acc);font-weight:800;font-size:2.2vh;text-decoration:underline}
+.lnk[hidden]{display:none}
+/* Toko 3D */
+#shop{padding:0;gap:0;justify-content:stretch;align-items:stretch;z-index:6;text-align:left;overflow:hidden}
+.shopwrap{display:grid;grid-template-columns:1fr 38vw;width:100%;height:100%}
+.room{position:relative;overflow:hidden}
+.x{position:absolute;top:1.4vh;left:1.4vh;z-index:3;border:0;background:rgba(0,0,0,.6);color:#fff;font-weight:800;border-radius:3vh;padding:1vh 2vh;font-size:2.2vh}
+.wall{position:absolute;inset:0 0 45% 0;background:repeating-linear-gradient(90deg,#f4e3c4 0 6vh,#efdbb8 6vh 12vh)}
+.sign{position:absolute;top:4vh;left:50%;transform:translateX(-50%);background:#3b2a20;color:#ffd9a0;font-weight:900;font-size:4vh;padding:1vh 3vh;border-radius:1.4vh;box-shadow:0 .6vh 0 #1f140e;white-space:nowrap}
+.floor{position:absolute;inset:55% 0 0 0;background:linear-gradient(#8a5a33,#5e3a1e)}
+.tabletop{position:absolute;left:4%;right:4%;top:52%;height:22%;background:linear-gradient(#c58a4e,#9a5f2c);clip-path:polygon(8% 0,92% 0,100% 100%,0 100%)}
+.tfront{position:absolute;left:4%;right:4%;top:74%;height:6%;background:#6a3f1c;border-radius:0 0 1vh 1vh}
+.tleg{position:absolute;top:80%;width:2.6vh;height:20%;background:#5a3418}
+.items{position:absolute;left:9%;right:9%;top:24%;height:46%;display:flex;justify-content:space-around;align-items:flex-end}
+.it3{--s:9vh;display:flex;flex-direction:column;align-items:center;gap:1.2vh;border:0;background:none;color:inherit;perspective:80vh;cursor:pointer}
+.cube{width:var(--s);height:var(--s);position:relative;transform-style:preserve-3d;transform:rotateX(-22deg) rotateY(-32deg);transition:transform .5s}
+.it3:hover .cube,.it3:focus-visible .cube{transform:rotateX(-26deg) rotateY(-52deg) translateY(-1.6vh)}
+.cube i{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:5vh;background:var(--c);border:.3vh solid rgba(0,0,0,.25)}
+.cube i.rt,.cube i.lf{filter:brightness(.82)}.cube i.tp{filter:brightness(1.15)}.cube i.bt,.cube i.bk{filter:brightness(.7)}
+.plate{background:#fff8ea;color:#3b2a20;border-radius:.8vh;padding:.4vh 1vh;font-weight:900;font-size:1.8vh;line-height:1.25;box-shadow:0 .3vh 0 rgba(0,0,0,.3)}
+.board{background:var(--panel);color:var(--ink);border-left:.6vh solid #6a3f1c;padding:2vh 1.6vw;display:flex;flex-direction:column;gap:1vh;min-height:0}
+.board h2{margin:0;font-size:3.4vh}
+#plist{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:.8vh}
+.pr{display:grid;grid-template-columns:5vh 1fr auto;gap:1.2vh;align-items:center;padding:.8vh 1.2vh;border:2px solid var(--line);border-radius:1.6vh;background:transparent;text-align:left;font-weight:800;font-size:2.2vh}
+.pr small{display:block;color:var(--mut);font-size:1.6vh;font-weight:600}
+.pr:hover{border-color:var(--acc)}
+.cart{border-top:1px solid var(--line);padding-top:1vh;font-weight:800;font-size:2.1vh}
+#clist div{display:flex;justify-content:space-between;align-items:center;font-size:1.8vh;font-weight:600}
+.rm{border:0;background:var(--line);border-radius:50%;width:3vh;height:3vh;font-weight:900;color:var(--ink)}
+.tot{display:flex;justify-content:space-between}
+#cmsg{font-size:1.8vh;color:var(--ok);min-height:2.2vh}
+.pay{font-size:2.8vh;padding:1vh 0;width:100%}
+.pay:disabled{opacity:.5}
+/* Profil + seret item */
+.invp{display:none;height:94vh;flex-direction:column;gap:1.4vh;min-width:0}
+body.pm .panel{display:none}
+body.pm .invp{display:flex}
+body.pm .cmts{display:none}
+.invp h2{margin:0;font-size:4vh}
+.invp p{margin:0;color:var(--mut);font-size:2.4vh;font-weight:600}
+.inv{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(16vh,1fr));gap:1.6vh;align-content:start}
+.it{touch-action:none;user-select:none;cursor:grab;background:var(--panel);border:2px solid var(--line);border-radius:2vh;padding:1.2vh;text-align:center;font-weight:800;font-size:2vh;position:relative}
+.it .ic{font-size:6vh;display:block}
+.it .qty{position:absolute;top:.6vh;right:1vh;background:var(--acc);color:#fff;border-radius:2vh;padding:0 1vh;font-size:1.8vh}
+.ghost{position:fixed;z-index:20;pointer-events:none;font-size:7vh;transform:translate(-50%,-50%)}
+.phone.drop{box-shadow:0 0 0 1vh var(--ok)}
+/* Menu mengambang */
+.lbtop{justify-content:center;flex-direction:column;gap:.6vh}
+.tbl{width:min(78vw,110vh)}
+.fnav{position:absolute;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:3vh;z-index:6}
+.fnav.l{left:2vw}.fnav.r{right:2vw}
+.fb{border:0;background:none;padding:0;font-size:7.5vh;line-height:1;filter:drop-shadow(0 .6vh 1vh rgba(0,0,0,.35));animation:bob 3.2s ease-in-out infinite}
+.fnav .fb:nth-child(2){animation-delay:-1.4s}
+.fb:hover:not(:disabled){filter:drop-shadow(0 .6vh 1vh rgba(0,0,0,.35)) brightness(1.2)}
+.fb:disabled{opacity:.5;filter:grayscale(.7);cursor:not-allowed}
+@keyframes bob{50%{transform:translateY(-1.2vh)}}
+/* Penjual */
+.items{left:5%;right:32%}
+.seller,.sarms{position:absolute;right:11%;top:27%;width:22vh;height:35.2vh;pointer-events:none}
+.sarms{z-index:2}
+.sbody{width:100%;height:100%;display:block}
+.say{position:absolute;right:72%;top:-2vh;background:#fff;color:#3b2a20;border-radius:1.6vh;padding:.8vh 1.4vh;font-weight:800;font-size:1.9vh;line-height:1.25;width:max-content;max-width:24vh;box-shadow:0 .4vh 0 rgba(0,0,0,.25)}
+.arm{position:absolute;top:47.5%;width:3vh;margin-left:-1.5vh;height:11vh;border-radius:1.5vh;background:#3b82f6;transform-origin:50% 0;transition:transform .35s ease,height .35s ease}
+.arm::after{content:"";position:absolute;bottom:-1.3vh;left:50%;width:3.2vh;height:3.2vh;margin-left:-1.6vh;border-radius:50%;background:#f2c9a0}
+#armL{left:22%}#armR{left:78%}
+.held{position:absolute;left:50%;top:56%;transform:translateX(-50%);width:13vh;display:flex;flex-wrap:wrap;gap:.4vh;justify-content:center;transition:transform .5s}
+.sarms.give .held{transform:translate(-50%,9vh) scale(1.5)}
+.mc{width:3.4vh;height:3.4vh;border-radius:.6vh;background:var(--c);display:grid;place-items:center;font-size:2.2vh;border:.2vh solid rgba(0,0,0,.3)}
+.it3.gone .cube{visibility:hidden}
+.it3.gone .plate{opacity:.55}
+.it3.taking .cube{transform:rotateX(-22deg) rotateY(-32deg) translate(3vh,-3vh) scale(.6)}
+/* Strike 3x: hentakan + listrik */
+.phone{position:relative}
+.zapfx{position:absolute;left:-1vh;top:-1vh;width:calc(100% + 2vh);height:calc(100% + 2vh);pointer-events:none;opacity:0;z-index:4;filter:drop-shadow(0 0 .7vh #38e1ff)}
+.phone.zap{animation:jolt .7s cubic-bezier(.2,.9,.3,1),glow 3s linear}
+.phone.zap .screen{animation:flash 3s linear}
+.phone.zap .zapfx{animation:flick 3s steps(1) both}
+@keyframes jolt{0%{transform:none}8%{transform:translate(-1.4vh,.8vh) rotate(-3deg) scale(1.07)}16%{transform:translate(1.6vh,-.8vh) rotate(3deg) scale(1.07)}28%{transform:translate(-1vh,.4vh) rotate(-2deg) scale(1.04)}42%{transform:translate(.8vh,-.3vh) rotate(1.4deg)}60%{transform:translate(-.4vh,.2vh) rotate(-.6deg)}100%{transform:none}}
+@keyframes flick{0%{opacity:1}5%{opacity:.2}10%{opacity:1}15%{opacity:0}20%{opacity:1}27%{opacity:.3}33%{opacity:1}40%{opacity:0}46%{opacity:1}52%{opacity:.25}58%{opacity:1}66%{opacity:0}72%{opacity:1}80%{opacity:.4}88%{opacity:1}94%{opacity:.3}100%{opacity:0}}
+@keyframes glow{0%,10%,22%,35%,48%,60%,74%,86%{box-shadow:0 0 2vh .8vh #7df9ff,0 0 5vh 2vh rgba(255,230,90,.55)}5%,16%,29%,42%,54%,67%,80%,92%{box-shadow:0 0 1vh .3vh #7df9ff}100%{box-shadow:0 1.5vh 4vh rgba(20,20,60,.35)}}
+@keyframes flash{0%,10%,22%,35%,48%,60%,74%,86%{filter:brightness(1.3) saturate(1.2)}5%,16%,29%,42%,54%,67%,80%,92%,100%{filter:none}}
+.chip.t.slow{box-shadow:0 0 0 .5vh rgba(24,160,251,.55)}
+.chip.t.slow b{color:#18a0fb}
+/* Menu kiri dengan nama + tombol Main */
+.fnav.l{left:2vw}
+.fb{display:flex;flex-direction:column;align-items:center;gap:.4vh;font-size:1.9vh;font-weight:800;color:var(--ink)}
+.fb .ic{font-size:6.5vh;line-height:1}
+.fb .lb{white-space:nowrap}
+.maincard{position:absolute;right:2vw;bottom:2.5vh;z-index:6;display:flex;align-items:center;gap:1.4vh;padding:1.4vh 3.6vh;border:0;border-radius:2.2vh;background:var(--acc);color:#fff;font-weight:900;font-size:3.4vh;box-shadow:0 .8vh 0 rgba(0,0,0,.25),0 1.4vh 2.4vh rgba(0,0,0,.25)}
+.maincard:disabled{background:var(--line);color:var(--mut);box-shadow:none;cursor:not-allowed}
+/* Inventori (tas) */
+.invhd{display:flex;justify-content:space-between;align-items:flex-start;gap:2vh}
+.bag{position:relative;background:none;border:0;padding:0;display:flex;flex-direction:column;align-items:center;gap:.2vh;color:var(--ink);filter:drop-shadow(0 .5vh .8vh rgba(0,0,0,.3))}
+.bi{font-size:7vh;line-height:1}
+.bl{font-size:1.9vh;font-weight:800}
+.bc{position:absolute;top:0;right:-.8vh;background:var(--acc);color:#fff;border-radius:2vh;font-style:normal;font-weight:900;font-size:1.9vh;padding:0 .9vh}
+.invbox{flex:1;min-height:0;display:flex;flex-direction:column;gap:1.2vh;background:var(--panel);border:1px solid var(--line);border-radius:2.4vh;padding:1.6vh}
+.invbox[hidden]{display:none}
+.invbox h2{font-size:3.2vh}
+/* Tombol Mulai Main lebih besar */
+#btnStart{font-size:4.6vh;padding:2.4vh 9vh}
+/* Cara Bermain + Rewards */
+#how,#rew{justify-content:flex-start;padding:2vh 3vw;gap:1.4vh}
+.ph{font-size:4.6vh!important}
+.lead{font-size:2.4vh!important;margin:0}
+.steps2{list-style:none;counter-reset:s;display:grid;grid-template-columns:1fr 1fr;gap:1.4vh 2vw;width:min(92vw,150vh);padding:0;margin:0;text-align:left}
+.steps2 li{counter-increment:s;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:2vh;padding:1.2vh 1.6vh 1.2vh 6vh;font-size:2.3vh;font-weight:700;line-height:1.3}
+.steps2 li::before{content:counter(s);position:absolute;left:1.4vh;top:50%;transform:translateY(-50%);width:3.6vh;height:3.6vh;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:900;font-size:2.2vh}
+.tree{width:min(92vw,120vh);max-height:52vh;height:auto}
+.tl{fill:none;stroke:var(--acc);stroke-width:2.5;stroke-linecap:round}
+.tl.no{stroke:var(--mut);stroke-dasharray:6 5}
+.tn rect{fill:var(--panel);stroke:var(--acc);stroke-width:2}
+.tn text{fill:var(--ink);text-anchor:middle;font-weight:800}
+.tn.no rect{stroke:var(--mut);stroke-dasharray:6 4}
+.tn.g rect{fill:#ffd34d;stroke:#b8860b}.tn.s rect{fill:#d5dde8;stroke:#8b97a8}.tn.b rect{fill:#e8a971;stroke:#a35f26}
+.tn.g text,.tn.s text,.tn.b text{fill:#2b2118}
+.lbl rect{fill:var(--acc)}.lbl.no rect{fill:var(--mut)}
+.lbl text{fill:#fff;font-size:11px;font-weight:900;text-anchor:middle}
+/* Drop merah */
+.redfx{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:5;background:linear-gradient(rgba(255,40,40,.9),rgba(190,0,20,.6) 60%,rgba(120,0,10,.3))}
+.phone.reddrop{animation:phoneDrop .9s cubic-bezier(.3,1.4,.5,1)}
+.phone.reddrop .redfx{animation:reddrop 1.4s ease-in both}
+@keyframes reddrop{0%{opacity:1;transform:translateY(-100%)}35%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(0)}}
+@keyframes phoneDrop{0%{transform:none}30%{transform:translateY(2.2vh) rotate(1deg);box-shadow:0 0 3vh 1vh rgba(255,40,40,.8)}60%{transform:translateY(-.6vh)}100%{transform:none}}
+@media(orientation:portrait){#rot{display:flex}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01s!important}}
+</style>
+</head>
+<body>
+<div id="game">
+  <div class="phone"><svg class="zapfx" viewBox="0 0 100 200" preserveAspectRatio="none"><g fill="none" stroke="#c8fbff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"><polyline vector-effect="non-scaling-stroke" points="0,20 6,30 1,40 8,52 2,64 7,78 0,92"/><polyline vector-effect="non-scaling-stroke" points="100,40 93,52 99,62 92,76 98,88 91,104 100,118"/><polyline vector-effect="non-scaling-stroke" points="12,0 22,6 30,0 42,7 54,0 66,6 80,0"/><polyline vector-effect="non-scaling-stroke" points="10,200 24,194 36,200 50,193 64,200 78,194 92,200"/><polyline vector-effect="non-scaling-stroke" points="0,130 7,140 2,152 9,164 3,176 8,188"/><polyline vector-effect="non-scaling-stroke" points="100,140 94,150 99,160 93,172 98,184"/></g></svg><div class="screen" id="scr">
+    <div class="notch"></div>
+    <div class="top"><span id="uTop">akun.kamu</span><span>☰</span></div>
+    <div class="prof">
+      <div class="ring"><div class="ava">😎</div></div>
+      <div class="stats">
+        <div><b id="sPosts" data-k="posts">0</b><span>Postingan</span></div>
+        <div><b id="sFol" data-k="followers">20</b><span>Pengikut</span></div>
+        <div><b>50</b><span>Mengikuti</span></div>
+      </div>
+    </div>
+    <div class="bio"><b id="uBio">Akun Kamu</b><small>Kreator konten pemula. Ayo naikkan akun ini!</small></div>
+    <div class="btns"><div class="go">Ikuti</div><div>Pesan</div></div>
+    <div class="cur"><span>👁 <b id="cV">0</b></span><span>❤️ <b id="cL">0</b></span><span>💬 <b id="cC">0</b></span></div>
+    <div class="grid" id="grid"></div>
+    <div class="cmts" id="cmts"></div>
+    <div class="redfx" id="redfx"></div>
+    <div class="nav"><span>🏠</span><span>🔍</span><span>➕</span><span>🎬</span><span>👤</span></div>
+  </div></div>
+
+  <div class="panel">
+    <div class="bar">
+      <div class="chip t" id="tbox"><small>Waktu</small><b id="time">5:00</b></div>
+      <div class="chip"><small>Skor</small><b id="score">0</b></div>
+      <div class="steps" id="steps"></div>
+    </div>
+    <div class="qcard">
+      <div class="qtag" id="qtag"></div>
+      <p class="q" id="q"></p>
+      <div class="opts" id="opts"></div>
+    </div>
+  </div>
+  <div class="invp" id="invp">
+    <div class="invhd">
+      <button class="cta sm" id="profX">← Kembali</button>
+      <button class="bag" id="bag" aria-label="Inventori"><span class="bi">🎒</span><span class="bl">Inventori</span><i class="bc" id="bagCnt">0</i></button>
+    </div>
+    <div class="invbox" id="invbox" hidden>
+      <h2>Item Boost Saya</h2>
+      <p>Seret ikon item ke HP untuk memakainya.</p>
+      <div class="inv" id="invlist"></div>
+    </div>
+  </div>
+</div>
+
+<div class="ov show" id="start">
+  <h1>Naikkan Akunmu!</h1>
+  <p>Jawab pertanyaan seputar cara mengembangkan akun. Jawaban benar membuka posting, views, like, komentar, dan followers. Jawaban salah mengurangi 1 follower. Waktumu 3 menit, dan kamu hanya bisa bermain 1 kali.</p>
+  <div class="plat" id="plat"><button class="pl" data-p="ig">📷 Instagram</button><button class="pl" disabled>🎵 TikTok <small>segera</small></button><button class="pl" disabled>▶️ YouTube <small>segera</small></button><button class="pl" disabled>👍 Facebook <small>segera</small></button></div>
+  <div class="uname" id="unameBox"><span>@</span><input id="uname" maxlength="30" placeholder="username instagram" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
+  <button class="cta" id="btnStart">Mulai Main</button>
+  <p id="hi"></p>
+</div>
+
+<div class="ov" id="end">
+  <p>Waktu habis! Skor akhirmu</p>
+  <div class="big" id="fScore">0</div>
+  <div class="sum" id="fSum"></div>
+  <p id="fBest">Skormu sudah tercatat. Kamu hanya bisa bermain 1 kali.</p>
+  <button class="cta" id="btnClose">✕ Tutup</button>
+</div>
+
+<div class="ov" id="lb">
+  <div class="lbtop">
+    <h1>Leaderboard</h1>
+    <div class="me" id="lbMe"></div>
+  </div>
+  <div class="fnav l">
+    <button class="fb" id="nbProf" title="Profil Saya" aria-label="Profil Saya"><span class="ic">👤</span><span class="lb">Profil Saya</span></button>
+    <button class="fb" id="nbShop" title="Merchant" aria-label="Merchant"><span class="ic">🛍️</span><span class="lb">Merchant</span></button>
+    <button class="fb" id="nbHow" title="Cara Bermain" aria-label="Cara Bermain"><span class="ic">❓</span><span class="lb">Cara Bermain</span></button>
+    <button class="fb" id="nbRew" title="Rewards" aria-label="Rewards"><span class="ic">🏆</span><span class="lb">Rewards</span></button>
+  </div>
+  <button class="maincard" id="nbPlay" title="Main" aria-label="Main"><span id="playIc">🎮</span><span>Main</span></button>
+  <div class="pod" id="pod"></div>
+  <div class="tbl" id="lbList"></div>
+  <p id="lbNote"></p>
+</div>
+
+<div class="ov" id="shop">
+  <div class="shopwrap">
+    <div class="room">
+      <button class="x" id="shopX">← Kembali</button>
+      <div class="wall"><div class="sign">Toko Boost Akun</div></div>
+      <div class="floor"></div>
+      <div class="seller"><svg class="sbody" viewBox="0 0 100 160"><rect x="22" y="70" width="56" height="95" rx="14" fill="#3b82f6"/><path d="M32 84h36v80H32z" fill="#8a5a33"/><rect x="43" y="58" width="14" height="16" fill="#e9b98d"/><circle cx="50" cy="40" r="24" fill="#f2c9a0"/><path d="M26 36a24 24 0 0 1 48 0z" fill="#e1306c"/><rect x="22" y="34" width="56" height="6" rx="3" fill="#b5204f"/><circle cx="42" cy="48" r="2.6" fill="#222"/><circle cx="58" cy="48" r="2.6" fill="#222"/><path d="M41 56q9 8 18 0" stroke="#222" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg><div class="say" id="say">Halo! Mau beli apa?</div></div>
+      
+      <div class="tabletop"></div>
+      <div class="items" id="items"></div>
+      <div class="tfront"></div>
+      <div class="tleg" style="left:9%"></div><div class="tleg" style="right:9%"></div>
+      <div class="sarms" id="sarms"><div class="arm" id="armL"></div><div class="arm" id="armR"></div><div class="held" id="held"></div></div>
+    </div>
+    <div class="board">
+      <h2>Papan Produk</h2>
+      <div id="plist"></div>
+      <div class="cart">
+        <b>Keranjang</b>
+        <div id="clist"></div>
+        <div class="tot"><span>Total</span><b id="ctot">Rp0</b></div>
+        <div class="tot"><span>Saldo website (uang nyata)</span><b id="cbal">Rp0</b></div>
+        <div id="cmsg"></div>
+        <button class="cta pay" id="btnPay" disabled>Bayar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="how">
+  <button class="cta sm" id="howX">← Kembali</button>
+  <h1 class="ph">Cara Bermain</h1>
+  <ol class="steps2">
+    <li>Pilih Instagram, isi username, lalu tekan Mulai Main. Kamu hanya bisa bermain 1 kali.</li>
+    <li>Waktu bermain 3 menit. Jawab pertanyaan sebanyak-banyaknya sebelum waktu habis.</li>
+    <li>Jawaban benar membuka tahap bergiliran: Posting, Views, Like, Komentar, lalu Followers.</li>
+    <li>Jawaban salah mengurangi 1 follower dan tahap tidak maju.</li>
+    <li>3 jawaban benar berturut-turut memicu strike: HP menghentak dan waktu melambat 2 detik.</li>
+    <li>Skor = posting x10 + views + like x2 + komentar x5 + follower bersih x20. Item dari Merchant tidak menambah skor.</li>
+  </ol>
+</div>
+
+<div class="ov" id="rew">
+  <button class="cta sm" id="rewX">← Kembali</button>
+  <h1 class="ph">Rewards</h1>
+  <p class="lead">Capai target sebelum 1 Januari 2027 untuk berebut hadiah uang tunai.</p>
+  <svg class="tree" viewBox="0 0 640 250" role="img" aria-label="Diagram cabang hadiah: akun yang mencapai target lalu masuk 3 besar mendapat uang tunai">
+    <path class="tl" d="M158 125 C185 125 185 80 210 80"/>
+    <path class="tl no" d="M158 125 C185 125 185 208 210 208"/>
+    <path class="tl" d="M340 80 C385 80 385 40 430 40"/>
+    <path class="tl" d="M340 80 C385 80 385 110 430 110"/>
+    <path class="tl" d="M340 80 C385 80 385 180 430 180"/>
+    <g class="lbl"><rect x="170" y="86" width="30" height="18" rx="9"/><text x="185" y="99" >Ya</text></g>
+    <g class="lbl no"><rect x="162" y="166" width="46" height="18" rx="9"/><text x="185" y="179">Belum</text></g>
+    <g class="tn"><rect x="8" y="89" width="150" height="72" rx="14"/>
+      <text x="83" y="112" font-size="14">Skor minimal</text>
+      <text x="83" y="135" font-size="22" id="tgtTxt">1.000</text>
+      <text x="83" y="154" font-size="11">sebelum 1 Jan 2027</text></g>
+    <g class="tn"><rect x="210" y="50" width="130" height="60" rx="14"/>
+      <text x="275" y="76" font-size="14">Masuk 3 besar</text>
+      <text x="275" y="96" font-size="14">leaderboard</text></g>
+    <g class="tn no"><rect x="210" y="180" width="130" height="56" rx="14"/>
+      <text x="275" y="204" font-size="13">Belum dapat</text>
+      <text x="275" y="222" font-size="13">hadiah tunai</text></g>
+    <g class="tn g"><rect x="430" y="12" width="200" height="56" rx="14"/>
+      <text x="530" y="32" font-size="14">🥇 Juara 1</text>
+      <text x="530" y="58" font-size="22">Rp100.000</text></g>
+    <g class="tn s"><rect x="430" y="82" width="200" height="56" rx="14"/>
+      <text x="530" y="102" font-size="14">🥈 Juara 2</text>
+      <text x="530" y="128" font-size="22">Rp30.000</text></g>
+    <g class="tn b"><rect x="430" y="152" width="200" height="56" rx="14"/>
+      <text x="530" y="172" font-size="14">🥉 Juara 3</text>
+      <text x="530" y="198" font-size="22">Rp10.000</text></g>
+  </svg>
+  <div class="me" id="rewMe"></div>
+  <p class="lead">Skor permainan berbasis browser, belum terverifikasi. Hadiah tidak dibayarkan otomatis dan menunggu verifikasi admin. Item merchant adalah item virtual game, bukan layanan sosial media asli.</p>
+</div>
+
+<div class="ov" id="rot"><h1>📱↻</h1><p>Putar HP kamu ke mode landscape untuk bermain.</p></div>
+
+<script>
+const requestUUID=()=>typeof crypto.randomUUID==='function'?crypto.randomUUID():Array.from(crypto.getRandomValues(new Uint8Array(16)),n=>n.toString(16).padStart(2,'0')).join('');
+const bridgeChannel=new URLSearchParams(location.hash.slice(1)).get('channel');
+let rpcId=0;const pendingRPC=new Map();
+function gameRPC(action,payload={}){
+ return new Promise((resolve,reject)=>{
+  if(!bridgeChannel||parent===window)return reject(new Error('Buka game dari halaman Event website.'));
+  const id=++rpcId;const timer=setTimeout(()=>{pendingRPC.delete(id);reject(new Error('Koneksi server terputus. Coba lagi dengan permintaan yang sama.'));},25000);
+  pendingRPC.set(id,{resolve,reject,timer});parent.postMessage({type:'boosteryuk-game',channel:bridgeChannel,id,action,payload},'*');
+ });
+}
+addEventListener('message',event=>{
+ const m=event.data;if(event.source!==parent||!m||m.type!=='boosteryuk-game-result'||m.channel!==bridgeChannel)return;
+ const wait=pendingRPC.get(m.id);if(!wait)return;clearTimeout(wait.timer);pendingRPC.delete(m.id);
+ if(m.result?.ok)wait.resolve(m.result);else wait.reject(new Error(m.result?.message||'Permintaan gagal.'));
+});
+function gameError(error){let el=document.getElementById('serverError');if(!el){el=document.createElement('div');el.id='serverError';el.style='position:fixed;top:8px;left:10%;right:10%;z-index:99999;padding:12px;background:#991b1b;color:white;border-radius:8px;font:14px sans-serif';document.body.appendChild(el);}el.textContent=error.message||'Gagal menghubungi server';setTimeout(()=>el.remove(),9000);}
+
+const Q=[
+["Fitur Instagram yang paling sering menjangkau orang baru?","Reels","Arsip","Close Friends","Simpanan"],
+["Apa fungsi hashtag yang relevan?","Membantu konten ditemukan orang lain","Menghapus komentar","Mengunci akun","Menambah ruang penyimpanan"],
+["Kapan waktu terbaik untuk posting?","Saat audiensmu paling aktif","Saat semua orang tidur","Selalu jam 3 pagi","Tidak pernah"],
+["Bio akun yang baik itu...","Jelas, singkat, dan menjelaskan isi akun","Dikosongkan","Berisi kata kasar","Dipenuhi 100 hashtag"],
+["Foto profil yang baik itu...","Jelas dan konsisten dengan identitas akun","Gelap dan tidak terlihat","Foto milik orang lain","Gambar buram"],
+["Cara meningkatkan engagement?","Ajak audiens berkomentar lewat pertanyaan","Mematikan kolom komentar","Tidak pernah membalas komentar","Posting tanpa caption"],
+["Mengapa membalas komentar penting?","Meningkatkan interaksi dan kedekatan","Membuat akun diblokir","Mengurangi followers","Menghapus postingan"],
+["Yang termasuk metrik engagement adalah...","Like, komentar, share, dan simpan","Level baterai HP","Jumlah foto yang dihapus","Ukuran file foto"],
+["Mengapa konsisten posting penting?","Audiens jadi terbiasa dan menunggu kontenmu","Supaya akun terkena banned","Supaya kualitas selalu turun","Tidak ada pengaruhnya"],
+["Apa itu fitur Collab post?","Postingan bersama akun lain untuk menjangkau dua audiens","Menghapus akun","Menyembunyikan postingan","Mengganti password"],
+["Mengapa 3 detik pertama video (hook) penting?","Menahan penonton agar tidak langsung berhenti","Membuat video lebih berat","Menghilangkan suara","Memperlambat loading"],
+["Apa itu retention rate?","Seberapa lama penonton bertahan menonton","Jumlah pengikut baru","Harga iklan","Ukuran file video"],
+["Konten yang berpeluang viral biasanya...","Relevan, menarik, dan mudah dibagikan","Panjang dan membosankan","Tanpa visual","Hasil copy-paste tanpa izin"],
+["Mengapa akun perlu niche (fokus tema)?","Audiens jadi tahu apa yang akan mereka dapat","Supaya posting apa saja tanpa arah","Supaya ganti tema tiap hari","Supaya identitas hilang"],
+["Apa itu CTA (call to action)?","Ajakan agar audiens bertindak, misalnya follow atau share","Kode rahasia password","Tombol hapus akun","Filter foto"],
+["Insight berguna untuk...","Melihat data performa akun lalu mengevaluasi konten","Mengganti nama akun","Mengatur volume suara","Melihat daftar blokir"],
+["Fungsi Stories untuk pertumbuhan akun?","Menjaga interaksi harian dengan audiens","Menghapus feed","Mengunci DM","Mengurangi followers"],
+["Caption yang baik itu...","Menyampaikan cerita dan mengajak interaksi","Selalu dikosongkan","Wajib bahasa asing","Hanya titik-titik"],
+["Kualitas visual yang baik berarti...","Gambar tajam dengan pencahayaan yang baik","Gelap dan buram","Potongan acak","Resolusi serendah mungkin"],
+["Apa manfaat membagikan konten ke platform lain?","Memperluas jangkauan ke audiens baru","Menutup semua platform lain","Menyembunyikan link","Menghapus username"],
+["Algoritma cenderung mendorong konten yang...","Disukai dan ditonton lama oleh penonton","Tidak pernah dilihat orang","Paling lama tidak diposting","Tanpa interaksi sama sekali"],
+["Mengapa perlu memantau tren dan kompetitor?","Tahu konten apa yang sedang diminati","Untuk menjiplak 100%","Untuk menghapus akun mereka","Tidak ada gunanya"]
+];
+const STAGES=[
+ {n:"Posting",tag:"📸 Jawab benar untuk memposting media",ic:"📸"},
+ {n:"Views",tag:"👁 Jawab benar untuk mendapat views",ic:"👁"},
+ {n:"Like",tag:"❤️ Jawab benar untuk mendapat like",ic:"❤️"},
+ {n:"Komentar",tag:"💬 Jawab benar untuk mendapat komentar",ic:"💬"},
+ {n:"Followers",tag:"🙋 Jawab benar untuk mendapat followers",ic:"🙋"}
+];
+const EMO=["🌅","🍜","🎨","🐱","🎮","🏝️","☕","🎸","🌸","🚀","📚","🍰","🏍️","🌈","🎬","🦋"];
+const COL=["#ffb86b,#ff6f91","#7ee0c3,#3a8fd9","#c3a6ff,#6c3df0","#ffe29a,#ff9a62","#9be15d,#00b09b","#f6a6ff,#7f7fd5"];
+const $=id=>document.getElementById(id);
+const DUR=180,START_FOL=20;
+let S,timer,order,qi,stage,locked,paused=false,pauseAt=0,playing=false,cur,DB=null,UID=null,lastSave=null,lastCloud=0;
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]]}return a};
+const score=()=>Math.max(0,S.posts*10+S.views+S.likes*2+S.comments*5+(S.followers-START_FOL)*20);
+
+/* Bank soal: pertanyaan acak (tumbuh akun, sulit, hitungan, istilah, pengetahuan umum) */
+Q.forEach(q=>{if(!q[5])q[5]="g"});
+[
+["Mengapa postingan carousel efektif?","Mendorong penonton menggeser sehingga waktu lihat naik","Karena otomatis viral","Karena tidak butuh visual","Karena menyembunyikan caption","g"],
+["Fitur Simpan pada postingan menandakan...","Konten dianggap bernilai untuk dilihat lagi","Konten ingin dihapus","Akun sedang dibatasi","Konten berisi iklan","g"],
+["Mengapa menyematkan postingan terbaik di profil?","Pengunjung baru langsung melihat konten terbaik","Supaya postingan lain terhapus","Supaya akun tidak terlihat","Supaya caption tidak terbaca","g"],
+["Konten edukasi biasanya menarik karena...","Audiens mendapat manfaat dan sering menyimpannya","Tidak perlu riset","Selalu hanya hiburan","Tidak butuh judul","g"],
+["Cover atau thumbnail yang baik harus...","Jelas, kontras, dan memancing rasa penasaran","Dipenuhi teks kecil","Sengaja dibuat gelap","Tanpa subjek apa pun","g"],
+["Teks di layar pada video membantu karena...","Banyak orang menonton tanpa suara","Video jadi lebih berat","Penonton harus membaca ulang","Suara otomatis hilang","g"],
+["Cara terbaik memakai ulang konten lama?","Dikemas ulang dengan format atau sudut pandang baru","Diunggah persis sama tiap hari","Dihapus semua","Ditutupi emoji","g"],
+["Mengapa membalas DM dengan cepat penting?","Membangun hubungan dan peluang konversi","Agar akun dibatasi","Agar followers berkurang","Tidak berpengaruh apa pun","g"],
+["Fungsi polling atau stiker pertanyaan di Story?","Mengundang interaksi dan riset audiens","Menghapus Story lama","Menyembunyikan viewer","Mengunci komentar","g"],
+["Apa itu social listening?","Memantau percakapan tentang merek atau topik","Mendengarkan musik saat posting","Mematikan notifikasi","Menghapus komentar negatif","g"],
+["Bio link berguna untuk...","Mengarahkan pengunjung ke halaman tujuan","Mengganti username","Menambah ruang unggah","Menyembunyikan postingan","g"],
+["Konsistensi tampilan feed membantu...","Akun lebih mudah dikenali","Postingan jadi buram","Algoritma berhenti bekerja","Followers berkurang","g"],
+["Cara menilai format konten paling efektif?","Membandingkan metrik beberapa postingan berformat berbeda","Memilih yang paling lama dibuat","Mengikuti firasat saja","Menghapus semua format","g"],
+["Komentar yang disematkan (pinned) berguna untuk...","Mengarahkan diskusi dan memberi CTA","Menghapus komentar lain","Menyembunyikan postingan","Menambah followers otomatis","g"],
+["Mengapa riset kata kunci penting?","Konten lebih sesuai dengan yang dicari audiens","Agar caption lebih panjang","Agar hashtag dihapus","Agar video lebih singkat","g"],
+["Tag lokasi berguna untuk...","Menjangkau audiens sekitar lokasi tersebut","Menyembunyikan akun","Mengganti bahasa","Menambah resolusi foto","g"],
+["Mengapa menjaga gaya bahasa yang konsisten?","Membangun identitas dan kedekatan dengan audiens","Supaya caption makin panjang","Supaya tidak perlu strategi","Supaya audiens bingung","g"],
+["Kapan sebaiknya mengevaluasi performa konten?","Secara rutin, misalnya mingguan atau bulanan","Hanya saat akun bermasalah","Tidak pernah","Setiap detik","g"],
+["Mengapa menjawab pertanyaan audiens di komentar membantu?","Menambah interaksi dan menunjukkan kepedulian","Membuat komentar hilang","Menurunkan kepercayaan","Mengunci akun","g"],
+["Konten berseri (series) membantu karena...","Audiens kembali untuk episode berikutnya","Konten jadi acak","Kualitas pasti turun","Ide jadi habis","g"],
+["Sinyal terkuat bahwa video layak direkomendasikan lebih luas biasanya...","Penonton menonton hingga selesai atau menontonnya ulang","Jumlah huruf di caption","Warna foto profil","Jumlah hashtag yang dihapus","h"],
+["Median dari data 3, 7, 7, 19, 100 adalah...","7","19","27,2","100","h"],
+["Berapa 15% dari 2.400?","360","240","320","450","h"],
+["Dalam A/B testing, apa itu signifikansi statistik?","Ukuran seberapa kecil peluang perbedaan hasil hanya karena kebetulan","Versi dengan warna paling cerah","Jumlah peserta tes","Versi yang paling mahal","h"],
+["Apa itu cold start problem pada sistem rekomendasi?","Sulitnya merekomendasikan konten atau akun baru yang belum punya data","Perangkat lambat saat baru dinyalakan","Server mati karena dingin","Aplikasi gagal diinstal","h"],
+["Prinsip Pareto (80/20) pada konten berarti...","Sebagian kecil konten sering menghasilkan sebagian besar hasil","Semua konten hasilnya sama","80% konten harus dihapus","Hanya konten panjang yang berhasil","h"],
+["Apa itu vanity metric?","Angka yang tampak bagus tetapi tidak mencerminkan hasil nyata","Metrik paling akurat","Metrik khusus iklan","Angka yang tidak bisa dilihat","h"],
+["Berapa nilai 2 pangkat 10?","1.024","1.000","2.048","512","h"],
+["Jika 3 mesin membuat 3 produk dalam 3 menit, berapa menit 100 mesin membuat 100 produk?","3","100","33","1","h"],
+["Rumus luas lingkaran adalah...","πr²","2πr","πd","r²/2","h"],
+["Apa fungsi tag canonical pada SEO?","Menunjuk versi utama dari halaman yang mirip","Menghapus halaman lama","Mempercepat gambar","Menambah hashtag","h"],
+["Apa itu attribution dalam pemasaran digital?","Menentukan kanal mana yang berjasa atas sebuah konversi","Menambah watermark","Menghapus data lama","Mengubah nama merek","h"],
+["Berapa hasil 17 x 23?","391","381","401","371","h"],
+["Bilangan prima setelah 31 adalah...","37","33","35","39","h"],
+["Apa itu churn rate?","Persentase pelanggan atau pengikut yang berhenti dalam periode tertentu","Jumlah konten yang diunggah","Kecepatan internet","Biaya per klik","h"],
+["Customer lifetime value (LTV) adalah...","Total nilai yang diberikan satu pelanggan selama berhubungan","Harga satu produk","Jumlah pengikut baru","Biaya iklan harian","h"],
+["F-pattern dan Z-pattern menggambarkan...","Pola gerak mata saat membaca halaman","Jenis font","Algoritma kompresi","Urutan hashtag","h"],
+["Rata-rata harmonik dari 2 dan 6 adalah...","3","4","3,5","2,5","h"],
+["Berapa cara berbeda menyusun huruf pada kata ABC?","6","3","9","12","h"],
+["Berapa detik dalam 2 jam?","7.200","3.600","720","14.400","h"],
+].forEach(q=>Q.push(q));
+function pairQ(list,fq,fr,cat){
+ list.forEach((a,i)=>{
+  const oth=k=>shuf(list.filter((_,j)=>j!==i).map(x=>x[k])).slice(0,3);
+  Q.push([fq(a[0]),a[1]].concat(oth(1),[cat]));
+  Q.push([fr(a[1]),a[0]].concat(oth(0),[cat]));
+ });
+}
+const pr=t=>t.split(";").map(x=>x.split("|"));
+pairQ(pr("CTR|Persentase klik dibanding tayangan;CPM|Biaya per seribu tayangan;CPC|Biaya per klik;ROI|Rasio keuntungan terhadap modal;Reach|Jumlah akun unik yang melihat konten;Impression|Total berapa kali konten ditampilkan;Engagement|Interaksi seperti like, komentar, share, dan simpan;CTA|Ajakan agar audiens melakukan tindakan;Hook|Bagian pembuka yang menahan perhatian;Niche|Segmen topik yang spesifik;UGC|Konten buatan pengguna atau audiens;KOL|Tokoh berpengaruh di media sosial;Insight|Data performa akun;Algoritma|Sistem yang mengatur konten apa yang ditampilkan;Hashtag|Tanda pagar untuk mengelompokkan topik;Caption|Teks pendamping postingan;Shadowban|Jangkauan akun dibatasi tanpa pemberitahuan;Giveaway|Pembagian hadiah untuk menarik interaksi;Konversi|Audiens yang melakukan tindakan target;Funnel|Alur audiens dari tahu sampai membeli;Retention|Seberapa lama penonton bertahan;Bounce rate|Persentase pengunjung yang langsung pergi;A/B testing|Membandingkan dua versi untuk melihat yang lebih baik;Content pillar|Tema utama yang menjadi dasar konten;Evergreen content|Konten yang tetap relevan dalam waktu lama;Remarketing|Menargetkan ulang orang yang pernah berinteraksi;Lookalike audience|Audiens baru yang mirip pelanggan lama;Brand awareness|Tingkat orang mengenal sebuah merek;Social proof|Bukti sosial berupa testimoni atau jumlah pengguna;Cross-posting|Mengunggah konten ke beberapa platform;Trending audio|Suara yang sedang populer dipakai konten;Collab|Postingan bersama akun lain;Story highlights|Kumpulan Story yang disematkan di profil;Live streaming|Siaran langsung ke audiens;Waktu tonton|Total durasi konten ditonton;Brief|Arahan kerja untuk pembuat konten"),a=>"Apa arti istilah "+a+"?",b=>"Istilah apa yang berarti: "+b+"?","w");
+const pick=a=>a[rnd(0,a.length-1)];
+const nf=n=>Math.round(n).toLocaleString("id-ID");
+const fI=x=>nf(x),fR=x=>"Rp"+nf(x),fP=x=>(Math.round(x*10)/10).toString().replace(".",",")+"%";
+function mk(q,c,f,ex){
+ const seen=new Set([f(c)]),w=[];
+ for(const x of (ex||[]).concat([c*2,c/2,c*1.1,c*.9,c*1.5,c*.75,c+3,c+7,c*3,c+11])){
+  if(!isFinite(x)||x<0)continue;
+  const t=f(x);
+  if(!seen.has(t)){seen.add(t);w.push(t);if(w.length===3)break}
+ }
+ return [q,f(c)].concat(w,["m"]);
+}
+const MT=[
+ ()=>{const F=pick([2000,5000,8000,12500,20000,40000]),L=Math.round(F*pick([.04,.05,.06,.08])),C=Math.round(L*pick([.1,.2,.25]));return mk("Akun punya "+nf(F)+" followers. Satu postingan mendapat "+nf(L)+" like dan "+nf(C)+" komentar. Berapa engagement rate (like + komentar dibagi followers)?",(L+C)/F*100,fP,[L/F*100,C/F*100,(L+C)/F*10])},
+ ()=>{const a=pick([800,1000,1500,2500,4000,10000]),g=pick([10,15,20,25,30,50,60]),b=Math.round(a*(1+g/100));return mk("Followers naik dari "+nf(a)+" menjadi "+nf(b)+". Berapa persen pertumbuhannya?",(b-a)/a*100,fP,[(b-a)/b*100,b/a*100,g+5])},
+ ()=>{const i=pick([5000,8000,10000,20000,50000]),pc=pick([1.5,2,2.5,3,4,5]);return mk(nf(i)+" tayangan menghasilkan "+nf(i*pc/100)+" klik. Berapa CTR?",pc,fP,[pc*10,pc/10,pc+1])},
+ ()=>{const m=pick([5,8,12,15,20])*1000,i=pick([10000,25000,50000,100000]);return mk("Biaya iklan Rp"+nf(m*i/1000)+" menghasilkan "+nf(i)+" tayangan. Berapa CPM (biaya per 1.000 tayangan)?",m,fR,[m/1000,m*10,m+5000])},
+ ()=>{const v=pick([400,800,1200,2500,5000]),pc=pick([2,3,5,8,10]);return mk("Dari "+nf(v)+" pengunjung profil, "+pc+"% mengikuti akun. Berapa follower baru?",v*pc/100,fI,[v*pc/10,v/pc,v+pc])},
+ ()=>{const s0=pick([120,350,900,1500,2200]),g=pick([8,12,15,25,40]),d=pick([7,10,14,30]);return mk("Akun bermula dengan "+nf(s0)+" followers dan bertambah "+g+" per hari. Berapa followers setelah "+d+" hari?",s0+g*d,fI,[s0+g*(d+1),s0*d,g*d])},
+ ()=>{const av=pick([1200,1500,2000]),a=pick([300,400,600]),b=pick([700,900,1200]),c=3*av-a-b;return mk("Tiga video mendapat "+nf(a)+", "+nf(b)+", dan "+nf(c)+" views. Berapa rata-rata views per video?",av,fI,[(a+b+c)/2,b,c])},
+ ()=>{const s0=pick([1000,2000,2500,4000,5000]),r=pick([10,20,50]);return mk("Followers "+nf(s0)+" tumbuh "+r+"% per bulan (bunga berbunga). Berapa followers setelah 2 bulan?",s0*Math.pow(1+r/100,2),fI,[s0*(1+2*r/100),s0*(1+r/100),s0*(1+r/100)*2])},
+ ()=>{const d=pick([20,40,60,80]),pc=pick([25,50,60,75]);return mk("Video berdurasi "+d+" detik rata-rata ditonton "+(d*pc/100)+" detik. Berapa retention rate?",pc,fP,[100-pc,pc/2,pc+10])},
+ ()=>{const m=pick([500,800,1000,2500])*1000,x=pick([1.5,2,3,4]),r=m*x;return mk("Modal iklan Rp"+nf(m)+" menghasilkan penjualan Rp"+nf(r)+". Berapa ROI?",(r-m)/m*100,fP,[r/m*100,(r-m)/r*100,x*10])},
+ ()=>{const n=pick([20,40,60,80,100,200]),pc=pick([5,10,15,20,25]);return mk("Peluang sebuah konten viral adalah "+pc+"%. Dari "+n+" konten, perkiraan berapa yang viral?",n*pc/100,fI,[n/pc,n*pc,pc])},
+ ()=>{const u=pick([2,3,4,5])*1000,n=pick([10,25,40,60]);return mk("Paket dijual Rp"+nf(u*3)+" dengan modal Rp"+nf(u*2)+" per paket. Berapa paket harus terjual agar total untung Rp"+nf(u*n)+"?",n,fI,[n*2,n/2,n*3])},
+ ()=>{const k=pick([3,4,5,7]),w=pick([4,6,8,12]);return mk("Kamu memposting "+k+" kali seminggu selama "+w+" minggu. Berapa total postingan?",k*w,fI,[k+w,k*w+k,(k+1)*w])},
+ ()=>{const pp=pick([4000,6000,8000,10000,12000,20000]),d=pick([10,20,25,30,40,50]);return mk("Harga layanan Rp"+nf(pp)+" mendapat diskon "+d+"%. Berapa harga akhirnya?",pp*(100-d)/100,fR,[pp*d/100,pp*(100+d)/100,pp-d])},
+ ()=>{const a=pick([1000,2000,5000,10000]);return mk("Followers "+nf(a)+" naik 10% lalu turun 10%. Berapa followers akhirnya?",a*.99,fI,[a,a*1.1,a*.9])},
+ ()=>{const r=pick([2000,5000,8000,10000,25000]),i=Math.round(r*pick([.02,.03,.04,.05,.06]));return mk("Sebuah postingan menjangkau "+nf(r)+" akun dan mendapat "+nf(i)+" interaksi. Berapa persen interaksi terhadap reach?",i/r*100,fP,[r/i,i/r*10,i/r*100+2])},
+ ()=>{const av=pick([40,55,80,120,250]),n=pick([4,5,6,8,10]);return mk("Total like dari "+n+" postingan adalah "+nf(av*n)+". Berapa rata-rata like per postingan?",av,fI,[av*n,av/2,av+n])},
+ ()=>{const cpf=pick([100,150,200,250,500]),f=pick([20,40,50,100]);return mk("Biaya iklan Rp"+nf(cpf*f)+" menambah "+f+" followers baru. Berapa biaya per follower?",cpf,fR,[cpf*f,cpf*2,cpf+100])},
+ ()=>{const x=pick([1000,2500,4000,8000,12000]),pc=pick([5,10,20,25,30]);return mk("Followers "+nf(x)+" berkurang "+pc+"% karena akun tidak aktif dibersihkan. Berapa followers sisanya?",x*(100-pc)/100,fI,[x*pc/100,x*(100+pc)/100,x-pc])},
+ ()=>{const s0=pick([100,250,500,800]),m=pick([2,3,4,5]);return mk("Followers "+nf(s0)+" berlipat dua setiap bulan. Berapa followers setelah "+m+" bulan?",s0*Math.pow(2,m),fI,[s0*2*m,s0*m,s0*Math.pow(2,m+1)])},
+ ()=>{const k=pick([10,15,20,30]),c=pick([12,25,40,60]);return mk("Rasio like : komentar sebuah akun adalah "+k+" : 1. Jika komentar "+c+", berapa like?",k*c,fI,[c/k,k+c,k*c*2])},
+ ()=>{const r=pick([10000,20000,50000,100000]),a=pick([2,4,5,10]),b=pick([5,10,20,25]);return mk("Dari "+nf(r)+" akun yang dijangkau, "+a+"% mengklik profil, lalu "+b+"% dari yang klik mengikuti. Berapa follower baru?",r*a/100*b/100,fI,[r*a/100,r*b/100,r*(a+b)/100])},
+ ()=>{const a=pick([2,4,6]),m=pick([1.5,2,2.5]);return mk("Engagement rate naik dari "+a+"% menjadi "+(a*m).toString().replace(".",",")+"%. Berapa persen kenaikan relatifnya?",(m-1)*100,fP,[(m-1)*10,a*m-a,m*100])},
+ ()=>{const t=pick([5000,10000,20000]),x=pick([1000,2000,3000]),g=pick([50,100,200,250]);return mk("Target "+nf(t)+" followers. Sekarang "+nf(x)+", tumbuh "+g+" per hari. Berapa hari lagi sampai target?",(t-x)/g,fI,[t/g,(t-x)/g+10,(t-x)/(g*2)])},
+ ()=>{const c=pick([8,10,12,15,20])*1000,n=pick([25000,40000,60000,80000]);return mk("CPM sebuah iklan Rp"+nf(c)+". Berapa biaya untuk "+nf(n)+" tayangan?",c*n/1000,fR,[c*n,c/1000*n/10,c+n/1000])}
+];
+{const seenQ=new Set(Q.map(x=>x[0]));
+ for(let r=0;r<40;r++)MT.forEach(f=>{const q=f();if(!seenQ.has(q[0])){seenQ.add(q[0]);Q.push(q)}});}
+function buildOrder(){
+ const L={};Q.forEach((q,i)=>{(L[q[5]]=L[q[5]]||[]).push(i)});
+ for(const k in L)L[k]=shuf(L[k]);
+ const pat=["g","g","h","m","g","w","h","m","g","m"],out=[];
+ let more=true;
+ while(more){more=false;for(const k of pat){if(L[k]&&L[k].length){out.push(L[k].pop());more=true}}}
+ return out;
+}
+function buildSteps(){$("steps").innerHTML=STAGES.map((s,i)=>`<div class="st" id="st${i}">${s.ic} ${s.n}</div>`).join("")}
+function renderStats(){
+ $("sPosts").textContent=S.posts;$("sFol").textContent=S.followers;
+ $("cV").textContent=cur.v;$("cL").textContent=cur.l;$("cC").textContent=cur.c;
+ $("score").textContent=score();
+ STAGES.forEach((_,i)=>{const e=$("st"+i);e.className="st"+(i===stage?" on":i<stage?" done":"")});
+}
+function bump(id){const e=$(id);e.classList.add("bump");setTimeout(()=>e.classList.remove("bump"),250)}
+function float(txt,color){
+ const f=document.createElement("div");f.className="fl";f.textContent=txt;f.style.color=color||"#fff";
+ f.style.left=rnd(15,65)+"%";$("scr").appendChild(f);setTimeout(()=>f.remove(),1150);
+}
+function drawGrid(){
+ const g=$("grid");g.innerHTML="";
+ for(let i=0;i<9;i++){
+  const t=document.createElement("div");
+  if(i<S.tiles.length){const x=S.tiles[i];t.className="tile";t.style.background=`linear-gradient(135deg,${x.c})`;t.textContent=x.e}
+  else t.className="tile ph";
+  g.appendChild(t);
+ }
+}
+function nextQ(){
+ if(qi>=order.length){order=buildOrder();qi=0}
+ const q=Q[order[qi++]];
+ $("q").textContent=q[0];$("qtag").textContent=STAGES[stage].tag;
+ const opts=shuf([0,1,2,3]).map(i=>({t:q[i+1],ok:i===0}));
+ const box=$("opts");box.innerHTML="";locked=false;
+ opts.forEach(o=>{
+  const b=document.createElement("button");b.className="opt";b.textContent=o.t;
+  b.onclick=()=>answer(b,o.ok);box.appendChild(b);
+ });
+ renderStats();
+}
+function answer(btn,ok){
+ if(locked||!playing)return;locked=true;
+ [...$("opts").children].forEach(b=>b.disabled=true);
+ if(ok){
+  btn.classList.add("ok");armed=false;reward();if(++streak>=3){streak=0;strike()}
+ }else{
+  btn.classList.add("no");streak=0;if(armed){armed=false;redDrop()}
+  [...$("opts").children].forEach(b=>{if(b!==btn&&b.textContent===Q[order[qi-1]][1])b.classList.add("ok")});
+  if(S.followers>0)S.followers--;
+  float("-1 🙋","#ff5a5a");
+  $("scr").classList.add("hit");setTimeout(()=>$("scr").classList.remove("hit"),400);
+  renderStats();
+ }
+ persist();
+ setTimeout(()=>{if(playing)nextQ()},ok?700:1300);
+}
+function reward(){
+ if(stage===0){
+  S.posts++;cur={v:0,l:0,c:0};
+  S.tiles.unshift({e:EMO[rnd(0,EMO.length-1)],c:COL[rnd(0,COL.length-1)]});
+  if(S.tiles.length>9)S.tiles.pop();
+  drawGrid();float("📸 Posting baru!","#fff");bump("sPosts");
+ }else if(stage===1){const n=rnd(20,80);S.views+=n;cur.v+=n;float("+"+n+" 👁");bump("cV")}
+ else if(stage===2){const n=rnd(5,25);S.likes+=n;cur.l+=n;float("+"+n+" ❤️","#ff6b8b");bump("cL")}
+ else if(stage===3){const n=rnd(1,6);S.comments+=n;cur.c+=n;float("+"+n+" 💬");bump("cC");showComments(n)}
+ else{const n=rnd(2,9);S.followers+=n;float("+"+n+" 🙋","#7dffb0");bump("sFol")}
+ stage=(stage+1)%STAGES.length;
+}
+function tick(){
+ if(paused||!playing)return;
+ const now=Date.now(),dt=Math.min(now-(lastTick||now),500);lastTick=now;
+ if(now<slowUntil)S.end+=dt*0.75;
+ $("tbox").classList.toggle("slow",now<slowUntil);
+ const left=Math.max(0,Math.ceil((S.end-Date.now())/1000));
+ $("time").textContent=Math.floor(left/60)+":"+String(left%60).padStart(2,"0");
+ $("tbox").classList.toggle("low",left<=30);
+ renderStats();
+ if(left<=0)finish();
+}
+function fs(){
+ try{const r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(r&&r.catch)r.catch(()=>{})}catch(e){}
+ try{const o=screen.orientation&&screen.orientation.lock&&screen.orientation.lock("landscape");if(o&&o.catch)o.catch(()=>{})}catch(e){}
+}
+function begin(name,used){
+ S={user:name,used:used||0,platform:"instagram",posts:0,views:0,likes:0,comments:0,followers:START_FOL,tiles:[],end:Date.now()+DUR*1000,done:false};
+ cur={v:0,l:0,c:0};stage=0;
+ run();persist(true);
+}
+function run(){
+ hideAll();
+ streak=0;lastTick=0;slowUntil=0;armed=false;
+ order=buildOrder();qi=0;playing=true;paused=false;
+ $("uTop").textContent=S.user;$("uBio").textContent=S.user;
+ $("start").classList.remove("show");$("end").classList.remove("show");$("lb").classList.remove("show");
+ buildSteps();drawGrid();nextQ();tick();
+ clearInterval(timer);timer=setInterval(tick,250);
+}
+function finish(){
+ playing=false;clearInterval(timer);S.done=true;persist(true);
+ const sc=score();
+ $("fScore").textContent=sc;
+ $("fSum").innerHTML=[["📸","Posting",S.posts],["👁","Views",S.views],["❤️","Like",S.likes],["💬","Komentar",S.comments],["🙋","Followers",(S.followers-START_FOL>=0?"+":"")+(S.followers-START_FOL)]]
+  .map(a=>`<div>${a[0]} <b>${a[2]}</b><small>${a[1]}</small></div>`).join("");
+ 
+ $("end").classList.add("show");
+}
+
+const CN=["rina.kece","bagas_id","dinda.aja","fajar88","maya.story","kevin.fx","salsa_ok","andi.gram"];
+const CT=["Kontennya keren banget! 🔥","Wah, ilmunya bermanfaat, makasih!","Semangat terus kak!","Suka banget sama feed-nya 😍","Konsisten banget, mantap!","Ditunggu konten selanjutnya ya","Baru nemu akun ini, langsung follow!","Ceritanya relate banget 👏"];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function showComments(n){
+ const box=$("cmts");
+ for(let i=0;i<Math.min(n,3);i++)setTimeout(()=>{
+  if(!playing)return;
+  const c=document.createElement("div");c.className="cm";
+  c.innerHTML='<div class="a">'+["😀","😎","🥰","🤩","😄"][rnd(0,4)]+'</div><div><b>'+CN[rnd(0,CN.length-1)]+'</b>'+CT[rnd(0,CT.length-1)]+'</div>';
+  box.appendChild(c);while(box.children.length>3)box.firstChild.remove();
+  setTimeout(()=>c.remove(),3200);
+ },i*400);
+}
+/* Progres disimpan ke database lewat bridge website; tanpa penyimpanan lokal. */
+function persist(force){
+ if(!S)return;S.stage=stage;S.cur=cur;S.score=score();
+ if(force||Date.now()-lastCloud>8000){lastCloud=Date.now();const state=JSON.parse(JSON.stringify(S));lastSave=gameRPC('save',{state}).catch(gameError);}
+}
+let gameSession=null;
+async function initCloud(){
+ try{gameSession=await gameRPC('get');UID=gameSession.user_id;DB=true;}
+ catch(error){gameError(error);throw error;}
+}
+async function getMine(){const result=await gameRPC('get');gameSession=result;return result.state;}
+function adopt(rec){
+ S=JSON.parse(JSON.stringify(rec));stage=S.stage||0;cur=S.cur||{v:0,l:0,c:0};
+ if(S.done)showLeaderboard();
+ else if(Date.now()>=S.end)finish();
+ else run();
+}
+let USER=null,LB={rows:[],grants:{},g:0};
+const PN={instagram:"Instagram"};
+const PROD=[
+ {id:"f100",ic:"🙋",n:"Followers +100",k:"f",a:100,p:2500,c:"#7c4dff"},
+ {id:"f500",ic:"🙋",n:"Followers +500",k:"f",a:500,p:9000,c:"#e1306c"},
+ {id:"l250",ic:"❤️",n:"Like +250",k:"l",a:250,p:1500,c:"#ff4d6d"},
+ {id:"v1k",ic:"👁",n:"Views +1.000",k:"v",a:1000,p:2000,c:"#18a0fb"},
+ {id:"c25",ic:"💬",n:"Komentar +25",k:"c",a:25,p:1500,c:"#22b573"}
+];
+const SID={f:"sFol",l:"cL",v:"cV",c:"cC"};
+const rp=n=>"Rp"+n.toLocaleString("id-ID");
+
+let W={bal:0,inv:{},bonus:{f:0,l:0,v:0,c:0}},cart={},drag=null;
+function hideAll(){["start","end","lb","shop","how","rew"].forEach(i=>$(i).classList.remove("show"));document.body.classList.remove("pm")}
+async function loadWallet(){const result=await gameRPC('get');W=result.wallet;gameSession=result;}
+function saveWallet(){} // Inventory and bonus are exclusively written by server transactions.
+async function showLeaderboard(){
+ hideAll();$("lb").classList.add("show");
+ $("lbList").textContent="Memuat...";
+ try{await lastSave}catch(e){}
+ const sc=r=>r.score||0;
+ let rows=[],grants={};
+ try{const result=await gameRPC('leaderboard');rows=result.rows.filter(r=>r.uid!==UID);}catch(error){gameError(error);}
+ if(S)rows.push(S);
+ rows.sort((a,b)=>sc(b)-sc(a));
+ const rk=r=>rows.filter(x=>sc(x)>sc(r)).length+1;
+ const g=UID?(grants[UID]||0):0;
+ LB={rows,grants,g};
+ const top=rows.slice(0,3),mx=Math.max(1,top[0]?sc(top[0]):1),cls=["g","s","b"];
+ const slot=i=>{
+  const r=top[i];
+  if(!r)return '<div class="pc"><div class="nm2">-</div><div class="sc2">&nbsp;</div><div class="bar3 '+cls[i]+'" style="height:6vh">'+(i+1)+'</div></div>';
+  return '<div class="pc'+(r===S?' mine':'')+'"><div class="nm2">@'+esc(r.user||"?")+'</div><div class="sc2">'+sc(r)+'</div><div class="bar3 '+cls[i]+'" style="height:'+(10+22*sc(r)/mx).toFixed(1)+'vh">'+(i+1)+'</div></div>';
+ };
+ $("pod").innerHTML=slot(1)+slot(0)+slot(2);
+ const rest=rows.slice(3);
+ $("lbList").innerHTML='<div class="row hd"><span>Peringkat</span><span>Username</span><span>Platform</span><b>Skor</b></div>'+(rest.length?rest.map(r=>'<div class="row'+(r===S?' me':'')+'"><span class="rk">#'+rk(r)+'</span><span class="nm">@'+esc(r.user||"?")+'</span><span>'+esc(PN[r.platform]||r.platform||"Instagram")+'</span><b>'+sc(r)+'</b></div>').join(""):'<div class="row"><span></span><span class="nm">Belum ada peringkat di bawah juara 3.</span><span></span><span></span></div>');
+ $("lbMe").textContent=S?"Peringkatmu: #"+rk(S)+" dari "+rows.length+" pemain  |  Skor "+sc(S):"Mode admin";
+ const can=!S||g>(S.used||0);
+ $("nbPlay").disabled=!can;
+ $("playIc").textContent=can?"🎮":"🔒";
+ $("nbPlay").title=can?"":"Menunggu akses main dibuka admin";
+ $("nbProf").disabled=!S;
+ $("lbNote").textContent=!can?"Kamu sudah bermain. Tombol Bermain terkunci sampai admin membuka akses.":(DB?"":"Database online tidak tersedia di tampilan ini, jadi hanya skormu di perangkat ini yang tampil.");
+ const m=$("lbList").querySelector(".row.me");if(m&&m.scrollIntoView)m.scrollIntoView({block:"nearest"});
+}
+/* Toko 3D */
+function buildShop(){
+ if($("items").children.length)return;
+ const F=[["fr","translateZ(calc(var(--s)/2))"],["bk","rotateY(180deg) translateZ(calc(var(--s)/2))"],["rt","rotateY(90deg) translateZ(calc(var(--s)/2))"],["lf","rotateY(-90deg) translateZ(calc(var(--s)/2))"],["tp","rotateX(90deg) translateZ(calc(var(--s)/2))"],["bt","rotateX(-90deg) translateZ(calc(var(--s)/2))"]];
+ $("items").innerHTML=PROD.map(p=>'<button class="it3" data-id="'+p.id+'" style="--c:'+p.c+'"><div class="cube">'+F.map(f=>'<i class="'+f[0]+'" style="transform:'+f[1]+'">'+p.ic+'</i>').join("")+'</div><div class="plate">'+p.n+'<br>'+rp(p.p)+'</div></button>').join("");
+ $("plist").innerHTML=PROD.map(p=>'<button class="pr" data-id="'+p.id+'"><span style="font-size:3.6vh">'+p.ic+'</span><span>'+p.n+'<small>Ketuk untuk ambil</small></span><b>'+rp(p.p)+'</b></button>').join("");
+}
+function cartTotal(){return Object.keys(cart).reduce((t,id)=>t+cart[id]*PROD.find(p=>p.id===id).p,0)}
+function renderCart(){
+ const ids=Object.keys(cart);
+ $("clist").innerHTML=ids.length?ids.map(id=>{const p=PROD.find(x=>x.id===id);return '<div><span>'+p.ic+' '+p.n+' x'+cart[id]+'</span><button class="rm" data-rm="'+id+'">-</button></div>'}).join(""):"<div>Keranjang kosong. Ambil item dari meja atau papan.</div>";
+ $("ctot").textContent=rp(cartTotal());$("cbal").textContent=rp(W.bal);$("btnPay").disabled=!ids.length;
+}
+function openShop(){loadWallet().then(renderCart).catch(gameError);hideAll();$("shop").classList.add("show");buildShop();$("cmsg").textContent="";renderCart();syncTable();poseAuto()}
+$("shop").onclick=e=>{
+ const r=e.target.closest("[data-rm]");
+ if(r){const id=r.dataset.rm;if(--cart[id]<=0)delete cart[id];$("cmsg").textContent="";renderCart();syncTable();poseAuto();return}
+ const b=e.target.closest("[data-id]");
+ if(b&&!selling){cart[b.dataset.id]=(cart[b.dataset.id]||0)+1;$("cmsg").textContent="";renderCart();grabAnim(b.dataset.id)}
+};
+let purchaseAttempt=null,paying=false;
+$("btnPay").onclick=async()=>{
+ if(selling||paying||!Object.keys(cart).length)return;
+ const snap=Object.assign({},cart),signature=JSON.stringify(snap);
+ if(!purchaseAttempt||purchaseAttempt.signature!==signature)purchaseAttempt={signature,id:requestUUID()};
+ paying=true;$("btnPay").disabled=true;
+ try{
+  const result=await gameRPC('buy',{cart:snap,request_id:purchaseAttempt.id});
+  W=result.wallet;cart={};purchaseAttempt=null;renderCart();handOver(snap);
+  $("cmsg").style.color="var(--ok)";$("cmsg").textContent="Pembelian berhasil menggunakan saldo website. ID: "+result.order_id;
+ }catch(error){$("cmsg").style.color="var(--bad)";$("cmsg").textContent=error.message;}
+ finally{paying=false;renderCart();}
+};
+/* Profil + seret item ke HP */
+function renderProfile(){
+ $("sPosts").textContent=S.posts;$("sFol").textContent=S.followers+W.bonus.f;
+ $("cV").textContent=S.views+W.bonus.v;$("cL").textContent=S.likes+W.bonus.l;$("cC").textContent=S.comments+W.bonus.c;
+}
+function renderInv(){
+ const L=PROD.filter(p=>W.inv[p.id]>0);
+ $("bagCnt").textContent=PROD.reduce((t,p)=>t+(W.inv[p.id]||0),0);
+ $("invlist").innerHTML=L.length?L.map(p=>'<div class="it" data-id="'+p.id+'"><span class="ic">'+p.ic+'</span>'+p.n+'<span class="qty">'+W.inv[p.id]+'</span></div>').join(""):"<p>Belum ada item. Beli dulu di Merchant.</p>";
+}
+function openProfile(){
+ if(!S)return;
+ hideAll();document.body.classList.add("pm");
+ $("uTop").textContent=S.user;$("uBio").textContent=S.user;
+ drawGrid();renderProfile();renderInv();$("invbox").hidden=true;
+}
+let usingItem=false,useAttempt=null;
+async function useItem(p){
+ if(usingItem||!(W.inv[p.id]>0))return;usingItem=true;
+ if(!useAttempt || useAttempt.item!==p.id)useAttempt={item:p.id,id:requestUUID()};
+ try{const result=await gameRPC('use',{item_id:p.id,request_id:useAttempt.id});useAttempt=null;W=result.wallet;renderProfile();renderInv();float('+'+p.a.toLocaleString('id-ID')+' '+p.ic,'#7dffb0');bump(SID[p.k]);}
+ catch(error){gameError(error);}finally{usingItem=false;}
+}
+function dragMove(e){
+ if(!drag)return;
+ drag.g.style.left=e.clientX+"px";drag.g.style.top=e.clientY+"px";
+ const r=document.querySelector(".phone").getBoundingClientRect();
+ drag.over=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+ document.querySelector(".phone").classList.toggle("drop",drag.over);
+}
+function dragEnd(e,ok){
+ if(!drag)return;
+ if(ok)dragMove(e);
+ const d=drag;drag=null;d.g.remove();
+ document.querySelector(".phone").classList.remove("drop");
+ if(ok&&d.over)useItem(d.p);
+}
+$("invlist").addEventListener("pointerdown",e=>{
+ const it=e.target.closest(".it");if(!it)return;
+ const p=PROD.find(x=>x.id===it.dataset.id);if(!p)return;
+ const g=document.createElement("div");g.className="ghost";g.textContent=p.ic;document.body.appendChild(g);
+ drag={p,g,over:false};dragMove(e);e.preventDefault();
+});
+document.addEventListener("pointermove",dragMove);
+document.addEventListener("pointerup",e=>dragEnd(e,true));
+document.addEventListener("pointercancel",e=>dragEnd(e,false));
+let streak=0,slowUntil=0,lastTick=0,selling=false,armed=false;
+/* Strike 3x berturut-turut: hentakan listrik + waktu melambat */
+function strike(){
+ const ph=document.querySelector(".phone");
+ ph.classList.remove("zap");void ph.offsetWidth;ph.classList.add("zap");
+ setTimeout(()=>ph.classList.remove("zap"),3050);
+ slowUntil=Date.now()+700+2000;armed=true;
+ float("⚡ Strike x3!","#ffe45e");
+}
+/* Jawaban salah tepat setelah strike: layar HP drop merah */
+function redDrop(){
+ const ph=document.querySelector(".phone");
+ ph.classList.remove("reddrop");void ph.offsetWidth;ph.classList.add("reddrop");
+ setTimeout(()=>ph.classList.remove("reddrop"),1500);
+}
+/* Karakter penjual */
+const VH=()=>innerHeight/100;
+function aimArm(w,tx,ty,max){
+ const a=$("arm"+w),r=$("sarms").getBoundingClientRect();
+ const sx=r.left+r.width*(w==="L"?.22:.78),sy=r.top+r.height*.475,dx=tx-sx,dy=ty-sy;
+ const len=Math.max(6*VH(),Math.min(Math.hypot(dx,dy)-1.5*VH(),max||30*VH()));
+ a.style.height=len+"px";a.style.transform="rotate("+(Math.atan2(-dx,dy)*180/Math.PI)+"deg)";
+}
+function idleArms(){["L","R"].forEach(w=>{const a=$("arm"+w);a.style.height=11*VH()+"px";a.style.transform="rotate("+(w==="L"?10:-10)+"deg)"})}
+function holdArms(){
+ const r=$("held").getBoundingClientRect();
+ if(!r.height){idleArms();return}
+ const x=r.left+r.width/2,y=r.top+r.height/2;
+ aimArm("L",x-r.width*.35,y,20*VH());aimArm("R",x+r.width*.35,y,20*VH());
+}
+function say(t){$("say").textContent=t}
+function poseAuto(){
+ if(selling)return;
+ if(Object.keys(cart).length){holdArms();say("Sudah kuambilkan. Tinggal bayar ya!")}
+ else{idleArms();say("Halo! Mau beli apa?")}
+}
+function pointItem(id){
+ if(selling)return;
+ const p=PROD.find(x=>x.id===id),c=document.querySelector('#items .it3[data-id="'+id+'"] .cube');
+ if(!p||!c)return;
+ const r=c.getBoundingClientRect();
+ aimArm("L",r.left+r.width/2,r.top+r.height/2,34*VH());
+ say(p.n+" - "+rp(p.p));
+}
+function syncTable(snap){
+ const c=snap||cart;let h="",n=0;
+ document.querySelectorAll("#items .it3").forEach(b=>b.classList.toggle("gone",!!c[b.dataset.id]));
+ Object.keys(c).forEach(id=>{const p=PROD.find(x=>x.id===id);for(let i=0;i<Math.min(c[id],4)&&n<9;i++,n++)h+='<div class="mc" style="--c:'+p.c+'">'+p.ic+'</div>'});
+ $("held").innerHTML=h;
+}
+function grabAnim(id){
+ pointItem(id);
+ const it=document.querySelector('#items .it3[data-id="'+id+'"]');
+ if(it)it.classList.add("taking");
+ setTimeout(()=>{if(it)it.classList.remove("taking");syncTable();poseAuto()},380);
+}
+function handOver(snap){
+ selling=true;syncTable(snap);
+ const s=$("sarms"),r=s.getBoundingClientRect();
+ s.classList.add("give");
+ const x=r.left+r.width/2,y=r.top+r.height*.56+9*VH();
+ aimArm("L",x-5*VH(),y,40*VH());aimArm("R",x+5*VH(),y,40*VH());
+ say("Ini pesananmu, terima kasih!");
+ setTimeout(()=>{s.classList.remove("give");$("held").innerHTML="";selling=false;syncTable();poseAuto()},2300);
+}
+$("items").addEventListener("pointerover",e=>{const b=e.target.closest(".it3");if(b)pointItem(b.dataset.id)});
+$("plist").addEventListener("pointerover",e=>{const b=e.target.closest(".pr");if(b)pointItem(b.dataset.id)});
+$("items").addEventListener("pointerleave",poseAuto);
+$("plist").addEventListener("pointerleave",poseAuto);
+/* Navigasi */
+$("nbProf").onclick=openProfile;
+$("nbShop").onclick=openShop;
+const TARGET_SCORE=1000;
+function openRew(){
+ hideAll();$("rew").classList.add("show");
+ $("tgtTxt").textContent=nf(TARGET_SCORE);
+ const sc=S?score():0;
+ $("rewMe").textContent=S?"Skormu "+nf(sc)+"  |  "+(sc>=TARGET_SCORE?"Target tercapai ✅":"Belum mencapai target"):"Target: skor minimal "+nf(TARGET_SCORE);
+}
+$("nbHow").onclick=()=>{hideAll();$("how").classList.add("show")};
+$("nbRew").onclick=openRew;
+$("howX").onclick=showLeaderboard;
+$("rewX").onclick=showLeaderboard;
+$("nbPlay").onclick=()=>{
+ if($("nbPlay").disabled)return;
+ fs();
+ if(!S){hideAll();$("start").classList.add("show");return}
+ begin(S.user,LB.g);
+};
+$("shopX").onclick=showLeaderboard;
+$("profX").onclick=showLeaderboard;
+$("bag").onclick=()=>{const b=$("invbox");b.hidden=!b.hidden};
+let picked=false;
+$("plat").onclick=e=>{const b=e.target.closest(".pl");if(!b||b.disabled)return;picked=true;b.classList.add("on");$("unameBox").classList.add("show");$("uname").focus()};
+async function startClick(){
+ fs();
+ const h=$("hi");
+ if(!picked){h.textContent="Pilih platform sosial media dulu.";return}
+ const name=$("uname").value.trim().replace(/^@/,"");
+ if(!/^[A-Za-z0-9._]{1,30}$/.test(name)){h.textContent="Username Instagram tidak valid. Pakai huruf, angka, titik, atau garis bawah.";return}
+ $("btnStart").disabled=true;h.textContent="Memeriksa data...";
+ await cloudReady.catch(()=>initCloud());
+ const mine=await getMine();
+ if(mine){adopt(mine);return}
+ h.textContent="";$("btnStart").disabled=false;begin(name);
+}
+$("btnStart").onclick=()=>startClick().catch(error=>{$("btnStart").disabled=false;gameError(error);});
+$("btnClose").onclick=showLeaderboard;
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&playing)persist(true)});
+const cloudReady=initCloud();
+cloudReady.then(async()=>{
+ await loadWallet();
+ const m=await getMine();if(m&&!S)adopt(m);
+}).catch(gameError);
+setInterval(()=>{if(document.visibilityState==='visible')loadWallet().then(()=>{if($("shop").classList.contains("show"))renderCart();}).catch(()=>{});},15000);
+const mq=window.matchMedia("(orientation: portrait)");
+function onOri(){
+ if(mq.matches&&playing&&!paused){paused=true;pauseAt=Date.now()}
+ else if(!mq.matches&&paused){paused=false;if(S)S.end+=Date.now()-pauseAt}
+}
+if(mq.addEventListener)mq.addEventListener("change",onOri);else if(mq.addListener)mq.addListener(onOri);
+buildSteps();
+</script>
+</body>
+</html>

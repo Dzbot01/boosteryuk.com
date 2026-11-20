@@ -108,6 +108,7 @@ const baseMenu: {
   { id: 'sewa-agen', icon: Bot, label: 'Sewa Agen AI', desc: 'Agen AI WhatsApp, Telegram, dll' },
   { id: 'riwayat', icon: History, label: 'Riwayat Pesanan', desc: 'Tabel riwayat pesanan' },
   { id: 'cek-status', icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan' },
+  { id: 'event', icon: Gift, label: 'Event', desc: 'Game & event yang berlangsung' },
   { id: 'artikel', icon: BookOpen, label: 'Artikel', desc: 'Panduan & tips' },
   { id: 'about', icon: Info, label: 'Tentang Kami', desc: 'Tentang Kami' },
   { id: 'terms', icon: FileText, label: 'Syarat & Ketentuan', desc: 'Informasi Syarat dan Ketentuan' },
@@ -128,6 +129,8 @@ const HIDDEN_PROFILE_ITEM = 'profil';
 export { baseMenu, authMenu };
 
 const ADMIN_MENU = [
+  { id: 'cek-status' as const, icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan', path: '/cek-status' },
+  { id: 'event' as const, icon: Gift, label: 'Event', desc: 'Game & event yang berlangsung', path: '/event' },
   { id: 'events' as const, icon: Gift, label: 'Kelola Event', desc: 'Jadwal & status event', path: '/admin/events' },
   { id: 'orders' as const, icon: ClipboardList, label: 'Data Pesanan', desc: 'Pesanan semua user', path: '/admin/orders' },
   { id: 'users' as const, icon: Users, label: 'Data User', desc: 'Saldo & data user', path: '/admin/users' },
@@ -203,7 +206,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
     }
   };
 
-  const AUTH_REQUIRED = ['layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
+  const AUTH_REQUIRED = ['event', 'layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
 
   // Child panel: menu "Order Nomor" (OTP) tampil setelah "Buat Pesanan".
   const base = IS_CHILD_PANEL
@@ -398,7 +401,6 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
             )}
           </>
         )}
-        <button onClick={() => { navigate('/event'); onClose(); }} title="Event" aria-label="Event" className={expanded ? expandedRow(pathname === '/event') : railRow(pathname === '/event')}><Gift className="h-[17px] w-[17px] shrink-0"/>{expanded && <span className="text-[13px] font-semibold">Event</span>}</button>
       </nav>
 
       {/* Footer: profil akun (dikembalikan seperti semula — profil di side menu; Playground tetap terpisah di header) + keluar */}

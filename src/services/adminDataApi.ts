@@ -19,7 +19,7 @@ async function call<T>(action: string, body: Record<string, unknown> = {}): Prom
   }
 }
 
-export type OrderType = 'smm' | 'agent_ai' | 'nexspace' | 'otp' | 'upgrade';
+export type OrderType = 'smm' | 'agent_ai' | 'nexspace' | 'otp' | 'upgrade' | 'event';
 export type OrderStatus = 'pending' | 'proses' | 'selesai' | 'batal';
 export interface AdminOrder {
   id: number;
@@ -101,4 +101,4 @@ export const adminDataApi = {
 
 export const rupiah = (n: number | null | undefined) =>
   n === null || n === undefined ? '—' : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
-export const TYPE_LABEL: Record<OrderType, string> = { smm: 'SMM', agent_ai: 'Agen AI', nexspace: 'NexSpace', otp: 'Nomor OTP', upgrade: 'Upgrade' };
+export const TYPE_LABEL: Record<OrderType, string> = { event: 'Event', smm: 'SMM', agent_ai: 'Agen AI', nexspace: 'NexSpace', otp: 'Nomor OTP', upgrade: 'Upgrade' };

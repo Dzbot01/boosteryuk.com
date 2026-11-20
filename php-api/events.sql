@@ -12,5 +12,7 @@ CREATE TABLE IF NOT EXISTS site_events (
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO site_events (id,title,description,kind,status,ends_at) VALUES
-        (1,'Hitung mundur tahun baru','Sambut tahun baru bersama! Hitung mundur menuju 1 Januari 2027 pukul 00.00 WIB.','countdown','ongoing','2026-12-31 17:00:00'),
+        (1,'Hitung mundur tahun baru','Mainkan Naikkan Akunmu! Merchant memakai saldo website untuk item virtual game.','game','ongoing','2026-12-31 17:00:00'),
         (2,'','','standard','upcoming',NULL);
+
+UPDATE site_events SET kind='game' WHERE id=1 AND kind='countdown' AND title='Hitung mundur tahun baru';
