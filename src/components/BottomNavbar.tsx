@@ -1,3 +1,4 @@
+import UserAvatar from './UserAvatar';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Settings, HelpCircle, Music, Pause } from 'lucide-react';
@@ -118,13 +119,13 @@ export default function BottomNavbar() {
                       : 'text-cyan-700 hover:bg-cyan-50 dark:text-cyan-400 dark:hover:bg-cyan-900/30'
                 }`}
               >
-                {user.plusActive || profileActive? (
+                <UserAvatar user={user}>{user.plusActive || profileActive? (
                   user.initials
                 ) : (
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-100 text-cyan-700 ring-1 ring-cyan-200 transition-transform duration-300 group-hover:scale-110 dark:bg-cyan-900/40 dark:text-cyan-400 dark:ring-cyan-800/50">
                     {user.initials}
                   </span>
-                )}
+                )}</UserAvatar>
               </button>
             </>
           )}

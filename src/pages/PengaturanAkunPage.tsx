@@ -1,3 +1,4 @@
+import UserAvatar from '../components/UserAvatar';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendOtpEmail, genOtp, otpVerifRateCheck, otpVerifRateRecord, otpVerifRateStatus, fmtCooldown } from '../services/otp';
@@ -175,7 +176,7 @@ export default function PengaturanAkunPage() {
       <Reveal delay={40}>
         <div className="flex items-center gap-3.5">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 font-display text-lg font-extrabold text-white shadow-lg shadow-cyan-600/25">
-            {user?.initials?? 'U'}
+            <UserAvatar user={user}>{user?.initials?? 'U'}</UserAvatar>
           </span>
           <div>
             <h1 className="font-display text-[26px] font-extrabold leading-none tracking-tight text-slate-900 dark:text-white sm:text-[30px]">

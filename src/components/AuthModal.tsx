@@ -52,7 +52,7 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }: Prop
   const handleGoogleLogin = async () => {
     setError(''); setLoading(true);
     try { await startGoogleLogin(); }
-    catch (e) { setLoading(false); setError(e instanceof Error ? e.message : 'Tidak dapat memulai login Google. Coba lagi.'); }
+    catch { setLoading(false); setError('Ups! Tunggu sebentar lalu cobalagi'); }
   };
 
   const subtitle =
