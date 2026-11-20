@@ -44,7 +44,16 @@ if(!$active)eg_out(['ok'=>false,'message'=>'Event belum dimulai atau sudah seles
 eg_schema($conn);
 if($action==='buy') {
  // Refuse non-transactional tables: a history failure must roll back real money as well.
- foreach(['users','riwayat_pesanan','event_game_players','event_game_receipts'] as $table){$st=cp_q($conn,'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?','s',$table);$engine=$st->get_result()->fetch_assoc()['ENGINE']??'';$st->close();if(strtoupper($engine)!=='INNODB')eg_out(['ok'=>false,'message'=>'Pembelian dinonaktifkan: tabel transaksi harus InnoDB.'],503);}
+ $incompatible=[];
+ foreach(['users','riwayat_pesanan','event_game_players','event_game_receipts'] as $table){
+  $st=cp_q($conn,'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?','s',$table);
+  $engine=$st->get_result()->fetch_assoc()['ENGINE']??'';$st->close();
+  if(strtoupper($engine)!=='INNODB')$incompatible[]=$table.' ('.($engine ?: 'engine tidak terbaca').')';
+ }
+ if($incompatible)eg_out([
+  'ok'=>false,'code'=>'GAME_ENGINE_NOT_READY','payment_started'=>false,
+  'message'=>'Pembelian belum diproses; saldo tidak dipotong oleh permintaan ini. Tabel belum InnoDB: '.implode(', ',$incompatible).'. Admin perlu backup database lalu menjalankan event_game_innodb_migration.sql di database website.'
+ ],503);
  if(!riwayat_ensure_columns($conn))eg_out(['ok'=>false,'message'=>'Skema riwayat perlu diperbarui sebelum pembelian game.'],503);
 }
 if($action==='leaderboard'){
