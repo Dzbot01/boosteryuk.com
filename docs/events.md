@@ -96,3 +96,17 @@ Endpoint memverifikasi role admin di DB, menolak akses child panel, membatasi ev
 `node scripts/test-event-sessions.mjs` menguji start RPC, guard klik ganda, reuse request-ID saat retry dan kontrak sumber quota/auth/delete. Tes ini **bukan** eksekusi transaksi MySQL. `scripts/test-event-ui.mjs` memakai jsdom khusus pengujian (instal sementara di `/tmp`, tanpa perubahan package.json) untuk delay, klik ganda, pembatalan disabled/unmount, reduced motion, submit form, status poster, dan redaksi coming soon. Pemeriksaan sintaks PHP, build, tes bridge/API/event dan regresi avatar/OAuth juga dijalankan.
 
 Sebelum produksi: uji 5 start berhasil, start ke-6 ditolak, resume/reload tidak menambah jatah, retry ID sama, dua tab bersamaan saat tersisa satu, batas 00.00 WIB, isolasi akun, edit admin vs save yang bersamaan, hapus game tanpa mengubah users/riwayat/kuota, halaman kedua peserta, non-admin ditolak, serta klik pesan hanya mengirim **satu** transaksi setelah animasi. Pengujian runtime PHP/MySQL dan visual perangkat belum dilakukan di sandbox.
+
+
+## Koreksi kompatibilitas versi dan tombol paket Agen AI
+
+“Aksi tidak valid.” saat mulai bermain bukan efek mengganti username game atau menghapus peserta. Source PHP terbaru menerima `start`; PHP sebelum fitur batas harian tidak mengenalnya. Pesan tersebut mengarah pada kemungkinan API lama di hosting/proxy/cache, bukan bukti masalah akun. Diagnosis produksi tetap memerlukan pemeriksaan file/respons server.
+
+- Respons `event_game.php` kini menyertakan `api_version: 2`. Frontend memeriksa versi dan data jatah pada `get`/`start`; API lama ditolak sebelum game dimulai dengan instruksi update file, bukan fallback save lokal yang melewati kuota. Error `start` dari PHP lama juga diterjemahkan menjadi pesan versi tidak sesuai. Tidak ada auto-retry atau perubahan jatah/saldo oleh pemeriksaan versi frontend.
+- `event_game_lib.php` memiliki penanda protokol yang diperiksa endpoint agar file PHP baru tidak berjalan dengan helper lama. URL iframe memakai `?v=2` untuk membedakan dokumen game dari cache lama.
+- Upload `event_game.php` **dan** `event_game_lib.php` terbaru ke `/api` hosting PHP, bukan hanya frontend. Pertahankan configdb.php server. Jalankan SQL harian dari update sebelumnya jika belum dilakukan; tidak ada migrasi SQL tambahan pada koreksi ini. Jika file sudah benar tetapi versi respons lama, bersihkan cache proxy dan minta hosting me-refresh OPcache sesuai prosedurnya. Jangan membuka endpoint reset OPcache publik.
+- GET `/api/event_game.php` kini diharapkan membalas HTTP 405 JSON dengan `api_version: 2` dan “Gunakan POST.” Ini hanya membuktikan versi file endpoint yang terlayani, bukan keberhasilan transaksi DB atau kecocokan semua helper. POST get yang terautentikasi harus sukses dengan versi 2 dan objek daily.
+- Menghapus peserta hanya menghapus data event. Jatah harian tetap berdasarkan **ID akun website**, bukan username yang diketik di game. Mengganti nama game tidak mereset kuota. Peserta yang dihapus dapat mulai lagi bila masih punya jatah.
+- Di Agen AI, tahap kartu harga/pilih paket kembali memakai tombol biasa yang langsung memilih paket. Animasi transaksi tetap hanya pada “Pesan Sekarang” di tahap pengisian data, dengan jeda sebelum submit seperti sebelumnya.
+
+Tes API mencakup backend lama tanpa versi, `start` tidak dikenal, helper tidak cocok, kuota hilang, serta get/start versi baru. Tes kontrak Agen AI memastikan kartu harga tidak memakai TransactionButton dan form tetap memakainya. Pengujian langsung hosting/MySQL belum dijalankan.

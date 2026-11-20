@@ -20,4 +20,12 @@ assert.match(lib,/PRIMARY KEY\(user_id,play_date\)/);assert.match(lib,/Asia\/Jak
 assert.match(admin,/cp_require_admin/);assert.match(admin,/FOR UPDATE/);assert.match(admin,/revision/);assert.match(admin,/DELETE FROM event_game_players WHERE event_id=\? AND user_id=\?/);
 assert.doesNotMatch(admin,/DELETE FROM (users|event_game_daily|event_game_receipts|riwayat_pesanan)/i);
 assert.equal(fs.readFileSync('public/games/transaction-button.css','utf8'),fs.readFileSync('src/components/TransactionButton.css','utf8'));
+const agent=fs.readFileSync('src/pages/SewaAgenAiPage.tsx','utf8');
+const packages=agent.slice(agent.indexOf('function PackageCarousel'),agent.indexOf('function OrderForm'));
+const form=agent.slice(agent.indexOf('function OrderForm'),agent.indexOf('function ProcessingCard'));
+assert.doesNotMatch(packages,/<TransactionButton/);
+assert.match(packages,/<button type="button" onClick=\{\(\) => onPick\(i\)\}/);
+assert.match(form,/<TransactionButton onClick=\{props.onSubmit\}/);
+assert.match(api,/api_version['"]=>2/);
+assert.match(api,/EG_GAME_PROTOCOL_VERSION!==2/);
 console.log('PASS: start RPC, double-click guard, same-ID retry/new-ID next start, server quota/session/admin isolation source contracts, shared animation CSS parity. MySQL runtime still requires staging.');

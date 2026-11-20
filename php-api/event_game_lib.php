@@ -1,4 +1,5 @@
 <?php
+const EG_GAME_PROTOCOL_VERSION = 2;
 const EG_PRODUCTS = [
  'f100'=>['name'=>'Followers +100','price'=>2500,'kind'=>'f','amount'=>100],
  'f500'=>['name'=>'Followers +500','price'=>9000,'kind'=>'f','amount'=>500],
