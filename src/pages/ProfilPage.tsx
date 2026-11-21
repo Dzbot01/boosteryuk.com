@@ -1,3 +1,4 @@
+import GoogleProfileFallback from '../components/GoogleProfileFallback';
 import AvatarPicker from '../components/AvatarPicker';
 import UserAvatar from '../components/UserAvatar';
 import OwnedTitles from '../components/OwnedTitles';
@@ -21,7 +22,7 @@ export default function ProfilPage() {
   };
   return <div className="page-align-left mx-auto max-w-2xl px-4 pb-32 pt-10 sm:px-6">
     <section className="rounded-[28px] border border-slate-200 bg-white p-6 text-center dark:border-slate-700 dark:bg-slate-900">
-      <div className="mx-auto flex h-32 w-32 items-center justify-center text-2xl font-extrabold text-white"><UserAvatar user={user} fallbackClassName="rounded-3xl bg-gradient-to-br from-cyan-500 to-cyan-700">{user.initials}</UserAvatar></div>
+      <div className="mx-auto flex h-32 w-32 items-center justify-center text-2xl font-extrabold text-white"><UserAvatar user={user}><GoogleProfileFallback key={user.picture || user.id} src={user.picture}/></UserAvatar></div>
       <h1 className="mt-4 text-2xl font-extrabold">{user.name}</h1><p className="mt-1 text-sm text-slate-500">@{user.username} · {user.email}</p>
       <p className="mt-1 text-xs text-slate-400">Bergabung {user.joined}</p>
       {user.plusActive && <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-extrabold text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"><Crown size={18}/>{trial ? 'PLUS TRIAL' : 'VIP PLUS'}{trial && until && <span className="text-xs font-normal">sampai {new Date(until).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB</span>}</div>}

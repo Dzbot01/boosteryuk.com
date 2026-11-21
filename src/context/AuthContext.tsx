@@ -8,6 +8,7 @@ const API_URL = IS_CHILD_PANEL ? MAIN_API : import.meta.env.VITE_API_URL || MAIN
 
 type User = {
   avatar_variant?: AvatarVariant;
+  picture?: string; // Foto Google opsional dari API; fallback lokal bila tidak tersedia.
   id: number;
   name: string;
   username: string;

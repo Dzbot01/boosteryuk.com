@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { MusicProvider } from './context/MusicContext';
 const ProfilPage = lazy(() => import('./pages/ProfilPage'));
 const EventGamePage = lazy(() => import('./pages/EventGamePage'));
+const DailyStreakPage = lazy(() => import('./pages/DailyStreakPage'));
 const EventsPage = lazy(() => import('./pages/EventsPage'));
 const AdminEventDataPage = lazy(() => import('./pages/admin/AdminEventDataPage'));
 const AdminEventsPage = lazy(() => import('./pages/admin/AdminEventsPage'));
@@ -69,6 +70,7 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="profil" element={<ProtectedRoute><ProfilPage /></ProtectedRoute>} />
           <Route path="event" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+          <Route path="event/daily-streak" element={<ProtectedRoute><DailyStreakPage /></ProtectedRoute>} />
           <Route path="event/:id/game" element={<ProtectedRoute><EventGamePage /></ProtectedRoute>} />
           <Route path="admin/events/:id/data" element={<ProtectedRoute adminOnly><AdminEventDataPage /></ProtectedRoute>} />
           <Route path="admin/events" element={<ProtectedRoute adminOnly><AdminEventsPage /></ProtectedRoute>} />

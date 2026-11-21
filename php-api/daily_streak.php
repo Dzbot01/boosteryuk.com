@@ -36,7 +36,7 @@ try {
   if(!$existing){
    $day=(int)$row['streak_day']===7?1:(int)$row['streak_day']+1;
    if((int)$row['streak_day']===7)$row['cycle_no']++;
-   $cash=$day<=6?1:0;$until=null;
+   $cash=$day<=6?$day:0;$until=null;
    if($day===7){
     $st=cp_q($conn,'SELECT expires_at FROM user_plus_trials WHERE user_id=? FOR UPDATE','i',$uid);$trial=$st->get_result()->fetch_assoc();$st->close();
     $base=$trial?max(time(),strtotime($trial['expires_at'].' UTC')):time();$until=gmdate('Y-m-d H:i:s',$base+86400);
@@ -44,7 +44,7 @@ try {
     sr_title($conn,$uid,'daily-streak-7');
    }
    cp_q($conn,'INSERT INTO daily_streak_receipts (user_id,checkin_date,cycle_no,streak_day,balance_reward,trial_until) VALUES (?,?,?,?,?,?)','isiiis',$uid,$today,(int)$row['cycle_no'],$day,$cash,$until)->close();
-   if($cash){cp_q($conn,'UPDATE users SET balance=balance+1 WHERE id=?','i',$uid)->close();$u['balance']+=1;}
+   if($cash){cp_q($conn,'UPDATE users SET balance=balance+? WHERE id=?','ii',$cash,$uid)->close();$u['balance']+=$cash;}
    cp_q($conn,'UPDATE user_daily_streaks SET last_checkin=?,streak_day=?,cycle_no=? WHERE user_id=?','siii',$today,$day,(int)$row['cycle_no'],$uid)->close();
    $row['last_checkin']=$today;$row['streak_day']=$day;
    $reward=['day'=>$day,'cash'=>$cash,'trial_until'=>$until?str_replace(' ','T',$until).'Z':null];
