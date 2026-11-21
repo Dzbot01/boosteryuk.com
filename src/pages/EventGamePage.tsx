@@ -1,3 +1,4 @@
+import { eventAccess } from '../services/eventsApi';
 import { useMusic } from '../context/MusicContext';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -6,11 +7,17 @@ import { eventGameRequest, GAME_CLOSED } from '../services/eventGameApi';
 import Seo from '../components/Seo';
 export default function EventGamePage(){
  const {play,toggle,playing,blocked}=useMusic();
- useEffect(()=>{play();},[play]);
+ const [access,setAccess]=useState<'loading'|'allowed'|'blocked'>('loading');
+ const [accessMessage,setAccessMessage]=useState('');
  const {id}=useParams();const {user,refresh}=useAuth();const frame=useRef<HTMLIFrameElement>(null);const [channel]=useState(()=>crypto.randomUUID());const [error,setError]=useState('');const [bridgeReady,setBridgeReady]=useState(false);
+ useEffect(()=>{
+  let alive=true;setAccess('loading');
+  void eventAccess(Number(id)).then(r=>{if(!alive)return;if(r[String(id)]?.allowed){setAccess('allowed');play();}else{setAccess('blocked');setAccessMessage(r[String(id)]?.message || 'Event tidak dapat dibuka.');}}).catch(e=>{if(alive){setAccess('blocked');setAccessMessage(e instanceof Error?e.message:'Akses event belum dapat diperiksa.');}});
+  return()=>{alive=false;};
+ },[id,user?.id,play]);
  const token=user?.token;const refreshRef=useRef(refresh);refreshRef.current=refresh;
  useEffect(()=>{
-  if(!token||!id||!/^\d+$/.test(id))return;
+  if(access!=='allowed'||!token||!id||!/^\d+$/.test(id))return;
   let active=true,revision:number|null=null;let queue=Promise.resolve();let catalog:Record<string,{name:string;price:number}>={};const inFlight=new Set<number>();
   const receive=(event:MessageEvent)=>{
    const m=event.data;if(event.source!==frame.current?.contentWindow||!m||m.type!=='boosteryuk-game'||m.channel!==channel||!Number.isSafeInteger(m.id)||m.id<1||inFlight.has(m.id))return;
@@ -43,6 +50,7 @@ export default function EventGamePage(){
    }).catch(()=>{}).finally(()=>inFlight.delete(m.id));
   };
   window.addEventListener('message',receive);setBridgeReady(true);return()=>{active=false;window.removeEventListener('message',receive);};
- },[channel,id,token]);
+ },[access,channel,id,token]);
+ if(access!=='allowed')return <main className="mx-auto max-w-3xl px-4 py-10"><Link to="/event" className="text-sm font-bold text-violet-600">← Kembali ke Event</Link><p role="status" className="mt-5 rounded-2xl border p-6">{access==='loading'?'Memeriksa akses event…':accessMessage}</p></main>;
  return <main className="px-2 pb-28 pt-4 sm:px-6"><Seo title="Naikkan Akunmu! — Event" noindex/><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><Link to="/event" className="text-sm font-semibold text-cyan-700">← Kembali ke Event</Link><button type="button" onClick={toggle} className="text-xs font-bold text-cyan-700">{playing?'Jeda musik':blocked?'Putar musik (ketuk untuk mulai)':'Putar musik'}</button><p className="text-xs text-slate-500">Merchant memakai saldo website nyata. Jika koneksi terputus saat membayar, periksa riwayat sebelum membayar ulang.</p></div>{error && <p role="alert" className="mb-3 text-sm text-rose-600">{error}</p>}{bridgeReady && <iframe ref={frame} title="Game Naikkan Akunmu!" src={`/games/naikkan-akunmu.html?v=3#channel=${channel}`} sandbox="allow-scripts allow-orientation-lock" allow="fullscreen" allowFullScreen referrerPolicy="no-referrer" className="h-[calc(100dvh-150px)] min-h-[420px] w-full rounded-xl border border-slate-200 bg-white"/>}</main>;
 }

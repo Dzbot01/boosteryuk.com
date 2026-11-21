@@ -22,3 +22,11 @@ export function eventStatus(e: SiteEvent, now: number): EventStatus {
   if (e.starts_at) return Date.parse(e.starts_at) > now ? 'upcoming' : 'ongoing';
   return e.effective_status;
 }
+
+export interface EventAccess { allowed: boolean; completed: boolean; message: string }
+export async function eventAccess(eventId?: number): Promise<Record<string, EventAccess>> {
+  const response = await fetch(`${MAIN_API}/event_access.php`, { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: localStorage.getItem('token') || '', ...(eventId === undefined ? {} : { event_id: eventId }) }) });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.ok || !data.access) throw new Error(data?.message || 'Akses event belum dapat diperiksa. Coba lagi nanti.');
+  return data.access;
+}

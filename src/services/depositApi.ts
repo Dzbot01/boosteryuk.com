@@ -38,5 +38,5 @@ export async function depositCall(action: string, body: Record<string, unknown> 
   if (!response.ok || !data.ok) throw new DepositError(data);
   return data;
 }
-export const depositLabel = (status: string) => status === 'PAID' ? 'Sukses' : ['CREATING', 'UNPAID', 'PENDING'].includes(status) ? 'Menunggu pembayaran' : 'Batal';
+export const depositLabel = (status: string) => status === 'PAID' ? 'Sukses' : status === 'EXPIRED' ? 'Kedaluwarsa' : ['CREATING', 'UNPAID', 'PENDING'].includes(status) ? 'Menunggu pembayaran' : 'Batal';
 export const depositPending = (invoice: DepositInvoice | null) => !!invoice && ['CREATING', 'UNPAID', 'PENDING'].includes(invoice.status);

@@ -53,6 +53,8 @@ await assert.rejects(depositCall('active'), /tidak merespons JSON/);
 globalThis.fetch = async () => { calls++;throw new Error('offline'); };
 await assert.rejects(depositCall('create'), /offline/);assert.equal(calls, 2, 'never auto-retry create');
 for (const status of ['CREATING','UNPAID','PENDING']) { assert.equal(depositLabel(status), 'Menunggu pembayaran');assert.equal(depositPending({status}), true); }
-for (const status of ['FAILED','EXPIRED','REFUND','CANCELLED']) { assert.equal(depositLabel(status), 'Batal');assert.equal(depositPending({status}), false); }
+for (const status of ['FAILED','REFUND','CANCELLED']) { assert.equal(depositLabel(status), 'Batal');assert.equal(depositPending({status}), false); }
+assert.equal(depositLabel('EXPIRED'), 'Kedaluwarsa');assert.equal(depositPending({status:'EXPIRED'}),false);
+assert.match(api,/di_expire_user\(\$conn,\$uid\)/);assert.match(lib,/function di_due/);assert.match(lib,/status='EXPIRED',active_user_id=NULL/);assert.match(lib,/di_due\(\$data\)/);
 assert.equal(depositLabel('PAID'), 'Sukses');
 console.log('PASS: Worker endpoint contracts (no PHP Tripay secrets), authenticated ownership, reserve-before-create, 3% nominal-only billing, unique active slot, cooldown/live-check cancellation, ledger contracts, history ownership, client API errors/no automatic retry, labels, prices, FAQ.');

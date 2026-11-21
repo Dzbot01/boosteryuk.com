@@ -19,7 +19,7 @@ try {
  $st=cp_q($conn,'SELECT * FROM user_daily_streaks WHERE user_id=? FOR UPDATE','i',$uid);$row=$st->get_result()->fetch_assoc();$st->close();
  // Compute date AFTER acquiring lock, including requests crossing midnight WIB.
  [$today,$yesterday,$next]=sr_calendar();$active=sr_event_active($conn);
- if(sr_should_reset($row['last_checkin'],(int)$row['streak_day'],$today,$yesterday)){
+ if(!sr_completed($conn,$uid) && sr_should_reset($row['last_checkin'],(int)$row['streak_day'],$today,$yesterday)){
   $row['streak_day']=0;$row['cycle_no']++;$row['reset_count']++;
   cp_q($conn,'UPDATE user_daily_streaks SET streak_day=0,cycle_no=?,reset_count=? WHERE user_id=?','iii',(int)$row['cycle_no'],(int)$row['reset_count'],$uid)->close();
  }
@@ -34,9 +34,9 @@ try {
   // Unique receipt is the final idempotency gate even if a request is retried after response loss.
   $st=cp_q($conn,'SELECT streak_day FROM daily_streak_receipts WHERE user_id=? AND checkin_date=?','is',$uid,$today);$existing=$st->get_result()->fetch_assoc();$st->close();
   if(!$existing){
-   $day=(int)$row['streak_day']===7?1:(int)$row['streak_day']+1;
-   if((int)$row['streak_day']===7)$row['cycle_no']++;
-   $cash=$day<=6?$day:0;$until=null;
+   if(sr_completed($conn,$uid))throw new DomainException('Event sudah kamu selesaikan.');
+   $day=(int)$row['streak_day']+1;
+   $cash=$day<=6?$day*10:0;$until=null;
    if($day===7){
     $st=cp_q($conn,'SELECT expires_at FROM user_plus_trials WHERE user_id=? FOR UPDATE','i',$uid);$trial=$st->get_result()->fetch_assoc();$st->close();
     $base=$trial?max(time(),strtotime($trial['expires_at'].' UTC')):time();$until=gmdate('Y-m-d H:i:s',$base+86400);

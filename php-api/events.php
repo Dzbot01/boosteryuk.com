@@ -27,8 +27,9 @@ function ev_schema($conn) {
     $conn->query("INSERT IGNORE INTO site_events (id,title,description,kind,status,ends_at) VALUES
         (1,'Hitung mundur tahun baru','Mainkan Naikkan Akunmu! pada event Hitung mundur tahun baru. Merchant memakai saldo website untuk item virtual game.','game','ongoing','2026-12-31 17:00:00'),
         (2,'','','standard','upcoming',NULL)");
-    $conn->query("UPDATE site_events SET title='Daily Streak',description='Check-in 7 hari berturut-turut. Hari 1–6 mendapat Rp1 hingga Rp6 sesuai hari, hari ke-7 PLUS TRIAL 24 jam.',kind='streak',status='ongoing' WHERE id=2 AND title='' AND kind='standard' AND status='upcoming'");
-    $conn->query("UPDATE site_events SET description='Check-in 7 hari berturut-turut. Hari 1–6 mendapat Rp1 hingga Rp6 sesuai hari, hari ke-7 PLUS TRIAL 24 jam.' WHERE id=2 AND kind='streak' AND description='Check-in 7 hari berturut-turut. Hari 1–6 Rp1, hari ke-7 PLUS TRIAL 24 jam.'");
+    $conn->query("UPDATE site_events SET title='Daily Streak',description='Check-in 7 hari berturut-turut. Hari 1–6 mendapat Rp10 hingga Rp60 sesuai hari, hari ke-7 PLUS TRIAL 24 jam.',kind='streak',status='ongoing' WHERE id=2 AND title='' AND kind='standard' AND status='upcoming'");
+    $conn->query("UPDATE site_events SET description='Check-in 7 hari berturut-turut. Hari 1–6 mendapat Rp10 hingga Rp60 sesuai hari, hari ke-7 PLUS TRIAL 24 jam.' WHERE id=2 AND kind='streak' AND description='Check-in 7 hari berturut-turut. Hari 1–6 Rp1, hari ke-7 PLUS TRIAL 24 jam.'");
+    $conn->query("UPDATE site_events SET description='Check-in 7 hari berturut-turut. Hari 1–6 mendapat Rp10 hingga Rp60 sesuai hari, hari ke-7 PLUS TRIAL 24 jam.' WHERE id=2 AND kind='streak' AND description='Check-in 7 hari berturut-turut. Hari 1–6 mendapat Rp1 hingga Rp6 sesuai hari, hari ke-7 PLUS TRIAL 24 jam.'");
     $conn->query("INSERT IGNORE INTO site_events (id,title,description,kind,status) VALUES (3,'','','standard','upcoming')");
     $conn->query("UPDATE site_events SET kind='game' WHERE id=1 AND kind='countdown' AND title='Hitung mundur tahun baru'");
 }

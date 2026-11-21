@@ -18,7 +18,7 @@ globalThis.__depositAuth = { user: { id: 1, name: 'Test' }, refresh: async () =>
 const dir = mkdtempSync(path.join(tmpdir(), 'deposit-ui-'));
 try {
   const { outputFiles } = await build({
-    stdin: { contents: `export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {MemoryRouter,Routes,Route} from 'react-router-dom';export {default as Page} from './src/pages/DepositMethodPage';`, resolveDir: process.cwd() },
+    stdin: { contents: `export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {MemoryRouter,Routes,Route} from 'react-router-dom';export {default as Page} from './src/pages/DepositMethodPage';export {default as History} from './src/pages/DepositHistoryPage';`, resolveDir: process.cwd() },
     bundle: true, platform: 'node', format: 'cjs', write: false, jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"development"' },
     plugins: [{ name: 'deposit-test-hooks', setup(build) {
@@ -28,7 +28,7 @@ try {
     } }],
   });
   const file = path.join(dir, 'bundle.cjs');writeFileSync(file, outputFiles[0].text);
-  const { createElement: h, act, createRoot, MemoryRouter, Routes, Route, Page } = require(file);
+  const { createElement: h, act, createRoot, MemoryRouter, Routes, Route, Page, History } = require(file);
   let root;
   const now = Math.floor(Date.now() / 1000);
   const make = (age = 0) => ({ merchant_ref: 'BY-1-test', reference: 'T12345', nominal: 10000, bonus: 300, credit: 10300, method: 'QRIS', status: 'UNPAID', created_time: now-age, cancel_after: now-age+600, cancelled_at: null, paid_at: null,
@@ -71,6 +71,13 @@ try {
   assert.equal(document.querySelector('img[alt="QR pembayaran"]'), null, 'cancelled QR must not remain payable');
   await unmount();await mount('/deposit/QRIS?invoice=BY-1-test');
   assert.ok(text().includes('Deposit dibatalkan di aplikasi'), 'cancelled detail persists after remount');await unmount();
+  stored=make();stored.transaction.expired_time=now-1;live='EXPIRED';requests=[];
+  await mount('/deposit/QRIS?invoice=BY-1-test');
+  assert.ok(requests.some(r=>r.action==='status'),'deadline immediately asks server to persist expiry');
+  assert.ok(document.body.textContent.includes('Kedaluwarsa'));assert.equal(document.querySelector('img[alt="QR pembayaran"]'),null);await unmount();
+  globalThis.fetch=async(url,options)=>{assert.equal(JSON.parse(options.body).action,'list');return new Response(JSON.stringify({ok:true,rows:[stored],has_more:false}));};
+  root=createRoot(document.getElementById('root'));await act(async()=>root.render(h(MemoryRouter,null,h(History))));
+  assert.ok(document.querySelector('table').textContent.includes('Kedaluwarsa'));assert.ok(document.querySelector('.max-w-3xl.px-4'),'history uses padded order-history sized container');await unmount();installFetch();
   stored = null;requests = [];
   await mount();
   await act(async () => buttons().find(b => b.textContent.includes('5.000')).click());

@@ -22,12 +22,12 @@ export default function OwnedTitles() {
     {loading && <p role="status" className="py-8 text-center text-sm text-slate-500">Memuat koleksi akun…</p>}
     {error && <div role="alert" className="py-6 text-center text-sm text-rose-500">{error}<button onClick={() => setReload(n => n + 1)} className="ml-2 font-bold underline">Coba lagi</button></div>}
     {!loading && !error && !owned.length && <p className="py-8 text-center text-sm leading-relaxed text-slate-500">Belum ada title. Selesaikan Daily Streak 7 hari atau satu sesi game Tahun Baru untuk mendapatkannya.</p>}
-    <div className="flex flex-col gap-4 pt-4">{owned.map(row => {
+    <div className="grid grid-cols-2 gap-3 pt-4 sm:grid-cols-3">{owned.map(row => {
       const title = TITLE_CATALOG[row.code];
-      return <article key={row.code} className="flex flex-col items-center rounded-2xl border border-violet-100 bg-gradient-to-b from-violet-50/70 to-white p-5 text-center dark:border-slate-700 dark:from-violet-950/20 dark:to-slate-900">
-        <div className="h-36 w-36"><RewardAnimation src={title.src} label={title.name} /></div>
-        <h3 className="mt-2 font-extrabold">{title.name}</h3><p className="mt-2 max-w-sm text-xs leading-relaxed text-slate-500">{title.description}</p>
-        <p className="mt-4 text-[11px] font-semibold text-violet-500">Didapat {new Date(row.earned_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })} · Permanen</p>
+      return <article key={row.code} className="flex flex-col items-center rounded-2xl border border-violet-100 bg-gradient-to-b from-violet-50/70 to-white p-3 text-center dark:border-slate-700 dark:from-violet-950/20 dark:to-slate-900">
+        <div className="h-20 w-20 sm:h-24 sm:w-24"><RewardAnimation src={title.src} label={title.name} /></div>
+        <h3 className="mt-2 text-xs font-extrabold sm:text-sm">{title.name}</h3><p className="mt-2 max-w-sm text-[10px] leading-relaxed text-slate-500">{title.description}</p>
+        <p className="mt-3 text-[9px] font-semibold text-violet-500">Didapat {new Date(row.earned_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })} · Permanen</p>
       </article>;
     })}</div>
   </section>;

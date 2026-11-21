@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { LoaderCircle, Receipt, Wallet } from 'lucide-react';
 import TripayInvoice from '../components/TripayInvoice';
@@ -25,6 +25,7 @@ export default function DepositMethodPage() {
   const [clockOffset, setClockOffset] = useState(0);
   const amount = Number(amountText) || 0;
   const pending = depositPending(invoice);
+  const expiryChecked = useRef('');
   const apply = useCallback((data: Awaited<ReturnType<typeof depositCall>>) => {
     setInvoice(data.invoice || null);
     if (data.server_time) setClockOffset(data.server_time * 1000 - Date.now());
@@ -49,7 +50,14 @@ export default function DepositMethodPage() {
     try {
       const data = await depositCall(action, { merchant_ref: invoice.merchant_ref });apply(data);
       if (data.invoice?.status === 'PAID') await refresh();
-    } catch(e) { setError(e instanceof Error ? e.message : 'Gagal mengecek pembayaran.'); }
+    } catch(e) {
+      setError(e instanceof Error ? e.message : 'Gagal mengecek pembayaran.');
+      // The server may have persisted EXPIRED even when the live Worker is unreachable.
+      if (action === 'status') try {
+        const stored = await depositCall('detail', { merchant_ref: invoice.merchant_ref });apply(stored);
+        if (stored.invoice?.status === 'PAID') await refresh();
+      } catch { /* retain last invoice and original error */ }
+    }
     finally { setBusy(false); }
   }, [apply, busy, invoice, refresh]);
   useEffect(() => {
@@ -57,6 +65,13 @@ export default function DepositMethodPage() {
     const timer = window.setTimeout(() => void run('status'), 15000);
     return () => clearTimeout(timer);
   }, [pending, invoice, busy, run]);
+
+  useEffect(() => {
+    const deadline = invoice?.transaction?.expired_time;
+    if (!pending || busy || !invoice?.reference || !deadline || now + clockOffset < deadline * 1000 || expiryChecked.current === invoice.merchant_ref) return;
+    expiryChecked.current = invoice.merchant_ref;
+    void run('status');
+  }, [pending, busy, invoice, now, clockOffset, run]);
 
   const min = channel?.minimum_amount ?? 1000;
   const max = channel?.maximum_amount ?? 10000000;
