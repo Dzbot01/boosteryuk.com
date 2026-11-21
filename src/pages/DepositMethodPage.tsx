@@ -13,7 +13,7 @@ export default function DepositMethodPage() {
   const [search, setSearch] = useSearchParams();
   const selectedRef = search.get('invoice') || '';
   const { user, refresh } = useAuth();
-  const { channels } = useTripayChannels();
+  const { channels, loading: channelsLoading } = useTripayChannels();
   const channel = useMemo(() => findChannel(channels, method), [channels, method]);
   const [invoice, setInvoice] = useState<DepositInvoice | null>(null);
   const [amountText, setAmountText] = useState('');
@@ -74,6 +74,9 @@ export default function DepositMethodPage() {
       setError(e instanceof Error ? e.message : 'Gagal membuat invoice. Coba muat ulang untuk memulihkan invoice.');
     } finally { setBusy(false); }
   };
+  // This page mounts a fresh channel hook after navigation. An empty list while
+  // its Worker request is in flight does not mean the selected method is invalid.
+  if (!channel && !selectedRef && channelsLoading) return <p role="status" className="flex items-center gap-2 p-5"><LoaderCircle className="animate-spin" /> Memuat metode pembayaran…</p>;
   if (!channel && !selectedRef) return <Navigate to="/deposit" replace />;
   const seconds = invoice ? Math.max(0, Math.ceil((invoice.cancel_after * 1000 - now - clockOffset) / 1000)) : 0;
   return <div className="mx-auto max-w-3xl space-y-5 pb-10">
