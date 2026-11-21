@@ -169,7 +169,7 @@ const rupiah = (n?: number | null) =>
  *  - Mobile (<lg): overlay penuh dari kiri (translate-x), seperti biasa.
  *  - DESKTOP: tidak ada tombol toggle terpisah — kursor diarahkan ke ikon-ikon menu (mode off) → panel otomatis terbuka (hover); klik di LUAR panel / Esc menutup (klik di dalam panel berfungsi normal).
  *  Catatan: header tampil di semua ukuran; di MOBILE header memuat logo + judul brand, di DESKTOP header tanpa logo/judul (hanya Playground).
- *           Ikon profil, saldo, Pengaturan akun & Keluar berada di footer side menu ini. Playground tetap di header.
+ *           Ikon profil, saldo, Profil & Pengaturan & Keluar berada di footer side menu ini. Playground tetap di header.
  */
 export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
   const { user, isAdmin, logout } = useAuth();
@@ -437,11 +437,11 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
                 </div>
               </div>
               <button
-                onClick={() => { navigate('/pengaturan-akun'); onClose(); }}
+                onClick={() => { navigate('/profil'); onClose(); }}
                 className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-[13px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 <Settings className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
-                Pengaturan akun
+                Profil & Pengaturan
               </button>
               <button
                 onClick={logoutAndHome}
@@ -454,9 +454,9 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
           ) : (
             <>
               <button
-                onClick={() => { navigate('/pengaturan-akun'); onClose(); }}
-                title="Pengaturan akun"
-                aria-label="Pengaturan akun"
+                onClick={() => { navigate('/profil'); onClose(); }}
+                title="Profil & Pengaturan"
+                aria-label="Profil & Pengaturan"
                 className="flex h-11 w-11 items-center justify-center rounded-xl font-display text-[12px] font-extrabold text-white transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-cyan-500"
               >
                 <UserAvatar user={user} fallbackClassName={`rounded-xl ${avatarGrad}`}>{initials}</UserAvatar>

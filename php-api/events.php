@@ -27,6 +27,8 @@ function ev_schema($conn) {
     $conn->query("INSERT IGNORE INTO site_events (id,title,description,kind,status,ends_at) VALUES
         (1,'Hitung mundur tahun baru','Mainkan Naikkan Akunmu! pada event Hitung mundur tahun baru. Merchant memakai saldo website untuk item virtual game.','game','ongoing','2026-12-31 17:00:00'),
         (2,'','','standard','upcoming',NULL)");
+    $conn->query("UPDATE site_events SET title='Daily Streak',description='Check-in 7 hari berturut-turut. Hari 1–6 Rp1, hari ke-7 PLUS TRIAL 24 jam.',kind='streak',status='ongoing' WHERE id=2 AND title='' AND kind='standard' AND status='upcoming'");
+    $conn->query("INSERT IGNORE INTO site_events (id,title,description,kind,status) VALUES (3,'','','standard','upcoming')");
     $conn->query("UPDATE site_events SET kind='game' WHERE id=1 AND kind='countdown' AND title='Hitung mundur tahun baru'");
 }
 function ev_list($conn, $admin = false) {
@@ -67,10 +69,11 @@ if ($admin && ($input['action'] ?? '') === 'save') {
     if (!is_array($e)) ev_out(['ok'=>false,'message'=>'Data event tidak valid.'],400);
     $title = cp_str($e['title'] ?? '',120); $description = cp_str($e['description'] ?? '',4000);
     $status = $e['status'] ?? ''; $kind = $e['kind'] ?? '';
-    if (!in_array($status,['upcoming','ongoing','finished'],true) || !in_array($kind,['standard','countdown','game'],true) || ($status !== 'upcoming' && $title === '')) ev_out(['ok'=>false,'message'=>'Isi judul, jenis dan status event yang valid.'],400);
+    if (!in_array($status,['upcoming','ongoing','finished'],true) || !in_array($kind,['standard','countdown','game','streak'],true) || ($status !== 'upcoming' && $title === '')) ev_out(['ok'=>false,'message'=>'Isi judul, jenis dan status event yang valid.'],400);
     $start = ev_date($e['starts_at'] ?? null); $end = ev_date($e['ends_at'] ?? null);
     if (($start && $end && $end <= $start) || ($kind === 'countdown' && !$end)) ev_out(['ok'=>false,'message'=>'Batas akhir wajib untuk hitung mundur dan harus setelah waktu mulai.'],400);
     $id = (int)($e['id'] ?? 0);
+    if ($kind==='streak' && $id!==2) ev_out(['ok'=>false,'message'=>'Daily Streak menggunakan kartu event #2. Ubah kartu tersebut.'],400);
     if ($id > 0) {
         $st = cp_q($conn,'SELECT id FROM site_events WHERE id=?','i',$id); $exists=$st->get_result()->fetch_assoc(); $st->close();
         if (!$exists) ev_out(['ok'=>false,'message'=>'Event tidak ditemukan.'],404);

@@ -49,7 +49,6 @@ const AdminChildPanelPage = lazy(() => import('./pages/admin/AdminChildPanelPage
 const AdminWithdrawPage = lazy(() => import('./pages/admin/AdminWithdrawPage'));
 const PanelAdminPage = lazy(() => import('./pages/PanelAdminPage'));
 const ExtraSetupPage = lazy(() => import('./pages/ExtraSetupPage'));
-const PengaturanAkunPage = lazy(() => import('./pages/PengaturanAkunPage'));
 const DepositPage = lazy(() => import('./pages/DepositPage'));
 const DepositHistoryPage = lazy(() => import('./pages/DepositHistoryPage'));
 const DepositMethodPage = lazy(() => import('./pages/DepositMethodPage'));
@@ -110,7 +109,7 @@ export default function App() {
           <Route path="nexspace" element={<ProtectedRoute><NexSpacePage /></ProtectedRoute>} />
           <Route path="nexspace/portal" element={<ProtectedRoute><NexSpacePortalPage /></ProtectedRoute>} />
           <Route path="payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
-          <Route path="pengaturan-akun" element={<ProtectedRoute><PengaturanAkunPage /></ProtectedRoute>} />
+          <Route path="pengaturan-akun" element={<Navigate to="/profil#pengaturan-akun" replace />} />
 
           <Route path="admin" element={<ProtectedRoute adminOnly><AdminHomePage /></ProtectedRoute>} />
           <Route path="admin/profit" element={<ProtectedRoute adminOnly><AdminProfitPage /></ProtectedRoute>} />

@@ -1,3 +1,6 @@
+import { useAuth } from '../context/AuthContext';
+import { streakCall } from '../services/streakApi';
+import DailyStreakModal from '../components/DailyStreakModal';
 import { useMusic } from '../context/MusicContext';
 import EventPoster from '../components/EventPoster';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -6,9 +9,15 @@ import Seo from '../components/Seo';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi, EVENT_LABEL, eventStatus, type SiteEvent, type EventStatus } from '../services/eventsApi';
 export default function EventsPage() {
-  const navigate=useNavigate();const {play}=useMusic();
+  const navigate=useNavigate();const {play}=useMusic();const {user}=useAuth();
   const [rows,setRows]=useState<SiteEvent[]>([]);const [loading,setLoading]=useState(true);const [err,setErr]=useState('');const [selected,setSelected]=useState<number|null>(null);const [now,setNow]=useState(Date.now());const offset=useRef(0);
   const load=useCallback(async()=>{const r=await eventsApi.list();setLoading(false);if(!r.ok)return setErr(r.message || 'Gagal memuat event.');setErr('');setRows(r.events || []);const t=Date.parse(r.server_time || '');if(Number.isFinite(t))offset.current=t-Date.now();},[]);
+  useEffect(()=>{
+    if(!user)return;
+    let alive=true;
+    void streakCall('get').then(r=>{if(alive && r.state.reset_notice)setSelected(2);}).catch(()=>{/* Event list remains usable if reward API is not ready. */});
+    return()=>{alive=false;};
+  },[user?.id]);
   useEffect(()=>{void load();const t=window.setInterval(()=>{if(document.visibilityState==='visible')void load();},30_000);return()=>window.clearInterval(t);},[load]);
   useEffect(()=>{const t=window.setInterval(()=>setNow(Date.now()+offset.current),1000);return()=>window.clearInterval(t);},[]);
   const effective=(e:SiteEvent):EventStatus=>eventStatus(e,now);
@@ -20,7 +29,7 @@ export default function EventsPage() {
     <section aria-label="Daftar event" className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {[...rows].sort((a,b)=>['ongoing','upcoming','finished'].indexOf(effective(a))-['ongoing','upcoming','finished'].indexOf(effective(b)) || a.id-b.id).map(e=><EventPoster key={e.id} title={e.title} status={effective(e)} index={e.id} onOpen={()=>{if(e.kind==='game' && effective(e)==='ongoing'){play();navigate(`/event/${e.id}/game`);}else setSelected(e.id);}}/>)}
     </section>{!loading&&!err&&!rows.length&&<p className="mt-5 text-slate-400">Belum ada event.</p>}
-    {active && <EventModal event={active} status={effective(active)} onClose={closeModal}/>}
+    {active?.kind === 'streak' ? <DailyStreakModal onClose={closeModal}/> : active && <EventModal event={active} status={effective(active)} onClose={closeModal}/>}
   </main>;
 }
 function EventModal({event,status,onClose}:{event:SiteEvent;status:EventStatus;onClose:()=>void}){

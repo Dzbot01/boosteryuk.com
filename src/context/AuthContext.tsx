@@ -27,6 +27,9 @@ type User = {
 
 export type UserPlan = {
   plus: boolean;
+  plus_permanent?: boolean;
+  plus_trial_active?: boolean;
+  plus_trial_until?: string | null;
   extra_active: boolean;
   extra_until: string | null;
   promo_available: boolean;
@@ -70,6 +73,20 @@ export function AuthProvider({children}: {children: React.ReactNode}){
   useEffect(() => {
     refresh();
   }, []);
+
+// Expire a trial locally too: an offline tab must not advertise permanent Plus.
+useEffect(() => {
+  const until = user?.plan?.plus_trial_until;
+  if (!until || !user?.plan?.plus_trial_active) return;
+  const expire = () => {
+    if (Date.parse(until) > Date.now()) return;
+    setUser(current => current ? {...current, plusActive: !!current.plan?.plus_permanent || !!current.plan?.extra_active,
+      plan: current.plan ? {...current.plan, plus: !!current.plan.plus_permanent || !!current.plan.extra_active, plus_trial_active: false} : undefined} : null);
+  };
+  const timer = window.setInterval(expire, 1000);
+  window.addEventListener('focus', expire);document.addEventListener('visibilitychange', expire);expire();
+  return () => { window.clearInterval(timer);window.removeEventListener('focus', expire);document.removeEventListener('visibilitychange', expire); };
+}, [user?.plan?.plus_trial_until, user?.plan?.plus_trial_active]);
 
 /** Status paket Upgrade (Plus/EXTRA). Gagal → null (tidak mengganggu login). */
 const fetchPlan = async (token: string): Promise<UserPlan | null> => {
