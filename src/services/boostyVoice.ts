@@ -1,6 +1,6 @@
 // Controller suara "Guri Booster" (singleton pub/sub).
 // Dimulai setelah sesi login siap, termasuk redirect Google. Bila autoplay
-// diblokir, gesture berikutnya / tombol kartu melanjutkan audio yang sama.
+// diblokir, interaksi biasa berikutnya melanjutkan audio yang sama.
 import { BOOSTY_SEQUENCE, BOOSTY_WELCOME, type BoostyVoice } from '../data/boostyVoices';
 
 /** full = sapaan + info reseller, welcome = sapaan saja, off = tanpa suara (diatur per child panel). */
@@ -72,7 +72,7 @@ function resumeAudio() {
   el.play().then(() => {
     if (version !== playbackVersion) return;
     set({ blocked: false });removeGestureRetry();
-  }).catch(() => { /* keep explicit button / gesture retry available */ }).finally(() => {
+  }).catch(() => { /* tunggu interaksi biasa berikutnya */ }).finally(() => {
     if (version === playbackVersion) retryPending = false;
   });
 }
@@ -160,8 +160,6 @@ export const boostyVoice = {
     sequence = mode === 'welcome' ? [BOOSTY_WELCOME] : BOOSTY_SEQUENCE;
     playAt(0);
   },
-  /** Must be called directly from a click when autoplay is blocked. */
-  resume: resumeAudio,
   /** Hentikan & kosongkan subtitle. */
   stop() {
     primeToken++;

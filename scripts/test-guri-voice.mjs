@@ -1,7 +1,7 @@
 // Test-only jsdom: NODE_PATH=/tmp/streak-tests/node_modules node scripts/test-guri-voice.mjs
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
-import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,rmSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {build} from 'esbuild';
@@ -9,6 +9,7 @@ const require=createRequire(import.meta.url);const {JSDOM}=require('jsdom');
 const dom=new JSDOM('<div id="root"></div>',{url:'https://boosteryuk.com'});
 globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 globalThis.MessageChannel=class{port1={onmessage:null};port2={postMessage:()=>setImmediate(()=>this.port1.onmessage?.())};};
+const modal=readFileSync('src/components/AuthModal.tsx','utf8');assert.ok(modal.indexOf('boostyVoice.prime();')<modal.indexOf('await startGoogleLogin()'),'prime synchronously inside login gesture');
 const audios=[];let blocked=false;let pendingReject;
 globalThis.Audio=class{
  src='';muted=false;volume=1;currentTime=0;plays=0;pauses=0;
@@ -35,10 +36,10 @@ const render=()=>root.render(h(StrictMode,null,h(Session),h(Card,{category:'',se
 await act(async()=>render());const before=a.plays;
 auth={user:{token:'session1'},loading:false};await act(async()=>render());assert.equal(a.plays,before,'child config must arrive before audio');
 settings={voiceMode:'off',tenant:{id:1}};await act(async()=>render());assert.equal(a.plays,before,'off mode stays silent');
-blocked=true;settings={voiceMode:'welcome',tenant:{id:1}};await act(async()=>render());assert.equal(a.plays,before+1,'session starts voice once');assert.ok(document.body.textContent.includes('Suara menunggu izin browser'));const button=[...document.querySelectorAll('button')].find(b=>b.textContent==='Putar suara Guri');assert.ok(button);
-blocked=false;await act(async()=>button.click());assert.equal(voice.getState().blocked,false);assert.ok(document.body.textContent.includes('Sedang berbicara'));
+blocked=true;settings={voiceMode:'welcome',tenant:{id:1}};await act(async()=>render());assert.equal(a.plays,before+1,'session starts voice once');assert.ok(document.body.textContent.includes('Suara menunggu izin browser'));assert.equal(document.querySelectorAll('button').length,0,'Guri card has no playback or extra buttons');
+blocked=false;await act(async()=>window.dispatchEvent(new window.Event('pointerdown')));assert.equal(voice.getState().blocked,false);assert.ok(document.body.textContent.includes('Sedang berbicara'));
 const stable=a.plays;auth={...auth,user:{...auth.user,name:'refreshed'}};await act(async()=>render());assert.equal(a.plays,stable,'balance/profile refresh must not replay greeting');
 auth={user:null,loading:false};await act(async()=>render());assert.equal(voice.isActive(),false);
 auth={user:{token:'session2'},loading:false};await act(async()=>render());assert.equal(a.plays,stable+1,'new login greets again');
-await act(async()=>voice.stop());console.log('PASS: restored login starts voice once, panel off/welcome/full, synced subtitles, autoplay fallback + card button, logout/relogin, no stale-promise resurrection or refresh replay.');
+await act(async()=>voice.stop());console.log('PASS: restored login starts voice once, panel off/welcome/full, synced subtitles, automatic gesture recovery without card buttons, logout/relogin, no stale-promise resurrection or refresh replay.');
 }finally{if(root)await act(async()=>root.unmount());dom.window.close();rmSync(dir,{recursive:true,force:true});}
