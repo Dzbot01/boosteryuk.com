@@ -25,8 +25,16 @@ export function eventStatus(e: SiteEvent, now: number): EventStatus {
 
 export interface EventAccess { allowed: boolean; completed: boolean; message: string }
 export async function eventAccess(eventId?: number): Promise<Record<string, EventAccess>> {
-  const response = await fetch(`${MAIN_API}/event_access.php`, { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: localStorage.getItem('token') || '', ...(eventId === undefined ? {} : { event_id: eventId }) }) });
+  let response: Response;
+  try {
+    response = await fetch(`${MAIN_API}/events.php`, {
+      method: 'POST', cache: 'no-store',
+      body: new URLSearchParams({ action: 'access', token: localStorage.getItem('token') || '', ...(eventId === undefined ? {} : { event_id: String(eventId) }) }),
+    });
+  } catch {
+    throw new Error('Tidak dapat menghubungi API Event. Periksa koneksi lalu coba lagi.');
+  }
   const data = await response.json().catch(() => null);
-  if (!response.ok || !data?.ok || !data.access) throw new Error(data?.message || 'Akses event belum dapat diperiksa. Coba lagi nanti.');
+  if (!response.ok || !data?.ok || !data.access) throw new Error(data?.message || 'Akses event belum dapat diperiksa. Pastikan API Event terbaru sudah diunggah.');
   return data.access;
 }

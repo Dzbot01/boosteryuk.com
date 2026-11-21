@@ -59,7 +59,22 @@ function ev_date($s) {
     if ($t === false || gmdate('Y-m-d\TH:i:s', $t) !== substr($s,0,19)) ev_out(['ok'=>false,'message'=>'Tanggal tidak valid.'],400);
     return gmdate('Y-m-d H:i:s',$t);
 }
-$input = json_decode(file_get_contents('php://input'),true) ?: [];
+$input = json_decode(file_get_contents('php://input'),true) ?: $_POST;
+// Account access uses the existing events endpoint so same-origin API proxies
+// do not need a new route. Form encoding avoids a JSON CORS preflight.
+if ($_SERVER['REQUEST_METHOD']==='POST' && ($input['action']??'')==='access') {
+    $uid=(int)cp_user_id($conn,$input['token']??'');
+    if(!$uid)ev_out(['ok'=>false,'message'=>'Silakan login ulang.'],401);
+    ev_schema($conn);
+    require_once __DIR__.'/event_access_lib.php';
+    $eid=(int)($input['event_id']??0);
+    $st=$eid>0?cp_q($conn,'SELECT * FROM site_events WHERE id=?','i',$eid):cp_q($conn,'SELECT * FROM site_events ORDER BY id');
+    $result=$st->get_result();$access=[];
+    while($event=$result->fetch_assoc())$access[(string)$event['id']]=ea_access($conn,$uid,$event);
+    $st->close();
+    if($eid>0 && !isset($access[(string)$eid]))ev_out(['ok'=>false,'message'=>'Event tidak ditemukan.'],404);
+    ev_out(['ok'=>true,'access'=>(object)$access]);
+}
 $admin = $_SERVER['REQUEST_METHOD'] === 'POST';
 if ($admin) {
     if (!empty($_SERVER['HTTP_X_CHILD_PANEL'])) ev_out(['ok'=>false,'message'=>'Kelola event dari admin domain utama.'],403);
