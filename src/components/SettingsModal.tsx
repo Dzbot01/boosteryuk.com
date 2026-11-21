@@ -113,7 +113,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       />
 
       <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-0 sm:px-6">
-        <div className="flex max-h-[82vh] w-full max-w-md animate-slide-up sm:max-w-xl flex-col overflow-hidden rounded-t-3xl border-t border-slate-200 bg-white shadow-2xl shadow-slate-900/30 dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-black/40 sm:mb-6 sm:rounded-3xl sm:border">
+        <div className="flex max-h-[82vh] w-full max-w-md animate-slide-up sm:max-w-xl flex-col overflow-hidden rounded-t-3xl border-t border-slate-200 bg-white shadow-2xl shadow-slate-900/30 dark:border-slate-700/60 dark:bg-slate-900 dark:text-slate-100 dark:shadow-black/40 sm:mb-6 sm:rounded-3xl sm:border">
           <div className="flex justify-center pt-3 sm:hidden">
             <span className="h-1.5 w-10 rounded-full bg-slate-200 dark:bg-slate-700" />
           </div>
@@ -125,7 +125,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <h2 className="font-display text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
                 Pengaturan
               </h2>
-              <p className="text-[11.5px] font-medium text-slate-400 dark:text-slate-500">
+              <p className="text-[11.5px] font-medium text-slate-400 dark:text-slate-400">
                 Preferensi Boosteryuk
               </p>
             </div>
@@ -208,7 +208,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <SectionTitle icon={Shield} title="Privasi & Keamanan" />
             <button className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13.5px] font-semibold text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700">
               Riwayat pencarian lokal
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+              <span className="text-xs font-medium text-slate-400 dark:text-slate-400">
                 Hanya di perangkat
               </span>
             </button>
@@ -248,7 +248,7 @@ function SectionTitle({
   return (
     <div className="mb-3 mt-6 flex items-center gap-2">
       <Icon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" strokeWidth={2.4} />
-      <h3 className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+      <h3 className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-400">
         {title}
       </h3>
     </div>
@@ -284,7 +284,7 @@ function ToggleRow({
             </span>
           )}
         </div>
-        <p className={`text-[11.5px] ${descTag ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
+        <p className={`text-[11.5px] ${descTag ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-400'}`}>
           {desc}
           {DescIcon && <DescIcon className="ml-1 inline h-3 w-3" strokeWidth={2.4} />}
         </p>

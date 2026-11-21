@@ -55,6 +55,21 @@
   --by-placeholder: #98a2b3;
   --by-active: #f0f9fd;
 }
+/* Scope neutral utility tokens to dark mode only. This also covers shared
+   sheets/dialogs using slate backgrounds without changing the light palette. */
+.dark {
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f5f5f5;
+  --color-slate-200: #e5e5e5;
+  --color-slate-300: #d4d4d4;
+  --color-slate-400: #a3a3a3;
+  --color-slate-500: #737373;
+  --color-slate-600: #525252;
+  --color-slate-700: #404040;
+  --color-slate-800: #262626;
+  --color-slate-900: #121212;
+  --color-slate-950: #000000;
+}
 .dark {
   /* Mode gelap = netral/hitam (bukan biru tua). */
   --by-primary: #5fd3ef;
@@ -69,7 +84,7 @@
 /* Latar halaman: abu-abu lembut agar card/modal putih tidak menyatu dengan tema. */
 body { background-color: #eef1f5; }
 /* Latar dasar mode gelap = hampir hitam netral (hindari flash & nuansa biru). */
-.dark body { background-color: #0a0a0b; }
+.dark body { background-color: #000000; color: #f5f5f5; }
 
 /* UI Desktop (>= lg): kolom halaman sempit dibuat rata kiri sejajar tepi kiri kontainer
    header (max-w-6xl = 72rem), bukan di tengah layar. Lebar kolom tetap; mobile tak berubah. */
@@ -864,7 +879,7 @@ body {
 .dark .by-menu-text { color: var(--by-menu-dark, var(--by-menu)); }
 /* Header kartu kaca dengan warna kustom: tetap transparan + blur. */
 .by-header-tint { background-color: color-mix(in srgb, var(--by-header) 55%, transparent); }
-.dark .by-header-tint { background-color: color-mix(in srgb, var(--by-header) 30%, rgb(15 23 42 / 0.6)); }
+.dark .by-header-tint { background-color: color-mix(in srgb, var(--by-header) 30%, rgb(0 0 0 / 0.6)); }
 
 /* Aksesoris header: ayunan pelan dari titik gantung */
 @keyframes by-sway { 0%, 100% { rotate: -4deg; } 50% { rotate: 4deg; } }
@@ -893,18 +908,18 @@ body {
   --primary-foreground: #ffffff;
 }
 .dark {
-  --background: #0a0a0b;
-  --foreground: #f1f5f9;
-  --card: #0f172a;
-  --card-foreground: #f1f5f9;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e293b;
-  --accent-foreground: #f1f5f9;
-  --secondary: #1e293b;
-  --secondary-foreground: #f1f5f9;
-  --border: #334155;
-  --input: #334155;
+  --background: #000000;
+  --foreground: #f5f5f5;
+  --card: #121212;
+  --card-foreground: #f5f5f5;
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+  --accent: #262626;
+  --accent-foreground: #f5f5f5;
+  --secondary: #262626;
+  --secondary-foreground: #f5f5f5;
+  --border: #404040;
+  --input: #404040;
 }
 @theme inline {
   --color-background: var(--background);

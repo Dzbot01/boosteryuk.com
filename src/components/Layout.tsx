@@ -24,7 +24,7 @@ export default function Layout() {
   }, [pathname]);
 
   return (
-    <div className={`relative flex min-h-screen flex-col overflow-x-clip bg-[#eef1f5] text-slate-900 transition-[background-color,border-color,color,padding] duration-300 dark:bg-[#0a0a0b] dark:text-slate-100 ${railVisible ? 'lg:pl-16' : 'lg:pl-0'}`}>
+    <div className={`relative flex min-h-screen flex-col overflow-x-clip bg-[#eef1f5] text-slate-900 transition-[background-color,border-color,color,padding] duration-300 dark:bg-black dark:text-slate-100 ${railVisible ? 'lg:pl-16' : 'lg:pl-0'}`}>
       {/* ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-grid dark:opacity-40" />

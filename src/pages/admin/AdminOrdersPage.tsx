@@ -137,7 +137,7 @@ export default function AdminOrdersPage() {
               const pid = providerId(o);
               return (
                 <tr key={o.id} className="align-top hover:bg-slate-50/60 dark:hover:bg-slate-700/20">
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-500">{waktu(o.created_at)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-slate-400">{waktu(o.created_at)}</td>
                   <td className="px-4 py-3">
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{o.username || o.user_name || `#${o.user_id}`}</p>
                     <p className="text-[11px] text-slate-400">{o.user_name && o.username ? `${o.user_name} · ` : ''}{o.user_email || '—'}</p>
@@ -186,7 +186,7 @@ export default function AdminOrdersPage() {
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-[12.5px] text-slate-500">
+      <div className="mt-4 flex items-center justify-between text-[12.5px] text-slate-500 dark:text-slate-400">
         <span>Halaman {page} dari {pages}</span>
         <div className="flex gap-1.5">
           <button className={iconBtn} disabled={page <= 1} onClick={() => setPage((p) => p - 1)} aria-label="Halaman sebelumnya"><ChevronLeft className="h-4 w-4" /></button>
@@ -209,7 +209,7 @@ export default function AdminOrdersPage() {
               {info.lines.map(([k, v]) => <div key={k} className="flex justify-between gap-4"><dt className="text-slate-400">{k}</dt><dd className="text-right font-semibold text-slate-800 dark:text-slate-100">{v}</dd></div>)}
             </dl>
             <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
-              <p className="mb-2 text-[11.5px] text-slate-500">Sesuaikan status di Boosteryuk (saldo user tidak berubah otomatis):</p>
+              <p className="mb-2 text-[11.5px] text-slate-500 dark:text-slate-400">Sesuaikan status di Boosteryuk (saldo user tidak berubah otomatis):</p>
               <div className="flex flex-wrap gap-1.5">
                 {(Object.keys(ST_LABEL) as OrderStatus[]).map((s) => (
                   <button key={s} disabled={info.o.status === s} onClick={() => void setSt(info.o, s)} className={`rounded-lg px-2.5 py-1.5 text-[12px] font-bold disabled:opacity-40 ${ST[s]}`}>{ST_LABEL[s]}</button>

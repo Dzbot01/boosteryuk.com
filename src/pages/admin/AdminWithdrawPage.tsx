@@ -80,7 +80,7 @@ export default function AdminWithdrawPage() {
             Tabel pencairan pendapatan child panel. Klik baris untuk detail & proses — transfer manual, lalu tandai <b>Sudah dibayar</b> atau <b>Tolak</b>.
           </p>
         </div>
-        <button onClick={() => void load(filter)} aria-label="Muat ulang" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+        <button onClick={() => void load(filter)} aria-label="Muat ulang" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
           <RefreshCw className={`h-4 w-4 ${rows === null ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -90,7 +90,7 @@ export default function AdminWithdrawPage() {
           <div key={s} className={card}>
             <p className="text-[11.5px] text-slate-400">{s === 'pending' ? 'Menunggu transfer' : s === 'paid' ? 'Sudah dibayar' : 'Ditolak'}</p>
             <p className="text-[18px] font-extrabold text-slate-900 dark:text-white">{counts[s]}</p>
-            <p className="text-[11.5px] text-slate-500">{rupiah(totals[s])}</p>
+            <p className="text-[11.5px] text-slate-500 dark:text-slate-400">{rupiah(totals[s])}</p>
           </div>
         ))}
       </div>
@@ -164,7 +164,7 @@ export default function AdminWithdrawPage() {
                         <p className="font-bold text-slate-900 dark:text-white">{rupiah(w.net_amount)}</p>
                         <p className="mt-0.5 text-[10.5px] font-normal text-slate-400">dari {rupiah(w.amount)}</p>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-500" title={`#${w.id}`}>{waktu(w.created_at)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-slate-400" title={`#${w.id}`}>{waktu(w.created_at)}</td>
                       <td className="max-w-[240px] px-4 py-3">
                         <p className="truncate font-semibold text-slate-800 dark:text-slate-100" title={`${tujuan} a.n. ${w.account_name}`}>{tujuan}</p>
                         <p className="mt-0.5 text-[11px] text-slate-400">a.n. {w.account_name}</p>
@@ -347,7 +347,7 @@ function WithdrawModal({ id, onClose, onDone }: { id: number; onClose: () => voi
             {w.status === 'pending' && (
               <>
                 <label className="mt-4 block">
-                  <span className="mb-1 block text-[11.5px] font-semibold text-slate-500">Catatan (opsional untuk dibayar, wajib untuk ditolak)</span>
+                  <span className="mb-1 block text-[11.5px] font-semibold text-slate-500 dark:text-slate-400">Catatan (opsional untuk dibayar, wajib untuk ditolak)</span>
                   <input
                     value={note}
                     maxLength={255}

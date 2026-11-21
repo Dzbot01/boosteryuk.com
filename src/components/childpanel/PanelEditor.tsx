@@ -267,9 +267,9 @@ export function PanelEditor({
                     placeholder="tokoguri"
                     maxLength={32}
                   />
-                  <span className="shrink-0 bg-slate-50 px-2.5 text-[12px] font-semibold leading-10 text-slate-500 dark:bg-slate-800">.{ROOT}</span>
+                  <span className="shrink-0 bg-slate-50 px-2.5 text-[12px] font-semibold leading-10 text-slate-500 dark:bg-slate-800 dark:text-slate-400">.{ROOT}</span>
                 </div>
-                {subLocked && <p className="mt-1 text-[11.5px] text-slate-500">Subdomain permanen dan tidak dapat diubah.</p>}
+                {subLocked && <p className="mt-1 text-[11.5px] text-slate-500 dark:text-slate-400">Subdomain permanen dan tidak dapat diubah.</p>}
                 {subState && <span className={`mt-1 block text-[11.5px] font-semibold ${subState.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{subState.msg}</span>}
               </label>
               {!owner && (
@@ -290,7 +290,7 @@ export function PanelEditor({
             </div>
           </section>
 
-          <section className={sec}><h3 className={h3}>Kontak support toko</h3><p className="text-xs text-slate-500">Kosongkan untuk memakai kontak bawaan. Nomor WhatsApp gunakan kode negara, contoh 62812…</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><label><span className={lbl}>WhatsApp support</span><input className={inp} type="tel" value={cfg.supportWhatsapp||''} onChange={e=>setCfg({supportWhatsapp:e.target.value})} placeholder="6281234567890"/></label><label><span className={lbl}>Email support</span><input className={inp} type="email" value={cfg.supportEmail||''} onChange={e=>setCfg({supportEmail:e.target.value})} placeholder="support@tokomu.com"/></label></div></section>
+          <section className={sec}><h3 className={h3}>Kontak support toko</h3><p className="text-xs text-slate-500 dark:text-slate-400">Kosongkan untuk memakai kontak bawaan. Nomor WhatsApp gunakan kode negara, contoh 62812…</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><label><span className={lbl}>WhatsApp support</span><input className={inp} type="tel" value={cfg.supportWhatsapp||''} onChange={e=>setCfg({supportWhatsapp:e.target.value})} placeholder="6281234567890"/></label><label><span className={lbl}>Email support</span><input className={inp} type="email" value={cfg.supportEmail||''} onChange={e=>setCfg({supportEmail:e.target.value})} placeholder="support@tokomu.com"/></label></div></section>
           {/* Brand & header */}
           <section className={sec}>
             <h3 className={h3}><Type className="h-4 w-4 text-slate-400" /> Logo, judul header & footer</h3>
@@ -384,7 +384,7 @@ export function PanelEditor({
           {/* Slider */}
           <section className={sec}>
             <h3 className={h3}><Layers className="h-4 w-4 text-slate-400" /> Image slider (halaman Layanan, Sewa Agen AI, VPS)</h3>
-            {d.slides.length === 0 && <p className="mb-2 text-[12px] text-slate-500">Kosong = memakai slider bawaan Boosteryuk.</p>}
+            {d.slides.length === 0 && <p className="mb-2 text-[12px] text-slate-500 dark:text-slate-400">Kosong = memakai slider bawaan Boosteryuk.</p>}
             <div className="space-y-3">
               {d.slides.map((s, i) => {
                 const src = preview(s.image, s.pending);
@@ -417,7 +417,7 @@ export function PanelEditor({
           {/* Video player dashboard */}
           <section className={sec}>
             <h3 className={h3}><Film className="h-4 w-4 text-slate-400" /> Video player di dashboard</h3>
-            <p className="mb-3 text-[12px] text-slate-500">
+            <p className="mb-3 text-[12px] text-slate-500 dark:text-slate-400">
               Bawaan: <b>tidak ada video</b>. Unggah video (MP4/WebM, maks 50 MB) — disimpan di Supabase Storage seperti video web utama — atau tempel link video https.
             </p>
             {cfg.videoUrl ? (
@@ -432,7 +432,7 @@ export function PanelEditor({
                 <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                   <div className="h-full bg-cyan-600 transition-[width]" style={{ width: `${Math.round(videoProgress * 100)}%` }} />
                 </div>
-                <p className="mt-1 text-[11.5px] text-slate-500">Mengunggah video… {Math.round(videoProgress * 100)}%</p>
+                <p className="mt-1 text-[11.5px] text-slate-500 dark:text-slate-400">Mengunggah video… {Math.round(videoProgress * 100)}%</p>
               </div>
             )}
             <div className="mt-3 flex flex-wrap gap-2">
@@ -457,7 +457,7 @@ export function PanelEditor({
 
           {/* Markup */}
           <section className={sec}>
-            <h3 className={h3}><Percent className="h-4 w-4 text-slate-400" /> Margin markup harga</h3><label className="mt-3 block"><span className={lbl}>Merchant Event (%)</span><input className={inp} type="number" min={0} max={300} step={0.5} value={cfg.merchantMarkupPct??0} onChange={e=>setCfg({merchantMarkupPct:Number(e.target.value)})}/><span className="text-xs text-slate-500">Selisih harga merchant masuk penghasilan toko.</span></label>
+            <h3 className={h3}><Percent className="h-4 w-4 text-slate-400" /> Margin markup harga</h3><label className="mt-3 block"><span className={lbl}>Merchant Event (%)</span><input className={inp} type="number" min={0} max={300} step={0.5} value={cfg.merchantMarkupPct??0} onChange={e=>setCfg({merchantMarkupPct:Number(e.target.value)})}/><span className="text-xs text-slate-500 dark:text-slate-400">Selisih harga merchant masuk penghasilan toko.</span></label>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className={lbl}>Layanan SMM (%)</span>
@@ -466,14 +466,14 @@ export function PanelEditor({
               <label className="block">
                 <span className={lbl}>Sewa Agen AI (%)</span>
                 <input className={inp} type="number" min={0} max={300} step={0.5} value={d.markup_agent_pct} onChange={(e) => setD({ ...d, markup_agent_pct: Number(e.target.value) })} />
-                <span className="mt-1 block text-[11.5px] text-slate-500">
+                <span className="mt-1 block text-[11.5px] text-slate-500 dark:text-slate-400">
                   Contoh: Starter {rupiah(10000)} → {rupiah(Math.ceil(10000 * (1 + (Number(d.markup_agent_pct) || 0) / 100)))} /bulan
                 </span>
               </label>
               <label className="block">
                 <span className={lbl}>Order Nomor OTP (%)</span>
                 <input className={inp} type="number" min={0} max={300} step={0.5} value={d.markup_otp_pct} onChange={(e) => setD({ ...d, markup_otp_pct: Number(e.target.value) })} />
-                <span className="mt-1 block text-[11.5px] text-slate-500">
+                <span className="mt-1 block text-[11.5px] text-slate-500 dark:text-slate-400">
                   Di atas harga OTP web utama. Contoh: {rupiah(3600)} → {rupiah(Math.ceil((3600 * (1 + (Number(d.markup_otp_pct) || 0) / 100)) / 100) * 100)}
                 </span>
               </label>
@@ -495,11 +495,11 @@ export function PanelEditor({
                 </label>
               ))}
             </div>
-            <p className="mt-2 text-[11.5px] text-slate-500">Rekaman suara saat ini menyebut “boosteryuk.com”. Pilih “Tanpa suara” bila panel memakai brand lain.</p>
+            <p className="mt-2 text-[11.5px] text-slate-500 dark:text-slate-400">Rekaman suara saat ini menyebut “boosteryuk.com”. Pilih “Tanpa suara” bila panel memakai brand lain.</p>
             <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2.5 dark:border-slate-700">
               <span>
                 <span className="block text-[12.5px] font-semibold text-slate-700 dark:text-slate-200">Tombol putar musik di bottom navbar</span>
-                <span className="block text-[11.5px] text-slate-500">Bawaan: tidak ditampilkan di child panel.</span>
+                <span className="block text-[11.5px] text-slate-500 dark:text-slate-400">Bawaan: tidak ditampilkan di child panel.</span>
               </span>
               <input type="checkbox" checked={!!cfg.showMusic} onChange={(e) => setCfg({ showMusic: e.target.checked })} className="h-5 w-5 accent-cyan-600" />
             </label>
