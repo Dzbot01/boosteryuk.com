@@ -1,3 +1,4 @@
+import './HomePage.hero-desktop.css';
 import Seo from '../components/Seo';
 import { SITE_URL } from '../seo/config';
 import { useNavigate } from 'react-router-dom';
@@ -67,28 +68,28 @@ export default function HomePage() {
 
         <div className="mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:pb-24 lg:pt-32">
           <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-          <Reveal>
+          <Reveal className="home-hero-copy">
             <h1 className="font-display text-[44px] font-extrabold leading-[1.02] tracking-[-0.04em] text-white sm:text-[58px] lg:text-[64px]">
               <span className="by-accent-hero">{settings.brandName}</span>
               <span className="text-white">{settings.brandSuffix}</span>
             </h1>
 
-            <p className="mt-5 max-w-md font-display text-[19px] font-bold leading-snug tracking-tight text-white/90 sm:text-[22px]">
+            <p className="home-hero-tagline mt-5 max-w-md font-display text-[19px] font-bold leading-snug tracking-tight text-white/90 sm:text-[22px]">
               Turbo Speed,
               <br />
               <span className="text-cyan-300">Fort Knox Security.</span>
             </p>
 
-            <p className="mt-4 max-w-md text-[14.5px] leading-relaxed text-neutral-300/85">
+            <p className="home-hero-description mt-4 max-w-md text-[14.5px] leading-relaxed text-neutral-300/85">
               Platform booster media sosial terpercaya — followers, likes, views, dan engagement
               untuk semua platform favorit Anda.
             </p>
 
             {/* Trust & stats — baris rating di atas, dua metrik angka sejajar di bawah.
                 Tata letak konsisten & tidak meng-wrap/terpotong di mobile maupun desktop. */}
-            <div className="mt-7 max-w-md">
+            <div className="home-hero-trust mt-7 max-w-md">
               {/* rating */}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div className="home-hero-rating flex flex-wrap items-center gap-x-3 gap-y-2">
                 <div className="flex -space-x-2">
                   {SOCIAL_BRANDS.slice(0, 5).map((b) => (
                     <span
@@ -118,7 +119,7 @@ export default function HomePage() {
               </div>
 
               {/* metrik: dua kolom sejajar + pemisah */}
-              <div className="mt-5 flex items-center gap-7">
+              <div className="home-hero-stats mt-5 flex items-center gap-7">
                 <div>
                   <p className="font-display text-[26px] font-extrabold leading-none text-white">698+</p>
                   <p className="mt-1.5 text-[11.5px] font-semibold text-neutral-400">Layanan Tersedia</p>
@@ -132,7 +133,7 @@ export default function HomePage() {
             </div>
             
             {/* CTA — cek status (tombol bubble animasi, tanpa ikon kaca pembesar) */}
-            <div className="mt-7">
+            <div className="home-hero-primary mt-7">
               <button onClick={() => navigate('/cek-status')} className="by-bubble-button" aria-label="Cek Status Pesanan">
                 <span className="by-bubble-layer by-bubble-1" />
                 <span className="by-bubble-layer by-bubble-2" />
@@ -149,7 +150,7 @@ export default function HomePage() {
             {/* FIX: tambah `flex` — tanpa ini flex-wrap/items-center/gap tidak berlaku,
                 tombol Masuk & Daftar jadi menumpuk ke bawah. */}
             {!user && (
-              <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="home-hero-auth mt-4 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
