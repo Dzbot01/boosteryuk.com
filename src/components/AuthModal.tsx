@@ -1,3 +1,4 @@
+import { boostyVoice } from '../services/boostyVoice';
 import { startGoogleLogin } from '../services/googleRedirect';
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
@@ -50,6 +51,7 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }: Prop
   if (!open) return null;
 
   const handleGoogleLogin = async () => {
+    boostyVoice.prime(); // Sinkron sebelum await, saat gesture login masih aktif.
     setError(''); setLoading(true);
     try { await startGoogleLogin(); }
     catch { setLoading(false); setError('Ups! Tunggu sebentar lalu cobalagi'); }

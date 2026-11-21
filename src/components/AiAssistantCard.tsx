@@ -60,7 +60,7 @@ export default function AiAssistantCard({
   const [version, setVersion] = useState(0);
 
   // ====== Suara + subtitle "Guri Booster" ======
-  // Berlangganan controller global (dimulai dari gesture login agar autoplay lolos).
+  // Sesi login memulai controller; gesture biasa melanjutkan jika autoplay diblokir.
   const voiceState = useSyncExternalStore(boostyVoice.subscribe, boostyVoice.getState);
   const activeVoice = voiceState.voice;
   const subtitle = voiceState.subtitle;
@@ -229,7 +229,7 @@ export default function AiAssistantCard({
                 />
               ))}
             </span>
-            Sedang berbicara…
+            {voiceState.blocked ? 'Suara menunggu izin browser' : 'Sedang berbicara…'}
           </div>
           <p className="mt-1.5 text-[13px] font-medium leading-relaxed text-slate-700 dark:text-slate-200">
             {subtitle || ' '}
