@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 error_reporting(0);
 require 'configdb.php';
 require_once __DIR__ . '/child_panel_lib.php';
+require_once __DIR__ . '/plus_trial_lib.php';
 require_once __DIR__ . '/riwayat_schema.php';
 if (isset($conn) && $conn instanceof mysqli) $conn->set_charset('utf8mb4');
 
@@ -101,8 +102,13 @@ function pu_status($conn, $uid, $prices) {
     $extraUntil = $plan['extra_until'] ?? null;
     $extraActive = $extraUntil && strtotime($extraUntil) > time();
     $panel = pu_owner_panel($conn, $uid);
+    $permanent = pu_user_is_plus($conn, $uid, $plan);
+    $trialUntil = pt_trial_until($conn, (int)$uid);
     return [
-        'plus'            => pu_user_is_plus($conn, $uid, $plan) || $extraActive,
+        'plus'            => $permanent || $extraActive || (bool)$trialUntil,
+        'plus_permanent'  => $permanent,
+        'plus_trial_active' => (bool)$trialUntil,
+        'plus_trial_until' => $trialUntil,
         'extra_active'    => (bool)$extraActive,
         'extra_until'     => $extraUntil,
         'promo_available' => empty($plan['extra_started']),

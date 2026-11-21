@@ -115,6 +115,9 @@ try {
   $state['score']=max(0,$state['score']+$state['score_adjustment']);
   if(!empty($previous['done'])){ $conn->commit();eg_out(['ok'=>true,'daily'=>eg_daily($conn,$uid)]+eg_payload($row,$u['balance'])); }
   cp_q($conn,'UPDATE event_game_players SET state_json=?,score=?,revision=revision+1 WHERE event_id=? AND user_id=?','siii',json_encode($state,JSON_UNESCAPED_UNICODE),$state['score'],$eid,(int)$uid)->close();
+  if($eid===1 && !empty($state['done']) && is_file(__DIR__.'/daily_streak_lib.php')) {
+   try { require_once __DIR__.'/daily_streak_lib.php';sr_newyear_title($conn,(int)$uid); } catch(Throwable $badgeError) { error_log('newyear badge: '.$badgeError->getMessage()); }
+  }
  }
  if($action==='buy'||$action==='use'){
   $request=(string)($in['request_id']??'');if(!preg_match('/^[a-f0-9-]{16,64}$/D',$request))throw new Exception('ID transaksi tidak valid.');

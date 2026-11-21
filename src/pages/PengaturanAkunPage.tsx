@@ -18,7 +18,7 @@ import {
 import Reveal from '../components/Reveal';
 import { useAuth } from '../context/AuthContext';
 
-export default function PengaturanAkunPage() {
+export default function PengaturanAkunPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
 
@@ -172,13 +172,13 @@ export default function PengaturanAkunPage() {
   };
 
   return (
-    <div className="page-align-left mx-auto max-w-2xl px-4 py-10 sm:px-6">
+    <div id="pengaturan-akun" className={embedded ? "mt-8 border-t border-slate-200 pt-8 dark:border-slate-700" : "page-align-left mx-auto max-w-2xl px-4 py-10 sm:px-6"}>
 
       <Reveal delay={40}>
         <div className="flex items-center gap-3.5">
-          <span className="flex h-14 w-14 items-center justify-center font-display text-lg font-extrabold text-white">
+          {!embedded && <span className="flex h-14 w-14 items-center justify-center font-display text-lg font-extrabold text-white">
             <UserAvatar user={user} fallbackClassName="rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 shadow-lg shadow-cyan-600/25">{user?.initials?? 'U'}</UserAvatar>
-          </span>
+          </span>}
           <div>
             <h1 className="font-display text-[26px] font-extrabold leading-none tracking-tight text-slate-900 dark:text-white sm:text-[30px]">
               Pengaturan Akun
@@ -201,7 +201,7 @@ export default function PengaturanAkunPage() {
         </div>
       )}
 
-      <div className="mb-6"><AvatarPicker /><a href="/profil" className="mt-3 inline-block text-xs font-semibold text-cyan-700 underline dark:text-cyan-400">Lihat halaman profil</a></div>
+      {!embedded && <div className="mb-6"><AvatarPicker /><a href="/profil" className="mt-3 inline-block text-xs font-semibold text-cyan-700 underline dark:text-cyan-400">Lihat halaman profil</a></div>}
 
       {/* Profile data */}
       <Reveal delay={70}>

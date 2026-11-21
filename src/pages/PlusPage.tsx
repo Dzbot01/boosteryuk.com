@@ -67,7 +67,7 @@ export default function PlusPage() {
   }, []);
 
   const promo = !plan || plan.promo_available;
-  const isPlus = !!user?.plusActive;
+  const isPlus = plan?.plus_permanent ?? (!!user?.plusActive && !plan?.plus_trial_active);
   const extraActive = !!plan?.extra_active;
 
   const choose = (p: PlanChoice) => {

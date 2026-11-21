@@ -20,7 +20,7 @@ export default function BottomNavbar() {
   const showMusic = !IS_CHILD_PANEL || !!tenant?.config?.showMusic;
   const [showFAQ, setShowFAQ] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const profileActive = pathname === '/pengaturan-akun';
+  const profileActive = (pathname === '/profil' || pathname === '/pengaturan-akun');
 
   const items = [
     {
@@ -108,7 +108,7 @@ export default function BottomNavbar() {
             <>
               <span className="mx-0.5 h-7 w-px bg-slate-200 dark:bg-slate-700" />
               <button
-                onClick={() => navigate('/pengaturan-akun')}
+                onClick={() => navigate('/profil')}
                 aria-label="Profil"
                 title="Profil"
                 className="group relative flex h-10 w-10 items-center justify-center rounded-full font-display text-[12px] font-extrabold transition-transform duration-250 active:scale-90 focus-visible:outline-2 focus-visible:outline-cyan-500"

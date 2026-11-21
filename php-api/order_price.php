@@ -91,6 +91,9 @@ function bk_order_price($conn, $userId, $serviceId, $qty, $apiId, $apiKey, $base
         $st->close();
     } catch (Throwable $e) { $plus = false; } // kolom belum ada → harga normal
 
+    require_once __DIR__.'/plus_trial_lib.php';
+    $plus = $plus || (bool)pt_trial_until($conn, (int)$userId);
+
     $perK = $rates[(string)$serviceId] + ($plus ? BK_MARKUP_PLUS_PER_1000 : BK_MARKUP_PER_1000);
     $base = round(($qty / 1000) * $perK);
     $perKPanel = $tenant ? cp_apply_markup($perK, $tenant, 'smm') : $perK;
