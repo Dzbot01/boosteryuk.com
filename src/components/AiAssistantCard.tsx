@@ -60,7 +60,7 @@ export default function AiAssistantCard({
   const [version, setVersion] = useState(0);
 
   // ====== Suara + subtitle "Guri Booster" ======
-  // Berlangganan controller global (dimulai dari gesture login agar autoplay lolos).
+  // Sesi login memulai controller; tombol melanjutkan jika autoplay diblokir.
   const voiceState = useSyncExternalStore(boostyVoice.subscribe, boostyVoice.getState);
   const activeVoice = voiceState.voice;
   const subtitle = voiceState.subtitle;
@@ -229,8 +229,9 @@ export default function AiAssistantCard({
                 />
               ))}
             </span>
-            Sedang berbicara…
+            {voiceState.blocked ? 'Suara menunggu izin browser' : 'Sedang berbicara…'}
           </div>
+          {voiceState.blocked && <button type="button" onClick={() => boostyVoice.resume()} className="mt-2 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-bold text-white hover:bg-cyan-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500">Putar suara Guri</button>}
           <p className="mt-1.5 text-[13px] font-medium leading-relaxed text-slate-700 dark:text-slate-200">
             {subtitle || ' '}
           </p>

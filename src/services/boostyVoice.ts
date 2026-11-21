@@ -1,6 +1,6 @@
 // Controller suara "Guri Booster" (singleton pub/sub).
-// Dimulai DI DALAM gesture klik login (AuthModal) agar autoplay diizinkan browser,
-// lalu AiAssistantCard berlangganan untuk menampilkan subtitle tersinkron.
+// Dimulai setelah sesi login siap, termasuk redirect Google. Bila autoplay
+// diblokir, gesture berikutnya / tombol kartu melanjutkan audio yang sama.
 import { BOOSTY_SEQUENCE, BOOSTY_WELCOME, type BoostyVoice } from '../data/boostyVoices';
 
 /** full = sapaan + info reseller, welcome = sapaan saja, off = tanpa suara (diatur per child panel). */
@@ -22,6 +22,8 @@ let el: HTMLAudioElement | null = null;
 let sequence: BoostyVoice[] = BOOSTY_SEQUENCE;
 let playing = false;
 let primeToken = 0;
+let playbackVersion = 0;
+let retryPending = false;
 let gestureCleanup: (() => void) | null = null;
 const subs = new Set<() => void>();
 
@@ -52,6 +54,7 @@ function removeGestureRetry() {
 }
 
 function clearAudio() {
+  playbackVersion++;retryPending = false;
   removeGestureRetry();
   playing = false;
   if (el) {
@@ -62,16 +65,21 @@ function clearAudio() {
 }
 
 /** Jika autoplay diblokir browser, coba putar lagi pada gesture user berikutnya. */
-function retryOnGesture(a: HTMLAudioElement) {
+function resumeAudio() {
+  if (!playing || !el || retryPending) return;
+  const version = playbackVersion;
+  retryPending = true;
+  el.play().then(() => {
+    if (version !== playbackVersion) return;
+    set({ blocked: false });removeGestureRetry();
+  }).catch(() => { /* keep explicit button / gesture retry available */ }).finally(() => {
+    if (version === playbackVersion) retryPending = false;
+  });
+}
+function retryOnGesture() {
   removeGestureRetry();
-  const retry = () => {
-    a.play().then(() => {
-      set({ blocked: false });
-      removeGestureRetry();
-    }).catch(() => { /* masih diblokir, tunggu gesture lain */ });
-  };
-  GESTURE_EVENTS.forEach((ev) => window.addEventListener(ev, retry, { passive: true }));
-  gestureCleanup = () => GESTURE_EVENTS.forEach((ev) => window.removeEventListener(ev, retry));
+  GESTURE_EVENTS.forEach((ev) => window.addEventListener(ev, resumeAudio, { passive: true }));
+  gestureCleanup = () => GESTURE_EVENTS.forEach((ev) => window.removeEventListener(ev, resumeAudio));
 }
 
 function playAt(index: number) {
@@ -100,9 +108,11 @@ function playAt(index: number) {
       set({ voice: null, subtitle: '' });
     }
   };
-  a.play().then(() => set({ blocked: false })).catch(() => {
+  const version = playbackVersion;
+  a.play().then(() => { if (version === playbackVersion) set({ blocked: false }); }).catch(() => {
+    if (version !== playbackVersion) return;
     set({ blocked: true });
-    retryOnGesture(a);
+    retryOnGesture();
   });
 }
 
@@ -144,11 +154,14 @@ export const boostyVoice = {
     if (mode === 'off') {
       clearAudio();
       if (el) el.muted = false;
+      set({ voice: null, subtitle: '', blocked: false });
       return;
     }
     sequence = mode === 'welcome' ? [BOOSTY_WELCOME] : BOOSTY_SEQUENCE;
     playAt(0);
   },
+  /** Must be called directly from a click when autoplay is blocked. */
+  resume: resumeAudio,
   /** Hentikan & kosongkan subtitle. */
   stop() {
     primeToken++;
