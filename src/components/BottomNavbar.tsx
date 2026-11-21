@@ -42,7 +42,7 @@ export default function BottomNavbar() {
   return (
     <>
       <div className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2">
-        <div className="relative flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 p-1.5 shadow-[0_12px_30px_-8px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-800/95 dark:shadow-black/40">
+        <div className="relative flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 p-1.5 shadow-[0_12px_30px_-8px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-slate-700/60 dark:bg-black/95 dark:shadow-black/40">
           {items.map(({ key, icon: Icon, label, open, on }) => (
             <button
               key={key}
@@ -97,7 +97,7 @@ export default function BottomNavbar() {
               {showTooltip &&!playing && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
                   <span className="absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75 pulse-ring text-cyan-400" />
-                  <span className="relative h-2.5 w-2.5 rounded-full border-2 border-white bg-cyan-500 dark:border-slate-800" />
+                  <span className="relative h-2.5 w-2.5 rounded-full border-2 border-white bg-cyan-500 dark:border-black" />
                 </span>
               )}
             </button>

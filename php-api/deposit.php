@@ -11,7 +11,7 @@ $raw=file_get_contents('php://input');$in=json_decode($raw,true);
 if(!is_array($in)||strlen($raw)>10000)di_out(['ok'=>false,'message'=>'Data tidak valid.'],400);
 $uid=(int)cp_user_id($conn,$in['token']??'');if(!$uid)di_out(['ok'=>false,'message'=>'Silakan login ulang.'],401);
 try {
- di_ready($conn);dep_import_log($conn);
+ di_ready($conn);dep_import_log($conn);di_expire_user($conn,$uid);
  $action=$in['action']??'';
  if($action==='list') {
     $page=max(1,(int)($in['page']??1));$offset=($page-1)*25;

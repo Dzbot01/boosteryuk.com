@@ -43,7 +43,8 @@ if(!in_array($action,['get','start','save','buy','use','leaderboard'],true))eg_o
 $st=cp_q($conn,'SELECT * FROM site_events WHERE id=?','i',$eid);$event=$st->get_result()->fetch_assoc();$st->close();
 if(!$event || $event['kind']!=='game')eg_out(['ok'=>false,'message'=>'Game event tidak ditemukan.'],404);
 $active=$event['status']!=='finished' && (!$event['starts_at']||strtotime($event['starts_at'].' UTC')<=time()) && (!$event['ends_at']||strtotime($event['ends_at'].' UTC')>time()) && ($event['status']==='ongoing'||$event['starts_at']);
-if(!$active)eg_out(['ok'=>false,'message'=>'Event belum dimulai atau sudah selesai.'],403);
+if(!$active)eg_out(['ok'=>false,'message'=>$event['status']==='finished'||(!empty($event['ends_at'])&&strtotime($event['ends_at'].' UTC')<=time())?'Event telah berakhir.':'Event belum dimulai.'],403);
+require_once __DIR__.'/event_access_lib.php';
 $tenant=cp_resolve($conn);
 if(cp_request_host() && !$tenant)eg_out(['ok'=>false,'message'=>'Child panel tidak aktif.'],403);
 $catalog=eg_catalog($tenant);
@@ -70,6 +71,11 @@ if($action==='leaderboard'){
 $conn->begin_transaction();
 try {
  $st=cp_q($conn,'SELECT balance FROM users WHERE id=? FOR UPDATE','i',(int)$uid);$u=$st->get_result()->fetch_assoc();$st->close();if(!$u)throw new Exception('Akun tidak ditemukan.');
+ if(in_array($action,['get','start','buy','use'],true)){
+  $st=cp_q($conn,'SELECT * FROM site_events WHERE id=? FOR UPDATE','i',$eid);$currentEvent=$st->get_result()->fetch_assoc();$st->close();
+  if(!$currentEvent || $currentEvent['kind']!=='game')throw new Exception('Event tidak dapat dibuka.');
+  $access=ea_access($conn,(int)$uid,$currentEvent);if(!$access['allowed'])throw new Exception($access['message']);
+ }
  if(in_array($action,['start','buy','use'],true))cp_q($conn,"INSERT IGNORE INTO event_game_players (event_id,user_id,inventory,bonus) VALUES (?,?,'{}','{\"f\":0,\"l\":0,\"v\":0,\"c\":0}')",'ii',$eid,(int)$uid)->close();
  $st=cp_q($conn,'SELECT * FROM event_game_players WHERE event_id=? AND user_id=? FOR UPDATE','ii',$eid,(int)$uid);$row=$st->get_result()->fetch_assoc();$st->close();
  if(!$row){

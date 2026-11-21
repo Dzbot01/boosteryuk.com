@@ -29,6 +29,22 @@ function di_row($conn,$ref,$uid=null,$lock=false) {
     $st=$uid===null ? cp_q($conn,$sql.($lock?' FOR UPDATE':''),'s',$ref) : cp_q($conn,$sql.' AND user_id=?'.($lock?' FOR UPDATE':''),'si',$ref,$uid);
     $r=$st->get_result()->fetch_assoc();$st->close();return $r;
 }
+/** Expiry comes only from the gateway snapshot saved by the server, never browser input. */
+function di_due($data,$now=null) {
+    return is_array($data) && (int)($data['expired_time']??0)>0 && (int)$data['expired_time']<=($now??time());
+}
+function di_expire_user($conn,$uid) {
+    $conn->begin_transaction();
+    try {
+        cp_q($conn,'SELECT id FROM users WHERE id=? FOR UPDATE','i',$uid)->close();
+        $st=cp_q($conn,"SELECT merchant_ref,invoice_json FROM deposit_invoices WHERE user_id=? AND status IN ('UNPAID','PENDING') FOR UPDATE",'i',$uid);
+        $result=$st->get_result();$due=[];
+        while($r=$result->fetch_assoc())if(di_due(json_decode($r['invoice_json']??'',true)))$due[]=$r['merchant_ref'];
+        $st->close();
+        foreach($due as $ref)cp_q($conn,"UPDATE deposit_invoices SET status='EXPIRED',active_user_id=NULL WHERE merchant_ref=? AND status IN ('UNPAID','PENDING')",'s',$ref)->close();
+        $conn->commit();
+    }catch(Throwable $e){$conn->rollback();throw $e;}
+}
 function di_view($r) {
     $data=json_decode($r['invoice_json']??'',true) ?: [];
     $status=$r['status'];
@@ -64,6 +80,7 @@ function di_apply($conn,$ref,$data) {
         cp_q($conn,'SELECT id FROM users WHERE id=? FOR UPDATE','i',(int)$before['user_id'])->close();
         $r=di_row($conn,$ref,null,true);di_validate($r,$data);
         $status=di_next_status($r['status'],$data['status']);
+        if(in_array($status,['UNPAID','PENDING'],true) && di_due($data))$status='EXPIRED';
         if ($status==='PAID') {
             $uid=(int)$r['user_id'];$credit=(int)$r['nominal']+(int)$r['bonus'];$reference=$data['reference'];$method=$r['method'];
             $st=cp_q($conn,"INSERT IGNORE INTO deposits (merchant_ref,reference,user_id,amount,method,status,source,paid_at) VALUES (?,?,?,?,?,'paid','tripay',NOW())",'ssids',$ref,$reference,$uid,$credit,$method);

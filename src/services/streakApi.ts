@@ -1,7 +1,7 @@
 import { MAIN_API } from '../lib/apiBase';
 export interface EarnedTitle { code: string; earned_at: string }
 export interface StreakState {
-  day: number; last_checkin: string | null; claimed_today: boolean; can_claim: boolean;
+  blocked_message?: string; completed?: boolean; day: number; last_checkin: string | null; claimed_today: boolean; can_claim: boolean;
   today: string; next_day_at: number; server_time: number; cycle: number;
   reset_notice: boolean; reset_version: number; trial_until: string | null;
   balance: number; titles: EarnedTitle[]; event_active: boolean;

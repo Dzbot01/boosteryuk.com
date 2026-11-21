@@ -28,7 +28,7 @@ export default function ChildPanelDetail({ panel, onClose }: {panel: ChildPanel;
   };
   return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-4" onClick={() => !busy && onClose()}>
     <section role="dialog" aria-modal="true" aria-labelledby="panel-detail-title" onClick={e => e.stopPropagation()} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900">
-      <div className="flex justify-between gap-3"><div><h2 id="panel-detail-title" className="text-lg font-bold">Detail {panel.name}</h2><p className="text-sm text-slate-500">{panel.hostname}</p></div><button disabled={busy} onClick={onClose} aria-label="Tutup"><X/></button></div>
+      <div className="flex justify-between gap-3"><div><h2 id="panel-detail-title" className="text-lg font-bold">Detail {panel.name}</h2><p className="text-sm text-slate-500 dark:text-slate-400">{panel.hostname}</p></div><button disabled={busy} onClick={onClose} aria-label="Tutup"><X/></button></div>
       {!data && !error && <Loader2 className="my-6 animate-spin"/>}
       {error && <p role="alert" className="my-3 text-sm text-rose-600">{error}</p>}
       {data && <>
@@ -37,8 +37,8 @@ export default function ChildPanelDetail({ panel, onClose }: {panel: ChildPanel;
           ['Awal upgrade EXTRA',date(data.panel.extra_started)], ['Expired panel',data.panel.expires_at ? date(data.panel.expires_at) : 'Tanpa batas waktu (panel admin)'],
           ['Markup Merchant',`${panel.config?.merchantMarkupPct||0}%`],['Markup SMM',`${panel.markup_smm_pct}%`],['Markup Agen AI',`${panel.markup_agent_pct}%`],['Markup OTP',`${panel.markup_otp_pct || 0}%`],
           ['Total pendapatan (termasuk debug)',rupiah(data.balance.earned)],['Total tambahan debug',rupiah(data.balance.debug_credit || 0)],['Pendapatan pesanan',rupiah(data.balance.earned - (data.balance.debug_credit || 0))], ['Bisa dicairkan',rupiah(data.balance.available)],['Tertahan',rupiah(data.balance.held)],['Withdraw pending',rupiah(data.balance.pending)],['Sudah dibayar',rupiah(data.balance.paid)],
-        ].map(([k,v]) => <div key={k}><dt className="text-xs text-slate-500">{k}</dt><dd className="break-all font-semibold">{v}</dd></div>)}</dl>
-        <p className="mb-4 text-xs text-slate-500">Awal EXTRA diambil dari tanggal upgrade pertama akun; expired memakai masa aktif panel yang tersimpan, termasuk perpanjangan.</p>
+        ].map(([k,v]) => <div key={k}><dt className="text-xs text-slate-500 dark:text-slate-400">{k}</dt><dd className="break-all font-semibold">{v}</dd></div>)}</dl>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Awal EXTRA diambil dari tanggal upgrade pertama akun; expired memakai masa aktif panel yang tersimpan, termasuk perpanjangan.</p>
         <form onSubmit={e => { e.preventDefault(); void credit(); }} className="space-y-3 rounded-xl border border-amber-300 p-4">
           <h3 className="font-bold">Tambah saldo pendapatan (debug)</h3><p className="text-xs text-amber-700">Saldo ini masuk saldo tersedia dan dapat di-withdraw. Semua penambahan dicatat dengan ID admin dan catatan.</p>
           <input required type="number" min="1" max="100000000" step="0.01" aria-label="Nominal tambahan" placeholder="Nominal Rupiah" value={amount} onChange={e => setAmount(e.target.value)} className="w-full rounded border p-2 dark:bg-slate-800"/>

@@ -48,9 +48,9 @@ export default function AdminNexSpacePage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[28px] font-extrabold tracking-tight text-slate-900 dark:text-white">NexSpace Pro Request</h1>
-          <p className="mt-1 text-[13.5px] text-slate-500">Pesanan Pro yang menunggu data login. Data yang dikirim langsung tampil di Portal Server pemesan dan pemesan diberi tahu lewat email.</p>
+          <p className="mt-1 text-[13.5px] text-slate-500 dark:text-slate-400">Pesanan Pro yang menunggu data login. Data yang dikirim langsung tampil di Portal Server pemesan dan pemesan diberi tahu lewat email.</p>
         </div>
-        <button onClick={() => void load(filter)} aria-label="Muat ulang" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-800">
+        <button onClick={() => void load(filter)} aria-label="Muat ulang" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
           <RefreshCw className={`h-4 w-4 ${rows === null ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -155,7 +155,7 @@ function DeliverModal({ o, def, onClose, onDone }: { o: NxAdminOrder; def: { hos
               <button type="button" onClick={() => setPw(genPass())} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-3 text-[12px] font-bold text-slate-600 dark:border-slate-600 dark:text-slate-300"><Wand2 className="h-3.5 w-3.5" /> Buat</button>
             </div>
             <input className={`${inp} mt-2`} value={note} maxLength={255} onChange={(e) => setNote(e.target.value)} placeholder="Catatan untuk pemesan (opsional)" />
-            <p className="mt-2 text-[11.5px] text-slate-500">Password disimpan terenkripsi dan hanya tampil di Portal Server pemesan (tidak dikirim lewat email).</p>
+            <p className="mt-2 text-[11.5px] text-slate-500 dark:text-slate-400">Password disimpan terenkripsi dan hanya tampil di Portal Server pemesan (tidak dikirim lewat email).</p>
             <button onClick={() => void deliver()} disabled={!!busy || pw.length < 6} className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-[13.5px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
               {busy === 'd' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Kirim data login & beri tahu pemesan
             </button>
@@ -169,8 +169,8 @@ function DeliverModal({ o, def, onClose, onDone }: { o: NxAdminOrder; def: { hos
         ) : (
           <div className="mt-4 rounded-xl bg-slate-50 p-3 text-[12.5px] dark:bg-slate-800">
             {o.login ? <p className="font-mono">{o.login.ssh}{o.login.password ? ` · ${o.login.password}` : ''}</p> : null}
-            {o.note && <p className="mt-1 text-slate-500">Catatan: {o.note}</p>}
-            <p className="mt-1 text-slate-500">Diproses {waktu(o.delivered_at)}{o.viewed ? ' · sudah diambil pemesan' : ''}</p>
+            {o.note && <p className="mt-1 text-slate-500 dark:text-slate-400">Catatan: {o.note}</p>}
+            <p className="mt-1 text-slate-500 dark:text-slate-400">Diproses {waktu(o.delivered_at)}{o.viewed ? ' · sudah diambil pemesan' : ''}</p>
           </div>
         )}
         {err && <p role="alert" className="mt-3 flex items-center gap-1.5 text-[12.5px] font-semibold text-rose-600"><CircleAlert className="h-4 w-4" /> {err}</p>}

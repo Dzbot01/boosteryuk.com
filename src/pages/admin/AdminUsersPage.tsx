@@ -100,7 +100,7 @@ export default function AdminUsersPage() {
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-[12.5px] text-slate-500">
+      <div className="mt-4 flex items-center justify-between text-[12.5px] text-slate-500 dark:text-slate-400">
         <span>Halaman {page} dari {pages}</span>
         <div className="flex gap-1.5">
           <button className={iconBtn} disabled={page <= 1} onClick={() => setPage((p) => p - 1)} aria-label="Halaman sebelumnya"><ChevronLeft className="h-4 w-4" /></button>
@@ -163,7 +163,7 @@ function UserModal({ u, initialTab, onClose, onDone }: { u: AdminUser; initialTa
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">User #{u.id}</p>
             <p className="text-[17px] font-extrabold text-slate-900 dark:text-white">{u.name || u.email}</p>
-            <p className="text-[12.5px] text-slate-500">Saldo sekarang <b className="text-slate-900 dark:text-white">{rupiah(u.balance)}</b></p>
+            <p className="text-[12.5px] text-slate-500 dark:text-slate-400">Saldo sekarang <b className="text-slate-900 dark:text-white">{rupiah(u.balance)}</b></p>
           </div>
           <button onClick={onClose} aria-label="Tutup" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="h-5 w-5" /></button>
         </div>
@@ -178,8 +178,8 @@ function UserModal({ u, initialTab, onClose, onDone }: { u: AdminUser; initialTa
         {tab === 'saldo' ? (
           <div className="mt-4 space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setMode('add')} className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border text-[13px] font-bold ${mode === 'add' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30' : 'border-slate-200 text-slate-500 dark:border-slate-700'}`}><Plus className="h-4 w-4" /> Tambah</button>
-              <button type="button" onClick={() => setMode('sub')} className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border text-[13px] font-bold ${mode === 'sub' ? 'border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-900/30' : 'border-slate-200 text-slate-500 dark:border-slate-700'}`}><Minus className="h-4 w-4" /> Kurangi</button>
+              <button type="button" onClick={() => setMode('add')} className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border text-[13px] font-bold ${mode === 'add' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:text-emerald-300 dark:bg-emerald-900/30' : 'border-slate-200 text-slate-500 dark:border-slate-700'}`}><Plus className="h-4 w-4" /> Tambah</button>
+              <button type="button" onClick={() => setMode('sub')} className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border text-[13px] font-bold ${mode === 'sub' ? 'border-rose-500 bg-rose-50 text-rose-700 dark:text-rose-300 dark:bg-rose-900/30' : 'border-slate-200 text-slate-500 dark:border-slate-700'}`}><Minus className="h-4 w-4" /> Kurangi</button>
             </div>
             <label className="block"><span className={lbl}>Nominal (Rp)</span>
               <input className={adminInput} type="number" inputMode="numeric" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50000" />
@@ -190,7 +190,7 @@ function UserModal({ u, initialTab, onClose, onDone }: { u: AdminUser; initialTa
             <label className="block"><span className={lbl}>Catatan (wajib)</span>
               <input className={adminInput} value={note} maxLength={255} onChange={(e) => setNote(e.target.value)} placeholder="mis. Deposit manual via DANA" />
             </label>
-            {amt > 0 && <p className="text-[12.5px] text-slate-500">Saldo setelahnya: <b className="text-slate-900 dark:text-white">{rupiah(u.balance + (mode === 'add' ? amt : -amt))}</b></p>}
+            {amt > 0 && <p className="text-[12.5px] text-slate-500 dark:text-slate-400">Saldo setelahnya: <b className="text-slate-900 dark:text-white">{rupiah(u.balance + (mode === 'add' ? amt : -amt))}</b></p>}
             <button onClick={() => void saveBalance()} disabled={busy} className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[13.5px] font-bold text-white disabled:opacity-50 ${mode === 'add' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}>
               {busy && <Loader2 className="h-4 w-4 animate-spin" />} {mode === 'add' ? 'Tambah saldo' : 'Kurangi saldo'}
             </button>
@@ -209,7 +209,7 @@ function UserModal({ u, initialTab, onClose, onDone }: { u: AdminUser; initialTa
                 <input type="checkbox" className="h-4 w-4 accent-cyan-600" checked={d.plus} onChange={(e) => setD({ ...d, plus: e.target.checked })} /> Boosteryuk Plus aktif
               </label>
             )}
-            <p className="text-[11.5px] text-slate-500">Password user tidak bisa dilihat. User dapat menggantinya sendiri lewat lupa password.</p>
+            <p className="text-[11.5px] text-slate-500 dark:text-slate-400">Password user tidak bisa dilihat. User dapat menggantinya sendiri lewat lupa password.</p>
             <button onClick={() => void saveData()} disabled={busy} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 text-[13.5px] font-bold text-white hover:bg-cyan-700 disabled:opacity-50">
               {busy && <Loader2 className="h-4 w-4 animate-spin" />} Simpan data
             </button>

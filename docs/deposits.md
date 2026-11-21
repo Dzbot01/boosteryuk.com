@@ -68,3 +68,11 @@ Callback dan Cek status menggunakan fungsi kredit yang sama. Nominal/bonus diamb
 - `node scripts/test-deposits.mjs`: kontrak integrasi Worker/no keys, kepemilikan, nominal-only, reservasi/cooldown/idempotensi berbasis source, client API mocked, harga dan FAQ.
 - `NODE_PATH=/tmp/deposit-tests/node_modules node scripts/test-deposit-ui.mjs`: jsdom, restore QR, cooldown, form pending terkunci, tagihan vs bonus, cek status/refetch saldo, batal/remount, sembunyikan QR terminal, payload create.
 - PHP syntax diperiksa memakai `php-parser` eksternal test-only. Test source-contract bukan pengganti pengujian transaksi/concurrency pada MySQL sungguhan. Tidak menambah npm dependency proyek.
+
+## Persistensi kedaluwarsa dan layout riwayat
+
+- Setiap request deposit (termasuk list/detail/active) menutup invoice pending yang melewati `expired_time` resmi tersimpan: status `EXPIRED`, slot aktif dilepas dalam transaksi user/invoice. Bukan timestamp kiriman browser. Tidak memerlukan cron atau migrasi baru; tanpa request status tersimpan diperbarui pada akses berikutnya.
+- Halaman pembayaran meminta status saat deadline; riwayat refresh pada deadline, setiap 15 detik selama ada pending, dan saat tab kembali aktif. Label `Kedaluwarsa` dibedakan dari `Batal`. Bila Worker tidak tersedia, detail tersimpan tetap bisa menampilkan expiry.
+- PAID terverifikasi yang datang terlambat tetap dikreditkan tepat sekali melalui ledger lama. Expiry lokal tidak membatalkan pembayaran di gateway.
+- Riwayat memakai container `max-w-3xl px-4 sm:px-6`, sesuai riwayat pesanan; tabel lebar di-scroll di dalam container, bukan melebar ke tepi layar.
+- Upload `deposit.php` dan `deposit_invoice_lib.php` bersama frontend terbaru. Worker, kanal pembayaran dan konfigurasi Tripay tidak diubah.
