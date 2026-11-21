@@ -4,7 +4,7 @@
 
 - Kartu Coming Soon bawaan **event #2** menjadi Daily Streak. Kartu Coming Soon baru adalah #3. Seed tidak menimpa event custom admin yang sudah diberi judul; jika #2/#3 sudah diubah, admin perlu menyesuaikannya melalui Kelola Event.
 - Kalender server **Asia/Jakarta / WIB**, pergantian hari 00.00 WIB. Bukan cooldown 24 jam dari klik sebelumnya.
-- Hari 1–6 masing-masing **Rp1**, langsung menambah `users.balance`. Tidak membuat deposit, tidak memanggil Worker/Tripay atau payment gateway.
+- Hari 1–6 mendapat saldo sesuai nomor hari: **Rp1, Rp2, Rp3, Rp4, Rp5, Rp6**, langsung menambah `users.balance`. Tidak membuat deposit, tidak memanggil Worker/Tripay atau payment gateway.
 - Hari 7: **Plus Trial 24 jam**, dihitung sejak klaim berhasil, serta title permanen `daily-streak-7`. Hari 7 tidak memberi Rp1 tambahan.
 - Satu klaim per akun per tanggal WIB. Request ulang, refresh, respons hilang atau tab lain tidak memberi hadiah kedua.
 - Jika melewatkan satu tanggal saat progres hari 1–6, progres menjadi 0 dan klaim berikutnya adalah hari 1. Saldo lama dan title tetap dimiliki. Pemberitahuan reset dicatat server sampai pengguna mengakuinya.
@@ -24,13 +24,13 @@
 
 ## UI
 
-- Modal Daily Streak mempunyai kartu api di atas grid 7 hadiah. Sebelum klaim pertama ditampilkan ikon api; sesudah hari 1 animasi pertama, hari 2–6 animasi kedua, hari 7 animasi ketiga.
+- Halaman `/event/daily-streak` (bukan modal floating) mempunyai kartu api di atas grid 7 hadiah. Sebelum klaim pertama ditampilkan ikon api; sesudah hari 1 animasi pertama, hari 2–6 animasi kedua, hari 7 animasi ketiga.
 - Semua URL animasi mengikuti permintaan pemilik. Animasi gagal memakai `loop={false}` sehingga berjalan satu kali dan berhenti pada frame terakhir; lainnya autoplay/loop.
-- Ucapan selamat/reset/title memakai sheet menempel di bawah dengan animasi masuk vertikal seperti FAQ bottom navbar, dukungan Escape, focus trap dan pemulihan scroll/fokus.
-- Reset diinformasikan saat membuka halaman Event atau modal Daily Streak. Versi reset disimpan sehingga dua tab tidak salah mengakui reset yang lebih baru.
-- `/profil` berisi identitas, saldo sebenarnya, pemilih avatar, koleksi **Title dimiliki**, dan pengaturan akun lengkap di bawah. Tidak menampilkan statistik pesanan dummy atau switch keamanan lokal palsu dari profil lama.
+- Hanya ucapan selamat/reset memakai sheet menempel di bawah dengan animasi masuk vertikal seperti FAQ bottom navbar, dukungan Escape, focus trap dan pemulihan scroll/fokus.
+- Reset diinformasikan saat membuka halaman Daily Streak. Versi reset disimpan sehingga dua tab tidak salah mengakui reset yang lebih baru.
+- `/profil` berisi identitas, saldo sebenarnya, pemilih avatar, bagian **Title dimiliki** dengan kartu vertikal yang langsung terlihat tanpa modal, dan pengaturan akun lengkap di bawah. Tidak menampilkan statistik pesanan dummy atau switch keamanan lokal palsu dari profil lama.
 - `/pengaturan-akun` diarahkan ke `/profil#pengaturan-akun`; tombol profil bottom navbar/sidebar menuju halaman gabungan.
-- Lottie gagal dimuat tidak membatalkan hadiah atau mengubah state server. Avatar masih memakai fallback lama, tanpa latar/lingkaran animasi baru.
+- Lottie gagal dimuat tidak membatalkan hadiah atau mengubah state server. Pada halaman profil, avatar menampilkan animasi saja tanpa gradient/latar/lingkaran tambahan; fallback adalah foto Google HTTPS jika tersedia pada field `picture` API, atau siluet profil Google default lokal jika tidak tersedia/gagal. Avatar di area lain tetap memakai fallback lamanya. Field `picture` opsional; perubahan ini tidak menambahkan penyimpanan foto pada backend OAuth.
 
 ## Database dan keamanan
 
@@ -42,6 +42,14 @@
 4. `user_event_titles`: koleksi permanen. PK `(user_id, title_code)`.
 
 API `daily_streak.php` menerima hanya aksi `get`, `claim`, `ack_reset` dan token sesi. ID user diambil dari token; tanggal/hari/bonus/nominal/trial/title tidak dipercayai dari browser. Sebelum operasi API memeriksa semua tabel reward dan `users` adalah InnoDB. Tidak otomatis mengubah engine pengguna saat request. Lock user `FOR UPDATE` → lock progres → tanggal WIB dihitung setelah lock → receipt unik → kredit/trial/title/progres → commit. Error melakukan rollback. Ini juga menjaga dua request yang melewati tengah malam. Claim pada event tidak aktif/selesai ditolak server.
+
+## Pembaruan halaman dan nominal reward
+
+- Kartu Daily Streak pada Event mengarah ke route terautentikasi `/event/daily-streak`. Halaman bisa di-refresh/dibuka langsung dan mempunyai tautan kembali ke Event. Tidak ada scroll-lock/modal untuk halaman utama check-in.
+- Hari ke-7 pada grid memakai animasi avatar PLUS TRIAL (`nhBFSRR128.lottie`), bukan ikon mahkota statis. Animasi api besar hari 7 dan notifikasi sukses/gagal tetap dipertahankan.
+- Perhitungan kredit baru ada di PHP, bukan hanya label UI: `cash = day <= 6 ? day : 0` dan update saldo terparameterisasi dengan nilai yang sama seperti receipt. Total cash satu siklus penuh sekarang Rp21; hari 7 hanya trial/title.
+- Receipt lama dan saldo yang sudah diberikan **tidak dihitung ulang**. Pengguna yang sudah klaim hari ini tidak dapat mengklaim selisih lagi setelah pembaruan. Klaim pada tanggal berikutnya memakai aturan nominal baru sesuai progresnya.
+- **Tidak memerlukan migrasi skema baru** bila `daily_streak.sql` dari rilis sebelumnya sudah dijalankan. Cukup upload `daily_streak.php` dan `events.php` terbaru, lalu build/upload frontend. `events.php` memperbarui deskripsi bawaan lama tanpa menimpa deskripsi custom admin. Instalasi pertama tetap memerlukan SQL dan semua file di bawah.
 
 ## Upload manual — belum dijalankan
 
@@ -59,12 +67,12 @@ API `daily_streak.php` menerima hanya aksi `get`, `claim`, `ack_reset` dan token
 Tes lokal:
 
 - `node scripts/test-daily-streak.mjs`: kontrak keamanan/source backend, mapping animasi, client API/no retry, avatar trial/permanen/expired.
-- `NODE_PATH=/tmp/streak-tests/node_modules node scripts/test-streak-ui.mjs`: jsdom grid, double click, saldo refresh, hari 1/2/7, popup sukses, kegagalan one-shot, ack reset, title, auth error, scroll/fokus.
+- `NODE_PATH=/tmp/streak-tests/node_modules node scripts/test-streak-ui.mjs`: jsdom grid, double click, saldo refresh, hari 1/2/7, popup sukses, kegagalan one-shot, ack reset, title, auth error, scroll/fokus, navigasi kartu Event ke halaman Daily Streak, kartu title inline, dan fallback Google.
 - Build, parser syntax PHP dan seluruh tes regresi event/game/session/merchant/avatar/OAuth/deposit.
 
 **Belum diuji dengan runtime MySQL atau pembayaran/saldo produksi.** Source-contract dan mock bukan bukti concurrency database nyata. Uji staging menggunakan akun/DB uji:
 
-- dua tab/perangkat mengklaim tanggal sama → satu receipt, saldo bertambah Rp1 sekali;
+- dua tab/perangkat mengklaim tanggal sama → satu receipt, saldo bertambah sesuai nomor hari sekali;
 - retry setelah respons putus → hadiah tidak bertambah lagi;
 - hari berturut, batas 23:59:59 → 00:00 WIB, melewatkan sehari, tahun kabisat/pergantian bulan;
 - hari 7 → trial tepat 24 jam, saldo tidak bertambah, title sekali;

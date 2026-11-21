@@ -1,5 +1,5 @@
 -- Backup dahulu; jalankan saat maintenance. Tidak ada payment gateway untuk reward.
--- users harus InnoDB agar kredit Rp1 dan receipt berada dalam satu transaksi.
+-- users harus InnoDB agar kredit reward dan receipt berada dalam satu transaksi.
 ALTER TABLE users ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS user_daily_streaks (
  user_id INT NOT NULL PRIMARY KEY,
@@ -33,6 +33,6 @@ CREATE TABLE IF NOT EXISTS user_event_titles (
  PRIMARY KEY(user_id,title_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 -- site_events sudah dibuat oleh events.php. Hanya ubah placeholder bawaan, bukan event custom admin.
-UPDATE site_events SET title='Daily Streak',description='Check-in 7 hari berturut-turut. Hari 1–6 Rp1, hari ke-7 PLUS TRIAL 24 jam.',kind='streak',status='ongoing',starts_at=NULL,ends_at=NULL
+UPDATE site_events SET title='Daily Streak',description='Check-in 7 hari berturut-turut. Hari 1–6 mendapat Rp1 hingga Rp6 sesuai hari, hari ke-7 PLUS TRIAL 24 jam.',kind='streak',status='ongoing',starts_at=NULL,ends_at=NULL
  WHERE id=2 AND kind='standard' AND title='' AND status='upcoming';
 INSERT IGNORE INTO site_events (id,title,description,kind,status) VALUES (3,'','','standard','upcoming');
