@@ -315,7 +315,8 @@ export default function BuatPesananCard() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
   const [serviceId, setServiceId] = useState('');
-  const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [descriptionRead, setDescriptionRead] = useState(false);
+  const [targetConfirmed, setTargetConfirmed] = useState(false);
   const [target, setTarget] = useState('');
   const [quantity, setQuantity] = useState('');
   const [comments, setComments] = useState('');
@@ -347,6 +348,8 @@ export default function BuatPesananCard() {
   const filteredServices = useMemo(() => category ? services.filter((s) => s.category.trim() === category) : services, [services, category]);
   const serviceOptions = useMemo<Option[]>(() => filteredServices.map((s) => ({ value: s.id, label: s.name })), [filteredServices]);
   const selected = useMemo(() => services.find((s) => s.id === serviceId) || null, [services, serviceId]);
+  useEffect(() => { setDescriptionRead(false);setTargetConfirmed(false); }, [serviceId, category]);
+  useEffect(() => { setTargetConfirmed(false); }, [target]);
   const description = selected ? parseDescription(selected.description) : null;
   const isCustomComment = isCustomCommentService(selected);
 
@@ -362,7 +365,7 @@ export default function BuatPesananCard() {
   const price = Math.round((qty / 1000) * rate);
 
 const handleOrder = async () => {
-    if (!user || !selected || !target.trim() || qty <= 0) return;
+    if (ordering || !user || !selected || !target.trim() || qty <= 0 || !descriptionRead || !targetConfirmed) return;
 
     if (user.balance < price) {
       setOrderNotice({ ok: false, message: 'Saldo Anda tidak mencukupi untuk melakukan pemesanan ini.' });
@@ -414,6 +417,7 @@ const handleOrder = async () => {
       const successMessage = `Pesanan berhasil dibuat. ID #${orderIdFinal}`;
       setOrderNotice({ ok: true, message: successMessage });
 
+      setDescriptionRead(false);setTargetConfirmed(false);
       setTarget('');
       setQuantity('');
       setComments('');
@@ -644,20 +648,25 @@ const handleOrder = async () => {
         <label className="flex cursor-pointer items-center gap-2">
           <input
             type="checkbox"
-            checked={favoriteOnly}
-            onChange={(event) => setFavoriteOnly(event.target.checked)}
+            checked={descriptionRead}
+            onChange={(event) => setDescriptionRead(event.target.checked)}
             className="h-[15px] w-[15px] shrink-0 rounded"
             style={{ accentColor: COLOR.primary }}
           />
           <span className="text-[12.5px]" style={{ color: COLOR.secondary }}>
-            Tampilkan layanan favorit saja
+            Sudah membaca deskripsi layanan
           </span>
+        </label>
+
+        <label className="flex cursor-pointer items-center gap-2">
+          <input type="checkbox" checked={targetConfirmed} onChange={(event) => setTargetConfirmed(event.target.checked)} className="h-[15px] w-[15px] shrink-0 rounded" style={{ accentColor: COLOR.primary }} />
+          <span className="text-[12.5px]" style={{ color: COLOR.secondary }}>Target yang di masukan sudah benar.</span>
         </label>
 
         {/* Pesan Button */}
         <TransactionButton
           onClick={handleOrder}
-          disabled={!user || !selected || !target.trim() || qty <= 0 || ordering}
+          disabled={!user || !selected || !target.trim() || qty <= 0 || !descriptionRead || !targetConfirmed || ordering}
           className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-bold text-white shadow-lg shadow-cyan-600/20 transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
 
         >

@@ -16,8 +16,11 @@ assert.match(read('src/components/EventPoster.tsx'),/aria-disabled=\{upcoming \|
 globalThis.window={location:{hostname:'boosteryuk.com',origin:'https://boosteryuk.com'}};globalThis.localStorage={getItem:()=> 'session'};
 const {outputFiles}=await build({entryPoints:['src/services/eventsApi.ts'],bundle:true,format:'esm',write:false});
 const {eventAccess}=await import('data:text/javascript;base64,'+Buffer.from(outputFiles[0].text).toString('base64'));
-let count=0;globalThis.fetch=async(url,options)=>{count++;assert.equal(url,'https://boosteryuk.com/api/event_access.php');assert.equal(options.cache,'no-store');assert.deepEqual(JSON.parse(options.body),{token:'session',event_id:2});return new Response(JSON.stringify({ok:true,access:{2:{allowed:false,completed:true,message:'Event sudah kamu selesaikan.'}}}));};
+let count=0;globalThis.fetch=async(url,options)=>{count++;assert.equal(url,'https://boosteryuk.com/api/events.php');assert.equal(options.cache,'no-store');assert.ok(options.body instanceof URLSearchParams);assert.equal(options.headers,undefined);assert.deepEqual(Object.fromEntries(options.body),{action:'access',token:'session',event_id:'2'});return new Response(JSON.stringify({ok:true,access:{2:{allowed:false,completed:true,message:'Event sudah kamu selesaikan.'}}}));};
 assert.equal((await eventAccess(2))[2].allowed,false);assert.equal(count,1);
 globalThis.fetch=async()=>new Response('<html>challenge</html>');await assert.rejects(eventAccess(2),/belum dapat diperiksa/);
 globalThis.fetch=async()=>new Response(JSON.stringify({ok:false,message:'Silakan login ulang.'}),{status:401});await assert.rejects(eventAccess(1),/login ulang/);
 console.log('PASS: authenticated per-account event access, stored completion/receipt criteria, ended/completed notices, fresh locked game guard before purchases, no repeat streak cycles, client auth/HTML error handling.');
+
+const events=read('php-api/events.php');assert.ok(events.indexOf("($input['action']??'')==='access'")<events.indexOf('cp_require_admin'));assert.match(events,/cp_user_id\(\$conn,\$input\['token'\]/);assert.match(events,/\?: \$_POST/);
+globalThis.fetch=async()=>{throw new TypeError('Failed to fetch');};await assert.rejects(eventAccess(2),/Tidak dapat menghubungi API Event/);

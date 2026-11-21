@@ -88,3 +88,9 @@ Tes lokal:
 `event_access.php` menerima POST token sesi dan event_id opsional; membaca penyelesaian dari akun server, bukan localStorage/skor browser. Kartu menampilkan **Event sudah kamu selesaikan.** atau **Event telah berakhir.** dan tidak menavigasi; klik kartu aktif diperiksa ulang server. Route game memeriksa akses sebelum memasang iframe. Game get/start/buy/use memeriksa event terkini di dalam lock transaksi. Save akhir/receipt retry tetap dipertahankan agar finalisasi tidak terputus. Daily Streak menolak klaim baru sesudah title/receipt hari 7, tetapi retry klaim hari yang sama tetap idempoten.
 
 Upload tambahan wajib bersama file lain: `event_access.php`, `event_access_lib.php`, `daily_streak_lib.php`, `event_game.php`. Tidak ada tabel baru untuk fitur akses ini. Penyelesaian game mengikuti kriteria receipt minimal 180 detik yang sama dengan badge, bukan sekadar score dari browser.
+
+## Perbaikan koneksi pemeriksaan akses event
+
+Frontend kini mengirim POST form `action=access` ke **`events.php`**, bukan bergantung pada route baru `event_access.php`. Endpoint yang sama sudah dipakai daftar event/proxy; form URL-encoded tidak menambah preflight JSON CORS. Token tetap di body, tidak di URL. Aksi access mengautentikasi akun biasa sebelum cabang admin; aksi list/save admin tetap dibatasi seperti semula. Gangguan jaringan ditampilkan dalam bahasa Indonesia dan tidak membuka akses tanpa verifikasi.
+
+**Upload wajib:** `php-api/events.php` dan `php-api/event_access_lib.php` ke `/api`, lalu build/upload frontend terbaru secara bersamaan. Endpoint lama `event_access.php` boleh dipertahankan untuk kompatibilitas frontend lama. Tidak ada perubahan Worker/credential atau migrasi SQL. Belum menguji koneksi hosting produksi; jika fetch masih gagal, periksa Network browser/proxy untuk request POST `/api/events.php` dan pastikan file PHP terbaru sudah terunggah.
