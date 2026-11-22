@@ -36,7 +36,7 @@ export default function HomePage() {
   // Logo mengikuti pengaturan (child panel / admin), bukan logo Boosteryuk bawaan.
   const logoUrl = useSiteSettings().settings.logoUrl;
   const { isDark } = useTheme();
-  const { heroImageSrc, settings, dashboardVideo } = useSiteSettings();
+  const { heroImageSrc, dashboardVideo } = useSiteSettings();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
@@ -69,16 +69,11 @@ export default function HomePage() {
         <div className="home-hero-container mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:pb-24 lg:pt-32">
           <div className="home-hero-stage grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <Reveal className="home-hero-copy">
-            <h1 className="font-display text-[44px] font-extrabold leading-[1.02] tracking-[-0.04em] text-white sm:text-[58px] lg:text-[64px]">
-              <span className="by-accent-hero">{settings.brandName}</span>
-              <span className="text-white">{settings.brandSuffix}</span>
-            </h1>
-
-            <p className="home-hero-tagline mt-5 max-w-md font-display text-[19px] font-bold leading-snug tracking-tight text-white/90 sm:text-[22px]">
+            <h1 className="home-hero-tagline mt-5 max-w-md font-display text-[19px] font-bold leading-snug tracking-tight text-white/90 sm:text-[22px]">
               Turbo Speed,
               <br />
               <span className="text-cyan-300">Fort Knox Security.</span>
-            </p>
+            </h1>
 
             <p className="home-hero-description mt-4 max-w-md text-[14.5px] leading-relaxed text-neutral-300/85">
               Platform booster media sosial terpercaya — followers, likes, views, dan engagement

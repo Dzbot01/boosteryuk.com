@@ -1,9 +1,10 @@
+import './Calculator.css';
 import { useState } from 'react';
 import { Calculator as CalcIcon, X } from 'lucide-react';
 
 /**
- * Floating calculator — a small vertical "kalkulator" tab on the right edge.
- * Pulling it out reveals a white calculator card with expression display.
+ * Icon-only calculator launcher beside the mobile dock / desktop bottom-right.
+ * Opens the existing calculator panel without changing its arithmetic.
  */
 export default function Calculator() {
   const [open, setOpen] = useState(false);
@@ -106,34 +107,34 @@ export default function Calculator() {
 
   return (
     <>
-      {/* Hidden pull-tab on the right edge */}
+      {/* Icon only: no label, card, bubble, or background. */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="Buka kalkulator"
-        className={`fixed right-0 top-1/2 z-40 -translate-y-1/2 rounded-l-xl border border-r-0 border-slate-200 bg-white py-3 pl-1.5 pr-2 text-slate-600 shadow-md transition-all duration-300 hover:text-cyan-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 ${
-          open ? 'pointer-events-none opacity-0' : 'opacity-100'
-        }`}
-        style={{ writingMode: 'vertical-rl' }}
+        type="button"
+        aria-expanded={open}
+        tabIndex={open ? -1 : 0}
+        aria-controls="floating-calculator-panel"
+        className={`calculator-launcher ${open ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
       >
-        <span className="flex items-center gap-1.5 font-display text-[12px] font-bold tracking-widest">
-          <CalcIcon className="h-4 w-4" strokeWidth={2.2} />
-          Kalkulator
-        </span>
+        <CalcIcon className="h-7 w-7" strokeWidth={2} aria-hidden="true" />
       </button>
 
       {/* Calculator card */}
       <div
-        className={`fixed right-0 top-1/2 z-40 -translate-y-1/2 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          open ? 'translate-x-0' : 'translate-x-full'
+        id="floating-calculator-panel"
+        aria-label="Kalkulator"
+        role="dialog"
+        aria-hidden={!open}
+        inert={!open}
+        className={`calculator-panel transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          open ? 'visible translate-x-0' : 'invisible pointer-events-none translate-x-full'
         }`}
       >
-        <div className="mr-2 w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/20 dark:border-slate-700 dark:bg-slate-900">
+        <div className="w-[280px] max-w-[calc(100vw-32px)] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/20 dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CalcIcon className="h-4 w-4 text-cyan-600 dark:text-cyan-400" strokeWidth={2.2} />
-              <span className="font-display text-[14px] font-extrabold text-slate-900 dark:text-white">
-                Kalkulator
-              </span>
             </div>
             <button
               onClick={() => setOpen(false)}
