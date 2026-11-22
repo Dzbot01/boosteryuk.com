@@ -66,7 +66,7 @@ export default function HomePage() {
           <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-[#eef1f5] dark:to-[#0a0a0b]" />
         </div>
 
-        <div className="mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:pb-24 lg:pt-32">
+        <div className="home-hero-container mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:pb-24 lg:pt-32">
           <div className="home-hero-stage grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <Reveal className="home-hero-copy">
             <h1 className="font-display text-[44px] font-extrabold leading-[1.02] tracking-[-0.04em] text-white sm:text-[58px] lg:text-[64px]">
