@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
+import { AdminNotificationsProvider } from '../context/AdminNotificationsContext';
 import GuriVoiceSession from './GuriVoiceSession';
 import SideMenu from './SideMenu';
 import BottomNavbar from './BottomNavbar';
 import AuthLoadingModal from './AuthLoadingModal';
-import Calculator from './Calculator';
 import Footer from './Footer';
 import HeaderOrnament from './HeaderOrnament';
 import SessionGuard from './SessionGuard';
@@ -25,7 +25,7 @@ export default function Layout() {
   }, [pathname]);
 
   return (
-    <div className={`relative flex min-h-screen flex-col overflow-x-clip bg-[#eef1f5] text-slate-900 transition-[background-color,border-color,color,padding] duration-300 dark:bg-black dark:text-slate-100 ${railVisible ? 'lg:pl-16' : 'lg:pl-0'}`}>
+    <AdminNotificationsProvider><div className={`relative flex min-h-screen flex-col overflow-x-clip bg-[#eef1f5] text-slate-900 transition-[background-color,border-color,color,padding] duration-300 dark:bg-black dark:text-slate-100 ${railVisible ? 'lg:pl-16' : 'lg:pl-0'}`}>
       <GuriVoiceSession />
       {/* ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
@@ -65,8 +65,6 @@ export default function Layout() {
       {/* Sesi kedaluwarsa → keluar otomatis + kembali ke beranda */}
       <SessionGuard />
 
-      {/* Floating calculator */}
-      <Calculator />
-    </div>
+    </div></AdminNotificationsProvider>
   );
 }

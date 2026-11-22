@@ -1,4 +1,6 @@
 import UserAvatar from './UserAvatar';
+import AdminDataDot from './AdminDataDot';
+import { useAdminNotifications } from '../context/AdminNotificationsContext';
 import {
   Home,
   Gift,
@@ -203,6 +205,7 @@ const rupiah = (n?: number | null) =>
  */
 export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
   const { user, isAdmin, logout } = useAuth();
+  const { markRead } = useAdminNotifications();
   const { settings } = useSiteSettings();
   // Child panel: pemilik panel (admin ke-2) mendapat menu Admin Panel Toko.
   const isPanelOwner = usePanelOwner(user?.token) === true && IS_CHILD_PANEL;
@@ -327,12 +330,13 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
               return (
                 <li key={item.id}>
                   <button
-                    onClick={(event) => { if (item.id === 'event') { animateEventText(event.currentTarget); window.setTimeout(() => { navigate(item.path); onClose(); }, 480); return; } navigate(item.path); onClose(); }}
+                    onClick={(event) => { markRead(item.path);if (item.id === 'event') { animateEventText(event.currentTarget); window.setTimeout(() => { navigate(item.path); onClose(); }, 480); return; } navigate(item.path); onClose(); }}
                     title={item.label}
                     aria-label={item.label}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`${expanded ? expandedRow(isActive) : railRow(isActive)}`}
+                    className={`relative ${expanded ? expandedRow(isActive) : railRow(isActive)}`}
                   >
+                    <AdminDataDot path={item.path} />
                     <Icon className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
                     {expanded && (
                       <span className="min-w-0 flex-1">

@@ -1,3 +1,5 @@
+import AdminDataDot from '../../components/AdminDataDot';
+import { useAdminNotifications } from '../../context/AdminNotificationsContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Gift, Settings, Server, Shield, ArrowUpRight, DollarSign, Globe, Banknote, Crown, ClipboardList, Users, Wallet } from 'lucide-react';
@@ -76,6 +78,7 @@ const CARDS = [
 
 export default function AdminHomePage() {
   const navigate = useNavigate();
+  const { markRead } = useAdminNotifications();
   const { user } = useAuth();
   const { settings } = useSiteSettings();
   const [pendingWd, setPendingWd] = useState(0);
@@ -115,9 +118,10 @@ export default function AdminHomePage() {
         {CARDS.map((c, i) => (
           <Reveal key={c.path} delay={60 + i * 50}>
             <button
-              onClick={() => navigate(c.path)}
+              onClick={() => { markRead(c.path);navigate(c.path); }}
               className="group relative w-full overflow-hidden rounded-[24px] border border-slate-200 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-700/60 dark:bg-slate-800/80"
             >
+              <AdminDataDot path={c.path} />
               <span
                 className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${c.color} text-white shadow-lg`}
               >
