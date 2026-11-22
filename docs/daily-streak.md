@@ -87,10 +87,18 @@ Tes lokal:
 
 `event_access.php` menerima POST token sesi dan event_id opsional; membaca penyelesaian dari akun server, bukan localStorage/skor browser. Kartu menampilkan **Event sudah kamu selesaikan.** atau **Event telah berakhir.** dan tidak menavigasi; klik kartu aktif diperiksa ulang server. Route game memeriksa akses sebelum memasang iframe. Game get/start/buy/use memeriksa event terkini di dalam lock transaksi. Save akhir/receipt retry tetap dipertahankan agar finalisasi tidak terputus. Daily Streak menolak klaim baru sesudah title/receipt hari 7, tetapi retry klaim hari yang sama tetap idempoten.
 
-Upload tambahan wajib bersama file lain: `event_access.php`, `event_access_lib.php`, `daily_streak_lib.php`, `event_game.php`. Tidak ada tabel baru untuk fitur akses ini. Penyelesaian game mengikuti kriteria receipt minimal 180 detik yang sama dengan badge, bukan sekadar score dari browser.
+Upload tambahan wajib bersama file lain: `event_access.php`, `event_access_lib.php`, `daily_streak_lib.php`, `event_game.php`. Tidak ada tabel baru untuk fitur akses ini. Badge game mengikuti kriteria receipt minimal 180 detik, tetapi bukan penanda penyelesaian event kompetisi dan tidak memblokir akses bermain ulang.
 
 ## Perbaikan koneksi pemeriksaan akses event
 
 Frontend kini mengirim POST form `action=access` ke **`events.php`**, bukan bergantung pada route baru `event_access.php`. Endpoint yang sama sudah dipakai daftar event/proxy; form URL-encoded tidak menambah preflight JSON CORS. Token tetap di body, tidak di URL. Aksi access mengautentikasi akun biasa sebelum cabang admin; aksi list/save admin tetap dibatasi seperti semula. Gangguan jaringan ditampilkan dalam bahasa Indonesia dan tidak membuka akses tanpa verifikasi.
 
 **Upload wajib:** `php-api/events.php` dan `php-api/event_access_lib.php` ke `/api`, lalu build/upload frontend terbaru secara bersamaan. Endpoint lama `event_access.php` boleh dipertahankan untuk kompatibilitas frontend lama. Tidak ada perubahan Worker/credential atau migrasi SQL. Belum menguji koneksi hosting produksi; jika fetch masih gagal, periksa Network browser/proxy untuk request POST `/api/events.php` dan pastikan file PHP terbaru sudah terunggah.
+
+## Koreksi: event kompetisi bukan misi sekali selesai
+
+`ea_completed` hanya menutup misi Daily Streak (#2, kind streak) berdasarkan title/receipt hari7. Game Tahun Baru (kind game) selalu dianggap belum selesai per akun: state done menutup satu sesi, dan title newyear-2027 adalah badge partisipasi. Keduanya tidak menutup event kompetisi skor. Kartu, route langsung, dan guard game tetap memeriksa tanggal/status event yang sama.
+
+Batas **5 start baru per akun per hari WIB** tetap memakai lock/receipt dan tabel event_game_daily yang sudah ada. Retry request start yang sama tidak memakai jatah tambahan; sesi aktif tetap harus dilanjutkan, bukan ditimpa. Jatah habis tidak mengunci akses membuka halaman/leaderboard; start baru tersedia lagi pada hari WIB berikutnya selama event aktif. Status finished admin atau ends_at tetap menutup event. Tanggal seed tidak diubah: 2026-12-31 17:00:00 UTC = **1 Januari2027 00:00 WIB**; jadwal custom admin tetap dihormati.
+
+**Deploy perbaikan ini:** upload `php-api/event_access_lib.php` ke `/api/event_access_lib.php`. Endpoint events.php/event_access.php dan event_game.php memakai library yang sama. Tidak perlu menghapus badge, skor, receipt, progres, atau tabel; tidak perlu SQL/Worker/credential baru. Tes UI memakai mock dan tes sumber tidak membuktikan concurrency MySQL produksi.

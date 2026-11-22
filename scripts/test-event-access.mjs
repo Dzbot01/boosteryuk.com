@@ -5,7 +5,10 @@ const read=p=>fs.readFileSync(p,'utf8');
 const php=read('php-api/event_access.php');const lib=read('php-api/event_access_lib.php');const game=read('php-api/event_game.php');const daily=read('php-api/daily_streak.php');
 assert.match(php,/cp_user_id\(\$conn,\$in\['token'\]/);assert.doesNotMatch(php,/\$in\['user_id'\]/);
 assert.match(lib,/user_id=\? AND title_code=\?/);assert.match(lib,/streak_day=7/);
-assert.match(lib,/request_id=\? AND action='start'/);assert.match(lib,/INTERVAL 180 SECOND/);
+assert.match(lib,/if\(\$kind!=='streak' \|\| \$id!==2\)return false;/);
+assert.doesNotMatch(lib,/newyear-2027|event_game_players|event_game_receipts|state_json/);
+assert.match(game,/plays=plays\+1 WHERE user_id=\? AND play_date=\? AND plays<5/);assert.match(game,/Batas bermain 5 kali/);
+assert.match(read('php-api/daily_streak_lib.php'),/newyear-2027/);
 assert.match(lib,/Event sudah kamu selesaikan\./);assert.match(lib,/Event telah berakhir\./);
 assert.ok(game.indexOf("$access=ea_access($conn,(int)$uid,$currentEvent)")>game.indexOf('SELECT balance FROM users WHERE id=? FOR UPDATE'));
 assert.ok(game.indexOf("$access=ea_access($conn,(int)$uid,$currentEvent)")<game.indexOf("if($action==='buy'||$action==='use')"));
@@ -20,7 +23,7 @@ let count=0;globalThis.fetch=async(url,options)=>{count++;assert.equal(url,'http
 assert.equal((await eventAccess(2))[2].allowed,false);assert.equal(count,1);
 globalThis.fetch=async()=>new Response('<html>challenge</html>');await assert.rejects(eventAccess(2),/belum dapat diperiksa/);
 globalThis.fetch=async()=>new Response(JSON.stringify({ok:false,message:'Silakan login ulang.'}),{status:401});await assert.rejects(eventAccess(1),/login ulang/);
-console.log('PASS: authenticated per-account event access, stored completion/receipt criteria, ended/completed notices, fresh locked game guard before purchases, no repeat streak cycles, client auth/HTML error handling.');
+console.log('PASS: authenticated per-account event access, mission-only completion, repeatable game keeps five-play quota/title award, ended/completed notices, fresh locked game guard before purchases, no repeat streak cycles, client auth/HTML error handling.');
 
 const events=read('php-api/events.php');assert.ok(events.indexOf("($input['action']??'')==='access'")<events.indexOf('cp_require_admin'));assert.match(events,/cp_user_id\(\$conn,\$input\['token'\]/);assert.match(events,/\?: \$_POST/);
 globalThis.fetch=async()=>{throw new TypeError('Failed to fetch');};await assert.rejects(eventAccess(2),/Tidak dapat menghubungi API Event/);
