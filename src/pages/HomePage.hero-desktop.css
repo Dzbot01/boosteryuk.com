@@ -3,7 +3,7 @@
 @media (min-width: 1024px) {
   .home-hero-container {
     padding-top: 104px;
-    padding-bottom: 64px;
+    padding-bottom: 128px;
   }
 
   .home-hero-stage {
@@ -47,12 +47,15 @@
     margin: 24px 0 0;
     font-size: 20px;
     line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);
   }
 
   .home-hero-copy > .home-hero-trust {
     width: 100%;
     max-width: 100%;
-    margin-top: 32px;
+    margin-top: 40px;
   }
 
   .home-hero-copy .home-hero-rating {
@@ -68,7 +71,7 @@
     gap: 64px;
     width: 100%;
     max-width: 448px;
-    margin: 32px auto 0;
+    margin: 40px auto 0;
   }
 
   .home-hero-copy > .home-hero-actions {
@@ -77,7 +80,7 @@
     align-items: center;
     flex-wrap: nowrap;
     gap: 16px;
-    margin-top: 40px;
+    margin-top: 48px;
   }
 
   .home-hero-actions > .home-hero-primary,
@@ -126,6 +129,8 @@
 
   .home-hero-rating p {
     font-size: 15px;
+    color: rgba(255, 255, 255, 0.75);
+    font-weight: 500;
   }
 
   .home-hero-rating svg {
@@ -140,6 +145,8 @@
   .home-hero-stats > div > p:last-child {
     font-size: 15px;
     margin-top: 8px;
+    color: rgba(255, 255, 255, 0.75);
+    font-weight: 500;
   }
 
   .home-hero-stats > span {
@@ -156,6 +163,6 @@
 @media (min-width: 1024px) and (max-height: 800px) {
   .home-hero-container {
     padding-top: 88px;
-    padding-bottom: 40px;
+    padding-bottom: 56px;
   }
 }

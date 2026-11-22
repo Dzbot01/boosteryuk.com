@@ -73,7 +73,7 @@ export type PageId =
   | 'sewa-agen'
   | 'plus';
 
-const ROUTE_PATH: Record<PageId, string> = {
+export const ROUTE_PATH: Record<PageId, string> = {
   home: '/',
   event: '/event',
   'cek-status': '/cek-status',
@@ -143,7 +143,7 @@ const HIDDEN_PROFILE_ITEM = 'profil';
 
 export { baseMenu, authMenu };
 
-const ADMIN_MENU = [
+export const ADMIN_MENU = [
   { id: 'cek-status' as const, icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan', path: '/cek-status' },
   { id: 'event' as const, icon: Gift, label: 'Event', desc: 'Game & event yang berlangsung', path: '/event' },
   { id: 'events' as const, icon: Gift, label: 'Kelola Event', desc: 'Jadwal & status event', path: '/admin/events' },
@@ -158,6 +158,36 @@ const ADMIN_MENU = [
   { id: 'nexspace' as const, icon: Server, label: 'NexSpace Pro Request', desc: 'Kirim data login Pro', path: '/admin/nexspace' },
   { id: 'server' as const, icon: Server, label: 'Server Panel', desc: 'Ping provider', path: '/admin/server' },
 ];
+
+export function getUserMenuItems(signedIn: boolean, isAdmin: boolean, child: boolean) {
+  const AUTH_REQUIRED = ['event', 'layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'riwayat-deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
+
+  // Child panel: menu "Order Nomor" (OTP) tampil setelah "Buat Pesanan".
+  const base = child
+    ? [baseMenu[0], baseMenu[1], baseMenu[2], { id: 'nokos' as PageId, icon: Smartphone, label: 'Order Nomor', desc: 'Nomor OTP WhatsApp, Telegram, dll' }, ...baseMenu.slice(3)]
+    : baseMenu;
+  const combined = signedIn
+   ? [base[0], base[1], base[2],...authMenu,...base.slice(3)]
+    : base;
+
+  const menuItems = isAdmin
+   ? []
+    : combined
+       .filter(
+          (item) =>
+           !HIDDEN_USER_ITEMS.includes(item.id) &&
+            item.id!== HIDDEN_PROFILE_ITEM &&
+            (!AUTH_REQUIRED.includes(item.id) || signedIn) &&
+            // Child panel: sembunyikan menu "Upgrade" (upsell tidak relevan di panel kloning).
+            !(child && item.id === 'plus'),
+        );
+
+  return menuItems;
+}
+
+export function getAdminMenuItems(child: boolean) {
+  return ADMIN_MENU.filter(item => !['withdraw','events'].includes(item.id) || !child);
+}
 
 const rupiah = (n?: number | null) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(n) || 0);
@@ -221,27 +251,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
     }
   };
 
-  const AUTH_REQUIRED = ['event', 'layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'riwayat-deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
-
-  // Child panel: menu "Order Nomor" (OTP) tampil setelah "Buat Pesanan".
-  const base = IS_CHILD_PANEL
-    ? [baseMenu[0], baseMenu[1], baseMenu[2], { id: 'nokos' as PageId, icon: Smartphone, label: 'Order Nomor', desc: 'Nomor OTP WhatsApp, Telegram, dll' }, ...baseMenu.slice(3)]
-    : baseMenu;
-  const combined = user
-   ? [base[0], base[1], base[2],...authMenu,...base.slice(3)]
-    : base;
-
-  const menuItems = isAdmin
-   ? []
-    : combined
-       .filter(
-          (item) =>
-           !HIDDEN_USER_ITEMS.includes(item.id) &&
-            item.id!== HIDDEN_PROFILE_ITEM &&
-            (!AUTH_REQUIRED.includes(item.id) || user!== null) &&
-            // Child panel: sembunyikan menu "Upgrade" (upsell tidak relevan di panel kloning).
-            !(IS_CHILD_PANEL && item.id === 'plus'),
-        );
+  const menuItems = getUserMenuItems(user !== null, isAdmin, IS_CHILD_PANEL);
 
   const handleNav = (id: PageId) => {
     if (id === 'pengaturan') {
@@ -311,7 +321,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
         {/* Admin menus */}
         {isAdmin && (
           <ul className={`space-y-1 ${expanded ? '' : 'flex flex-col items-center'}`}>
-            {ADMIN_MENU.filter(item => !['withdraw','events'].includes(item.id) || !IS_CHILD_PANEL).map((item) => {
+            {getAdminMenuItems(IS_CHILD_PANEL).map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.path || pathname.startsWith(item.path);
               return (
