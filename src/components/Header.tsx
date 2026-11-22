@@ -2,6 +2,7 @@ import { IS_CHILD_PANEL } from '../lib/apiBase';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import HamburgerToggle from './HamburgerToggle';
+import BottomNavbar from './BottomNavbar';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 
 /** Jarak scroll (px) sebelum header berubah dari transparan menjadi glass card. */
@@ -31,11 +32,9 @@ interface HeaderProps {
   onToggleMenu: () => void;
   /** State menu terbuka — menggerakkan animasi hamburger. */
   menuOpen: boolean;
-  /** Paksa hamburger tampil di DESKTOP juga — dipakai saat rail disembunyikan (tamu di dashboard). */
-  showMenuOnDesktop?: boolean;
 }
 
-export default function Header({ onToggleMenu, menuOpen, showMenuOnDesktop = false }: HeaderProps) {
+export default function Header({ onToggleMenu, menuOpen }: HeaderProps) {
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
   const scrolled = useScrolled();
@@ -77,7 +76,7 @@ export default function Header({ onToggleMenu, menuOpen, showMenuOnDesktop = fal
         {/* Sisi kiri DESKTOP sengaja kosong — brand & navigasi ada di rail ikon (hover untuk membuka panel). */}
 
         {/* Right actions */}
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {/* Playground — tetap di header (tidak ikut ke side menu); tombol teks tanpa card */}
           {!IS_CHILD_PANEL && <button
             onClick={() => navigate('/playground')}
@@ -87,13 +86,14 @@ export default function Header({ onToggleMenu, menuOpen, showMenuOnDesktop = fal
             <span className="text-silver-shine">Playground</span>
           </button>}
 
-          {/* Hamburger — mobile/tablet; di DESKTOP tampil hanya saat rail disembunyikan (tamu di dashboard) */}
+          {/* Hamburger stays in the header, immediately left of the desktop FAQ control. */}
           <HamburgerToggle
             open={menuOpen}
             onToggle={onToggleMenu}
             label={menuOpen ? 'Tutup menu' : 'Buka menu'}
-            className={`h-11 w-11 ${showMenuOnDesktop ? '' : 'lg:hidden'} ${onHeroTop ? 'text-white' : 'text-slate-700 dark:text-slate-200'}`}
+            className={`h-11 w-11 ${onHeroTop ? 'text-white' : 'text-slate-700 dark:text-slate-200'}`}
           />
+          <BottomNavbar placement="header" onDark={onHeroTop} />
         </div>
       </div>
     </header>
