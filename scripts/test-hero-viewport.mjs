@@ -11,11 +11,12 @@ import {build} from 'esbuild';
 import postcss from 'postcss';
 const require=createRequire(import.meta.url);
 const {chromium:pw}=require('playwright');const chromium=require('@sparticuz/chromium').default;
-const old=fs.readFileSync('backups/layout-before-header-controls/HomePage.tsx.bak','utf8');
+const old=fs.readFileSync('backups/before-hero-title-calculator-icon/HomePage.tsx.bak','utf8');
 const current=fs.readFileSync('src/pages/HomePage.tsx','utf8');
-const oldCSS=fs.readFileSync('backups/layout-before-header-controls/HomePage.hero-desktop.css.bak','utf8');
+const oldCSS=fs.readFileSync('backups/before-hero-title-calculator-icon/HomePage.hero-desktop.css.bak','utf8');
 const newCSS=fs.readFileSync('src/pages/HomePage.hero-desktop.css','utf8');
-assert.equal(current.replace('home-dashboard-video ', '').replace(' sm:px-6 lg:max-w-6xl"',' sm:px-6"'),old,'only desktop video container class changed in homepage JSX');
+const expected=old.replace(/            <h1 className="font-display[\s\S]*?<\/h1>\n\n/, '').replace('<p className="home-hero-tagline','<h1 className="home-hero-tagline').replace('<span className="text-cyan-300">Fort Knox Security.</span>\n            </p>','<span className="text-cyan-300">Fort Knox Security.</span>\n            </h1>').replace('const { heroImageSrc, settings, dashboardVideo }','const { heroImageSrc, dashboardVideo }');
+assert.equal(current,expected,'only brand hero heading removed; tagline promoted without other JSX changes');
 postcss.parse(newCSS).walkRules(r=>{assert.equal(r.parent.name,'media');assert.ok(r.parent.params.startsWith('(min-width: 1024px)') || r.parent.params==='(max-width: 1023px)');});
 assert.doesNotMatch(newCSS,/background:|font-family:|animation:|@keyframes|box-shadow:/);
 assert.doesNotMatch(newCSS,/right: -128px|position: absolute/,'remove former desktop mascot positioning');
@@ -48,20 +49,20 @@ try{
  for(const logged of [false,true])for(const width of [1024,1280,1440,1920])for(const height of (width===1280?[720,900]:[900])){
   const m=await measure('new',width,logged,height);
   for(const group of ['copy','title','stats','divider','tagline','desc','rating'])assert.ok(Math.abs(m[group].cx-width/2)<1,`${group} centered ${width} logged=${logged}: ${m[group].cx}`);
-  assert.ok(Math.abs(m.tagline.y-(m.title.y+m.title.h)-16)<1);
+  assert.deepEqual(m.title,m.tagline,'tagline is the sole hero h1');
   assert.ok(Math.abs(m.desc.y-(m.tagline.y+m.tagline.h)-24)<1);
   assert.ok(Math.abs(m.rating.y-(m.desc.y+m.desc.h)-40)<1);
   assert.ok(Math.abs(m.stats.y-(m.rating.y+m.rating.h)-40)<1);
   assert.ok(Math.abs(m.buttons[0].y-(m.stats.y+m.stats.h)-48)<1);
-  const before=await measure('old',width,logged,height);assert.equal(m.title.y,before.title.y,'upper spacing unchanged');for(const group of ['title','tagline','desc','rating','stats']){assert.equal(m[group].w,before[group].w);assert.equal(m[group].h,before[group].h,'existing scale preserved');}assert.ok(m.hero.y+m.hero.h-m.buttons[0].y-m.buttons[0].h>=(height<=800?56:128)-1);
+  const before=await measure('old',width,logged,height);assert.equal(m.title.y,before.title.y,'upper spacing unchanged');for(const group of ['tagline','desc','rating','stats']){assert.equal(m[group].w,before[group].w);assert.equal(m[group].h,before[group].h,'existing scale preserved');}assert.ok(m.hero.y+m.hero.h-m.buttons[0].y-m.buttons[0].h>=(height<=800?56:128)-1);
   assert.ok(Math.abs(m.video.w-(m.body.w-48))<=2,'desktop video matches content width');
   assert.equal(m.stageDisplay,'block');assert.equal(m.copy.w,760);
   assert.equal(m.mascot.w,0,'floating mascot has no desktop box');assert.equal(m.mascot.h,0);
   assert.ok(m.hero.h<=height,`hero ${m.hero.h}px must fit ${width}x${height}`);
-  assert.ok(m.title.h<=93,'title stays on one line');assert.ok(m.tagline.h<=96,'tagline stays on two intentional lines');assert.ok(m.desc.h<=65,'description stays on two lines');
+  assert.ok(m.tagline.h<=96,'tagline stays on two intentional lines');assert.ok(m.desc.h<=65,'description stays on two lines');
   for(const button of m.buttons)assert.equal(button.h,56);
   if(!logged){assert.equal(m.buttons.length,3);assert.equal(m.buttons[1].w,m.buttons[2].w);assert.ok(m.buttons[1].w>=144);assert.ok(m.buttons.every(b=>Math.abs(b.cy-m.buttons[0].cy)<1));assert.ok(Math.abs((m.buttons[0].x+m.buttons[2].x+m.buttons[2].w)/2-width/2)<1);for(let i=1;i<3;i++)assert.ok(Math.abs(m.buttons[i].x-(m.buttons[i-1].x+m.buttons[i-1].w)-16)<1);}
  }
- console.log('PASS Chromium: 760px hero centered at viewport50%, symmetric stats, 56px CTA row/16px gaps/equal secondary buttons; floating mascot has no desktop box; no excessive line wraps; size/upper spacing unchanged; extra lower clearance and group gaps; hero fits 1280x720 and 1440x900 plus desktop widths1024/1920 at900px, guest+login. Centered responsive hero320/375/768/1023; unchanged mobile video and full content-width desktop video.');
+ console.log('PASS Chromium: 760px hero centered at viewport50%, symmetric stats, 56px CTA row/16px gaps/equal secondary buttons; floating mascot has no desktop box; no excessive line wraps; brand heading removed and tagline is semantic h1; remaining scale/upper spacing unchanged; extra lower clearance and group gaps; hero fits 1280x720 and 1440x900 plus desktop widths1024/1920 at900px, guest+login. Centered responsive hero320/375/768/1023; unchanged mobile video and full content-width desktop video.');
 
 }finally{if(browser)await browser.close();fs.rmSync(dir,{recursive:true,force:true});}
