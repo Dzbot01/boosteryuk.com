@@ -78,6 +78,13 @@ function ad_user_select($conn) {
     return "u.name AS user_name, " . (isset($c['username']) ? 'u.username' : 'NULL') . " AS username, u.email AS user_email";
 }
 
+// Lightweight root-only feed, before any legacy deposit import or mutation.
+if ($action === 'notifications') {
+    if (!empty($_SERVER['HTTP_X_CHILD_PANEL'])) ad_out(['ok'=>false,'message'=>'Indikator admin hanya untuk domain utama.'],403);
+    require_once __DIR__.'/admin_notifications_lib.php';
+    ad_out(['ok'=>true,'markers'=>an_snapshot($conn)]);
+}
+
 // Saldo provider dibaca langsung di server, tidak mempercayai nominal dari browser.
 if ($action === 'provider_health') {
     require __DIR__ . '/config.php';
