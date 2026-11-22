@@ -1,13 +1,27 @@
-/* Desktop hero copy only. Keep the existing grid, artwork and <1024px layout. */
+/* Only the homepage hero layout at desktop sizes. Mobile/tablet keep their
+   original classes; the action wrapper uses display:contents below 1024px. */
 @media (min-width: 1024px) {
+  .home-hero-stage {
+    position: relative;
+    display: block;
+  }
+
   .home-hero-copy {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 600px;
-    margin-inline: auto;
+    max-width: 560px;
+    margin: 0 auto;
     text-align: center;
+  }
+
+  /* Layout reserves 64px for the signed-in desktop rail. Correct only this
+     text block's 32px center offset, without touching the rail or background. */
+  :where(.lg\:pl-16) .home-hero-copy {
+    left: -32px;
   }
 
   .home-hero-copy > h1 {
@@ -16,12 +30,12 @@
 
   .home-hero-copy > .home-hero-tagline {
     max-width: 100%;
-    margin: 16px 0 0;
+    margin: 12px 0 0;
   }
 
   .home-hero-copy > .home-hero-description {
     max-width: 560px;
-    margin: 24px 0 0;
+    margin: 16px 0 0;
   }
 
   .home-hero-copy > .home-hero-trust {
@@ -37,37 +51,59 @@
   }
 
   .home-hero-copy .home-hero-stats {
-    justify-content: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+    align-items: center;
     gap: 32px;
-    margin-top: 24px;
+    width: 100%;
+    max-width: 320px;
+    margin: 24px auto 0;
   }
 
-  .home-hero-copy > .home-hero-primary {
+  .home-hero-copy > .home-hero-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 12px;
     margin-top: 32px;
   }
 
-  .home-hero-copy > .home-hero-auth {
-    justify-content: center;
-    gap: 8px;
-    margin-top: 16px;
+  .home-hero-actions > .home-hero-primary,
+  .home-hero-actions > .home-hero-auth {
+    margin: 0;
   }
 
-  .home-hero-copy .home-hero-primary > button,
-  .home-hero-copy .home-hero-auth > button {
+  .home-hero-actions > .home-hero-auth {
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .home-hero-actions .home-hero-primary > button,
+  .home-hero-actions .home-hero-auth > button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    border-radius: 9999px;
-  }
-
-  .home-hero-copy .home-hero-primary > button {
-    min-height: 56px;
-    padding: 16px 32px;
-  }
-
-  .home-hero-copy .home-hero-auth > button {
     height: 48px;
     padding: 8px 24px;
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+
+  .home-hero-actions .home-hero-auth > button {
+    min-width: 120px;
+  }
+
+  /* Keep the original visual's children, size cap, colors and animation.
+     Only its outer Reveal leaves the flow so it cannot offset the text. */
+  .home-hero-stage > .home-hero-mascot {
+    position: absolute;
+    top: 50%;
+    right: -128px;
+    width: 448px;
+    translate: 0 -50%;
+    pointer-events: none;
   }
 }

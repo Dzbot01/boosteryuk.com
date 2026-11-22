@@ -67,7 +67,7 @@ export default function HomePage() {
         </div>
 
         <div className="mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:pb-24 lg:pt-32">
-          <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="home-hero-stage grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <Reveal className="home-hero-copy">
             <h1 className="font-display text-[44px] font-extrabold leading-[1.02] tracking-[-0.04em] text-white sm:text-[58px] lg:text-[64px]">
               <span className="by-accent-hero">{settings.brandName}</span>
@@ -132,6 +132,7 @@ export default function HomePage() {
               </div>
             </div>
             
+            <div className="home-hero-actions contents">
             {/* CTA — cek status (tombol bubble animasi, tanpa ikon kaca pembesar) */}
             <div className="home-hero-primary mt-7">
               <button onClick={() => navigate('/cek-status')} className="by-bubble-button" aria-label="Cek Status Pesanan">
@@ -175,9 +176,10 @@ export default function HomePage() {
                 </button>
               </div>
             )}
+            </div>
           </Reveal>
 
-          <Reveal delay={140}>
+          <Reveal delay={140} className="home-hero-mascot">
             {/* Visual kanan — logo beranimasi dengan beberapa lingkaran di belakangnya
                 (tanpa card/orb), mengikuti versi awal. Warna ring netral agar pas di tema abu-abu. */}
             <div className="relative mx-auto flex aspect-square w-full max-w-[20rem] items-center justify-center sm:max-w-sm lg:max-w-md">
