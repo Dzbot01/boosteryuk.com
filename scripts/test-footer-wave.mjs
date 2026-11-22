@@ -31,12 +31,11 @@ try{
   const originalItems=originalSelect(fixture.getUserMenuItems(true,false,true).find(i=>i.id==='nokos').icon,fixture.baseMenu,fixture.authMenu,['payment','struk'],'profil',auth.user,admin,child);
   assert.deepEqual(fixture.getUserMenuItems(signedIn,admin,child),originalItems);
   const html=fixture.render();const dom=new JSDOM(html);const q=s=>dom.window.document.querySelector(s);
-  const expected=[];if(!child)expected.push(['Playground','/playground']);if(!admin&&owner&&child)expected.push(['Admin Panel Toko','/panel-admin']);
-  for(const item of admin?fixture.getAdminMenuItems(child):originalItems)expected.push([item.label,admin?item.path:fixture.ROUTE_PATH[item.id]]);
-  if(signedIn)expected.push(['Profil & Pengaturan','/profil'],['Keluar',null]);
-  const actual=[...dom.window.document.querySelectorAll('.site-footer-nav .site-footer-row')].map(e=>[e.querySelector('.site-footer-menu-label').textContent,e.getAttribute('href')]);assert.deepEqual(actual,expected,'footer reproduces visible header/sidebar menu order and destinations');
+  const expected=[];if(!child)expected.push(['Playground','/playground']);
+  for(const item of fixture.getUserMenuItems(false,false,child))expected.push([item.label,fixture.ROUTE_PATH[item.id]]);
+  const actual=[...dom.window.document.querySelectorAll('.site-footer-nav .site-footer-row')].map(e=>[e.textContent,e.getAttribute('href')]);assert.deepEqual(actual,expected,'footer reproduces visible header/sidebar menu order and destinations');
   assert.deepEqual([...dom.window.document.querySelectorAll('.site-footer-socials a')].map(a=>a.getAttribute('href')),['#','#','#','#']);assert.equal(q('.site-footer-logo img').getAttribute('src'),'/logo.webp');assert.ok(q('.site-footer-bottom').textContent.includes('Existing copyright'));
-  assert.deepEqual([...dom.window.document.querySelectorAll('.site-footer-bottom a')].map(a=>a.textContent),['Layanan','Cek Status','Artikel','Tentang','Syarat','Privasi']);
+  assert.deepEqual([...dom.window.document.querySelectorAll('.site-footer-bottom a')].map(a=>a.textContent),['Syarat','Privasi']);
   if(signedIn&&!admin&&!child)sample=html;dom.window.close();
  }
  const css=fs.readFileSync('src/components/Footer.css','utf8');postcss.parse(css).walkRules(r=>assert.ok(r.selectors.every(s=>s.startsWith('.site-footer'))));assert.doesNotMatch(css,/@keyframes|animation:|transition:|gradient/);
@@ -44,9 +43,9 @@ try{
  browser=await pw.launch({headless:true,executablePath:await chromium.executablePath(),args:chromium.args});const page=await browser.newPage();await page.route('**/*',r=>r.abort());
  for(const dark of [false,true])for(const width of [360,375,768,1024,1440,1920]){
   await page.setViewportSize({width,height:900});await page.setContent(`<html class="${dark?'dark':''}"><style>${fullCSS}${css}</style><body>${sample}</body></html>`);
-  const m=await page.evaluate(()=>{const q=s=>document.querySelector(s),r=e=>{const b=e.getBoundingClientRect();return {x:b.x,y:b.y,w:b.width,h:b.height,right:b.right,bottom:b.bottom};};return {overflow:document.documentElement.scrollWidth>innerWidth,brand:r(q('.site-footer-brand')),nav:r(q('.site-footer-nav')),wave:r(q('.site-footer-wave')),body:r(q('.site-footer-body')),blue:getComputedStyle(q('.site-footer-body')).backgroundColor,fill:getComputedStyle(q('.site-footer-wave')).fill,rows:[...document.querySelectorAll('.site-footer-row')].map(r)};});
-  assert.equal(m.overflow,false,`no footer overflow ${width}`);assert.equal(m.wave.w,width);assert.equal(m.wave.h,60);assert.ok(Math.abs(m.wave.bottom-m.body.y)<=1,'wave and body have no gap');assert.equal(m.blue,'rgb(14, 165, 233)');assert.equal(m.fill,m.blue);assert.ok(m.rows.every(r=>r.h>=56));
+  const m=await page.evaluate(()=>{const q=s=>document.querySelector(s),r=e=>{const b=e.getBoundingClientRect();return {x:b.x,y:b.y,w:b.width,h:b.height,right:b.right,bottom:b.bottom};};return {overflow:document.documentElement.scrollWidth>innerWidth,brand:r(q('.site-footer-brand')),nav:r(q('.site-footer-nav')),wave:r(q('.site-footer-wave')),body:r(q('.site-footer-body')),blue:getComputedStyle(q('.site-footer-body')).backgroundColor,fill:getComputedStyle(q('.site-footer-wave')).fill,rowBackground:getComputedStyle(q('.site-footer-row')).backgroundColor,rowIcons:document.querySelectorAll('.site-footer-nav svg').length,rows:[...document.querySelectorAll('.site-footer-row')].map(r)};});
+  assert.ok(!/href="\/(?:admin|panel-admin|profil|layanan|deposit)/.test(sample));assert.equal(m.overflow,false,`no footer overflow ${width}`);assert.equal(m.wave.w,width);assert.equal(m.wave.h,60);assert.ok(Math.abs(m.wave.bottom-m.body.y)<=1,'wave and body have no gap');assert.equal(m.blue,'rgb(14, 165, 233)');assert.equal(m.fill,m.blue);assert.equal(m.rowBackground,'rgba(0, 0, 0, 0)');assert.equal(m.rowIcons,0);assert.ok(m.rows.every(r=>r.h>=44));
   if(width>=1024)assert.equal(m.brand.y,m.nav.y,'two desktop columns');else assert.ok(m.nav.y>=m.brand.bottom,'one mobile/tablet column');
  }
- console.log('PASS: footer/header/sidebar menu parity across guest/user/admin/child/owner, old links/copyright/logo retained, no invented social URLs. Chromium wave/no seam, blue/dark parity, one/two columns, row targets and no overflow360–1920px.');
+ console.log('PASS: footer always matches signed-out menu across guest/user/admin/child/owner; sidebar selection unchanged, legal/copyright/logo retained, no invented social URLs. Chromium wave/no seam, blue/dark parity, one/two columns, row targets and no overflow360–1920px.');
 }finally{if(browser)await browser.close();fs.rmSync(dir,{recursive:true,force:true});}

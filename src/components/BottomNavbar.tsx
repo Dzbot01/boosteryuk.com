@@ -1,4 +1,5 @@
 import UserAvatar from './UserAvatar';
+import { createPortal } from 'react-dom';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Settings, HelpCircle, Music, Pause } from 'lucide-react';
@@ -9,7 +10,8 @@ import { useMusic } from '../context/MusicContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { IS_CHILD_PANEL } from '../lib/apiBase';
 
-export default function BottomNavbar() {
+export default function BottomNavbar({ placement = 'bottom', onDark = false }: { placement?: 'bottom' | 'header'; onDark?: boolean }) {
+  const inHeader = placement === 'header';
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,18 +43,19 @@ export default function BottomNavbar() {
 
   return (
     <>
-      <div className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2">
-        <div className="relative flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 p-1.5 shadow-[0_12px_30px_-8px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-slate-700/60 dark:bg-black/95 dark:shadow-black/40">
+      <div data-navigation-controls={placement} className={inHeader ? 'hidden lg:block' : 'fixed bottom-5 left-1/2 z-30 -translate-x-1/2 lg:hidden'}>
+        <div className={inHeader ? 'relative flex flex-row-reverse items-center gap-1' : 'relative flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 p-1.5 shadow-[0_12px_30px_-8px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-slate-700/60 dark:bg-black/95 dark:shadow-black/40'}>
           {items.map(({ key, icon: Icon, label, open, on }) => (
             <button
               key={key}
+              style={inHeader ? { order: key === 'settings' ? 0 : 3 } : undefined}
               onClick={open}
               aria-label={label}
               title={label}
               className={`group relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-250 active:scale-90 ${
                 on
                 ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-cyan-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-cyan-400'
+                  : inHeader && onDark ? 'text-white/90 hover:bg-white/10 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-cyan-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-cyan-400'
               }`}
             >
               <Icon
@@ -65,8 +68,8 @@ export default function BottomNavbar() {
           ))}
 
           {showMusic && (
-          <div className="relative">
-            {showTooltip && (
+          <div className="relative" style={inHeader ? { order: 2 } : undefined}>
+            {showTooltip && !inHeader && (
               <div className="absolute bottom-full left-1/2 z-10 mb-3 w-max max-w-[220px] -translate-x-1/2 animate-fade-in rounded-xl bg-slate-900 px-3.5 py-2.5 text-center shadow-xl dark:bg-slate-100">
                 <p className="text-[11.5px] font-bold leading-snug text-white dark:text-slate-900">
                   Gunakan Musik
@@ -83,7 +86,7 @@ export default function BottomNavbar() {
               className={`group relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-250 active:scale-90 ${
                 playing
                 ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-cyan-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-cyan-400'
+                  : inHeader && onDark ? 'text-white/90 hover:bg-white/10 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-cyan-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-cyan-400'
               }`}
             >
               {playing? (
@@ -106,9 +109,10 @@ export default function BottomNavbar() {
 
           {user && (
             <>
-              <span className="mx-0.5 h-7 w-px bg-slate-200 dark:bg-slate-700" />
+              {!inHeader && <span className="mx-0.5 h-7 w-px bg-slate-200 dark:bg-slate-700" />}
               <button
                 onClick={() => navigate('/profil')}
+                style={inHeader ? { order: 1 } : undefined}
                 aria-label="Profil"
                 title="Profil"
                 className="group relative flex h-10 w-10 items-center justify-center rounded-full font-display text-[12px] font-extrabold transition-transform duration-250 active:scale-90 focus-visible:outline-2 focus-visible:outline-cyan-500"
@@ -131,8 +135,10 @@ export default function BottomNavbar() {
         </div>
       </div>
 
-      <FAQModal isOpen={showFAQ} onClose={() => setShowFAQ(false)} />
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      {typeof document !== 'undefined' && createPortal(<>
+        <FAQModal isOpen={showFAQ} onClose={() => setShowFAQ(false)} />
+        <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      </>, document.body)}
     </>
   );
 }

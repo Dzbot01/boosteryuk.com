@@ -1,18 +1,11 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, FlaskConical, LogOut, Settings, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useSiteSettings } from '../context/SiteSettingsContext';
-import { useAuth } from '../context/AuthContext';
-import { usePanelOwner } from '../services/panelApi';
 import { IS_CHILD_PANEL } from '../lib/apiBase';
-import { getAdminMenuItems, getUserMenuItems, ROUTE_PATH } from './SideMenu';
+import { getUserMenuItems, ROUTE_PATH } from './SideMenu';
 import './Footer.css';
 
-// Preserve every previous footer link at the bottom, with its existing label.
+// Keep legal links at the bottom; all other navigation uses the public grid.
 const LINKS = [
-  { to: '/layanan', label: 'Layanan' },
-  { to: '/cek-status', label: 'Cek Status' },
-  { to: '/artikel', label: 'Artikel' },
-  { to: '/about', label: 'Tentang' },
   { to: '/terms', label: 'Syarat' },
   { to: '/privacy', label: 'Privasi' },
 ];
@@ -24,20 +17,11 @@ const SOCIALS = [
   { label: 'X', icon: <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.6 5.5 22H2.3l8.2-9.4L2.8 2h6.5l4.4 6.7L18.9 2ZM17.7 20h1.7L8.2 4H6.4l11.3 16Z" /></svg> },
 ];
 
-/** Global footer: navigation follows exactly the hamburger's visibility rules. */
+/** Global footer: public navigation only, independent of the current account. */
 export default function Footer() {
   const { settings } = useSiteSettings();
-  const { user, isAdmin, logout } = useAuth();
-  const isPanelOwner = usePanelOwner(user?.token) === true && IS_CHILD_PANEL;
-  const navigate = useNavigate();
-  const items = isAdmin
-    ? getAdminMenuItems(IS_CHILD_PANEL).map(item => ({ ...item, to: item.path }))
-    : getUserMenuItems(user !== null, isAdmin, IS_CHILD_PANEL).map(item => ({ ...item, to: ROUTE_PATH[item.id] }));
-  const rowContent = (label: string, Icon: typeof Settings) => <>
-    <span className="site-footer-menu-icon"><Icon aria-hidden="true" strokeWidth={1.8} /></span>
-    <span className="site-footer-menu-label">{label}</span>
-    <ChevronRight className="site-footer-chevron" aria-hidden="true" />
-  </>;
+  // Footer is always the public (signed-out) menu, even for admin accounts.
+  const items = getUserMenuItems(false, false, IS_CHILD_PANEL).map(item => ({ ...item, to: ROUTE_PATH[item.id] }));
 
   return (
     <footer className="site-footer">
@@ -60,13 +44,8 @@ export default function Footer() {
             <nav aria-label="Navigasi footer" className="site-footer-nav">
               <h2>NAVIGASI</h2>
               <ul>
-                {!IS_CHILD_PANEL && <li><Link to="/playground" className="site-footer-row">{rowContent('Playground', FlaskConical)}</Link></li>}
-                {!isAdmin && isPanelOwner && <li><Link to="/panel-admin" className="site-footer-row">{rowContent('Admin Panel Toko', Shield)}</Link></li>}
-                {items.map(item => <li key={item.id}><Link to={item.to} className="site-footer-row">{rowContent(item.label, item.icon)}</Link></li>)}
-                {user && <>
-                  <li><Link to="/profil" className="site-footer-row">{rowContent('Profil & Pengaturan', Settings)}</Link></li>
-                  <li><button type="button" className="site-footer-row" onClick={() => { logout();navigate('/'); }}>{rowContent('Keluar', LogOut)}</button></li>
-                </>}
+                {!IS_CHILD_PANEL && <li><Link to="/playground" className="site-footer-row">Playground</Link></li>}
+                {items.map(item => <li key={item.id}><Link to={item.to} className="site-footer-row">{item.label}</Link></li>)}
               </ul>
             </nav>
           </div>

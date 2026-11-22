@@ -1,0 +1,168 @@
+/* Only the homepage hero layout at desktop sizes. Mobile/tablet keep their
+   original classes; the action wrapper uses display:contents below 1024px. */
+@media (min-width: 1024px) {
+  .home-hero-container {
+    padding-top: 104px;
+    padding-bottom: 128px;
+  }
+
+  .home-hero-stage {
+    position: relative;
+    display: block;
+  }
+
+  .home-hero-copy {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  /* Layout reserves 64px for the signed-in desktop rail. Correct only this
+     text block's 32px center offset, without touching the rail or background. */
+  :where(.lg\:pl-16) .home-hero-copy {
+    left: -32px;
+  }
+
+  .home-hero-copy > h1 {
+    margin: 0;
+    font-size: clamp(56px, 6vw, 88px);
+    line-height: 1.05;
+  }
+
+  .home-hero-copy > .home-hero-tagline {
+    max-width: 100%;
+    margin: 16px 0 0;
+    font-size: clamp(26px, 2.6vw, 38px);
+    line-height: 1.25;
+  }
+
+  .home-hero-copy > .home-hero-description {
+    max-width: 620px;
+    margin: 24px 0 0;
+    font-size: 20px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);
+  }
+
+  .home-hero-copy > .home-hero-trust {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 40px;
+  }
+
+  .home-hero-copy .home-hero-rating {
+    justify-content: center;
+    column-gap: 16px;
+    row-gap: 8px;
+  }
+
+  .home-hero-copy .home-hero-stats {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+    align-items: center;
+    gap: 64px;
+    width: 100%;
+    max-width: 448px;
+    margin: 40px auto 0;
+  }
+
+  .home-hero-copy > .home-hero-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 16px;
+    margin-top: 48px;
+  }
+
+  .home-hero-actions > .home-hero-primary,
+  .home-hero-actions > .home-hero-auth {
+    margin: 0;
+  }
+
+  .home-hero-actions > .home-hero-auth {
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .home-hero-actions .home-hero-primary > button,
+  .home-hero-actions .home-hero-auth > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 56px;
+    padding: 8px 32px;
+    font-size: 17px;
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+
+  .home-hero-actions .home-hero-auth > button {
+    width: 160px;
+    min-width: 160px;
+  }
+
+  .home-hero-actions button > svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .home-hero-rating > div:first-child > span {
+    width: 44px;
+    height: 44px;
+  }
+
+  .home-hero-rating img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .home-hero-rating p {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.75);
+    font-weight: 500;
+  }
+
+  .home-hero-rating svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .home-hero-stats > div > p:first-child {
+    font-size: 44px;
+  }
+
+  .home-hero-stats > div > p:last-child {
+    font-size: 15px;
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.75);
+    font-weight: 500;
+  }
+
+  .home-hero-stats > span {
+    height: 48px;
+  }
+
+  /* The floating artwork is mobile/tablet only, with no desktop footprint. */
+  .home-hero-mascot {
+    display: none;
+  }
+}
+
+/* Preserve breathing room without exceeding common 720/768px desktop heights. */
+@media (min-width: 1024px) and (max-height: 800px) {
+  .home-hero-container {
+    padding-top: 88px;
+    padding-bottom: 56px;
+  }
+}
