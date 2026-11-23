@@ -203,14 +203,14 @@ export default function HomePage() {
         <h2 id="top-service-title" className="mb-4 text-center font-display text-2xl font-extrabold text-slate-900 lg:text-3xl dark:text-white">Top Service</h2>
         <img src="/images/top-service-google-maps.png" alt="Top Service Google Maps — ilustrasi tampilan lokasi dan ulasan bisnis" className="mx-auto h-auto w-full max-w-4xl rounded-2xl object-contain" loading="lazy" width={1377} height={1223} />
         <GoogleMapsReviewColumns />
-        <div aria-hidden className="mt-8 h-px w-full bg-slate-200/90 dark:bg-slate-700/70" />
+        <div aria-hidden className="mt-10 h-px w-full bg-slate-200/90 dark:bg-slate-700/70" />
       </section>
 
       {/* ================= VIDEO PLAYER (antara hero & body) =================
           Web utama: video Boosteryuk (Supabase Storage). Child panel: video milik panel bila ada.
           Tidak dapat diunduh: controlsList=nodownload + klik-kanan dinonaktifkan. */}
       {dashboardVideo && (
-        <section className="home-dashboard-video mx-auto mt-6 max-w-xl px-4 sm:px-6 lg:max-w-6xl">
+        <section className="home-dashboard-video mx-auto mt-12 max-w-xl px-4 sm:px-6 lg:max-w-6xl">
           <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-black shadow-[0_26px_60px_-30px_rgba(15,23,42,0.6)] dark:border-slate-700/60">
             <video
               key={dashboardVideo.src}

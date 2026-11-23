@@ -16,12 +16,17 @@ const card=fs.readFileSync('src/components/BuatPesananCard.tsx','utf8');assert.m
 const home=fs.readFileSync('src/pages/HomePage.tsx','utf8');assert.ok(home.indexOf('<GoogleMapsReviewColumns />')<home.indexOf('{dashboardVideo &&'));assert.match(home,/h-px w-full bg-slate-200\/90/);assert.match(home,/OPEN_LOGIN_EVENT, openLogin/);assert.match(home,/sessionStorage\.removeItem\(PENDING_ORDER_PATH_KEY\)/);
 assert.match(fs.readFileSync('src/components/Layout.tsx','utf8'),/\\\/layanan\\\?server=3&service=/);
 const dom=new JSDOM('<div id="root"></div>',{url:'https://boosteryuk.com'});const navCalls=[];
-const {outputFiles}=await build({stdin:{contents:"export {default as Cols, PENDING_ORDER_PATH_KEY, OPEN_LOGIN_EVENT} from './src/components/GoogleMapsReviewColumns';export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';",resolveDir:process.cwd()},bundle:true,write:false,format:'cjs',platform:'node',jsx:'automatic',plugins:[{name:'mock',setup(b){b.onResolve({filter:/(services\/servicesApi|context\/AuthContext|react-router-dom)$/},a=>({path:a.path,namespace:'mock'}));b.onLoad({filter:/.*/,namespace:'mock'},a=>({contents:a.path.endsWith('react-router-dom')?'export const useNavigate=()=>globalThis.navSpy;':a.path.endsWith('AuthContext')?'export const useAuth=()=>globalThis.authState;':'export const fetchServices=async()=>globalThis.gmResult;export const formatRate=(r)=>"Rp"+r;'}));}}]});
-const ctx={process,performance,queueMicrotask,MessageChannel:class{port1={onmessage:null};port2={postMessage:()=>setImmediate(()=>this.port1.onmessage?.())};},module:{exports:{}},exports:{},console,window:dom.window,document:dom.window.document,navigator:dom.window.navigator,setTimeout,clearTimeout,IS_REACT_ACT_ENVIRONMENT:true,CustomEvent:dom.window.CustomEvent,Event:dom.window.Event,sessionStorage:dom.window.sessionStorage,localStorage:dom.window.localStorage,navSpy:(p)=>navCalls.push(p),authState:{user:null},gmResult:{ok:true,categories:['Google Maps Review'],services:[{id:'12',name:'Google Maps Review 5 Bintang',category:'Google Maps Review',type:'default',rate:55000,min:5,max:100,refill:false,cancel:false,description:'No drop'}]}};
+const {outputFiles}=await build({stdin:{contents:"export {default as Cols, PENDING_ORDER_PATH_KEY, OPEN_LOGIN_EVENT} from './src/components/GoogleMapsReviewColumns';export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';",resolveDir:process.cwd()},bundle:true,write:false,format:'cjs',platform:'node',jsx:'automatic',plugins:[{name:'mock',setup(b){b.onResolve({filter:/(services\/servicesApi|context\/AuthContext|react-router-dom)$/},a=>({path:a.path,namespace:'mock'}));b.onLoad({filter:/.*/,namespace:'mock'},a=>({contents:a.path.endsWith('react-router-dom')?'export const useNavigate=()=>globalThis.navSpy;':a.path.endsWith('AuthContext')?'export const useAuth=()=>globalThis.authState;':'export const fetchServices=async()=>{globalThis.gmCalls=(globalThis.gmCalls||0)+1;return globalThis.gmResult;};export const formatRate=(r)=>"Rp"+r;'}));}}]});
+const ctx={process,performance,queueMicrotask,MessageChannel:class{port1={onmessage:null};port2={postMessage:()=>setImmediate(()=>this.port1.onmessage?.())};},module:{exports:{}},exports:{},console,window:dom.window,document:dom.window.document,navigator:dom.window.navigator,setTimeout,clearTimeout,IS_REACT_ACT_ENVIRONMENT:true,CustomEvent:dom.window.CustomEvent,Event:dom.window.Event,sessionStorage:dom.window.sessionStorage,localStorage:dom.window.localStorage,navSpy:(p)=>navCalls.push(p),authState:{user:null},gmCalls:0,gmResult:null};
 vm.runInNewContext(outputFiles[0].text,ctx);const {Cols,PENDING_ORDER_PATH_KEY,OPEN_LOGIN_EVENT,createElement:h,act,createRoot}=ctx.module.exports;
+const GM={ok:true,categories:['Google Maps Review'],services:[{id:'12',name:'Google Maps Review 5 Bintang',category:'Google Maps Review',type:'default',rate:55000,min:5,max:100,refill:false,cancel:false,description:'No drop'}]};
+let resolveGm;ctx.gmResult=new Promise(r=>{resolveGm=r;});
 const root=createRoot(dom.window.document.getElementById('root'));let opened=0;dom.window.addEventListener(OPEN_LOGIN_EVENT,()=>opened++);
+const freshRoot=()=>createRoot(dom.window.document.body.appendChild(dom.window.document.createElement('div')));
 try{
  await act(async()=>root.render(h(Cols)));
+ assert.equal(ctx.gmCalls,1);assert.equal(dom.window.document.querySelectorAll('[role="status"]').length,2,'skeleton kategori+layanan saat memuat');assert.ok(dom.window.document.querySelector('.animate-pulse'));assert.equal(dom.window.document.querySelectorAll('button[aria-label^="Pesan"]').length,0);
+ await act(async()=>{resolveGm(GM);});
  const secs=dom.window.document.querySelectorAll('section');assert.equal(secs.length,2);assert.match(secs[0].getAttribute('aria-label'),/Kategori/);assert.match(secs[1].getAttribute('aria-label'),/Layanan/);
  assert.match(secs[0].textContent,/Google Maps Review/);assert.match(secs[1].textContent,/Google Maps Review 5 Bintang/);assert.match(secs[1].textContent,/Rp55000/);
  const cart=dom.window.document.querySelector('button[aria-label="Pesan Google Maps Review 5 Bintang"]');assert.ok(cart);
@@ -29,7 +34,17 @@ try{
  ctx.authState={user:{plusActive:false}};
  await act(async()=>root.render(h(Cols)));await act(async()=>dom.window.document.querySelector('button[aria-label="Pesan Google Maps Review 5 Bintang"]').click());
  assert.deepEqual(navCalls,['/layanan?server=3&service=12'],'logged-in user goes straight to order step');
- ctx.gmResult={ok:true,services:[]};const root2=createRoot(dom.window.document.createElement('div'));
- await act(async()=>root2.render(h(Cols)));assert.equal(dom.window.document.querySelectorAll('section').length,2,'empty data renders nothing new');
+ // error state: alert jelas + tombol coba lagi memanggil ulang API
+ ctx.gmResult={ok:false,message:'medanpedia_config.php belum ada di /api.'};const rootErr=freshRoot();
+ await act(async()=>rootErr.render(h(Cols)));
+ const alert=dom.window.document.querySelector('[role="alert"]');assert.ok(alert);assert.match(alert.textContent,/gagal dimuat/i);assert.match(alert.textContent,/medanpedia_config\.php belum ada/);
+ const before=ctx.gmCalls;
+ await act(async()=>[...alert.querySelectorAll('button')].find(b=>/Coba Lagi/.test(b.textContent)).click());
+ assert.equal(ctx.gmCalls,before+1,'retry memanggil ulang fetchServices');
+ // ready tetapi katalog kosong: pesan informatif, kolom tetap tampil
+ ctx.gmResult={ok:true,categories:[],services:[]};const rootEmpty=freshRoot();
+ await act(async()=>rootEmpty.render(h(Cols)));
+ assert.equal(dom.window.document.querySelectorAll('section').length>=2,true);assert.match(dom.window.document.body.textContent,/belum tersedia di Server 3/);
 }finally{await act(async()=>root.unmount());dom.window.close();}
-console.log('PASS PHP syntax; Server 3 order/status/refill contracts; S3 prefix + refund + pending; auto-detect grouping/fallback; dashboard GM columns + cart + login gate + resume; Server 3 hidden from dropdown. No live Medanpedia calls.');
+const home2=fs.readFileSync('src/pages/HomePage.tsx','utf8');assert.match(home2,/mt-10 h-px w-full bg-slate-200\/90/);assert.match(home2,/home-dashboard-video mx-auto mt-12/);
+console.log('PASS PHP syntax; Server 3 order/status/refill contracts; S3 prefix + refund + pending; auto-detect grouping/fallback; dashboard GM columns always visible (skeleton/error+retry/empty) + cart + login gate + resume; wider gap before video; Server 3 hidden from dropdown. No live Medanpedia calls.');
