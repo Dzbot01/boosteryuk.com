@@ -1,6 +1,7 @@
 import { invokeProxy } from '../supabase';
 
 export interface OrderRequest {
+  server?: 1 | 2;
   serviceId: string;
   serviceName: string; // WAJIB: buat simpan ke riwayat
   link: string;
@@ -13,6 +14,7 @@ export interface OrderResponse {
   ok: boolean;
   message: string;
   orderId: string | null;
+  price?: number;
   new_balance?: number; // BALIKAN SALDO BARU DARI PHP
 }
 
@@ -23,12 +25,14 @@ interface RawResponse {
   msg?: string;
   orderId?: number | string;
   order?: number | string;
+  price?: number;
   new_balance?: number;
 }
 
 export async function placeOrder(req: OrderRequest): Promise<OrderResponse> {
   const edge = await invokeProxy<RawResponse>({
     action: 'order',
+    server: req.server ?? 1,
     serviceId: req.serviceId,
     serviceName: req.serviceName, // KIRIM KE PHP
     link: req.link,
@@ -72,6 +76,7 @@ export async function placeOrder(req: OrderRequest): Promise<OrderResponse> {
     ok: ok === true,
     message: String(message),
     orderId: orderId != null ? String(orderId) : null,
+    price: data.price,
     new_balance: data.new_balance
   };
 }

@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {createRequire} from 'node:module';
+import {build} from 'esbuild';
+import vm from 'node:vm';
+const require=createRequire(import.meta.url);
+const Parser=require('php-parser');const parser=new Parser({parser:{php7:true}});
+for(const f of ['naizop_config.example.php','naizop_lib.php','naizop_services.php','naizop_status.php','order.php','order_price.php','admin_data.php'])parser.parseCode(fs.readFileSync('php-api/'+f,'utf8'));
+async function load(entry){const {outputFiles}=await build({stdin:{contents:entry,resolveDir:process.cwd()},bundle:true,write:false,format:'cjs',platform:'node',define:{'import.meta.env.VITE_API_URL':'undefined'},plugins:[{name:'tenant',setup(b){b.onResolve({filter:/lib\/tenant$/},()=>({path:'tenant',namespace:'mock'}));b.onLoad({filter:/.*/,namespace:'mock'},()=>({contents:'export const markupFactor=()=>1;'}));}}]});const mod={exports:{}};const context={module:mod,exports:mod.exports,fetch:globalThis.fetch,localStorage:{getItem:()=>null},window:{location:{hostname:'boosteryuk.com'}},performance,Date,console,Event};vm.runInNewContext(outputFiles[0].text,context);return mod.exports;}
+const requests=[];
+globalThis.fetch=async(url,opts)=>{
+ const body=JSON.parse(opts.body);requests.push({url,body});
+ if(url.endsWith('naizop_services.php'))return new Response(JSON.stringify({ok:true,services:[{service:17,name:'Followers',category:'Instagram',type:'Default',rate:14400,min:50,max:10000,refill:false,cancel:false}]}));
+ if(url.endsWith('services.php'))return new Response(JSON.stringify([{service:17,name:'Old provider',rate:1000}]));
+ if(url.endsWith('naizop_status.php'))return new Response(JSON.stringify({status:true,orders:{'S2-123':{order_status:'completed',remains:0}}}));
+ if(url.endsWith('status.php'))return new Response(JSON.stringify({status:true,order_id:'123',order_status:'processing'}));
+ if(url.endsWith('order.php'))return new Response(JSON.stringify({ok:true,orderId:'S2-123',price:188,new_balance:9812}));
+ throw new Error('unexpected '+url);
+};
+const m=await load("export * from './src/services/servicesApi';export * from './src/services/checkoutApi';export * from './src/services/orderApi';export {invokeProxy} from './src/supabase';");
+let r=await m.fetchServices();assert.equal(r.services[0].name,'Old provider');assert.ok(requests.at(-1).url.endsWith('/services.php'));
+r=await m.fetchServices(2);assert.equal(r.services[0].id,'17');assert.equal(r.services[0].rate,14400);assert.equal(r.services[0].min,50);
+assert.equal(m.applyMarkup(r.services[0].rate),18825);assert.equal(m.applyMarkup(r.services[0].rate,true),15400);
+const order=await m.placeOrder({server:2,serviceId:'17',serviceName:'Followers',link:'https://example.com',quantity:10,price:188});assert.equal(requests.at(-1).body.server,2);assert.equal(order.price,188);assert.equal(order.orderId,'S2-123');
+const status=await m.checkOrderStatus('123,S2-123');assert.equal(status.orders.length,2);assert.ok(requests.some(x=>x.url.endsWith('/naizop_status.php')));assert.equal(m.parseOrderIds('S2-123,123,bad').ids.length,2);
+const count=requests.length;const refill=await m.invokeProxy({action:'refill',id:'S2-123'});assert.equal(refill.ok,false);assert.equal(requests.length,count);
+const php=fs.readFileSync('php-api/naizop_lib.php','utf8');assert.match(php,/CURLOPT_SSL_VERIFYPEER=>true/);assert.match(php,/https:\/\/open.er-api.com\/v6\/latest\/USD/);assert.match(php,/time\(\)-\(int\)\$j\['time_last_update_unix'\]<=172800/);assert.match(php,/strtolower\(trim\(\$s\['type'\]/);assert.doesNotMatch(php,/CURLOPT_SSL_VERIFYPEER=>false/);
+const backend=fs.readFileSync('php-api/order.php','utf8');assert.ok(backend.indexOf('bk_order_price(')<backend.indexOf('UPDATE users SET balance = balance -'));assert.match(backend,/'runs'=>1/);assert.match(backend,/'S2-'\./);assert.match(backend,/SET balance=balance\+\?/);assert.match(backend,/'S2-PENDING-'/);
+const ui=fs.readFileSync('src/components/BuatPesananCard.tsx','utf8');assert.match(ui,/useState<1 \| 2>\(1\)/);assert.match(ui,/\}, \[server\]\)/);assert.match(ui,/if \(!alive\) return/);assert.match(ui,/disabled=\{ordering\}/);assert.match(ui,/const chargedPrice = result.price \?\? price/);
+console.log('PASS PHP parse; Server 1 default/unchanged routes; Server 2 normalization, markup normal/Plus, checkout payload and charged price; mixed status routing; refill isolation; FX/TLS/fail-closed/source safety contracts. No live provider/MySQL calls.');

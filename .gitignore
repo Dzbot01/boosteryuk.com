@@ -17,3 +17,7 @@ php-api/callback_config.php
 .env.*
 php-api/.env
 !.env.example
+
+# Server 2 credentials and short-lived server-side caches
+php-api/naizop_config.php
+php-api/naizop_*cache.json

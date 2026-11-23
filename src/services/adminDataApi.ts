@@ -94,6 +94,7 @@ export const adminDataApi = {
   updateUser: (d: Partial<Pick<AdminUser, 'name' | 'username' | 'email' | 'phone' | 'role' | 'plus'>> & { id: number }) => call<{ user?: AdminUser }>('user_update', d),
   balance: (id: number, amount: number, note: string) => call<{ balance?: number }>('user_balance', { id, amount, note }),
   setOrderId: (id: number, order_id: string) => call<{order_id: string}>('order_id', {id, order_id}),
+  provider2Balance: () => call<{balance: number; currency: string; idr: number; fx: {rate: number; updated_at: number}}>('provider2_balance'),
   providerHealth: () => call<{balance: number; shortfall: number; alert_sent: boolean}>('provider_health'),
   profit: () => call<ProfitData>('profit'),
   deposits: () => call<{ deposits?: AdminDeposit[]; stats?: ProfitData['deposits']; server_time?: string }>('deposits', { limit: 10 }),

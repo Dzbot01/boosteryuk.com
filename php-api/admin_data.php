@@ -85,6 +85,16 @@ if ($action === 'notifications') {
     ad_out(['ok'=>true,'markers'=>an_snapshot($conn)]);
 }
 
+if ($action === 'provider2_balance') {
+    if (!empty($_SERVER['HTTP_X_CHILD_PANEL'])) ad_out(['ok'=>false,'message'=>'Hanya domain utama.'],403);
+    require_once __DIR__.'/naizop_lib.php';
+    try {
+        $b=n2_call('balance');
+        if(isset($b['error']) || !is_numeric($b['balance']??null) || !is_finite((float)$b['balance']) || (float)$b['balance']<0 || ($b['currency']??'')!=='USD')throw new RuntimeException('Saldo USD provider 2 tidak dapat diverifikasi.');
+        $fx=n2_fx();ad_out(['ok'=>true,'balance'=>(float)$b['balance'],'currency'=>'USD','idr'=>round((float)$b['balance']*$fx['rate']),'fx'=>$fx]);
+    } catch(Throwable $e){ad_out(['ok'=>false,'message'=>$e->getMessage()],503);}
+}
+
 // Saldo provider dibaca langsung di server, tidak mempercayai nominal dari browser.
 if ($action === 'provider_health') {
     require __DIR__ . '/config.php';

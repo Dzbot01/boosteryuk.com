@@ -2,6 +2,7 @@ import { MAIN_API } from './lib/apiBase';
 export interface EdgePayload {
   action: 'status' | 'refill' | 'refill_status' | 'services' | 'order' | 'balance';
   id?: string;
+  server?: 1 | 2;
   serviceId?: string;
   serviceName?: string;
   link?: string;
@@ -33,7 +34,13 @@ export async function invokeProxy<T = unknown>(
   payload: EdgePayload
 ): Promise<EdgeResponse<T>> {
   const token = localStorage.getItem('token'); // ambil token login
-  const endpoint = ENDPOINTS[payload.action];
+  const server2Id = payload.id?.startsWith('S2-');
+  if (server2Id && (payload.action === 'refill' || payload.action === 'refill_status')) {
+    return { ok: false, status: 400, data: null, error: 'Refill Server 2 belum tersedia. Hubungi admin.' };
+  }
+  const endpoint = payload.action === 'services' && payload.server === 2
+    ? `${API_BASE_URL}/naizop_services.php`
+    : payload.action === 'status' && server2Id ? `${API_BASE_URL}/naizop_status.php` : ENDPOINTS[payload.action];
 
   if (!endpoint) {
     return { ok: false, status: 400, data: null, error: `Action ${payload.action} tidak ditemukan` };
@@ -43,6 +50,7 @@ export async function invokeProxy<T = unknown>(
     const body: any = { token };
 
 if (payload.action === 'order') {
+  body.server = payload.server ?? 1;
   body.service = payload.serviceId; 
   body.serviceName = payload.serviceName; // TAMBAH
   body.link = payload.link;         

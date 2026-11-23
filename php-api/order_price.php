@@ -72,13 +72,19 @@ function bk_service_rates($apiId, $apiKey, $baseUrl) {
  *         price null + unknown=false → daftar layanan provider tidak bisa dimuat (cadangan: harga kiriman);
  *         price null + unknown=true  → ID layanan tidak ada di daftar → order ditolak.
  */
-function bk_order_price($conn, $userId, $serviceId, $qty, $apiId, $apiKey, $baseUrl) {
+function bk_order_price($conn, $userId, $serviceId, $qty, $apiId, $apiKey, $baseUrl, $server = 1) {
     $tenant = null;
     if (is_file(__DIR__ . '/child_panel_lib.php')) {
         require_once __DIR__ . '/child_panel_lib.php';
         try { $tenant = cp_resolve($conn); } catch (Throwable $e) { $tenant = null; }
     }
-    $rates = bk_service_rates($apiId, $apiKey, $baseUrl);
+    if ($server === 2) {
+        require_once __DIR__.'/naizop_lib.php';
+        $svc = n2_validate_service($serviceId, $qty);
+        $rates = [(string)$serviceId => (float)$svc['rate']];
+    } else {
+        $rates = bk_service_rates($apiId, $apiKey, $baseUrl);
+    }
     if (!$rates) return ['price' => null, 'base' => null, 'tenant' => $tenant, 'unknown' => false];
     if (!isset($rates[(string)$serviceId])) return ['price' => null, 'base' => null, 'tenant' => $tenant, 'unknown' => true];
 

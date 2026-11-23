@@ -24,6 +24,9 @@ require_once __DIR__ . '/riwayat_schema.php'; // kolom target (link SMM) — riw
 
 $data = json_decode(file_get_contents("php://input"), true);
 
+$server = $data['server'] ?? 1;
+if (!in_array($server, [1, 2, '1', '2'], true)) { http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Server tidak valid.']);exit; }
+$server = (int)$server;
 $token    = trim($data['token'] ?? '');
 $service  = trim($data['serviceId'] ?? $data['service'] ?? '');
 $link     = trim($data['target'] ?? $data['link'] ?? '');
@@ -52,7 +55,12 @@ if(!$user || (function_exists('getUserIdByToken') && !getUserIdByToken($token)))
 $user_id = (int)$user['id'];
 
 // 2. HARGA DARI SERVER
-$calc = bk_order_price($conn, $user_id, $service, $quantity, $API_ID, $API_KEY, $BASE_URL);
+try {
+    $calc = bk_order_price($conn, $user_id, $service, $quantity, $API_ID, $API_KEY, $BASE_URL, $server);
+} catch (Throwable $e) {
+    http_response_code(503);echo json_encode(['ok'=>false,'message'=>$server === 2 ? $e->getMessage() : 'Harga tidak dapat diverifikasi.','orderId'=>null]);exit;
+}
+if ($server === 2 && $calc['price'] === null) { http_response_code(503);echo json_encode(['ok'=>false,'message'=>'Harga Server 2 tidak dapat diverifikasi.']);exit; }
 $price = $calc['price'];
 if ($price === null && !empty($calc['unknown'])) {
     http_response_code(400);
@@ -96,6 +104,27 @@ $provider_order_id = null;
 $final_status = 'pending';
 $provider_msg = 'Order masuk antrian. Menunggu eksekusi provider.';
 
+// Server 2 order IDs are namespaced, preventing collisions with Server 1.
+if ($server === 2) {
+    try {
+        $parsed = n2_call('add', ['service'=>(int)$service,'link'=>$link,'quantity'=>$quantity,'runs'=>1]);
+    } catch (Throwable $e) { $parsed = null; }
+    if (is_array($parsed) && isset($parsed['error'])) {
+        // Explicit provider rejection: no order exists, return the debit atomically.
+        $refund=$conn->prepare('UPDATE users SET balance=balance+? WHERE id=?');
+        $refund->bind_param('di',$price,$user_id);$refund->execute();$refund->close();
+        http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Order ditolak Server 2. Saldo telah dikembalikan.','orderId'=>null]);exit;
+    }
+    if (is_array($parsed) && preg_match('/^[1-9][0-9]*$/',(string)($parsed['order']??''))) {
+        $provider_order_id='S2-'.(string)$parsed['order'];
+        $provider_msg='Order berhasil dikirim ke Server 2.';
+    } else {
+        // Timeout is ambiguous: never automatically resubmit/refund a possibly accepted order.
+        $provider_order_id='S2-PENDING-'.bin2hex(random_bytes(8));
+        $provider_msg='Status pengiriman Server 2 belum pasti. Admin akan memeriksa; jangan kirim ulang.';
+    }
+    $serviceName=mb_substr('[Server 2] '.$serviceName,0,255);
+} else {
 // 4. KIRIM KE PROVIDER
 $postFields = [
     'api_id'   => (int)$API_ID,
@@ -128,6 +157,9 @@ if(!$curl_error && is_array($parsed) && ($parsed['status'] ?? false) === true){
     $provider_msg = 'Saldo provider kosong. Order masuk antrian manual. ' . ($parsed['msg'] ?? $curl_error);
 }
 if (!$provider_order_id) $provider_order_id = 'ORD-' . time() . '-' . $user_id;
+
+
+}
 
 // 6. SIMPAN RIWAYAT — target (link yang diinput user) ikut disimpan bila kolom tersedia.
 try { riwayat_ensure_columns($conn); } catch (Throwable $e) { /* hosting tanpa ALTER → lanjut tanpa target */ }
