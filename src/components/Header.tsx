@@ -63,7 +63,7 @@ export default function Header({ onToggleMenu, menuOpen }: HeaderProps) {
           <img src={settings.logoUrl} alt={`${settings.brandName}${settings.brandSuffix}`} className="h-9 w-9 shrink-0 object-contain" />
           <span className="min-w-0 leading-tight">
             <span className="block font-display text-[17px] font-extrabold leading-none tracking-tight">
-              <span className="by-accent">{settings.brandName}</span>
+              <span className="text-sky-400">{settings.brandName}</span>
               <span className={onHeroTop ? 'text-white' : 'text-black dark:text-white'}>{settings.brandSuffix}</span>
             </span>
             {settings.headerTagline && (

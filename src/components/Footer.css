@@ -6,7 +6,7 @@
 .site-footer-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; }
 .site-footer-brand { min-width: 0; max-width: 420px; }
 .site-footer-identity { display: flex; align-items: center; gap: 16px; }
-.site-footer-logo { display: flex; flex: 0 0 72px; width: 72px; height: 72px; align-items: center; justify-content: center; border-radius: 20px; background: rgba(255,255,255,.18); box-shadow: 0 4px 12px rgba(11,27,51,.08); }
+.site-footer-logo { display: flex; flex: 0 0 72px; width: 72px; height: 72px; align-items: center; justify-content: center; border-radius: 20px; background: #fff; box-shadow: 0 4px 12px rgba(11,27,51,.08); }
 .site-footer-logo img { width: 56px; height: 56px; object-fit: contain; }
 .site-footer-name { min-width: 0; font-size: clamp(28px, 3vw, 40px); font-weight: 800; line-height: 1.05; letter-spacing: -.04em; overflow-wrap: anywhere; }
 .site-footer-name > span:last-child { color: #0b1b33; }
