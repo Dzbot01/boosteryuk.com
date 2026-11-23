@@ -10,14 +10,10 @@ import Footer from './Footer';
 import HeaderOrnament from './HeaderOrnament';
 import SessionGuard from './SessionGuard';
 import NexSpaceBanner from './NexSpaceBanner';
-import { useAuth } from '../context/AuthContext';
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
-  const { user } = useAuth();
-  // Mode off (rail ikon) di desktop: sembunyi di dashboard untuk tamu; tampil bila sudah login / di halaman lain.
-  const railVisible = pathname === '/' ? !!user : true;
 
   // Reset scroll position when the route changes (except for in-page anchors).
   useEffect(() => {
@@ -25,7 +21,7 @@ export default function Layout() {
   }, [pathname]);
 
   return (
-    <AdminNotificationsProvider><div className={`relative flex min-h-screen flex-col overflow-x-clip bg-[#eef1f5] text-slate-900 transition-[background-color,border-color,color,padding] duration-300 dark:bg-black dark:text-slate-100 ${railVisible ? 'lg:pl-16' : 'lg:pl-0'}`}>
+    <AdminNotificationsProvider><div className={`relative flex min-h-screen flex-col overflow-x-clip bg-[#eef1f5] text-slate-900 transition-[background-color,border-color,color,padding] duration-300 dark:bg-black dark:text-slate-100 lg:pl-16`}>
       <GuriVoiceSession />
       {/* ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10">

@@ -196,7 +196,7 @@ const rupiah = (n?: number | null) =>
 
 /**
  * Side menu unified — SATU komponen satu UI dengan dua mode tampilan:
- *  - Mode OFF (desktop, ≥lg): rail ikon di tepi kiri (64px). Dashboard untuk tamu: disembunyikan.
+ *  - Mode OFF (desktop, ≥lg): rail ikon di tepi kiri (64px), termasuk dashboard sebelum login.
  *  - Mode ON: panel penuh (272px) yang "keluar" dari rail (width melebar) — bukan layer terpisah.
  *  - Mobile (<lg): overlay penuh dari kiri (translate-x), seperti biasa.
  *  - DESKTOP: tidak ada tombol toggle terpisah — kursor diarahkan ke ikon-ikon menu (mode off) → panel otomatis terbuka (hover); klik di LUAR panel / Esc menutup (klik di dalam panel berfungsi normal).
@@ -212,10 +212,6 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location?.pathname || '/';
-  const onDashboard = pathname === '/';
-  // Aturan rail (mode off) di desktop: tampil bila user sudah login ATAU di halaman selain dashboard.
-  const railVisible = !onDashboard || !!user;
-  const stripVisible = isOpen || railVisible;
 
   // Esc menutup menu + klik di LUAR panel menutup menu (desktop) + kunci scroll body selama terbuka (mobile saja).
   useEffect(() => {
@@ -510,12 +506,11 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
              Mode off: rail 64px (ikon saja). Mode on: melebar 272px (sidebar penuh).
              Kursor masuk ke ikon-ikon menu (mode off) → otomatis terbuka (hover, bukan klik). ===== */}
       <aside
-        aria-hidden={!stripVisible}
         data-by-side-panel
         onMouseEnter={openOnHover}
         className={`fixed left-0 top-0 z-40 hidden h-full flex-col overflow-hidden border-r border-slate-200 bg-white shadow-none transition-[width,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-slate-700/60 dark:bg-slate-900 lg:flex ${
           isOpen ? 'w-[272px] shadow-2xl shadow-slate-900/20 dark:shadow-black/40' : 'w-16'
-        } ${stripVisible ? 'translate-x-0 visible' : 'pointer-events-none invisible -translate-x-full'}`}
+        } translate-x-0 visible`}
       >
         {renderPanel(isOpen)}
       </aside>
