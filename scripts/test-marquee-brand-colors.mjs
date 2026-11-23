@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source = fs.readFileSync('src/pages/HomePage.tsx', 'utf8');
+const marquee = source.split('{/* social marquees */}')[1].split('</main>')[0];
+assert.match(marquee, /src=\{socialIconUrl\(brand.slug, brand.color\)\}/);
+assert.match(marquee, /src=\{brand.url\}/);
+assert.doesNotMatch(marquee, /isDark|darkUrl|darkInvert|dark:invert|ffffff|grayscale/);
+assert.match(marquee, /animate-marquee flex/);
+assert.match(marquee, /animate-marquee-reverse flex/);
+assert.match(marquee, /opacity-60/);
+assert.match(marquee, /opacity-65/);
+assert.match(marquee, /hover:scale-110 hover:opacity-100/);
+console.log('PASS both dashboard marquees use the same brand color URLs in light/dark mode; animation, sizing and hover preserved.');
