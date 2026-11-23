@@ -11,12 +11,12 @@ Assets live in separate `site_settings` rows `asset_slide_0..2`, not large base6
 ## Frontend
 
 - Server 1 option/selected label: **Server 1 — Ringkas & Murah**. Server 2 label unchanged; routing/default/prices unchanged.
-- Dashboard: user-supplied WebP displayed under **Top Service**, before the video. Uses full-width responsive image with max-width 56rem inside page container, `h-auto` / `object-contain`, no crop. Original file included as `public/images/top-service-google-maps.webp`. The artwork is an illustration, not live place ratings.
+- Dashboard: user-supplied PNG displayed under **Top Service**, before the video. Uses full-width responsive image with max-width 56rem inside page container, `h-auto` / `object-contain`, no crop. Original file included as `public/images/top-service-google-maps.png`. The artwork is an illustration, not live place ratings.
 - Hero/map/fade and video behavior unchanged. Before-edit HomePage backup: `backups/before-dashboard-top-service/HomePage.tsx`.
 
 ## Upload
 
-Update **`/api/site_settings.php`**, then build (`npm ci && npm run build`) and upload `dist/` including `images/top-service-google-maps.webp`. No new PHP file, SQL migration, API key, or configdb.php change. Table `site_settings` is created by the existing endpoint if missing. Not deployed automatically.
+Update **`/api/site_settings.php`**, then build (`npm ci && npm run build`) and upload `dist/` including `images/top-service-google-maps.png`. No new PHP file, SQL migration, API key, or configdb.php change. Table `site_settings` is created by the existing endpoint if missing. Not deployed automatically.
 
 ## Tests
 
