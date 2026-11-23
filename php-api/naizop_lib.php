@@ -40,6 +40,12 @@ function n2_fx() {
     }
     return ['rate'=>(float)$j['rates']['IDR'],'updated_at'=>(int)$j['time_last_update_unix']];
 }
+/** Clean presentation fields only: upstream IDs, prices and targets remain untouched. */
+function n2_label($value) {
+    $text=(string)$value;
+    for($i=0;$i<3;$i++)$text=html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    return trim(preg_replace("/\\bnaizop(?:\\s*['’‘`´]\\s*s|s)?\\b/iu", 'Boosteryuk', $text));
+}
 function n2_catalogue() {
     // Config and account currency must be verified before any debit, even with cached services.
     $fingerprint=hash('sha256',n2_key());
@@ -56,6 +62,8 @@ function n2_catalogue() {
     foreach($list as $s){
         // Existing default order UI can fulfill Default services; do not sell unsupported required fields.
         if(strtolower(trim($s['type']??''))!=='default' || !is_numeric($s['rate']??null) || !is_finite((float)$s['rate']) || (float)$s['rate']<0 || !preg_match('/^\d+$/',(string)($s['service']??'')))continue;
+        $s['name']=n2_label($s['name']??'');
+        $s['category']=n2_label($s['category']??'');
         $s['rate']=round((float)$s['rate']*$fx['rate'],6);
         $s['refill']=false;$s['cancel']=false; // Server 2 post-order actions are not exposed yet.
         $out[]=$s;

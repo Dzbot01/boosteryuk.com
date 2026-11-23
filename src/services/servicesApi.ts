@@ -5,6 +5,7 @@
  * Credentials aman di server
  */
 
+import { server2Label } from '../lib/server2Presentation';
 import { invokeProxy } from '../supabase';
 import type { ServiceCategory } from '../constants';
 import { markupFactor } from '../lib/tenant';
@@ -121,7 +122,7 @@ export async function fetchServices(server: 1 | 2 = 1): Promise<ServicesResult> 
     return { ok: false, message: msg, services: [] };
   }
 
-  const all = list.map(normalize);
+  const all = list.map(normalize).map(s => server === 2 ? {...s, name: server2Label(s.name), category: server2Label(s.category)} : s);
 
   // FILTER KHUSUS TRIPAY
   const banned = ['😢', '🤬', '😥', '😭', '😡'];

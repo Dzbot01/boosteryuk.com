@@ -39,3 +39,13 @@ Penolakan eksplisit provider mengembalikan debit dan membalas ok:false. Timeout/
 `NODE_PATH=/tmp/naizop-tests/node_modules node scripts/test-naizop.mjs` (php-parser test-only di luar repo): PHP parse, mock transport katalog/harga/markup/payload/ID/status campuran, isolasi refill, serta source contracts keamanan dan loading state. `npm run build` termasuk SEO prerender.
 
 Tidak tersedia PHP CLI/MySQL lokal; autentikasi DB, debit/refund, konkurensi dan live provider belum diuji end-to-end. Dua error TypeScript baseline DepositInvoicePage/PlaygroundPage tetap terpisah dari fitur ini.
+
+## Presentasi label dan ikon Server 2
+
+Nama layanan/kategori didekode sebagai teks (termasuk `&#039;`, `&apos;`, dan entity ganda), lalu varian `Naizop's`, `Naizop’s`, `Naizop`s`, `Naizops`, atau `Naizop` ditulis **Boosteryuk**. PHP menerapkan ini setelah membaca cache sehingga tidak perlu menghapus cache provider; frontend juga membersihkan label untuk kompatibilitas jika PHP lama masih terpasang. ID, rate, target, dan parameter pemesanan tidak berubah. Server 1 tidak memakai rewrite ini.
+
+Dropdown kategori DAN layanan Server 2 memakai badge. Platform yang dikenali menggunakan simbol platform (tambahan Reddit, SoundCloud, Kick, Rumble, Quora, Vimeo, Dailymotion, Deezer, Apple Music, Audiomack, Mixcloud, Medium, Tumblr, Steam, Trustpilot, Tripadvisor, IMDb, VK dan X). Kata kunci dicocokkan sebagai kata utuh: "high" bukan IG, "online" bukan LINE. Nama layanan turut memakai konteks kategori, mis. "Followers" dalam kategori Instagram mendapat badge Instagram.
+
+Untuk nama tidak dikenal/CDN gagal, gunakan ikon lokal sesuai jenis layanan: pengikut, suka, tayangan, komentar, bagikan, rating, musik, video, traffic/web, game, boost, atau tag generik. Fallback ini tidak bergantung CDN. Pemetaan berbasis kata kunci, bukan daftar katalog live yang sudah diverifikasi: API key/katalog produksi tidak tersedia di sandbox.
+
+Tes tambahan: `NODE_PATH=/tmp/server2-icons-tests/node_modules node scripts/test-server2-presentation.mjs` (jsdom/php-parser test-only). Upload pembaruan `naizop_lib.php` serta hasil build frontend; tidak ada SQL/config/key tambahan.

@@ -1,3 +1,4 @@
+import Server2ServiceBadge from './Server2ServiceBadge';
 import TransactionButton from './TransactionButton';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -63,7 +64,7 @@ const COLOR = {
   muted: 'var(--by-muted)',
 };
 
-interface Option { value: string; label: string }
+interface Option { value: string; label: string; iconHint?: string }
 
 /** Ubah HTML deskripsi jadi teks polos TANPA menghilangkan baris baru. */
 function stripHtml(value: string): string {
@@ -164,6 +165,7 @@ export function CustomSelect({
   searchable = false,
   searchPlaceholder = 'Cari...',
   showBrand = false,
+  server2Icons = false,
   widePanel = false,
   wrapText = false,
 }: {
@@ -177,6 +179,7 @@ export function CustomSelect({
   searchPlaceholder?: string;
   /** Render a round social-media brand badge before each option label. */
   showBrand?: boolean;
+  server2Icons?: boolean;
   /** Let the panel grow wider than the trigger so long labels fit on one line. */
   widePanel?: boolean;
   /** Wrap text onto lines below rather than truncating or scrolling horizontally. */
@@ -222,7 +225,7 @@ export function CustomSelect({
         style={{ borderColor: COLOR.border }}
       >
         <span className="flex min-w-0 flex-1 items-center gap-2">
-          {showBrand && selected && <BrandBadge name={selected.label} />}
+          {showBrand && selected && (server2Icons ? <Server2ServiceBadge name={selected.iconHint || selected.label} /> : <BrandBadge name={selected.label} />)}
           <span
             className={`min-w-0 flex-1 ${wrapText && selected ? 'whitespace-normal break-words text-[13px] leading-snug' : 'truncate'}`}
             style={{ color: selected ? COLOR.dark : 'var(--by-placeholder)' }}
@@ -277,7 +280,7 @@ export function CustomSelect({
                   }`}
                   style={{ borderColor: COLOR.border, background: active ? 'var(--by-active)' : undefined }}
                 >
-                  {showBrand && <BrandBadge name={option.label} />}
+                  {showBrand && (server2Icons ? <Server2ServiceBadge name={option.iconHint || option.label} /> : <BrandBadge name={option.label} />)}
                   <span
                     className={`min-w-0 flex-1 dark:text-slate-200 ${
                       wrapText
@@ -349,7 +352,7 @@ export default function BuatPesananCard() {
 
   const categoryOptions = useMemo<Option[]>(() => Array.from(new Set(services.map((s) => s.category.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)).map((value) => ({ value, label: value })), [services]);
   const filteredServices = useMemo(() => category ? services.filter((s) => s.category.trim() === category) : services, [services, category]);
-  const serviceOptions = useMemo<Option[]>(() => filteredServices.map((s) => ({ value: s.id, label: s.name })), [filteredServices]);
+  const serviceOptions = useMemo<Option[]>(() => filteredServices.map((s) => ({ value: s.id, label: s.name, iconHint: `${s.name} ${s.category}` })), [filteredServices]);
   const selected = useMemo(() => services.find((s) => s.id === serviceId) || null, [services, serviceId]);
   useEffect(() => { setDescriptionRead(false);setTargetConfirmed(false); }, [serviceId, category]);
   useEffect(() => { setTargetConfirmed(false); }, [target]);
@@ -544,6 +547,7 @@ const handleOrder = async () => {
             searchable
             searchPlaceholder="Cari kategori..."
             showBrand
+            server2Icons={server === 2}
             widePanel
             onChange={(value) => {
               setCategory(value);
@@ -555,6 +559,8 @@ const handleOrder = async () => {
         {/* 2. Layanan */}
         <FormSection label="Layanan">
           <CustomSelect
+            showBrand={server === 2}
+            server2Icons={server === 2}
             id="buat-pesanan-layanan"
             value={serviceId}
             options={serviceOptions}
