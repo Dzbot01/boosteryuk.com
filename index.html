@@ -34,6 +34,14 @@
     <link id="app-favicon" rel="icon" type="image/png" href="/favicon.png" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Root-only initial icons, before React/remote settings load. Child defaults stay unchanged. -->
+    <script>
+      if (!window.__CHILD_PANEL__ && /^(?:www\.|app\.)?boosteryuk\.com$/i.test(location.hostname)) {
+        document.getElementById('app-favicon').href = '/branding/root-favicon-zigzag.png';
+        document.querySelector('link[type="image/x-icon"]').href = '/branding/root-favicon-zigzag.ico';
+        document.querySelector('link[rel="apple-touch-icon"]').href = '/branding/root-apple-zigzag.png';
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />

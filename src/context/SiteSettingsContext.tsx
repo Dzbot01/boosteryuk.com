@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { LOGO_URL as DEFAULT_LOGO } from '../constants';
+import { applyRootBranding, ROOT_APPLE_ICON } from '../lib/rootBranding';
 import { MAIN_API, IS_CHILD_PANEL } from '../lib/apiBase';
 import { loadTenant, tenantAssetUrl, type Tenant, type TenantSlide, type VoiceMode } from '../lib/tenant';
 
@@ -231,6 +232,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const effective = useMemo<SiteSettings>(() => {
+    if (!IS_CHILD_PANEL) return applyRootBranding(settings, false);
     if (!tenant) return settings;
     const c = tenant.config || {};
     const logo = tenantAssetUrl(tenant, c.logo);
@@ -343,6 +345,15 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     }
     link.type = href.startsWith('data:image/svg') || href.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
     link.href = href;
+    // Keep all browser icon candidates consistent; retain tenant favicon after load.
+    document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]').forEach((icon) => {
+      if (icon === link) return;
+      icon.href = href;
+      icon.type = link.type;
+      icon.removeAttribute('sizes');
+    });
+    const apple = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+    if (apple) apple.href = IS_CHILD_PANEL ? href : ROOT_APPLE_ICON;
   }, [effective.faviconUrl]);
 
   // Terapkan warna tema ke variabel CSS di <html> (lihat index.css: .by-accent, .by-menu-active, ...).
