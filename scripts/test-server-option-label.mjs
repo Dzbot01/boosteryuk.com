@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const s=fs.readFileSync('src/components/BuatPesananCard.tsx','utf8');
+assert.match(s,/id="buat-pesanan-server" wrapText/);
+assert.match(s,/value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap'/);
+assert.match(s,/value: '1', label: 'Server 1'/);
+assert.match(s,/useState<1 \| 2>\(1\)/);
+assert.match(s,/\{selected\?\.label \|\| placeholder\}/);
+assert.match(s,/\{option.label\}/);
+console.log('PASS Server 2 label in shared option/selected rendering, wrap enabled, Server 1 default unchanged.');
