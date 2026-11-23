@@ -41,8 +41,9 @@ tervalidasi, timeout, tanpa follow redirect.
 - Dashboard: dua kolom Kategori & Layanan GM Review di bawah gambar Top Service, tombol
   keranjang gaya modal Layanan Rekomendasi. Tamu: simpan path tertunda di sessionStorage +
   buka modal login; setelah login (kembali ke /overview) Layout melanjutkan ke step order.
-  Menutup modal tanpa login membatalkan path tertunda. Data kosong/gagal → kolom disembunyikan.
-- Garis pembatas tipis ditambahkan setelah kolom, sebelum video player.
+  Menutup modal tanpa login membatalkan path tertunda. Kolom selalu tampil: skeleton saat memuat,
+  panel error jelas + tombol Coba Lagi bila API gagal, pesan informatif bila katalog belum punya kategori GM Review.
+- Garis pembatas tipis setelah kolom (mt-10) dan jarak lebih besar ke video player (mt-12).
 
 ## Asumsi & batasan
 
