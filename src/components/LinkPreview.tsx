@@ -1,3 +1,5 @@
+import GoogleMapsTargetPreview from './GoogleMapsTargetPreview';
+import { googleMapsKind } from '../lib/googleMapsPreview';
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Link2 } from 'lucide-react';
 
@@ -139,7 +141,7 @@ export default function LinkPreview({ target }: { target: string }) {
     setPreview(null);
     setLoading(false);
 
-    if (!parsed) return;
+    if (!parsed || googleMapsKind(parsed)) return;
 
     // Debounce agar tidak menembak API setiap ketikan.
     const controller = new AbortController();
@@ -192,6 +194,7 @@ export default function LinkPreview({ target }: { target: string }) {
   }, [parsedKey]);
 
   if (!parsed) return null;
+  if (googleMapsKind(parsed)) return <GoogleMapsTargetPreview key={parsed.href} url={parsed} />;
 
   // Skeleton ringkas selama metadata dimuat.
   if (loading && !preview) {
