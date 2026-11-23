@@ -27,6 +27,8 @@ export interface ServicesResult {
   ok: boolean;
   message: string;
   services: ServiceItem[];
+  /** Server 3: daftar kategori yang ikut dikembalikan endpoint publik (subset GM Review). */
+  categories?: string[];
 }
 
 /**
@@ -101,7 +103,7 @@ function extractList(data: unknown): RawService[] | null {
 
 /** Fetch every service from the catalogue. */
 /** Fetch every service from the catalogue. */
-export async function fetchServices(server: 1 | 2 = 1): Promise<ServicesResult> {
+export async function fetchServices(server: 1 | 2 | 3 = 1): Promise<ServicesResult> {
   const edge = await invokeProxy<unknown>({
     action: 'services',
     server,
@@ -121,6 +123,9 @@ export async function fetchServices(server: 1 | 2 = 1): Promise<ServicesResult> 
     const msg = (edge.data as { msg?: string; message?: string })?.msg || 'Daftar layanan tidak tersedia.';
     return { ok: false, message: msg, services: [] };
   }
+  const categories = server === 3 && Array.isArray((edge.data as { categories?: unknown }).categories)
+    ? ((edge.data as { categories: unknown[] }).categories).map((c) => String(c))
+    : undefined;
 
   const all = list.map(normalize).map(s => server === 2 ? {...s, name: server2Label(s.name), category: server2Label(s.category)} : s);
 
@@ -131,7 +136,7 @@ export async function fetchServices(server: 1 | 2 = 1): Promise<ServicesResult> 
     return !banned.some(k => text.includes(k));
   });
 
-  return { ok: true, message: 'Layanan dimuat.', services: safe };
+  return { ok: true, message: 'Layanan dimuat.', services: safe, categories };
 }
 
 /** Keep only the services that belong to the given platform. */

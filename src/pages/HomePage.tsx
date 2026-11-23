@@ -8,9 +8,10 @@ import {
   UserRound,
   Shield,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Reveal from '../components/Reveal';
 import AuthModal from '../components/AuthModal';
+import GoogleMapsReviewColumns, { OPEN_LOGIN_EVENT, PENDING_ORDER_PATH_KEY } from '../components/GoogleMapsReviewColumns';
 
 import {
   SECONDARY_SOCIAL_BRANDS,
@@ -38,6 +39,13 @@ export default function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
+
+  // Tombol keranjang Google Maps Review (tamu) meminta modal login dibuka.
+  useEffect(() => {
+    const openLogin = () => setAuthOpen(true);
+    window.addEventListener(OPEN_LOGIN_EVENT, openLogin);
+    return () => window.removeEventListener(OPEN_LOGIN_EVENT, openLogin);
+  }, []);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
   const marquee = [...SOCIAL_BRANDS,...SOCIAL_BRANDS];
@@ -194,6 +202,8 @@ export default function HomePage() {
       <section aria-labelledby="top-service-title" className="mx-auto mt-8 w-full max-w-6xl px-4 sm:px-6">
         <h2 id="top-service-title" className="mb-4 text-center font-display text-2xl font-extrabold text-slate-900 lg:text-3xl dark:text-white">Top Service</h2>
         <img src="/images/top-service-google-maps.png" alt="Top Service Google Maps — ilustrasi tampilan lokasi dan ulasan bisnis" className="mx-auto h-auto w-full max-w-4xl rounded-2xl object-contain" loading="lazy" width={1377} height={1223} />
+        <GoogleMapsReviewColumns />
+        <div aria-hidden className="mt-8 h-px w-full bg-slate-200/90 dark:bg-slate-700/70" />
       </section>
 
       {/* ================= VIDEO PLAYER (antara hero & body) =================
@@ -269,7 +279,10 @@ export default function HomePage() {
 
       <AuthModal
         open={authOpen}
-        onClose={() => setAuthOpen(false)}
+        onClose={() => {
+          setAuthOpen(false);
+          try { sessionStorage.removeItem(PENDING_ORDER_PATH_KEY); } catch { /* abaikan */ }
+        }}
         initialMode={authMode}
       />
     </>
