@@ -301,7 +301,7 @@ export default function SideMenu({ isOpen, onClose, onOpen }: SideMenuProps) {
         {expanded && (
           <div className="min-w-0">
             <p className="font-display text-[16px] font-extrabold leading-none tracking-tight">
-              <span className="by-accent">{settings.brandName}</span>
+              <span className="text-sky-400">{settings.brandName}</span>
               <span className="text-black dark:text-white">{settings.brandSuffix}</span>
             </p>
             {isAdmin && <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Admin Panel</p>}
