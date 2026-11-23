@@ -9,6 +9,7 @@
  */
 
 import { invokeProxy } from '../supabase';
+import { MAIN_API } from '../lib/apiBase';
 
 /* ------------------------------------------------------------------ */
 /* Types */
@@ -100,7 +101,7 @@ export function parseOrderIds(raw: string): { ids: string[]; invalid: string[] }
   const invalid: string[] = [];
 
   for (const p of unique) {
-    if (/^(?:\d+|S2-(?:\d+|PENDING-[a-f0-9]+))$/.test(p)) ids.push(p);
+    if (/^(?:\d+|S2-(?:\d+|PENDING-[a-f0-9]+)|S3-(?:\d+|PENDING-[a-f0-9]+))$/.test(p)) ids.push(p);
     else invalid.push(p);
   }
 
@@ -142,20 +143,15 @@ function blankDebug(id: string): DebugInfo {
 /* Main request — via PHP Proxy */
 /* ------------------------------------------------------------------ */
 
-export async function checkOrderStatus(rawInput: string): Promise<LookupResult> {
+async function lookupViaPrimary(rawInput: string): Promise<LookupResult> {
   const t0 = typeof performance!== 'undefined'? performance.now() : Date.now();
   const elapsed = () => Math.round((typeof performance!== 'undefined'? performance.now() : Date.now()) - t0);
 
   const { ids, invalid } = parseOrderIds(rawInput);
 
-  // Never send Server 2 identifiers to Server 1, including mixed bulk lookups.
-  if (ids.some(id => id.startsWith('S2-')) && ids.some(id => !id.startsWith('S2-'))) {
-    const parts = await Promise.all([checkOrderStatus(ids.filter(id => id.startsWith('S2-')).join(',')), checkOrderStatus(ids.filter(id => !id.startsWith('S2-')).join(','))]);
-    return {ok: parts.some(p => p.ok), message: 'Pemeriksaan kedua server selesai.', orders: parts.flatMap(p => p.orders), failures: [...parts.flatMap(p => p.failures), ...invalid.map(id => ({id, reason: 'ID tidak valid.'}))], debug: parts[0].debug};
-  }
 
   const invalidFailures: LookupFailure[] = ids.length > 0
-   ? invalid.map((id) => ({ id, reason: 'Dilewati — format ID tidak valid (angka atau S2-ID).' }))
+   ? invalid.map((id) => ({ id, reason: 'Dilewati — format ID tidak valid (angka, S2-ID, atau S3-ID).' }))
     : [];
 
   const finish = (r: Omit<LookupResult, 'debug'>, dbg: DebugInfo): LookupResult => ({
@@ -170,12 +166,12 @@ export async function checkOrderStatus(rawInput: string): Promise<LookupResult> 
       {
         ok: false,
         message: invalid.length > 0
-         ? `ID tidak valid: ${invalid.join(', ')}. Gunakan ID angka atau S2-ID, maks ${MAX_IDS} ID dipisah koma.`
+         ? `ID tidak valid: ${invalid.join(', ')}. Gunakan ID angka, S2-ID, atau S3-ID, maks ${MAX_IDS} ID dipisah koma.`
           : 'Masukkan minimal satu ID pesanan.',
         orders: [],
         failures: invalid.map((id) => ({
           id,
-          reason: 'Format tidak valid — gunakan angka atau S2-ID.',
+          reason: 'Format tidak valid — gunakan angka, S2-ID, atau S3-ID.',
         })),
       },
       blankDebug(rawInput),
@@ -290,6 +286,53 @@ export async function checkOrderStatus(rawInput: string): Promise<LookupResult> 
     },
     debug,
   );
+}
+
+/**
+ * Auto-deteksi Server 3: bila ID angka polos tidak ditemukan di Server 1,
+ * coba satu persatu ke Server 3 (medanpedia_status.php) sebelum menyerah.
+ */
+async function lookupServer3Fallback(idStr: string): Promise<Omit<LookupResult, 'debug'> | null> {
+  try {
+    const response = await fetch(`${MAIN_API}/medanpedia_status.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ id: idStr }),
+    });
+    const data = (await response.json()) as ApiResponse;
+    if (!response.ok || data.status !== true || !data.orders || typeof data.orders !== 'object') return null;
+    const orders: OrderData[] = [];
+    for (const id of idStr.split(',')) {
+      const entry = (data.orders as Record<string, { order_status?: string; msg?: string }>)[id];
+      if (entry && entry.order_status) orders.push(makeOrder(id, entry as Record<string, unknown>, 'Pesanan ditemukan di Server 3.'));
+    }
+    if (orders.length === 0) return null;
+    return { ok: true, message: 'Pesanan ditemukan di Server 3.', orders, failures: [] };
+  } catch {
+    return null;
+  }
+}
+
+/** Cek status dengan routing prefix + auto-deteksi coba satu persatu (Server 1 → 3, S2/S3 sesuai prefix). */
+export async function checkOrderStatus(rawInput: string): Promise<LookupResult> {
+  const { ids, invalid } = parseOrderIds(rawInput);
+  const s2 = ids.filter((id) => id.startsWith('S2-'));
+  const s3 = ids.filter((id) => id.startsWith('S3-'));
+  const plain = ids.filter((id) => !id.startsWith('S2-') && !id.startsWith('S3-'));
+  const groups = [s2, s3, plain].filter((g) => g.length > 0);
+  if (groups.length > 1) {
+    const parts = await Promise.all(groups.map((g) => checkOrderStatus(g.join(','))));
+    return { ok: parts.some((p) => p.ok), message: 'Pemeriksaan semua server selesai.', orders: parts.flatMap((p) => p.orders), failures: [...parts.flatMap((p) => p.failures), ...invalid.map((id) => ({ id, reason: 'ID tidak valid.' }))], debug: parts[0].debug };
+  }
+  const primary = await lookupViaPrimary(rawInput);
+  if (plain.length > 0 && plain.length === ids.length && !primary.ok) {
+    const fb = await lookupServer3Fallback(plain.join(','));
+    if (fb) {
+      const found = new Set(fb.orders.map((o) => o.orderId));
+      return { ...fb, failures: primary.failures.filter((f) => !found.has(f.id)), debug: primary.debug };
+    }
+  }
+  return primary;
 }
 
 /* ------------------------------------------------------------------ */

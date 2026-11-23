@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {createRequire} from 'node:module';import {build} from 'esbuild';
+const require=createRequire(import.meta.url);const {JSDOM}=require('jsdom');const parser=new (require('php-parser'))({parser:{php7:true}});
+for(const f of ['medanpedia_lib.php','medanpedia_services.php','medanpedia_status.php','medanpedia_refill.php','order.php','order_price.php'])parser.parseCode(fs.readFileSync('php-api/'+f,'utf8'));
+const lib=fs.readFileSync('php-api/medanpedia_lib.php','utf8');
+assert.match(lib,/CURLOPT_SSL_VERIFYPEER\s*=>\s*true/);assert.match(lib,/CURLOPT_FOLLOWLOCATION\s*=>\s*false/);assert.match(lib,/mp_cache_read\('services', 600\)/);assert.match(lib,/function mp_validate_service/);assert.match(lib,/function mp_is_gm_review/);assert.match(lib,/medanpedia_config\.php/);
+assert.match(fs.readFileSync('php-api/medanpedia_services.php','utf8'),/mp_gm_review\(\)/);
+const order=fs.readFileSync('php-api/order.php','utf8');
+assert.match(order,/in_array\(\$server, \[1, 2, 3, '1', '2', '3'\], true\)/);assert.match(order,/'S3-'\.\$mpOrder|'S3-'\.bin2hex|\$provider_order_id='S3-'/);assert.match(order,/S3-PENDING-/);assert.match(order,/Order ditolak Server 3\. Saldo telah dikembalikan\./);assert.match(order,/\[Server 3\] /);
+assert.match(fs.readFileSync('php-api/order_price.php','utf8'),/\$server === 3[\s\S]{0,220}mp_validate_service/);
+const sup=fs.readFileSync('src/supabase.ts','utf8');assert.match(sup,/server\?: 1 \| 2 \| 3/);assert.match(sup,/medanpedia_services\.php/);assert.match(sup,/medanpedia_status\.php/);
+const oa=fs.readFileSync('src/services/orderApi.ts','utf8');assert.ok(oa.includes('S3-(?:\\d+|PENDING-[a-f0-9]+)'));assert.match(oa,/async function lookupServer3Fallback/);assert.match(oa,/Pemeriksaan semua server selesai\./);
+const ra=fs.readFileSync('src/services/refillApi.ts','utf8');assert.match(ra,/medanpedia_refill\.php/);assert.match(ra,/function providerOrder/);assert.match(ra,/Refill Server 2 belum tersedia/);
+const sa=fs.readFileSync('src/services/servicesApi.ts','utf8');assert.match(sa,/fetchServices\(server: 1 \| 2 \| 3 = 1\)/);assert.match(sa,/categories\?: string\[\]/);
+assert.match(fs.readFileSync('src/services/checkoutApi.ts','utf8'),/server\?: 1 \| 2 \| 3/);
+const card=fs.readFileSync('src/components/BuatPesananCard.tsx','utf8');assert.match(card,/Server 3 — Google Maps Review/);assert.ok(card.includes("{ value: '1', label: 'Server 1 — Ringkas & Murah' }") && card.includes("{ value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap' }"),'dropdown options must stay Server 1 & 2 only');assert.match(card,/\(server === 1 \|\| server === 3\) && preselectId/);assert.match(card,/startsWith\('S3-PENDING-'\)/);assert.ok(!/value: '3', label/.test(card),'Server 3 must not be a selectable option');
+const home=fs.readFileSync('src/pages/HomePage.tsx','utf8');assert.ok(home.indexOf('<GoogleMapsReviewColumns />')<home.indexOf('{dashboardVideo &&'));assert.match(home,/h-px w-full bg-slate-200\/90/);assert.match(home,/OPEN_LOGIN_EVENT, openLogin/);assert.match(home,/sessionStorage\.removeItem\(PENDING_ORDER_PATH_KEY\)/);
+assert.match(fs.readFileSync('src/components/Layout.tsx','utf8'),/\\\/layanan\\\?server=3&service=/);
+const dom=new JSDOM('<div id="root"></div>',{url:'https://boosteryuk.com'});const navCalls=[];
+const {outputFiles}=await build({stdin:{contents:"export {default as Cols, PENDING_ORDER_PATH_KEY, OPEN_LOGIN_EVENT} from './src/components/GoogleMapsReviewColumns';export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';",resolveDir:process.cwd()},bundle:true,write:false,format:'cjs',platform:'node',jsx:'automatic',plugins:[{name:'mock',setup(b){b.onResolve({filter:/(services\/servicesApi|context\/AuthContext|react-router-dom)$/},a=>({path:a.path,namespace:'mock'}));b.onLoad({filter:/.*/,namespace:'mock'},a=>({contents:a.path.endsWith('react-router-dom')?'export const useNavigate=()=>globalThis.navSpy;':a.path.endsWith('AuthContext')?'export const useAuth=()=>globalThis.authState;':'export const fetchServices=async()=>globalThis.gmResult;export const formatRate=(r)=>"Rp"+r;'}));}}]});
+const ctx={process,performance,queueMicrotask,MessageChannel:class{port1={onmessage:null};port2={postMessage:()=>setImmediate(()=>this.port1.onmessage?.())};},module:{exports:{}},exports:{},console,window:dom.window,document:dom.window.document,navigator:dom.window.navigator,setTimeout,clearTimeout,IS_REACT_ACT_ENVIRONMENT:true,CustomEvent:dom.window.CustomEvent,Event:dom.window.Event,sessionStorage:dom.window.sessionStorage,localStorage:dom.window.localStorage,navSpy:(p)=>navCalls.push(p),authState:{user:null},gmResult:{ok:true,categories:['Google Maps Review'],services:[{id:'12',name:'Google Maps Review 5 Bintang',category:'Google Maps Review',type:'default',rate:55000,min:5,max:100,refill:false,cancel:false,description:'No drop'}]}};
+vm.runInNewContext(outputFiles[0].text,ctx);const {Cols,PENDING_ORDER_PATH_KEY,OPEN_LOGIN_EVENT,createElement:h,act,createRoot}=ctx.module.exports;
+const root=createRoot(dom.window.document.getElementById('root'));let opened=0;dom.window.addEventListener(OPEN_LOGIN_EVENT,()=>opened++);
+try{
+ await act(async()=>root.render(h(Cols)));
+ const secs=dom.window.document.querySelectorAll('section');assert.equal(secs.length,2);assert.match(secs[0].getAttribute('aria-label'),/Kategori/);assert.match(secs[1].getAttribute('aria-label'),/Layanan/);
+ assert.match(secs[0].textContent,/Google Maps Review/);assert.match(secs[1].textContent,/Google Maps Review 5 Bintang/);assert.match(secs[1].textContent,/Rp55000/);
+ const cart=dom.window.document.querySelector('button[aria-label="Pesan Google Maps Review 5 Bintang"]');assert.ok(cart);
+ await act(async()=>cart.click());assert.equal(opened,1,'guest must open login modal');assert.equal(dom.window.sessionStorage.getItem(PENDING_ORDER_PATH_KEY),'/layanan?server=3&service=12');assert.equal(navCalls.length,0);
+ ctx.authState={user:{plusActive:false}};
+ await act(async()=>root.render(h(Cols)));await act(async()=>dom.window.document.querySelector('button[aria-label="Pesan Google Maps Review 5 Bintang"]').click());
+ assert.deepEqual(navCalls,['/layanan?server=3&service=12'],'logged-in user goes straight to order step');
+ ctx.gmResult={ok:true,services:[]};const root2=createRoot(dom.window.document.createElement('div'));
+ await act(async()=>root2.render(h(Cols)));assert.equal(dom.window.document.querySelectorAll('section').length,2,'empty data renders nothing new');
+}finally{await act(async()=>root.unmount());dom.window.close();}
+console.log('PASS PHP syntax; Server 3 order/status/refill contracts; S3 prefix + refund + pending; auto-detect grouping/fallback; dashboard GM columns + cart + login gate + resume; Server 3 hidden from dropdown. No live Medanpedia calls.');

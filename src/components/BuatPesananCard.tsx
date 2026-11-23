@@ -11,6 +11,7 @@ import {
   Search,
   ShoppingCart,
   Tag,
+  Server,
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -314,7 +315,9 @@ interface SuccessInfo {
 export default function BuatPesananCard() {
   const { user, topUp } = useAuth();
   const { addOrder } = useOrderHistory();
-  const [server, setServer] = useState<1 | 2>(1);
+  const [searchParams] = useSearchParams();
+  const preselectId = searchParams.get('service') || '';
+  const [server, setServer] = useState<1 | 2 | 3>(() => (searchParams.get('server') === '3' ? 3 : 1));
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
@@ -327,8 +330,6 @@ export default function BuatPesananCard() {
   const [ordering, setOrdering] = useState(false);
   const [orderNotice, setOrderNotice] = useState<{ ok: boolean; message: string } | null>(null);
   const [successInfo, setSuccessInfo] = useState<SuccessInfo | null>(null);
-  const [searchParams] = useSearchParams();
-  const preselectId = searchParams.get('service') || '';
 
   useEffect(() => {
     let alive = true;
@@ -338,7 +339,7 @@ export default function BuatPesananCard() {
       if (result.ok) {
         setServices(result.services);
         // Pilih otomatis layanan dari ?service=ID (mis. dari tombol keranjang di Overview)
-        const pre = server === 1 && preselectId ? result.services.find((x) => x.id === preselectId) : undefined;
+        const pre = (server === 1 || server === 3) && preselectId ? result.services.find((x) => x.id === preselectId) : undefined;
         if (pre) {
           setCategory(pre.category.trim());
           setServiceId(pre.id);
@@ -422,7 +423,7 @@ const handleOrder = async () => {
      // Riwayat pesanan & pendapatan child panel dicatat oleh order.php di server
      // (dulu dikirim lagi dari browser → riwayat dobel & harga bisa dipalsukan).
 
-      const successMessage = orderIdFinal.startsWith('S2-PENDING-') ? result.message : `Pesanan berhasil dibuat. ID #${orderIdFinal}`;
+      const successMessage = orderIdFinal.startsWith('S2-PENDING-') || orderIdFinal.startsWith('S3-PENDING-') ? result.message : `Pesanan berhasil dibuat. ID #${orderIdFinal}`;
       setOrderNotice({ ok: true, message: successMessage });
 
       setDescriptionRead(false);setTargetConfirmed(false);
@@ -532,10 +533,18 @@ const handleOrder = async () => {
         {/* ============ KIRI: input pesanan ============ */}
         <div className="space-y-5">
         <FormSection label="Server">
+          {server === 3 ? (
+            <div id="buat-pesanan-server" className="flex flex-wrap items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2.5 text-[12.5px] font-semibold text-cyan-700 dark:border-cyan-800/40 dark:bg-cyan-950/20 dark:text-cyan-300">
+              <Server className="h-4 w-4" strokeWidth={2.2} />
+              Server 3 — Google Maps Review
+              <span className="font-normal text-cyan-600/90 dark:text-cyan-400/90">· jalur khusus tombol keranjang dashboard</span>
+            </div>
+          ) : (
           <CustomSelect id="buat-pesanan-server" wrapText value={String(server)} options={[{ value: '1', label: 'Server 1 — Ringkas & Murah' }, { value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap' }]} disabled={ordering} onChange={(value) => {
             if (value === String(server)) return;
             setLoading(true);setServices([]);setCategory('');setServiceId('');setTarget('');setQuantity('');setComments('');setDescriptionRead(false);setTargetConfirmed(false);setSuccessInfo(null);setServer(value === '2' ? 2 : 1);
           }} />
+          )}
         </FormSection>
          {/* 1. Kategori */}
         <FormSection label="Kategori">

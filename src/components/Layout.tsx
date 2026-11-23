@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { PENDING_ORDER_PATH_KEY } from './GoogleMapsReviewColumns';
 import Header from './Header';
 import { AdminNotificationsProvider } from '../context/AdminNotificationsContext';
 import GuriVoiceSession from './GuriVoiceSession';
@@ -14,6 +16,19 @@ import NexSpaceBanner from './NexSpaceBanner';
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  // Setelah login Google (kembali ke /overview), lanjutkan step order yang tertunda
+  // dari tombol keranjang Google Maps Review di dashboard.
+  useEffect(() => {
+    if (loading || !user) return;
+    let path = '';
+    try { path = sessionStorage.getItem(PENDING_ORDER_PATH_KEY) || ''; } catch { path = ''; }
+    if (!/^\/layanan\?server=3&service=[A-Za-z0-9%._-]+$/.test(path)) return;
+    try { sessionStorage.removeItem(PENDING_ORDER_PATH_KEY); } catch { /* abaikan */ }
+    navigate(path);
+  }, [user, loading, navigate]);
 
   // Reset scroll position when the route changes (except for in-page anchors).
   useEffect(() => {

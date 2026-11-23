@@ -25,7 +25,7 @@ require_once __DIR__ . '/riwayat_schema.php'; // kolom target (link SMM) — riw
 $data = json_decode(file_get_contents("php://input"), true);
 
 $server = $data['server'] ?? 1;
-if (!in_array($server, [1, 2, '1', '2'], true)) { http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Server tidak valid.']);exit; }
+if (!in_array($server, [1, 2, 3, '1', '2', '3'], true)) { http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Server tidak valid.']);exit; }
 $server = (int)$server;
 $token    = trim($data['token'] ?? '');
 $service  = trim($data['serviceId'] ?? $data['service'] ?? '');
@@ -58,9 +58,9 @@ $user_id = (int)$user['id'];
 try {
     $calc = bk_order_price($conn, $user_id, $service, $quantity, $API_ID, $API_KEY, $BASE_URL, $server);
 } catch (Throwable $e) {
-    http_response_code(503);echo json_encode(['ok'=>false,'message'=>$server === 2 ? $e->getMessage() : 'Harga tidak dapat diverifikasi.','orderId'=>null]);exit;
+    http_response_code(503);echo json_encode(['ok'=>false,'message'=>in_array($server, [2, 3], true) ? $e->getMessage() : 'Harga tidak dapat diverifikasi.','orderId'=>null]);exit;
 }
-if ($server === 2 && $calc['price'] === null) { http_response_code(503);echo json_encode(['ok'=>false,'message'=>'Harga Server 2 tidak dapat diverifikasi.']);exit; }
+if (($server === 2 || $server === 3) && $calc['price'] === null) { http_response_code(503);echo json_encode(['ok'=>false,'message'=>'Harga Server '.$server.' tidak dapat diverifikasi.']);exit; }
 $price = $calc['price'];
 if ($price === null && !empty($calc['unknown'])) {
     http_response_code(400);
@@ -124,6 +124,29 @@ if ($server === 2) {
         $provider_msg='Status pengiriman Server 2 belum pasti. Admin akan memeriksa; jangan kirim ulang.';
     }
     $serviceName=mb_substr('[Server 2] '.$serviceName,0,255);
+} elseif ($server === 3) {
+    // Server 3 (Medanpedia): alur sama dengan Server 2 — penolakan eksplisit = refund,
+    // timeout/ambigu = ID S3-PENDING-… (saldo tetap, rekonsiliasi manual admin).
+    require_once __DIR__.'/medanpedia_lib.php';
+    try {
+        $parsed = mp_call('order', ['service'=>(int)$service,'link'=>$link,'quantity'=>$quantity], true);
+    } catch (Throwable $e) { $parsed = null; }
+    if (is_array($parsed) && ($parsed['status'] ?? null) === false) {
+        // Explicit provider rejection: no order exists, return the debit atomically.
+        $refund=$conn->prepare('UPDATE users SET balance=balance+? WHERE id=?');
+        $refund->bind_param('di',$price,$user_id);$refund->execute();$refund->close();
+        http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Order ditolak Server 3. Saldo telah dikembalikan.','orderId'=>null]);exit;
+    }
+    $mpOrder = is_array($parsed) ? (string)($parsed['order'] ?? $parsed['order_id'] ?? (is_array($parsed['data'] ?? null) ? ($parsed['data']['order'] ?? '') : '')) : '';
+    if (is_array($parsed) && preg_match('/^[1-9][0-9]*$/', $mpOrder)) {
+        $provider_order_id='S3-'.$mpOrder;
+        $provider_msg='Order berhasil dikirim ke Server 3.';
+    } else {
+        // Timeout is ambiguous: never automatically resubmit/refund a possibly accepted order.
+        $provider_order_id='S3-PENDING-'.bin2hex(random_bytes(8));
+        $provider_msg='Status pengiriman Server 3 belum pasti. Admin akan memeriksa; jangan kirim ulang.';
+    }
+    $serviceName=mb_substr('[Server 3] '.$serviceName,0,255);
 } else {
 // 4. KIRIM KE PROVIDER
 $postFields = [

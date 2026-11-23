@@ -1,7 +1,7 @@
 import { invokeProxy } from '../supabase';
 
 export interface OrderRequest {
-  server?: 1 | 2;
+  server?: 1 | 2 | 3;
   serviceId: string;
   serviceName: string; // WAJIB: buat simpan ke riwayat
   link: string;
