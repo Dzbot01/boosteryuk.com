@@ -17,7 +17,6 @@ import {
   SOCIAL_BRANDS,
   socialIconUrl,
 } from '../constants';
-import { useTheme } from '../context/ThemeContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { useAuth } from '../context/AuthContext';
 import ReviewsSection from '../components/ReviewsSection';
@@ -35,7 +34,6 @@ const HOME_JSONLD = [
 export default function HomePage() {
   // Logo mengikuti pengaturan (child panel / admin), bukan logo Boosteryuk bawaan.
   const logoUrl = useSiteSettings().settings.logoUrl;
-  const { isDark } = useTheme();
   const { heroImageSrc, dashboardVideo } = useSiteSettings();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -234,7 +232,7 @@ export default function HomePage() {
                 {marquee.map((brand, i) => (
                   <img
                     key={`${brand.slug}-${i}`}
-                    src={socialIconUrl(brand.slug, isDark ? 'ffffff' : brand.color)}
+                    src={socialIconUrl(brand.slug, brand.color)}
                     alt={brand.name}
                     title={brand.name}
                     className="h-9 w-9 shrink-0 object-contain opacity-60 transition-all duration-200 hover:scale-110 hover:opacity-100"
@@ -250,10 +248,10 @@ export default function HomePage() {
                 {reverseMarquee.map((brand, i) => (
                   <img
                     key={`${brand.name}-${i}`}
-                    src={isDark ? brand.darkUrl : brand.url}
+                    src={brand.url}
                     alt={brand.name}
                     title={brand.name}
-                    className={`h-10 w-10 shrink-0 object-contain opacity-65 transition-all duration-200 hover:scale-110 hover:opacity-100 ${brand.darkInvert ? 'dark:invert' : ''}`}
+                    className="h-10 w-10 shrink-0 object-contain opacity-65 transition-all duration-200 hover:scale-110 hover:opacity-100"
                     loading="lazy"
                   />
                 ))}
