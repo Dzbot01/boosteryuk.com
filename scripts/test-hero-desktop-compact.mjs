@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const before = fs.readFileSync('backups/hero-before-desktop-compact/HomePage.hero-desktop.css', 'utf8');
+const after = fs.readFileSync('src/pages/HomePage.hero-desktop.css', 'utf8');
+const boundary = '/* Preserve breathing room';
+assert.equal(after.split(boundary)[1], before.split(boundary)[1], 'mobile/tablet and short-screen layout unchanged');
+const desktop = after.split(boundary)[0];
+assert.match(desktop, /@media \(min-width: 1024px\)/);
+assert.match(desktop, /font-size: clamp\(24px, 2.2vw, 32px\)/);
+assert.match(desktop, /font-size: 16px/);
+assert.match(desktop, /height: 44px;\s+padding: 8px 24px;\s+font-size: 14px/);
+assert.match(desktop, /min-width: 128px/);
+assert.match(desktop, /font-size: 34px/);
+assert.match(desktop, /left: -32px/);
+assert.match(desktop, /max-width: 760px/);
+assert.match(desktop, /\.home-hero-mascot\s*\{\s*display: none/);
+console.log('PASS compact desktop hero: smaller typography/buttons, viewport center preserved, mobile/tablet unchanged, rollback backup available.');

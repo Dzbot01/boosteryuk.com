@@ -32,14 +32,14 @@
   .home-hero-copy > .home-hero-tagline {
     max-width: 100%;
     margin: 0;
-    font-size: clamp(26px, 2.6vw, 38px);
+    font-size: clamp(24px, 2.2vw, 32px);
     line-height: 1.25;
   }
 
   .home-hero-copy > .home-hero-description {
     max-width: 620px;
     margin: 24px 0 0;
-    font-size: 20px;
+    font-size: 16px;
     line-height: 1.6;
     color: rgba(255, 255, 255, 0.85);
     font-weight: 500;
@@ -94,50 +94,50 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    height: 56px;
-    padding: 8px 32px;
-    font-size: 17px;
+    height: 44px;
+    padding: 8px 24px;
+    font-size: 14px;
     border-radius: 9999px;
     white-space: nowrap;
   }
 
   .home-hero-actions .home-hero-auth > button {
-    width: 160px;
-    min-width: 160px;
+    width: 128px;
+    min-width: 128px;
   }
 
   .home-hero-actions button > svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .home-hero-rating > div:first-child > span {
+    width: 36px;
+    height: 36px;
+  }
+
+  .home-hero-rating img {
     width: 20px;
     height: 20px;
   }
 
-  .home-hero-rating > div:first-child > span {
-    width: 44px;
-    height: 44px;
-  }
-
-  .home-hero-rating img {
-    width: 24px;
-    height: 24px;
-  }
-
   .home-hero-rating p {
-    font-size: 15px;
+    font-size: 13px;
     color: rgba(255, 255, 255, 0.75);
     font-weight: 500;
   }
 
   .home-hero-rating svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 
   .home-hero-stats > div > p:first-child {
-    font-size: 44px;
+    font-size: 34px;
   }
 
   .home-hero-stats > div > p:last-child {
-    font-size: 15px;
+    font-size: 13px;
     margin-top: 8px;
     color: rgba(255, 255, 255, 0.75);
     font-weight: 500;
