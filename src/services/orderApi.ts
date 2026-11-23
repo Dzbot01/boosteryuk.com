@@ -100,7 +100,7 @@ export function parseOrderIds(raw: string): { ids: string[]; invalid: string[] }
   const invalid: string[] = [];
 
   for (const p of unique) {
-    if (/^\d+$/.test(p)) ids.push(p);
+    if (/^(?:\d+|S2-(?:\d+|PENDING-[a-f0-9]+))$/.test(p)) ids.push(p);
     else invalid.push(p);
   }
 
@@ -148,8 +148,14 @@ export async function checkOrderStatus(rawInput: string): Promise<LookupResult> 
 
   const { ids, invalid } = parseOrderIds(rawInput);
 
+  // Never send Server 2 identifiers to Server 1, including mixed bulk lookups.
+  if (ids.some(id => id.startsWith('S2-')) && ids.some(id => !id.startsWith('S2-'))) {
+    const parts = await Promise.all([checkOrderStatus(ids.filter(id => id.startsWith('S2-')).join(',')), checkOrderStatus(ids.filter(id => !id.startsWith('S2-')).join(','))]);
+    return {ok: parts.some(p => p.ok), message: 'Pemeriksaan kedua server selesai.', orders: parts.flatMap(p => p.orders), failures: [...parts.flatMap(p => p.failures), ...invalid.map(id => ({id, reason: 'ID tidak valid.'}))], debug: parts[0].debug};
+  }
+
   const invalidFailures: LookupFailure[] = ids.length > 0
-   ? invalid.map((id) => ({ id, reason: 'Dilewati — format ID tidak valid (harus angka).' }))
+   ? invalid.map((id) => ({ id, reason: 'Dilewati — format ID tidak valid (angka atau S2-ID).' }))
     : [];
 
   const finish = (r: Omit<LookupResult, 'debug'>, dbg: DebugInfo): LookupResult => ({
@@ -164,12 +170,12 @@ export async function checkOrderStatus(rawInput: string): Promise<LookupResult> 
       {
         ok: false,
         message: invalid.length > 0
-         ? `ID tidak valid: ${invalid.join(', ')}. Harus angka, maks ${MAX_IDS} ID dipisah koma.`
+         ? `ID tidak valid: ${invalid.join(', ')}. Gunakan ID angka atau S2-ID, maks ${MAX_IDS} ID dipisah koma.`
           : 'Masukkan minimal satu ID pesanan.',
         orders: [],
         failures: invalid.map((id) => ({
           id,
-          reason: 'Format tidak valid — ID pesanan harus berupa angka.',
+          reason: 'Format tidak valid — gunakan angka atau S2-ID.',
         })),
       },
       blankDebug(rawInput),

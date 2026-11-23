@@ -311,6 +311,7 @@ interface SuccessInfo {
 export default function BuatPesananCard() {
   const { user, topUp } = useAuth();
   const { addOrder } = useOrderHistory();
+  const [server, setServer] = useState<1 | 2>(1);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
@@ -328,21 +329,23 @@ export default function BuatPesananCard() {
 
   useEffect(() => {
     let alive = true;
-    fetchServices().then((result) => {
+    setLoading(true);setServices([]);setCategory('');setServiceId('');setOrderNotice(null);
+    fetchServices(server).then((result) => {
       if (!alive) return;
       if (result.ok) {
         setServices(result.services);
         // Pilih otomatis layanan dari ?service=ID (mis. dari tombol keranjang di Overview)
-        const pre = preselectId ? result.services.find((x) => x.id === preselectId) : undefined;
+        const pre = server === 1 && preselectId ? result.services.find((x) => x.id === preselectId) : undefined;
         if (pre) {
           setCategory(pre.category.trim());
           setServiceId(pre.id);
         }
       }
+      if (!result.ok) setOrderNotice({ ok: false, message: result.message });
       setLoading(false);
     });
     return () => { alive = false; };
-  }, []);
+  }, [server]);
 
   const categoryOptions = useMemo<Option[]>(() => Array.from(new Set(services.map((s) => s.category.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)).map((value) => ({ value, label: value })), [services]);
   const filteredServices = useMemo(() => category ? services.filter((s) => s.category.trim() === category) : services, [services, category]);
@@ -351,7 +354,7 @@ export default function BuatPesananCard() {
   useEffect(() => { setDescriptionRead(false);setTargetConfirmed(false); }, [serviceId, category]);
   useEffect(() => { setTargetConfirmed(false); }, [target]);
   const description = selected ? parseDescription(selected.description) : null;
-  const isCustomComment = isCustomCommentService(selected);
+  const isCustomComment = server === 1 && isCustomCommentService(selected);
 
   // For custom-comment services the unit is counted per comment line (enter).
   const commentLines = useMemo(
@@ -365,7 +368,7 @@ export default function BuatPesananCard() {
   const price = Math.round((qty / 1000) * rate);
 
 const handleOrder = async () => {
-    if (ordering || !user || !selected || !target.trim() || qty <= 0 || !descriptionRead || !targetConfirmed) return;
+    if (ordering || loading || !user || !selected || !target.trim() || qty <= 0 || !descriptionRead || !targetConfirmed) return;
 
     if (user.balance < price) {
       setOrderNotice({ ok: false, message: 'Saldo Anda tidak mencukupi untuk melakukan pemesanan ini.' });
@@ -378,6 +381,7 @@ const handleOrder = async () => {
     setSuccessInfo(null);
 
    const result = await placeOrder({
+  server,
   serviceId: selected.id, // <- ini
   serviceName: selected.name, // <- ini juga
   link: target,
@@ -394,7 +398,8 @@ const handleOrder = async () => {
 
     if (result.ok && orderIdFinal) {
       const now = new Date();
-      topUp(-price);
+      const chargedPrice = result.price ?? price;
+      topUp(-chargedPrice);
       setSuccessInfo({
   name: captured.name,
   target: captured.target,
@@ -406,7 +411,7 @@ const handleOrder = async () => {
         serviceName: captured.name,
         orderId: orderIdFinal,
         quantity: captured.qty,
-        price,
+        price: chargedPrice,
         createdAt: now.getTime(),
         status: orderStatus,
       });
@@ -414,7 +419,7 @@ const handleOrder = async () => {
      // Riwayat pesanan & pendapatan child panel dicatat oleh order.php di server
      // (dulu dikirim lagi dari browser → riwayat dobel & harga bisa dipalsukan).
 
-      const successMessage = `Pesanan berhasil dibuat. ID #${orderIdFinal}`;
+      const successMessage = orderIdFinal.startsWith('S2-PENDING-') ? result.message : `Pesanan berhasil dibuat. ID #${orderIdFinal}`;
       setOrderNotice({ ok: true, message: successMessage });
 
       setDescriptionRead(false);setTargetConfirmed(false);
@@ -523,6 +528,12 @@ const handleOrder = async () => {
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start lg:gap-8">
         {/* ============ KIRI: input pesanan ============ */}
         <div className="space-y-5">
+        <FormSection label="Server">
+          <CustomSelect id="buat-pesanan-server" value={String(server)} options={[{ value: '1', label: 'Server 1' }, { value: '2', label: 'Server 2' }]} disabled={ordering} onChange={(value) => {
+            if (value === String(server)) return;
+            setLoading(true);setServices([]);setCategory('');setServiceId('');setTarget('');setQuantity('');setComments('');setDescriptionRead(false);setTargetConfirmed(false);setSuccessInfo(null);setServer(value === '2' ? 2 : 1);
+          }} />
+        </FormSection>
          {/* 1. Kategori */}
         <FormSection label="Kategori">
           <CustomSelect
@@ -666,7 +677,7 @@ const handleOrder = async () => {
         {/* Pesan Button */}
         <TransactionButton
           onClick={handleOrder}
-          disabled={!user || !selected || !target.trim() || qty <= 0 || !descriptionRead || !targetConfirmed || ordering}
+          disabled={loading || !user || !selected || !target.trim() || qty <= 0 || !descriptionRead || !targetConfirmed || ordering}
           className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-bold text-white shadow-lg shadow-cyan-600/20 transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
 
         >

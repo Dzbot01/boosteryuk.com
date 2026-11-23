@@ -155,10 +155,10 @@ export default function CekStatusPage() {
                 <Hash className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <input
                   value={orderId}
-                  onChange={(e) => setOrderId(e.target.value.replace(/[^\d,]/g, ''))}
+                  onChange={(e) => setOrderId(e.target.value.replace(/[^a-zA-Z0-9,\-]/g, ''))}
                   onKeyDown={(e) => e.key === 'Enter' && !loading && handleSearch()}
-                  placeholder="Contoh: 1107 atau 1107,1234"
-                  inputMode="numeric"
+                  placeholder="Contoh: 1107 atau S2-1234"
+                  inputMode="text"
                   autoFocus
                   className="h-[54px] w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 font-mono text-[15px] tracking-wide text-slate-900 placeholder-slate-400 transition-all focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:placeholder-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-700"
                 />

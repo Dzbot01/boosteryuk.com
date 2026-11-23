@@ -100,9 +100,10 @@ function extractList(data: unknown): RawService[] | null {
 
 /** Fetch every service from the catalogue. */
 /** Fetch every service from the catalogue. */
-export async function fetchServices(): Promise<ServicesResult> {
+export async function fetchServices(server: 1 | 2 = 1): Promise<ServicesResult> {
   const edge = await invokeProxy<unknown>({
     action: 'services',
+    server,
     id: '',
   });
 
