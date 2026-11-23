@@ -13,5 +13,5 @@ try{
 }finally{await act(async()=>root.unmount());dom.window.close();}
 const provider=fs.readFileSync('src/context/SiteSettingsContext.tsx','utf8');assert.match(provider,/rootSlideImages: \[\]/);assert.match(provider,/!IS_CHILD_PANEL \? SERVICE_SLIDES.map/);assert.match(provider,/tenant.config.slides.map/);assert.match(provider,/if \(IS_CHILD_PANEL\) return \{ok: false/);
 for(const page of ['LayananPage','SewaAgenAiPage','OrderVpsPage'])assert.match(fs.readFileSync(`src/pages/${page}.tsx`,'utf8'),/useSlides\(\)/);
-const home=fs.readFileSync('src/pages/HomePage.tsx','utf8');assert.ok(home.indexOf('id="top-service-title"')<home.indexOf('{dashboardVideo &&'));assert.match(home,/top-service-google-maps.webp/);assert.match(home,/h-auto w-full max-w-4xl/);assert.ok(fs.statSync('public/images/top-service-google-maps.webp').size>0);
+const home=fs.readFileSync('src/pages/HomePage.tsx','utf8');assert.ok(home.indexOf('id="top-service-title"')<home.indexOf('{dashboardVideo &&'));assert.match(home,/top-service-google-maps.png/);assert.match(home,/h-auto w-full max-w-4xl/);assert.ok(fs.statSync('public/images/top-service-google-maps.png').size>0);
 console.log('PASS PHP syntax/auth/image validation contracts; default 3 slides/reset/upload/type rejection UI; root/tenant isolation and shared hook consumers; Top Service placement/responsive asset. No live MySQL.');

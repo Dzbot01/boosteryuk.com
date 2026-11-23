@@ -193,7 +193,7 @@ export default function HomePage() {
 
       <section aria-labelledby="top-service-title" className="mx-auto mt-8 w-full max-w-6xl px-4 sm:px-6">
         <h2 id="top-service-title" className="mb-4 text-center font-display text-2xl font-extrabold text-slate-900 lg:text-3xl dark:text-white">Top Service</h2>
-        <img src="/images/top-service-google-maps.webp" alt="Top Service Google Maps — ilustrasi tampilan lokasi dan ulasan bisnis" className="mx-auto h-auto w-full max-w-4xl rounded-2xl object-contain" loading="lazy" width={1568} height={1045} />
+        <img src="/images/top-service-google-maps.png" alt="Top Service Google Maps — ilustrasi tampilan lokasi dan ulasan bisnis" className="mx-auto h-auto w-full max-w-4xl rounded-2xl object-contain" loading="lazy" width={1377} height={1223} />
       </section>
 
       {/* ================= VIDEO PLAYER (antara hero & body) =================
