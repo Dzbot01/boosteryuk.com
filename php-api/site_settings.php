@@ -105,6 +105,26 @@ function load_site($db) {
     return [is_array($val) ? $val : [], $row['updated_at'] ?? null];
 }
 
+/** Root slider assets are separate rows: no large image data in shared settings JSON. */
+function root_slide_refs($db) {
+    $refs=[];
+    for($i=0;$i<3;$i++) {
+        $row=q_row($db, "SELECT MD5(setting_value) version FROM site_settings WHERE setting_key = ?", ['asset_slide_'.$i]);
+        $refs[]=$row ? 'asset:slide:'.$i.':'.$row['version'] : '';
+    }
+    return $refs;
+}
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['asset'] ?? '') === 'slide') {
+    $index=(string)($_GET['index']??'');
+    if(!preg_match('/^[0-2]$/',$index))out(['ok'=>false],400);
+    $row=q_row($sdb,"SELECT setting_value FROM site_settings WHERE setting_key = ?",['asset_slide_'.$index]);
+    if(!$row || !preg_match('#^data:(image/(?:jpeg|png|webp));base64,(.+)$#s',$row['setting_value'],$m))out(['ok'=>false],404);
+    $bin=base64_decode($m[2],true);
+    if($bin===false)out(['ok'=>false],404);
+    while(ob_get_level())ob_end_clean();
+    header_remove('Cache-Control');header('Content-Type: '.$m[1]);header('Cache-Control: public, max-age=31536000, immutable');header('Content-Length: '.strlen($bin));echo $bin;exit;
+}
+
 /* ===================== GET ?asset=hero (gambar hero, publik) ===================== */
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['asset'] ?? '') === 'hero') {
     $row = q_row($sdb, "SELECT setting_value FROM site_settings WHERE setting_key = 'asset_hero'");
@@ -127,6 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['asset'] ?? '') === 'hero') {
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         list($settings, $updated) = load_site($sdb);
+        $settings['rootSlideImages']=root_slide_refs($sdb);
         out(['ok' => true, 'settings' => (object)$settings, 'updated_at' => $updated]);
     } catch (Throwable $e) {
         out(['ok' => false, 'message' => $e->getMessage()]);
@@ -167,6 +188,22 @@ list($isAdmin, $who, $err) = verify_admin($sdb, $in['token'] ?? '');
 if (!$isAdmin) out(['ok' => false, 'message' => $err], 403);
 
 $patch = is_array($in['settings'] ?? null) ? $in['settings'] : [];
+
+if (array_key_exists('slideImage', $patch)) {
+    if(!empty($_SERVER['HTTP_X_CHILD_PANEL']))out(['ok'=>false,'message'=>'Pengaturan slider ini hanya untuk admin root.'],403);
+    $slide=$patch['slideImage'];
+    if(!is_array($slide) || !isset($slide['index']) || !is_int($slide['index']) || $slide['index']<0 || $slide['index']>2 || !is_string($slide['data']??null))out(['ok'=>false,'message'=>'Slide tidak valid.'],400);
+    $key='asset_slide_'.$slide['index'];$img=$slide['data'];
+    if($img==='')q_exec($sdb,"DELETE FROM site_settings WHERE setting_key = ?",[$key]);
+    else {
+        if(strlen($img)>2800000 || !preg_match('#^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$#',$img,$m))out(['ok'=>false,'message'=>'Gunakan JPG, PNG atau WebP maksimal 2 MB.'],400);
+        $bin=base64_decode($m[2],true);$info=$bin!==false ? @getimagesizefromstring($bin) : false;
+        if(!$info || ($info['mime']??'')!==$m[1] || $info[0]>8192 || $info[1]>8192)out(['ok'=>false,'message'=>'File gambar tidak valid atau dimensi melebihi 8192px.'],400);
+        q_exec($sdb,"INSERT INTO site_settings (setting_key,setting_value,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),updated_by=VALUES(updated_by)",[$key,$img,(string)$who]);
+    }
+    out(['ok'=>true,'settings'=>['rootSlideImages'=>root_slide_refs($sdb)]]);
+}
+
 
 /** Sanitasi + whitelist field. */
 function clean_str($v, $max) { return mb_substr(trim((string)$v), 0, $max); }

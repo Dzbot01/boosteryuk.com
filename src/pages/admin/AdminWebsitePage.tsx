@@ -1,3 +1,4 @@
+import RootSliderSettings from '../../components/admin/RootSliderSettings';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -188,6 +189,8 @@ export default function AdminWebsitePage() {
           {sync.message}
         </div>
       )}
+
+      <RootSliderSettings />
 
       {/* Logo */}
       <Reveal delay={45}>

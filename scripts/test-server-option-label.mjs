@@ -3,7 +3,7 @@ import fs from 'node:fs';
 const s=fs.readFileSync('src/components/BuatPesananCard.tsx','utf8');
 assert.match(s,/id="buat-pesanan-server" wrapText/);
 assert.match(s,/value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap'/);
-assert.match(s,/value: '1', label: 'Server 1'/);
+assert.match(s,/value: '1', label: 'Server 1 — Ringkas & Murah'/);
 assert.match(s,/useState<1 \| 2>\(1\)/);
 assert.match(s,/\{selected\?\.label \|\| placeholder\}/);
 assert.match(s,/\{option.label\}/);

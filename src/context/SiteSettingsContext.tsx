@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { SERVICE_SLIDES } from '../constants';
 import { LOGO_URL as DEFAULT_LOGO } from '../constants';
 import { applyRootBranding, ROOT_APPLE_ICON } from '../lib/rootBranding';
 import { MAIN_API, IS_CHILD_PANEL } from '../lib/apiBase';
@@ -23,6 +24,7 @@ export interface InfoItem {
 }
 
 export interface SiteSettings {
+  rootSlideImages: string[];
   logoUrl: string;
   brandName: string;
   brandSuffix: string;
@@ -61,6 +63,7 @@ interface SiteCtx {
   setFaviconFile: (file: File | null) => void;
   resetFavicon: () => void;
   /** Upload gambar hero (data URL JPEG/PNG/WebP) ke database; null = kembali ke bawaan. */
+  saveRootSlide: (index: number, dataUrl: string | null) => Promise<{ok: boolean; message?: string}>;
   saveHeroImage: (dataUrl: string | null) => Promise<{ ok: boolean; message?: string }>;
   /** URL gambar hero yang siap dipakai di CSS ('' = bawaan). */
   heroImageSrc: string;
@@ -171,6 +174,7 @@ const DEFAULT_INFO: InfoItem[] = [
 ];
 
 const DEFAULTS: SiteSettings = {
+  rootSlideImages: [],
   logoUrl: DEFAULT_LOGO,
   brandName: 'Booster',
   brandSuffix: 'yuk',
@@ -210,6 +214,7 @@ const SiteContext = createContext<SiteCtx>({
   resetLogo: () => {},
   setFaviconFile: () => {},
   resetFavicon: () => {},
+  saveRootSlide: async () => ({ok: false}),
   saveHeroImage: async () => ({ ok: false }),
   heroImageSrc: '',
   tenant: null,
@@ -269,6 +274,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       .then((j) => {
         if (!alive || !j?.ok || !j.settings || typeof j.settings !== 'object') return;
         const remote = pickShared(j.settings as Partial<SiteSettings>);
+        if (Array.isArray(j.settings.rootSlideImages)) remote.rootSlideImages = j.settings.rootSlideImages;
         const hero = (j.settings as Partial<SiteSettings>).heroImageUrl;
         if (typeof hero === 'string') (remote as Partial<SiteSettings>).heroImageUrl = hero;
         // buang field kosong agar default tetap dipakai
@@ -375,6 +381,17 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     return m ? `${SETTINGS_API}?asset=hero&v=${m[1]}` : '';
   })();
 
+  const saveRootSlide = async (index: number, dataUrl: string | null): Promise<{ok: boolean; message?: string}> => {
+    if (IS_CHILD_PANEL) return {ok: false, message: 'Hanya admin root.'};
+    try {
+      const response = await fetch(SETTINGS_API, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({token: localStorage.getItem('token') || '', settings: {slideImage: {index, data: dataUrl || ''}}})});
+      const result = await response.json();
+      if (!response.ok || !result.ok || !Array.isArray(result.settings?.rootSlideImages)) return {ok: false, message: result.message || 'Gagal menyimpan slider.'};
+      setSettings(s => ({...s, rootSlideImages: result.settings.rootSlideImages}));
+      return {ok: true};
+    } catch {return {ok: false, message: 'Tidak dapat menghubungi server.'};}
+  };
+
   const saveHeroImage = async (dataUrl: string | null): Promise<{ ok: boolean; message?: string }> => {
     let token = '';
     try {
@@ -463,12 +480,17 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         resetLogo,
         setFaviconFile,
         resetFavicon,
+        saveRootSlide,
         saveHeroImage,
         heroImageSrc,
         tenant,
         slides: tenant?.config?.slides?.length
           ? tenant.config.slides.map((sl) => ({ ...sl, image: tenantAssetUrl(tenant, sl.image) })).filter((sl) => sl.image)
-          : null,
+          : !IS_CHILD_PANEL ? SERVICE_SLIDES.map((slide, index) => {
+              const ref = settings.rootSlideImages?.[index] || '';
+              const match = /^asset:slide:([0-2]):([a-f0-9]+)$/.exec(ref);
+              return {image: match && Number(match[1]) === index ? `${SETTINGS_API}?asset=slide&index=${index}&v=${match[2]}` : slide.url, title: slide.title, subtitle: slide.subtitle};
+            }) : null,
         // Panel: bawaan hanya sapaan (info reseller Boosteryuk tidak cocok untuk panel reseller).
         voiceMode: tenant ? tenant.config?.voice || 'welcome' : 'full',
         // Child panel: bawaan TANPA video; tampil hanya bila admin mengunggah/mengisi video.

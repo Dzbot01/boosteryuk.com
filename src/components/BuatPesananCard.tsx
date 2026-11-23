@@ -532,7 +532,7 @@ const handleOrder = async () => {
         {/* ============ KIRI: input pesanan ============ */}
         <div className="space-y-5">
         <FormSection label="Server">
-          <CustomSelect id="buat-pesanan-server" wrapText value={String(server)} options={[{ value: '1', label: 'Server 1' }, { value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap' }]} disabled={ordering} onChange={(value) => {
+          <CustomSelect id="buat-pesanan-server" wrapText value={String(server)} options={[{ value: '1', label: 'Server 1 — Ringkas & Murah' }, { value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap' }]} disabled={ordering} onChange={(value) => {
             if (value === String(server)) return;
             setLoading(true);setServices([]);setCategory('');setServiceId('');setTarget('');setQuantity('');setComments('');setDescriptionRead(false);setTargetConfirmed(false);setSuccessInfo(null);setServer(value === '2' ? 2 : 1);
           }} />
