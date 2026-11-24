@@ -1057,3 +1057,44 @@ img {
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
+
+/* ------------------------------------------------------------------ */
+/* Editor Studio (gaya CapCut Desktop): scrollbar tipis + slider.      */
+/* ------------------------------------------------------------------ */
+.ed-scroll,
+.ed-scroll-x {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a40 transparent;
+}
+.ed-scroll::-webkit-scrollbar,
+.ed-scroll-x::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.ed-scroll::-webkit-scrollbar-thumb,
+.ed-scroll-x::-webkit-scrollbar-thumb {
+  background: #3a3a40;
+  border-radius: 999px;
+}
+.ed-scroll::-webkit-scrollbar-track,
+.ed-scroll-x::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  border: none;
+}
+.ed-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  border: none;
+}
