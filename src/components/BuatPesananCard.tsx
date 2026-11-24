@@ -3,14 +3,19 @@ import TransactionButton from './TransactionButton';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
+  Ban,
+  BookOpen,
   Check,
   CheckCircle2,
   ChevronDown,
   ClipboardList,
+  AtSign,
+  Globe,
   LoaderCircle,
   Search,
   ShoppingCart,
   Tag,
+  Target,
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -27,9 +32,17 @@ function BrandBadge({ name }: { name: string }) {
   const brand = useMemo(() => brandForCategory(name), [name]);
   const [failed, setFailed] = useState(false);
 
-  if (!brand) return null;
-
   const initials = name.trim().slice(0, 2).toUpperCase();
+
+  // Tanpa merek resmi yang cocok: badge netral berisi inisial nama kategori
+  // agar setiap baris kategori tetap memiliki ikon yang merujuk namanya.
+  if (!brand) {
+    return (
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-500/90 ring-1 ring-black/5 dark:bg-slate-600" aria-hidden>
+        <span className="font-display text-[8px] font-extrabold text-white">{initials}</span>
+      </span>
+    );
+  }
   const full = Boolean(brand.fullColor);
 
   return (
@@ -54,6 +67,70 @@ function BrandBadge({ name }: { name: string }) {
 }
 
 
+/** Kartu panduan pemesanan: grid landscape berisi catatan wajib sebelum memesan. */
+const ORDER_GUIDE_NOTES: { icon: typeof Globe; title: string; body: string }[] = [
+  {
+    icon: Globe,
+    title: 'Target wajib mode Public',
+    body: 'Atur profil/akun target ke mode Publik (bukan Privat) sebelum memesan agar proses pengiriman bisa berjalan.',
+  },
+  {
+    icon: Target,
+    title: 'Target harus benar & valid',
+    body: 'Wajib memasukkan target yang benar. Jika target tidak valid, pesanan akan tercatat sukses tanpa satu pun pesanan terkirim ke target tersebut.',
+  },
+  {
+    icon: AtSign,
+    title: 'Khusus Followers Instagram',
+    body: 'Nonaktifkan fitur "Tandai untuk Ditinjau" pada pengaturan "Ikuti dan Undang Teman" agar followers dapat masuk.',
+  },
+  {
+    icon: Ban,
+    title: 'Jangan mengubah nama target',
+    body: 'Dilarang mengubah nama target (username/URL) selama proses pesanan berlangsung.',
+  },
+];
+
+function OrderGuideCard() {
+  return (
+    <section
+      className="mb-4 w-full rounded-[18px] border border-cyan-100 bg-white px-4 py-4 shadow-[0_14px_36px_-18px_rgba(23,32,51,.22)] dark:border-slate-700 dark:bg-slate-900 sm:px-5"
+      aria-label="Panduan Pemesanan"
+    >
+      <div className="flex items-center gap-2">
+        <BookOpen className="h-[18px] w-[18px]" style={{ color: COLOR.primary }} strokeWidth={2} />
+        <h2 className="text-[15px] font-semibold tracking-tight" style={{ color: COLOR.dark }}>
+          Panduan Pemesanan
+        </h2>
+      </div>
+      <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+        {ORDER_GUIDE_NOTES.map((note) => (
+          <article
+            key={note.title}
+            className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3 dark:border-slate-700/60 dark:bg-slate-800/60"
+          >
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white"
+              style={{ background: COLOR.primary }}
+              aria-hidden
+            >
+              <note.icon className="h-4 w-4" strokeWidth={2.2} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-bold leading-tight" style={{ color: COLOR.dark }}>
+                {note.title}
+              </p>
+              <p className="mt-1 text-[11.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+                {note.body}
+              </p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // DARK-FIX: nilai hex diganti token CSS var(--by-*) (lihat index.css) agar card/teks
 // mengikuti tema terang & gelap (sebelumnya inline hex -> teks gelap tak terlihat saat dark).
 const COLOR = {
@@ -66,6 +143,11 @@ const COLOR = {
 };
 
 interface Option { value: string; label: string; iconHint?: string }
+
+/** Kunci pembanding kategori: huruf kecil + spasi tunggal (pengelompokan stabil). */
+function normCategory(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
 
 /** Ubah HTML deskripsi jadi teks polos TANPA menghilangkan baris baru. */
 function stripHtml(value: string): string {
@@ -341,7 +423,7 @@ export default function BuatPesananCard() {
         // Pilih otomatis layanan dari ?service=ID (mis. dari tombol keranjang di Overview)
         const pre = preselectId ? result.services.find((x) => x.id === preselectId || x.name === preselectId) : undefined;
         if (pre) {
-          setCategory(pre.category.trim());
+          setCategory(normCategory(pre.category));
           setServiceId(pre.id);
         }
       }
@@ -351,8 +433,21 @@ export default function BuatPesananCard() {
     return () => { alive = false; };
   }, [server]);
 
-  const categoryOptions = useMemo<Option[]>(() => Array.from(new Set(services.map((s) => s.category.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)).map((value) => ({ value, label: value })), [services]);
-  const filteredServices = useMemo(() => category ? services.filter((s) => s.category.trim() === category) : services, [services, category]);
+  // Kunci kategori dinormalisasi (huruf kecil + spasi tunggal) supaya varian
+  // "Audiomack"/"Audiomack " /"AUDIOMACK" tetap SATU kelompok, tidak terpisah.
+  const categoryOptions = useMemo<Option[]>(() => {
+    const seen = new Map<string, string>();
+    for (const item of services) {
+      const raw = item.category.trim();
+      if (!raw) continue;
+      const key = normCategory(raw);
+      if (!seen.has(key)) seen.set(key, raw);
+    }
+    return Array.from(seen.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([value, label]) => ({ value, label }));
+  }, [services]);
+  const filteredServices = useMemo(() => category ? services.filter((s) => normCategory(s.category) === category) : services, [services, category]);
   const serviceOptions = useMemo<Option[]>(() => filteredServices.map((s) => ({ value: s.id, label: s.name, iconHint: `${s.name} ${s.category}` })), [filteredServices]);
   const selected = useMemo(() => services.find((s) => s.id === serviceId) || null, [services, serviceId]);
   useEffect(() => { setDescriptionRead(false);setTargetConfirmed(false); }, [serviceId, category]);
@@ -449,6 +544,7 @@ const handleOrder = async () => {
         ordering={ordering}
         orderNotice={orderNotice}
       />
+    <OrderGuideCard />
     <div className="w-full rounded-[18px] px-4 py-5 sm:px-6 lg:px-7" style={{ background: COLOR.surface, boxShadow: '0 22px 48px -22px rgba(23,32,51,.32), 0 6px 16px -10px rgba(23,32,51,.14)' }}>
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
@@ -533,7 +629,7 @@ const handleOrder = async () => {
         {/* ============ KIRI: input pesanan ============ */}
         <div className="space-y-5">
         <FormSection label="Server">
-          <CustomSelect id="buat-pesanan-server" wrapText value={String(server)} options={[{ value: '1', label: 'Server 1 — Ringkas & Murah' }, { value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap' }, { value: '4', label: 'Server 3 — Layanan Paling Lengkap' }]} disabled={ordering} onChange={(value) => {
+          <CustomSelect id="buat-pesanan-server" wrapText value={String(server)} options={[{ value: '1', label: 'Server 1 — Ringkas & Stabil' }, { value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap' }, { value: '4', label: 'Server 3 — Lengkap & Murah' }]} disabled={ordering} onChange={(value) => {
             if (value === String(server)) return;
             setLoading(true);setServices([]);setCategory('');setServiceId('');setTarget('');setQuantity('');setComments('');setDescriptionRead(false);setTargetConfirmed(false);setSuccessInfo(null);setServer(value === '2' ? 2 : value === '4' ? 4 : 1);
           }} />

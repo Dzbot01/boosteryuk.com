@@ -3,7 +3,7 @@ import fs from 'node:fs';
 const s=fs.readFileSync('src/components/BuatPesananCard.tsx','utf8');
 assert.match(s,/id="buat-pesanan-server" wrapText/);
 assert.match(s,/value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap'/);
-assert.match(s,/value: '1', label: 'Server 1 — Ringkas & Murah'/);assert.match(s,/value: '4', label: 'Server 3 — Layanan Paling Lengkap'/,'opsi Server 3 tampil di dropdown tanpa nama provider');
+assert.match(s,/value: '1', label: 'Server 1 — Ringkas & Stabil'/);assert.match(s,/value: '4', label: 'Server 3 — Lengkap & Murah'/,'opsi Server 3 tampil di dropdown tanpa nama provider');
 assert.match(s,/useState<1 \| 2 \| 4>\(\(\) => \(searchParams\.get\('server'\) === '2' \? 2 : searchParams\.get\('server'\) === '4' \? 4 : 1\)\)/,'Server 1 tetap default; server=4 via param; server=3 Medanpedia tetap ikut UI Server 1');assert.ok(!s.includes("get('server') === '3'"),'tidak ada jalur UI khusus server=3 (Medanpedia) lagi');
 assert.match(s,/\{selected\?\.label \|\| placeholder\}/);
 assert.match(s,/\{option.label\}/);
