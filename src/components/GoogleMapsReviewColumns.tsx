@@ -49,7 +49,7 @@ export default function GoogleMapsReviewColumns() {
   }, [reload]);
 
   const handleCart = (service: ServiceItem) => {
-    const path = `/layanan?server=3&service=${encodeURIComponent(service.id)}`;
+    const path = `/layanan?service=${encodeURIComponent(service.id)}`;
     if (!user) {
       try { sessionStorage.setItem(PENDING_ORDER_PATH_KEY, path); } catch { /* privat mode */ }
       window.dispatchEvent(new CustomEvent(OPEN_LOGIN_EVENT));

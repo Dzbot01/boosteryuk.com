@@ -21,6 +21,8 @@ export interface ServiceItem {
   refill: boolean;
   cancel: boolean;
   description: string;
+  /** Server asal layanan (1/2/3). Item Server 3 digabung ke UI Server 1 tanpa teks tambahan. */
+  source?: 1 | 2 | 3;
 }
 
 export interface ServicesResult {
@@ -131,12 +133,27 @@ export async function fetchServices(server: 1 | 2 | 3 = 1): Promise<ServicesResu
 
   // FILTER KHUSUS TRIPAY
   const banned = ['😢', '🤬', '😥', '😭', '😡'];
-  const safe = all.filter(s => {
+  const keep = (s: ServiceItem) => {
     const text = `${s.category} ${s.name}`.toLowerCase();
     return !banned.some(k => text.includes(k));
-  });
+  };
+  const safe = all.filter(keep);
 
-  return { ok: true, message: 'Layanan dimuat.', services: safe, categories };
+  // Server 3 diberi namespace ID (M3:) agar tidak bertabrakan dengan ID Server 1/2
+  // saat daftar digabung dalam satu UI; prefix dilepas kembali hanya saat order.
+  const tagged = safe.map(s => server === 3 ? { ...s, id: `M3:${s.id}`, source: 3 as const } : { ...s, source: server as 1 | 2 });
+
+  if (server !== 1) return { ok: true, message: 'Layanan dimuat.', services: tagged, categories };
+
+  // SERVER 1 = SATU UI: layanan Server 3 (Google Maps Review) ikut dimuat & digabung
+  // ke daftar yang sama, tampilan default tanpa teks/tanda tambahan.
+  const gm = await invokeProxy<unknown>({ action: 'services', server: 3, id: '' }).catch(() => null);
+  const gmList = gm && !gm.error && gm.data ? extractList(gm.data) : null;
+  const gmServices = gmList
+    ? gmList.map(normalize).filter(keep).map(s => ({ ...s, id: `M3:${s.id}`, source: 3 as const }))
+    : [];
+
+  return { ok: true, message: 'Layanan dimuat.', services: [...tagged, ...gmServices], categories };
 }
 
 /** Keep only the services that belong to the given platform. */

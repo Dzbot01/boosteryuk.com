@@ -4,7 +4,7 @@ const s=fs.readFileSync('src/components/BuatPesananCard.tsx','utf8');
 assert.match(s,/id="buat-pesanan-server" wrapText/);
 assert.match(s,/value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap'/);
 assert.match(s,/value: '1', label: 'Server 1 — Ringkas & Murah'/);
-assert.match(s,/useState<1 \| 2 \| 3>\(\(\) => \(searchParams\.get\('server'\) === '3' \? 3 : 1\)\)/,'Server 1 tetap default tanpa param server');
+assert.match(s,/useState<1 \| 2>\(\(\) => \(searchParams\.get\('server'\) === '2' \? 2 : 1\)\)/,'Server 1 tetap default; param server=3 kini ikut UI Server 1 (satu UI)');assert.ok(!s.includes("get('server') === '3'"),'tidak ada jalur UI khusus server=3 lagi');
 assert.match(s,/\{selected\?\.label \|\| placeholder\}/);
 assert.match(s,/\{option.label\}/);
 console.log('PASS Server 2 label in shared option/selected rendering, wrap enabled, Server 1 default unchanged.');

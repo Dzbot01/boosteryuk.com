@@ -61,3 +61,15 @@ tervalidasi, timeout, tanpa follow redirect.
 (syntax PHP via parser, kontrak order/refund/pending/auto-deteksi, jsdom kolom+keranjang+
 gerbang login, Server 3 tidak muncul di dropdown). `npm run build` lolos (24 halaman SEO);
 tsc hanya dua baseline error DepositInvoicePage/PlaygroundPage.
+
+## Satu UI dengan Server 1 (menggantikan jalur server=3 terpisah)
+
+- `fetchServices(1)` memuat katalog Server 1 DAN Server 3 sekaligus, lalu menggabungkannya
+  dalam satu daftar/UI default. Item Server 3 diberi namespace ID `M3:<id>` + `source: 3`
+  agar tidak bertabrakan dengan ID Server 1/2; tidak ada teks/tanda tambahan di tampilan.
+- Saat order, prefix `M3:` dilepas dan `placeOrder` mengirim `server: 3` sehingga order.php
+  tetap memakai jalur Medanpedia (ID pesanan `S3-…` / `S3-PENDING-…` tidak berubah).
+- Tombol keranjang kolom Google Maps Review di dashboard kini mengarah ke
+  `/layanan?service=M3:<id>` (UI Server 1 default); resume setelah login mengikuti pola yang sama.
+- Panel statis "Server 3 — Google Maps Review" di BuatPesananCard dihapus; dropdown server
+  tetap hanya Server 1 & Server 2.
