@@ -2,7 +2,7 @@ import { MAIN_API } from './lib/apiBase';
 export interface EdgePayload {
   action: 'status' | 'refill' | 'refill_status' | 'services' | 'order' | 'balance';
   id?: string;
-  server?: 1 | 2 | 3;
+  server?: 1 | 2 | 3 | 4;
   serviceId?: string;
   serviceName?: string;
   link?: string;
@@ -36,6 +36,7 @@ export async function invokeProxy<T = unknown>(
   const token = localStorage.getItem('token'); // ambil token login
   const server2Id = payload.id?.startsWith('S2-');
   const server3Id = payload.id?.startsWith('S3-');
+  const server4Id = payload.id?.startsWith('S4-');
   if (server2Id && (payload.action === 'refill' || payload.action === 'refill_status')) {
     return { ok: false, status: 400, data: null, error: 'Refill Server 2 belum tersedia. Hubungi admin.' };
   }
@@ -43,8 +44,12 @@ export async function invokeProxy<T = unknown>(
     ? `${API_BASE_URL}/naizop_services.php`
     : payload.action === 'services' && payload.server === 3
       ? `${API_BASE_URL}/medanpedia_services.php`
+      : payload.action === 'services' && payload.server === 4
+        ? `${API_BASE_URL}/smmgen_services.php`
       : payload.action === 'status' && server2Id ? `${API_BASE_URL}/naizop_status.php`
-        : payload.action === 'status' && server3Id ? `${API_BASE_URL}/medanpedia_status.php` : ENDPOINTS[payload.action];
+        : payload.action === 'status' && server3Id ? `${API_BASE_URL}/medanpedia_status.php`
+          : payload.action === 'status' && server4Id ? `${API_BASE_URL}/smmgen_status.php`
+            : (payload.action === 'refill' || payload.action === 'refill_status') && server4Id ? `${API_BASE_URL}/smmgen_refill.php` : ENDPOINTS[payload.action];
 
   if (!endpoint) {
     return { ok: false, status: 400, data: null, error: `Action ${payload.action} tidak ditemukan` };

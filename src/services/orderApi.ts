@@ -101,7 +101,7 @@ export function parseOrderIds(raw: string): { ids: string[]; invalid: string[] }
   const invalid: string[] = [];
 
   for (const p of unique) {
-    if (/^(?:\d+|S2-(?:\d+|PENDING-[a-f0-9]+)|S3-(?:\d+|PENDING-[a-f0-9]+))$/.test(p)) ids.push(p);
+    if (/^(?:\d+|S2-(?:\d+|PENDING-[a-f0-9]+)|S3-(?:\d+|PENDING-[a-f0-9]+)|S4-(?:\d+|PENDING-[a-f0-9]+))$/.test(p)) ids.push(p);
     else invalid.push(p);
   }
 
@@ -151,7 +151,7 @@ async function lookupViaPrimary(rawInput: string): Promise<LookupResult> {
 
 
   const invalidFailures: LookupFailure[] = ids.length > 0
-   ? invalid.map((id) => ({ id, reason: 'Dilewati — format ID tidak valid (angka, S2-ID, atau S3-ID).' }))
+   ? invalid.map((id) => ({ id, reason: 'Dilewati — format ID tidak valid (angka, S2-ID, S3-ID, atau S4-ID).' }))
     : [];
 
   const finish = (r: Omit<LookupResult, 'debug'>, dbg: DebugInfo): LookupResult => ({
@@ -166,12 +166,12 @@ async function lookupViaPrimary(rawInput: string): Promise<LookupResult> {
       {
         ok: false,
         message: invalid.length > 0
-         ? `ID tidak valid: ${invalid.join(', ')}. Gunakan ID angka, S2-ID, atau S3-ID, maks ${MAX_IDS} ID dipisah koma.`
+         ? `ID tidak valid: ${invalid.join(', ')}. Gunakan ID angka, S2-ID, S3-ID, atau S4-ID, maks ${MAX_IDS} ID dipisah koma.`
           : 'Masukkan minimal satu ID pesanan.',
         orders: [],
         failures: invalid.map((id) => ({
           id,
-          reason: 'Format tidak valid — gunakan angka, S2-ID, atau S3-ID.',
+          reason: 'Format tidak valid — gunakan angka, S2-ID, S3-ID, atau S4-ID.',
         })),
       },
       blankDebug(rawInput),
@@ -313,13 +313,39 @@ async function lookupServer3Fallback(idStr: string): Promise<Omit<LookupResult, 
   }
 }
 
-/** Cek status dengan routing prefix + auto-deteksi coba satu persatu (Server 1 → 3, S2/S3 sesuai prefix). */
+/**
+ * Auto-deteksi Server 3 (SMMGen): bila ID angka polos tidak ditemukan di Server 1
+ * maupun Server 3 (Medanpedia), coba ke smmgen_status.php sebelum menyerah.
+ */
+async function lookupServer4Fallback(idStr: string): Promise<Omit<LookupResult, 'debug'> | null> {
+  try {
+    const response = await fetch(`${MAIN_API}/smmgen_status.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ id: idStr }),
+    });
+    const data = (await response.json()) as ApiResponse;
+    if (!response.ok || data.status !== true || !data.orders || typeof data.orders !== 'object') return null;
+    const orders: OrderData[] = [];
+    for (const id of idStr.split(',')) {
+      const entry = (data.orders as Record<string, { order_status?: string; msg?: string }>)[id];
+      if (entry && entry.order_status) orders.push(makeOrder(id, entry as Record<string, unknown>, 'Pesanan ditemukan di Server 3 (SMMGen).'));
+    }
+    if (orders.length === 0) return null;
+    return { ok: true, message: 'Pesanan ditemukan di Server 3 (SMMGen).', orders, failures: [] };
+  } catch {
+    return null;
+  }
+}
+
+/** Cek status dengan routing prefix + auto-deteksi coba satu persatu (Server 1 → 3 → 4, S2/S3/S4 sesuai prefix). */
 export async function checkOrderStatus(rawInput: string): Promise<LookupResult> {
   const { ids, invalid } = parseOrderIds(rawInput);
   const s2 = ids.filter((id) => id.startsWith('S2-'));
   const s3 = ids.filter((id) => id.startsWith('S3-'));
-  const plain = ids.filter((id) => !id.startsWith('S2-') && !id.startsWith('S3-'));
-  const groups = [s2, s3, plain].filter((g) => g.length > 0);
+  const s4 = ids.filter((id) => id.startsWith('S4-'));
+  const plain = ids.filter((id) => !id.startsWith('S2-') && !id.startsWith('S3-') && !id.startsWith('S4-'));
+  const groups = [s2, s3, s4, plain].filter((g) => g.length > 0);
   if (groups.length > 1) {
     const parts = await Promise.all(groups.map((g) => checkOrderStatus(g.join(','))));
     return { ok: parts.some((p) => p.ok), message: 'Pemeriksaan semua server selesai.', orders: parts.flatMap((p) => p.orders), failures: [...parts.flatMap((p) => p.failures), ...invalid.map((id) => ({ id, reason: 'ID tidak valid.' }))], debug: parts[0].debug };
@@ -330,6 +356,11 @@ export async function checkOrderStatus(rawInput: string): Promise<LookupResult> 
     if (fb) {
       const found = new Set(fb.orders.map((o) => o.orderId));
       return { ...fb, failures: primary.failures.filter((f) => !found.has(f.id)), debug: primary.debug };
+    }
+    const fb4 = await lookupServer4Fallback(plain.join(','));
+    if (fb4) {
+      const found = new Set(fb4.orders.map((o) => o.orderId));
+      return { ...fb4, failures: primary.failures.filter((f) => !found.has(f.id)), debug: primary.debug };
     }
   }
   return primary;

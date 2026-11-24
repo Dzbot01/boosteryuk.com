@@ -317,7 +317,7 @@ export default function BuatPesananCard() {
   const { addOrder } = useOrderHistory();
   const [searchParams] = useSearchParams();
   const preselectId = searchParams.get('service') || '';
-  const [server, setServer] = useState<1 | 2>(() => (searchParams.get('server') === '2' ? 2 : 1));
+  const [server, setServer] = useState<1 | 2 | 4>(() => (searchParams.get('server') === '2' ? 2 : searchParams.get('server') === '4' ? 4 : 1));
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
@@ -358,7 +358,7 @@ export default function BuatPesananCard() {
   useEffect(() => { setDescriptionRead(false);setTargetConfirmed(false); }, [serviceId, category]);
   useEffect(() => { setTargetConfirmed(false); }, [target]);
   const description = selected ? parseDescription(selected.description) : null;
-  const isCustomComment = server === 1 && isCustomCommentService(selected);
+  const isCustomComment = (server === 1 || server === 4) && isCustomCommentService(selected);
 
   // For custom-comment services the unit is counted per comment line (enter).
   const commentLines = useMemo(
@@ -533,9 +533,9 @@ const handleOrder = async () => {
         {/* ============ KIRI: input pesanan ============ */}
         <div className="space-y-5">
         <FormSection label="Server">
-          <CustomSelect id="buat-pesanan-server" wrapText value={String(server)} options={[{ value: '1', label: 'Server 1 — Ringkas & Murah' }, { value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap' }]} disabled={ordering} onChange={(value) => {
+          <CustomSelect id="buat-pesanan-server" wrapText value={String(server)} options={[{ value: '1', label: 'Server 1 — Ringkas & Murah' }, { value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap' }, { value: '4', label: 'Server 3 — SMMGen · Layanan Lengkap' }]} disabled={ordering} onChange={(value) => {
             if (value === String(server)) return;
-            setLoading(true);setServices([]);setCategory('');setServiceId('');setTarget('');setQuantity('');setComments('');setDescriptionRead(false);setTargetConfirmed(false);setSuccessInfo(null);setServer(value === '2' ? 2 : 1);
+            setLoading(true);setServices([]);setCategory('');setServiceId('');setTarget('');setQuantity('');setComments('');setDescriptionRead(false);setTargetConfirmed(false);setSuccessInfo(null);setServer(value === '2' ? 2 : value === '4' ? 4 : 1);
           }} />
         </FormSection>
          {/* 1. Kategori */}
@@ -560,7 +560,7 @@ const handleOrder = async () => {
         {/* 2. Layanan */}
         <FormSection label="Layanan">
           <CustomSelect
-            showBrand={server === 2}
+            showBrand={server === 2 || server === 4}
             server2Icons={server === 2}
             id="buat-pesanan-layanan"
             value={serviceId}
