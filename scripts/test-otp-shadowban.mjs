@@ -16,7 +16,11 @@ for (const frag of [
 ]) assert.ok(otp.includes(frag), `teks syarat: ${frag.slice(0, 40)}…`);
 
 /* 2. Keterangan Shadowban + tautan + gambar contoh */
-assert.match(otp, /Apa itu Shadowban\?/, 'judul bagian shadowban');
+/* Penjelasan shadow ban hanya satu: judul dobel di bagian atas sudah dihapus. */
+assert.doesNotMatch(otp, /<h2[^>]*>Apa itu Shadowban\?<\/h2>/, 'judul shadowban di atas tidak lagi ada');
+assert.match(otp, /<h3[^>]*>Apa itu Shadow Ban\?<\/h3>/, 'penjelasan shadow ban yang lebih detail tetap ada');
+assert.equal((otp.match(/Penjelasan Shadow Ban/g) || []).length, 1, 'hanya satu blok penjelasan shadow ban');
+assert.match(otp, /aria-label="Keterangan penting dan penjelasan shadow ban"/, 'seksi keterangan tetap ada');
 assert.match(otp, /rate OTP hingga 95%/);
 assert.match(otp, /https:\/\/qpanel\.org\/panel\/requestlayanan/, 'tautan Request Layanan');
 assert.match(otp, /https:\/\/tinyurl\.com\/qpaneldoc/, 'tautan panduan KLIK DISINI');

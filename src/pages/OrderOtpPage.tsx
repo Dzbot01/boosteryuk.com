@@ -388,15 +388,16 @@ export default function OrderOtpPage() {
         </div>
       </div>
 
-      {/* Keterangan penting & edukasi shadow ban (lengkap dengan contoh gambar). */}
+      {/* Keterangan penting & edukasi shadow ban (lengkap dengan contoh gambar).
+          Judul "Apa itu Shadowban?" di bagian atas dihapus karena penjelasan shadow ban
+          yang lebih detail sudah ada di bawah (satu penjelasan saja, tidak dobel). */}
       <Reveal>
         <section
           className="mt-5 rounded-[18px] border p-4 sm:p-6"
           style={{ borderColor: COLOR.border, background: COLOR.surface }}
-          aria-label="Apa itu Shadowban"
+          aria-label="Keterangan penting dan penjelasan shadow ban"
         >
-          <h2 className="text-[15px] font-semibold tracking-tight" style={{ color: COLOR.dark }}>Apa itu Shadowban?</h2>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+          <ul className="list-disc space-y-1 pl-5 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
             <li>rate OTP hingga 95%.</li>
             <li>
               Tidak menemukan aplikasi? Ajukan di{' '}
