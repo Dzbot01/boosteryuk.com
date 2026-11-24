@@ -19,6 +19,7 @@ Baru: `medanpedia_lib.php`, `medanpedia_services.php`, `medanpedia_status.php`,
 otomatis (TTL 10 menit). Key hanya dibaca di PHP; semua request keluar memakai TLS
 tervalidasi, timeout, tanpa follow redirect.
 
+- Transport adaptif: bentuk request yang ditolak provider (`permintaan tidak valid`, 400/405/415) dicoba ulang dengan bentuk lain (POST form → GET query → POST JSON) untuk endpoint baca, dan bentuk yang berhasil di-cache (`medanpedia_transport_cache.json`). Endpoint mutating (order/refill) TIDAK di-retry (anti double-submit) dan memakai transport cache. Penolakan eksplisit provider = exception `MpReject` dengan pesan ASLI server; order menolaknya = refund atomik, status/refill meneruskannya ke pemanggil.
 - `medanpedia_services.php` (publik): hanya kategori+layanan Google Maps Review
   (filter regex `google\s*(maps?)?\s*review` / substring "google map"). Katalog penuh tidak dipublikasikan.
 - `medanpedia_status.php` (publik): menerima `S3-<id>`, `S3-PENDING-<16hex>`, dan ID angka
@@ -38,7 +39,7 @@ tervalidasi, timeout, tanpa follow redirect.
 - Cek Status: ID `S3-…` langsung ke Medanpedia; ID angka polos dicoba satu persatu
   Server 1 lalu Server 3; bulk campuran S2/S3/polos dipecah per grup dan digabung.
 - Refill & status refill: `S3-…` → Server 3; ID polos → Server 1 lalu Server 3; `S2-…` tetap pesan "belum tersedia".
-- Dashboard: dua kolom Kategori & Layanan GM Review di bawah gambar Top Service, tombol
+- Dashboard: dua kolom POLOS (tanpa card) Kategori & Layanan GM Review persis di bawah gambar Top Service, tombol
   keranjang gaya modal Layanan Rekomendasi. Tamu: simpan path tertunda di sessionStorage +
   buka modal login; setelah login (kembali ke /overview) Layout melanjutkan ke step order.
   Menutup modal tanpa login membatalkan path tertunda. Kolom selalu tampil: skeleton saat memuat,

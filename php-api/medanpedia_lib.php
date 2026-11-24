@@ -23,43 +23,87 @@ function mp_config() {
     return $cfg;
 }
 
-/** POST form-encoded ke satu path API Server 3; selalu mengembalikan array JSON. */
-function mp_http($path, array $post = []) {
-    list($base, $key) = mp_config();
-    $post = array_merge(['key' => $key], $post);
-    $ch = curl_init($base . '/' . ltrim((string)$path, '/'));
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => http_build_query($post),
+/** Penolakan eksplisit dari provider (status:false) — beda kelas agar order bisa refund aman. */
+class MpReject extends RuntimeException {}
+
+function mp_transport_cache_read() {
+    $f = __DIR__ . '/medanpedia_transport_cache.json';
+    if (is_file($f)) { $j = json_decode((string)@file_get_contents($f), true); if (is_array($j) && isset($j['t'])) return (int)$j['t']; }
+    return null;
+}
+function mp_transport_cache_write($t) { @file_put_contents(__DIR__ . '/medanpedia_transport_cache.json', json_encode(['t' => $t]), LOCK_EX); }
+
+/**
+ * Satu percobaan transport: 0=POST form, 1=GET query, 2=POST JSON.
+ * @return array{json: ?array, code: int, error: string}
+ */
+function mp_attempt($url, array $post, $transport) {
+    $common = [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 15,
         CURLOPT_CONNECTTIMEOUT => 8,
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_SSL_VERIFYHOST => 2,
         CURLOPT_FOLLOWLOCATION => false,
-        CURLOPT_HTTPHEADER => ['Accept: application/json'],
-    ]);
+    ];
+    $ch = curl_init();
+    if ($transport === 1) {
+        curl_setopt_array($ch, $common + [CURLOPT_URL => $url . (str_contains($url, '?') ? '&' : '?') . http_build_query($post), CURLOPT_HTTPHEADER => ['Accept: application/json']]);
+    } elseif ($transport === 2) {
+        curl_setopt_array($ch, $common + [CURLOPT_URL => $url, CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode($post), CURLOPT_HTTPHEADER => ['Accept: application/json', 'Content-Type: application/json']]);
+    } else {
+        curl_setopt_array($ch, $common + [CURLOPT_URL => $url, CURLOPT_POST => true, CURLOPT_POSTFIELDS => http_build_query($post), CURLOPT_HTTPHEADER => ['Accept: application/json']]);
+    }
     $raw = curl_exec($ch);
     $err = curl_error($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    if ($raw === false) throw new RuntimeException('Server 3 tidak dapat dihubungi: ' . ($err !== '' ? $err : 'timeout'));
+    if ($raw === false) return ['json' => null, 'code' => $code, 'error' => 'Server 3 tidak dapat dihubungi: ' . ($err !== '' ? $err : 'timeout')];
     $j = json_decode((string)$raw, true);
-    if (!is_array($j)) throw new RuntimeException('Server 3 membalas format tidak dikenali.');
-    return $j;
+    if (!is_array($j)) return ['json' => null, 'code' => $code, 'error' => 'Server 3 membalas format tidak dikenali (HTTP ' . $code . ').'];
+    return ['json' => $j, 'code' => $code, 'error' => ''];
+}
+
+function mp_is_retryable_msg($msg) {
+    return (bool)preg_match('/permintaan tidak valid|invalid request|bad request|method not allowed|tidak didukung|unsupported/i', (string)$msg);
 }
 
 /**
- * Panggil API Server 3.
- * @param bool $allowStatusFalse bila true, balasan status:false dikembalikan apa adanya
- *        (penolakan eksplisit); bila false, status:false dilempar sebagai exception.
+ * Panggil API Server 3 dengan transport adaptif: bentuk permintaan yang pernah berhasil
+ * di-cache; bila provider menolak dengan "permintaan tidak valid" (bentuk salah), coba
+ * bentuk lain untuk endpoint baca. Endpoint_mutating ($mutating=true: order/refill)
+ * TIDAK pernah di-retry agar tidak mengirim ganda — pakai transport cache saja.
+ * Pesan error asli provider selalu diteruskan lewat exception.
  */
-function mp_call($path, array $post = [], $allowStatusFalse = false) {
-    $j = mp_http($path, $post);
-    if (($j['status'] ?? null) === false) {
-        if ($allowStatusFalse) return $j;
-        throw new RuntimeException((string)($j['msg'] ?? 'Server 3 menolak permintaan.'));
+function mp_http($path, array $post = [], $mutating = false) {
+    list($base, $key) = mp_config();
+    $post = array_merge(['key' => $key], $post);
+    $url = $base . '/' . ltrim((string)$path, '/');
+    $cached = mp_transport_cache_read();
+    if ($cached !== null) $order = [$cached];
+    else $order = $mutating ? [0] : [0, 1, 2];
+    $lastMsg = '';
+    foreach ($order as $t) {
+        $r = mp_attempt($url, $post, $t);
+        if ($r['json'] !== null) {
+            if (($r['json']['status'] ?? null) !== false) {
+                if ($cached !== $t) mp_transport_cache_write($t);
+                return $r['json'];
+            }
+            $msg = (string)($r['json']['msg'] ?? 'Server 3 menolak permintaan.');
+            if ($mutating || !mp_is_retryable_msg($msg)) throw new MpReject($msg); // error asli server
+            $lastMsg = $msg;
+            continue; // bentuk permintaan ditolak → coba transport berikut (endpoint baca)
+        }
+        if ($mutating || !in_array($r['code'], [400, 405, 415], true)) throw new RuntimeException($r['error']);
+        $lastMsg = $r['error'];
     }
-    return $j;
+    throw new MpReject($lastMsg !== '' ? $lastMsg : 'Server 3 menolak permintaan.');
+}
+
+/** Panggil API Server 3; balasan status:true dikembalikan, status:false = MpReject. */
+function mp_call($path, array $post = [], $mutating = false) {
+    return mp_http($path, $post, $mutating);
 }
 
 function mp_cache_read($name, $ttl) {

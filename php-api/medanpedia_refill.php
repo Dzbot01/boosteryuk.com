@@ -24,11 +24,7 @@ if ($num === '') { echo json_encode(['status' => false, 'msg' => 'Gunakan ID pes
 
 try {
     $path = $action === 'refill' ? 'refill' : 'refill_status';
-    $parsed = mp_call($path, ['order' => $num], true);
-    if (($parsed['status'] ?? null) === false) {
-        echo json_encode(['status' => false, 'msg' => (string)($parsed['msg'] ?? ($action === 'refill' ? 'Refill belum tersedia.' : 'Refill tidak ditemukan.'))]);
-        exit;
-    }
+    $parsed = mp_call($path, ['order' => $num], $action === 'refill');
     $data = is_array($parsed['data'] ?? null) ? $parsed['data'] : $parsed;
     echo json_encode([
         'status' => true,
@@ -36,6 +32,8 @@ try {
         'refill' => $data['refill'] ?? $data['refill_id'] ?? null,
         'refill_status' => is_string($data['refill_status'] ?? null) ? $data['refill_status'] : null,
     ]);
+} catch (MpReject $e) {
+    echo json_encode(['status' => false, 'msg' => $e->getMessage()]);
 } catch (Throwable $e) {
     http_response_code(503);
     echo json_encode(['status' => false, 'msg' => 'Server 3 belum dapat dihubungi untuk refill.']);
