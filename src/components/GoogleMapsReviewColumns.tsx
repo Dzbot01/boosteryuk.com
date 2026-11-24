@@ -13,7 +13,8 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 /**
  * Dua kolom polos "Kategori" dan "Layanan" Google Maps Review dari Server 3 (Medanpedia),
- * diletakkan persis di bawah gambar Top Service (tanpa card) dan sebelum video player.
+ * disusun ATAS-BAWAH (bukan berdampingan) persis di bawah gambar Top Service (tanpa card)
+ * dan sebelum video player.
  * Kolom selalu tampil: skeleton saat memuat, pesan error ASLI dari server + tombol
  * Coba Lagi bila API gagal, dan pesan informatif bila katalog belum punya kategori GM Review.
  * Tombol keranjang memakai gaya yang sama dengan modal Layanan Rekomendasi di Overview;
@@ -77,7 +78,7 @@ export default function GoogleMapsReviewColumns() {
   }
 
   return (
-    <div className="mt-5 grid gap-6 sm:grid-cols-2 sm:gap-8">
+    <div className="mt-5 flex flex-col gap-6">
       <section aria-label="Kategori Google Maps Review">
         <h3 className="flex items-center gap-2 text-[13px] font-bold text-slate-700 dark:text-slate-200">
           <Layers className="h-4 w-4 text-cyan-500" strokeWidth={2.2} />
