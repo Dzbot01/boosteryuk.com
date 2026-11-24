@@ -200,8 +200,8 @@ export default function HomePage() {
       </section>
 
       <section aria-labelledby="top-service-title" className="mx-auto mt-8 w-full max-w-6xl px-4 sm:px-6">
-        <h2 id="top-service-title" className="mb-4 text-center font-display text-2xl font-extrabold text-slate-900 lg:text-3xl dark:text-white">Top Service</h2>
-        <img src="/images/top-service-google-maps.png" alt="Top Service Google Maps — ilustrasi tampilan lokasi dan ulasan bisnis" className="mx-auto h-auto w-full max-w-2xl rounded-2xl object-contain" loading="lazy" width={1377} height={1223} />
+        <h2 id="top-service-title" className="mb-4 text-center font-display text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white">Top Service</h2>
+        <img src="/images/top-service-google-maps.png" alt="Top Service Google Maps — ilustrasi tampilan lokasi dan ulasan bisnis" className="mx-auto h-auto w-full max-w-xl rounded-2xl object-contain" loading="lazy" width={1377} height={1223} />
         <GoogleMapsReviewColumns />
         <div aria-hidden className="mt-10 h-px w-full bg-slate-200/90 dark:bg-slate-700/70" />
       </section>

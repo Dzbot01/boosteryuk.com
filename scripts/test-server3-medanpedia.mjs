@@ -47,5 +47,5 @@ try{
  await act(async()=>rootEmpty.render(h(Cols)));
  assert.equal(dom.window.document.querySelectorAll('section').length>=2,true);assert.match(dom.window.document.body.textContent,/belum tersedia di Server 3/);
 }finally{await act(async()=>root.unmount());dom.window.close();}
-const home2=fs.readFileSync('src/pages/HomePage.tsx','utf8');assert.match(home2,/max-w-2xl rounded-2xl object-contain/,'image top service diperkecil');assert.match(home2,/mt-10 h-px w-full bg-slate-200\/90/);assert.match(home2,/home-dashboard-video mx-auto mt-12/);
+const home2=fs.readFileSync('src/pages/HomePage.tsx','utf8');assert.match(home2,/max-w-xl rounded-2xl object-contain/,'image top service diperkecil lagi');assert.match(home2,/text-3xl font-extrabold tracking-tight/,'judul Top Service diperbesar');assert.match(home2,/mt-10 h-px w-full bg-slate-200\/90/);assert.match(home2,/home-dashboard-video mx-auto mt-12/);
 console.log('PASS PHP syntax; Server 3 order/status/refill contracts; S3 prefix + refund + pending; auto-detect grouping/fallback; dashboard GM columns always visible (skeleton/error+retry/empty) + cart + login gate + resume; wider gap before video; Server 3 hidden from dropdown. No live Medanpedia calls.');
