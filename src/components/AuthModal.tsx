@@ -16,18 +16,41 @@ interface Props {
  * AuthModal — login & daftar HANYA lewat Google (tidak ada kolom username/email/password).
  * Alur redirect melalui boosteryuk.com; tidak memuat Google Identity Services.
  */
+/** Durasi tunggu simulasi pemulihan server PHP bila login gagal terhubung (2 menit). */
+const RECOVERY_SECONDS = 120;
+
+function isServerDownMessage(message: string): boolean {
+  return /menghubungi server login pusat|failed to fetch|networkerror|load failed|network request failed/i.test(message);
+}
+
 export default function AuthModal({ open, onClose, initialMode = 'login' }: Props) {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  /** Hitung mundur detik menuju percobaan ulang otomatis; null = tidak aktif. */
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   const rootRef = useRef<HTMLDivElement>(null);
+  const retryRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (!open) return;
     setError('');
     setLoading(false);
+    setCountdown(null);
   }, [open, initialMode]);
+
+  // Timer pemulihan: hitung mundur 2 menit, lalu coba login ulang otomatis sekali.
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown <= 0) {
+      setCountdown(null);
+      retryRef.current();
+      return;
+    }
+    const t = window.setTimeout(() => setCountdown((c) => (c === null ? null : c - 1)), 1000);
+    return () => window.clearTimeout(t);
+  }, [countdown]);
 
   useEffect(() => {
     if (!open) return;
@@ -54,8 +77,15 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }: Prop
     boostyVoice.prime(); // Sinkron sebelum await, saat gesture login masih aktif.
     setError(''); setLoading(true);
     try { await startGoogleLogin(); }
-    catch { setLoading(false); setError('Ups! Tunggu sebentar lalu cobalagi'); }
+    catch (e) {
+      setLoading(false);
+      const msg = e instanceof Error ? e.message : '';
+      setError(msg || 'Ups! Tunggu sebentar lalu coba lagi.');
+      // PHP down / tidak dapat dihubungi: tampilkan timer 2 menit simulasi tunggu pulih.
+      if (isServerDownMessage(msg) || e instanceof TypeError) setCountdown(RECOVERY_SECONDS);
+    }
   };
+  retryRef.current = () => { void handleGoogleLogin(); };
 
   const subtitle =
     initialMode === 'register'
@@ -85,14 +115,21 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }: Prop
             </p>
           )}
 
-          <button disabled={loading} onClick={() => void handleGoogleLogin()} aria-label={initialMode === 'register' ? 'Daftar dengan Google' : 'Masuk dengan Google'} className="relative inline-flex h-10 w-[300px] max-w-full items-center justify-center gap-3 rounded-full border border-[#747775] bg-white px-3 text-[14px] font-medium tracking-[0.25px] text-[#1f1f1f] transition-colors hover:border-[#747775] hover:bg-[#f8fafd] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-wait disabled:opacity-60">
+          {countdown !== null && (
+            <p className="authflip-footnote w-full" role="status" style={{ margin: 0 }}>
+              Server tidak dapat dihubungi. Mencoba ulang otomatis dalam{' '}
+              <b>{Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}</b> …
+            </p>
+          )}
+
+          <button disabled={loading || countdown !== null} onClick={() => void handleGoogleLogin()} aria-label={initialMode === 'register' ? 'Daftar dengan Google' : 'Masuk dengan Google'} className="relative inline-flex h-10 w-[300px] max-w-full items-center justify-center gap-3 rounded-full border border-[#747775] bg-white px-3 text-[14px] font-medium tracking-[0.25px] text-[#1f1f1f] transition-colors hover:border-[#747775] hover:bg-[#f8fafd] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-wait disabled:opacity-60">
             <svg aria-hidden="true" viewBox="0 0 48 48" className="absolute left-3 h-5 w-5 shrink-0">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/>
               <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65Z"/>
               <path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.78-4.59l-7.98-6.19A23.84 23.84 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78l7.97-6.19Z"/>
               <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/>
             </svg>
-            <span className="px-5">{loading ? 'Mengalihkan…' : initialMode === 'register' ? 'Daftar dengan Google' : 'Masuk dengan Google'}</span>
+            <span className="px-5">{loading ? 'Mengalihkan…' : countdown !== null ? `Tunggu ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}` : initialMode === 'register' ? 'Daftar dengan Google' : 'Masuk dengan Google'}</span>
           </button>
 
           <p className="authflip-footnote" style={{ margin: 0, fontSize: 11.5, opacity: 0.85 }}>

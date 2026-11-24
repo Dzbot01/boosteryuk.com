@@ -29,7 +29,7 @@ try{
  assert.equal(ctx.gmCalls,1);assert.equal(dom.window.document.querySelectorAll('[role="status"]').length,2,'skeleton kategori+layanan saat memuat');assert.ok(dom.window.document.querySelector('.animate-pulse'));assert.equal(dom.window.document.querySelectorAll('button[aria-label^="Pesan"]').length,0);
  await act(async()=>{resolveGm(GM);});
  const secs=dom.window.document.querySelectorAll('section');assert.equal(secs.length,2);assert.match(secs[0].getAttribute('aria-label'),/Kategori/);assert.match(secs[1].getAttribute('aria-label'),/Layanan/);
- assert.match(secs[0].textContent,/Google Maps Review/);assert.match(secs[1].textContent,/Google Maps Review 5 Bintang/);assert.match(secs[1].textContent,/Rp55000/);
+ assert.match(secs[0].textContent,/Google Maps Review/);assert.equal(secs[0].querySelector('img')?.getAttribute('src'),'/brands/googlemaps.png','ikon kategori GM Review pakai asset asli');assert.match(secs[1].textContent,/Google Maps Review 5 Bintang/);assert.match(secs[1].textContent,/Rp55000/);
  const cart=dom.window.document.querySelector('button[aria-label="Pesan Google Maps Review 5 Bintang"]');assert.ok(cart);
  await act(async()=>cart.click());assert.equal(opened,1,'guest must open login modal');assert.equal(dom.window.sessionStorage.getItem(PENDING_ORDER_PATH_KEY),'/layanan?server=3&service=12');assert.equal(navCalls.length,0);
  ctx.authState={user:{plusActive:false}};

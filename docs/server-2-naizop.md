@@ -53,3 +53,9 @@ Tes tambahan: `NODE_PATH=/tmp/server2-icons-tests/node_modules node scripts/test
 ## Ikon merek asli (self-host)
 
 Ikon kategori/layanan Server 2 (dan badge kategori Server 1) memakai file SVG merek asli yang di-bundle lokal di `public/brands/*.svg` (google, googlemaps, instagram, tiktok, youtube, x, whatsapp, telegram, spotify, linkedin, dll — 40 slug). `brandIconUrl()` memakai file lokal dulu; CDN simpleicons hanya untuk slug yang belum di-bundle; glyph semantik Lucide hanya fallback terakhir bila gambar gagal dimuat. Kategori Google Maps memakai ikon Google Maps asli, bukan glyph rekayasa.
+Merek Google memakai asset warna penuh pilihan pemilik web: `public/brands/googlemaps.png`
+(pin + peta) untuk kategori Google Maps Review dan `public/brands/google.png` (logo G) untuk
+kategori Google lainnya; badge dirender tanpa lingkaran warna (fullColor) dengan ukuran h-4 w-4.
+Pencocokan merek memakai word-boundary + keyword terpanjang dan kata generik (`channel`,
+`review`) diabaikan, sehingga kategori Telegram (mis. "Telegram Channel Members") tidak lagi
+keliru memakai ikon WhatsApp; keyword `wa` hanya cocok sebagai kata utuh.

@@ -1,4 +1,4 @@
-import { CATEGORY_BRAND_ICONS, type BrandIcon } from '../constants';
+import { CATEGORY_BRAND_ICONS, findBrandIcon, type BrandIcon } from '../constants';
 
 /** Decode provider text only; never inject it as HTML. Handles double-encoded apostrophes. */
 export function server2Label(value: string): string {
@@ -53,13 +53,5 @@ export function serviceGlyph(name: string): ServiceGlyph {
 }
 /** Word-boundary matching prevents IG in "high" and LINE in "online" matching brands. */
 export function server2Brand(name: string): BrandIcon | null {
-  const text = name.toLowerCase();
-  const candidates = [...EXTRA_BRANDS, ...CATEGORY_BRAND_ICONS].flatMap(brand => brand.keywords.map(keyword => ({brand, keyword: keyword.trim()}))).sort((a,b) => b.keyword.length - a.keyword.length);
-  for (const {brand, keyword} of candidates) {
-    // "channel" / "review" alone describe a service, not a specific platform.
-    if (['channel','review'].includes(keyword)) continue;
-    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    if (new RegExp(`(^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, 'i').test(text)) return brand;
-  }
-  return null;
+  return findBrandIcon(name, [...EXTRA_BRANDS, ...CATEGORY_BRAND_ICONS]);
 }
