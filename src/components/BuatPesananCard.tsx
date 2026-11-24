@@ -67,7 +67,31 @@ function BrandBadge({ name }: { name: string }) {
 }
 
 
-/** Kartu panduan pemesanan: grid landscape berisi catatan wajib sebelum memesan. */
+/** Langkah utama pemesanan yang ditampilkan berurutan di kartu panduan. */
+const ORDER_STEPS: { title: string; body: string }[] = [
+  {
+    title: 'Pilih Server',
+    body: 'Pilih server yang tersedia sesuai kebutuhan anda dengan beragam pilihan layanan dan harga.',
+  },
+  {
+    title: 'Pilih Kategori',
+    body: 'Pilih kategori yang relevan dengan kebutuhan anda.',
+  },
+  {
+    title: 'Pilih Layanan',
+    body: 'Pilih layanan dari kategori layanan yang anda pilih, lalu lanjut ke target wajib mode public.',
+  },
+];
+
+/** Langkah pengaturan Instagram agar followers tidak nyangkut di tinjauan/spam. */
+const IG_REVIEW_STEPS: string[] = [
+  'Buka Pengaturan dan Privasi.',
+  'Pilih Ikuti dan Undang Teman.',
+  'Nonaktifkan opsi Tandai untuk Ditinjau.',
+  'Jika baru Nonaktifkan opsi Tandai untuk Ditinjau, kamu bisa test pesan sedikit dulu.',
+];
+
+/** Kartu panduan pemesanan: bisa dibuka-tutup (default tertutup), berisi langkah, catatan wajib, dan panduan khusus followers Instagram. */
 const ORDER_GUIDE_NOTES: { icon: typeof Globe; title: string; body: string }[] = [
   {
     icon: Globe,
@@ -92,6 +116,7 @@ const ORDER_GUIDE_NOTES: { icon: typeof Globe; title: string; body: string }[] =
 ];
 
 function OrderGuideCard() {
+  const [open, setOpen] = useState(false);
   return (
     <section
       className="mb-4 w-full rounded-[18px] border border-cyan-100 bg-white px-4 py-4 shadow-[0_14px_36px_-18px_rgba(23,32,51,.22)] dark:border-slate-700 dark:bg-slate-900 sm:px-5"
@@ -102,31 +127,115 @@ function OrderGuideCard() {
         <h2 className="text-[15px] font-semibold tracking-tight" style={{ color: COLOR.dark }}>
           Panduan Pemesanan
         </h2>
+        {/* Tombol buka/tutup di pojok kanan; panduan default tertutup. */}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls="panduan-pemesanan-isi"
+          aria-label={open ? 'Tutup panduan pemesanan' : 'Buka panduan pemesanan'}
+          className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors duration-150 hover:bg-slate-100 dark:hover:bg-slate-800"
+          style={{ borderColor: COLOR.border, color: COLOR.primary }}
+        >
+          <ChevronDown
+            className="h-4 w-4 transition-transform duration-200"
+            style={{ transform: open ? 'rotate(180deg)' : 'none' }}
+            strokeWidth={2.4}
+          />
+        </button>
       </div>
-      <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-        {ORDER_GUIDE_NOTES.map((note) => (
-          <article
-            key={note.title}
-            className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3 dark:border-slate-700/60 dark:bg-slate-800/60"
-          >
-            <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white"
-              style={{ background: COLOR.primary }}
-              aria-hidden
-            >
-              <note.icon className="h-4 w-4" strokeWidth={2.2} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[12.5px] font-bold leading-tight" style={{ color: COLOR.dark }}>
-                {note.title}
-              </p>
-              <p className="mt-1 text-[11.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
-                {note.body}
-              </p>
+      {!open && (
+        <p className="mt-1.5 text-[11.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+          Langkah pemesanan & catatan wajib (target public, followers Instagram). Ketuk tombol di pojok kanan untuk membuka.
+        </p>
+      )}
+      {open && (
+        <div id="panduan-pemesanan-isi" className="mt-3 space-y-4">
+          {/* 1) Langkah berurutan: server -> kategori -> layanan */}
+          <ol className="space-y-2">
+            {ORDER_STEPS.map((step, i) => (
+              <li key={step.title} className="flex items-start gap-3">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-extrabold text-white"
+                  style={{ background: COLOR.primary }}
+                  aria-hidden
+                >
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[12.5px] font-bold leading-tight" style={{ color: COLOR.dark }}>
+                    {step.title}
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+                    {step.body}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          {/* 2) Catatan wajib (grid landscape) */}
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {ORDER_GUIDE_NOTES.map((note) => (
+              <article
+                key={note.title}
+                className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3 dark:border-slate-700/60 dark:bg-slate-800/60"
+              >
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white"
+                  style={{ background: COLOR.primary }}
+                  aria-hidden
+                >
+                  <note.icon className="h-4 w-4" strokeWidth={2.2} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[12.5px] font-bold leading-tight" style={{ color: COLOR.dark }}>
+                    {note.title}
+                  </p>
+                  <p className="mt-1 text-[11.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+                    {note.body}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {/* 3) Panduan khusus followers Instagram + gambar contoh */}
+          <article className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 dark:border-slate-700/60 dark:bg-slate-800/60">
+            <div className="flex items-center gap-2">
+              <AtSign className="h-4 w-4" style={{ color: COLOR.primary }} strokeWidth={2.2} />
+              <h3 className="text-[12.5px] font-bold" style={{ color: COLOR.dark }}>
+                Panduan khusus Followers Instagram
+              </h3>
             </div>
+            <img
+              src="/guides/instagram-flag-for-review.png"
+              alt="Contoh pengaturan Instagram: Settings and privacy, lalu Follow and invite friends, kemudian nonaktifkan sakelar Flag for review (Tandai untuk Ditinjau)."
+              loading="lazy"
+              className="mt-3 w-full rounded-xl border border-slate-200 dark:border-slate-700"
+            />
+            <p className="mt-3 text-[11.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+              Jika Anda tidak melihat pengikut baru, kemungkinan besar karena mereka perlu disetujui secara manual. Untuk
+              mengatasinya, ikuti langkah-langkah berikut untuk akun yang mau diisi followernya!:
+            </p>
+            <ol className="mt-2 space-y-1.5">
+              {IG_REVIEW_STEPS.map((step, i) => (
+                <li key={step} className="flex items-start gap-2 text-[11.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+                  <span className="font-extrabold" style={{ color: COLOR.primary }} aria-hidden>
+                    {i + 1}.
+                  </span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-2 text-[11.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+              Ini akan memungkinkan pengikut baru diterima secara otomatis tanpa perlu persetujuan manual. Harap lakukan
+              agar tidak terjadi mis order, followers tidak masuk tetapi sebenarnya pesanan berhasil masuk namun masuk ke
+              kategori spam.
+            </p>
           </article>
-        ))}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
