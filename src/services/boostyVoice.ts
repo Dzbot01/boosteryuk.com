@@ -25,6 +25,9 @@ let primeToken = 0;
 let playbackVersion = 0;
 let retryPending = false;
 let gestureCleanup: (() => void) | null = null;
+let retryStartedAt = 0;
+/** Retry gesture hanya berlaku sesaat setelah login; lewat itu dibatalkan. */
+const RETRY_WINDOW_MS = 60_000;
 const subs = new Set<() => void>();
 
 const GESTURE_EVENTS = ['pointerdown', 'keydown', 'touchstart', 'click'];
@@ -67,6 +70,12 @@ function clearAudio() {
 /** Jika autoplay diblokir browser, coba putar lagi pada gesture user berikutnya. */
 function resumeAudio() {
   if (!playing || !el || retryPending) return;
+  if (Date.now() - retryStartedAt > RETRY_WINDOW_MS) {
+    // Sudah lewat jendela login: klik biasa tidak boleh membunyikan audio lagi.
+    clearAudio();
+    set({ voice: null, subtitle: '', blocked: false });
+    return;
+  }
   const version = playbackVersion;
   retryPending = true;
   el.play().then(() => {
@@ -78,6 +87,7 @@ function resumeAudio() {
 }
 function retryOnGesture() {
   removeGestureRetry();
+  retryStartedAt = Date.now();
   GESTURE_EVENTS.forEach((ev) => window.addEventListener(ev, resumeAudio, { passive: true }));
   gestureCleanup = () => GESTURE_EVENTS.forEach((ev) => window.removeEventListener(ev, resumeAudio));
 }

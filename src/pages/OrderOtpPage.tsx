@@ -328,6 +328,14 @@ export default function OrderOtpPage() {
                 <li>Masukkan nomor di aplikasi & minta kode. Kode muncul otomatis di sini (maks 15 menit).</li>
                 <li>Kode tidak masuk / nomor bermasalah? <b>Batalkan</b> — saldo kembali utuh.</li>
               </ol>
+              <p className="mt-2.5 text-[13.5px] font-bold text-slate-900 dark:text-white">Syarat dan ketentuan</p>
+              <p className="mt-1 text-[12px] leading-relaxed">
+                Nomor yang sudah mendapatkan kode OTP dinyatakan Pesanan Sukses, tidak bisa di refund jika suatu saat nomor
+                bermasalah, Saat mendapatkan Nomor Segera lakukan verifikasi pada aplikasi layanan yang Anda pilih untuk
+                meminta kode OTP, kode akan muncul disini dan pastikan menunggu minimal 3 menit untuk menunggu kode OTP
+                muncul jika masin belum muncul artinya stok yang di pilih pada harga tersebut sedang sedikit atau kosong -
+                Pilih harga yang lebih tinggi untuk mendapatkan Rate OTP tinggi.
+              </p>
             </div>
 
             {orders.length === 0 && <p className="px-1 text-[12px] text-slate-400">Belum ada order nomor.</p>}
@@ -379,6 +387,105 @@ export default function OrderOtpPage() {
           </div>
         </div>
       </div>
+
+      {/* Keterangan penting & edukasi shadow ban (lengkap dengan contoh gambar). */}
+      <Reveal>
+        <section
+          className="mt-5 rounded-[18px] border p-4 sm:p-6"
+          style={{ borderColor: COLOR.border, background: COLOR.surface }}
+          aria-label="Apa itu Shadowban"
+        >
+          <h2 className="text-[15px] font-semibold tracking-tight" style={{ color: COLOR.dark }}>Apa itu Shadowban?</h2>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+            <li>rate OTP hingga 95%.</li>
+            <li>
+              Tidak menemukan aplikasi? Ajukan di{' '}
+              <a href="https://qpanel.org/panel/requestlayanan" target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>Request Layanan</a>
+            </li>
+            <li>
+              Panduan lengkap & tips optimasi OTP di{' '}
+              <a href="https://tinyurl.com/qpaneldoc" target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>KLIK DISINI</a>.
+            </li>
+            <li>
+              Pantau kondisi layanan OTP real-time melalui{' '}
+              <a href="https://qpanel.org/panel/serverstatus" target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>Server Status</a>
+            </li>
+            <li><b>Pilih OTP Lebih Mahal untuk mendapatkan service terbaik dengan success rate tertinggi.</b></li>
+            <li>
+              <b>PROMO SPESIAL:</b> Cek Nomor OTP hanya Rp.50/Check! &gt;&gt;{' '}
+              <a href="https://qpanel.org/panel/number-checker" target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>Klik Disini</a>
+            </li>
+          </ul>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] font-bold">
+            <a href="https://qpanel.org/panel/order/promo#" target="_blank" rel="noreferrer" className="underline" style={{ color: COLOR.primary }}>SMS Tidak Masuk?</a>
+            <a href="https://qpanel.org/panel/order/promo#" target="_blank" rel="noreferrer" className="underline" style={{ color: COLOR.primary }}>Apa itu Shadow Ban?</a>
+            <a href="https://qpanel.org/panel/order/promo#" target="_blank" rel="noreferrer" className="underline" style={{ color: COLOR.primary }}>Bagaimana Mencari OTP Fresh?</a>
+            <a href="https://qpanel.org/panel/order/promo#" target="_blank" rel="noreferrer" className="underline" style={{ color: COLOR.primary }}>Baca Info Penting!!</a>
+          </div>
+
+          <div className="my-4 h-px w-full" style={{ background: COLOR.border }} />
+
+          <h3 className="text-[13.5px] font-bold" style={{ color: COLOR.dark }}>Apa itu Shadow Ban?</h3>
+          <p className="mt-1.5 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Penjelasan Shadow Ban</p>
+          <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+            Shadow ban adalah mekanisme yang diterapkan oleh aplikasi seperti WhatsApp, Telegram, Gmail, dan lainnya untuk
+            membatasi atau memblokir aktivitas pengguna yang dianggap mencurigakan, tanpa memberi pemberitahuan langsung.
+            Dari sisi pengguna, segalanya tampak berjalan normal—misalnya, Anda masih dapat meminta OTP atau login ke
+            aplikasi—tetapi di sisi server mereka, aktivitas Anda diabaikan atau ditolak. Shadow ban ini merupakan salah
+            satu faktor yang menyebabkan OTP tidak masuk ke perangkat pengguna/server{' '}
+            <a href="http://QPanel.org" target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>QPanel.org</a>
+          </p>
+
+          <p className="mt-3 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Kenapa Shadow Ban Terjadi?</p>
+          <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+            Shadow ban sering terjadi ketika aplikasi mendeteksi pola penggunaan yang tidak wajar, seperti sering
+            menggunakan nomor telepon berbeda di perangkat yang sama tanpa mengganti fingerprint perangkat, atau
+            menggunakan IP publik yang sama berulang kali. Sistem aplikasi akan menganggap aktivitas ini sebagai spam.
+          </p>
+          <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+            Selain itu, jika Anda tidak menerapkan pengamanan yang memadai, seperti menggunakan browser anti-detect
+            (misalnya Adspower atau merek lain) dan tidak menggunakan IP Proxy Mobile Proxy 4G yang sesuai dengan negara,
+            serta jika perangkat yang dimodifikasi tidak dikonfigurasi dengan benar, risiko deteksi oleh sistem dapat
+            meningkat
+          </p>
+
+          <p className="mt-3 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Apa itu Fingerprint Perangkat?</p>
+          <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+            Fingerprint perangkat adalah data unik yang digunakan oleh aplikasi untuk mengidentifikasi perangkat Anda,
+            termasuk informasi seperti IMEI, device ID, versi browser, alamat IP, dan lainnya. Fingerprint ini
+            memungkinkan aplikasi untuk melacak pola penggunaan Anda.
+          </p>
+
+          <p className="mt-3 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+            <b>Penting:</b> Shadow ban bukan disebabkan oleh boosteryuk.com, melainkan oleh pola penggunaan dan pengamanan
+            yang kurang aman di sisi pengguna.
+          </p>
+          <p className="mt-1.5 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+            <b>Solusi:</b> Gunakan perangkat baru(fresh) atau modifikasi IMEI/ID DEVICE di ponsel. Untuk PC gunakan browser
+            anti-detect.
+          </p>
+          <p className="mt-1.5 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+            <b>Info:</b> Shadow ban adalah pembatasan visibilitas pengguna tanpa pemberitahuan dan tidak bersifat permanen.
+            Biasanya, ini bersifat sementara, sehingga Anda dapat mencoba lagi setelah beberapa waktu
+          </p>
+
+          <p className="mt-4 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Contoh kondisi shadow ban</p>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            <figure className="overflow-hidden rounded-xl border" style={{ borderColor: COLOR.border }}>
+              <img src="/images/shadowban-contoh-1.jpg" alt="Contoh shadow ban WhatsApp: notifikasi nomor belum diverifikasi dan pesan bahwa perangkat memerlukan WhatsApp versi resmi untuk login." loading="lazy" className="w-full object-cover" />
+              <figcaption className="px-3 py-2 text-[11px]" style={{ color: COLOR.secondary }}>
+                Perangkat terdeteksi memakai WhatsApp tidak resmi — permintaan login/OTP ditolak.
+              </figcaption>
+            </figure>
+            <figure className="overflow-hidden rounded-xl border" style={{ borderColor: COLOR.border }}>
+              <img src="/images/shadowban-contoh-2.png" alt="Contoh shadow ban WhatsApp: layar akun ini tidak bisa menggunakan WhatsApp karena aktivitas akun terbaru tidak mematuhi Ketentuan Layanan." loading="lazy" className="w-full object-cover" />
+              <figcaption className="px-3 py-2 text-[11px]" style={{ color: COLOR.secondary }}>
+                Akun dibatasi: aktivitas dianggap tidak mematuhi Ketentuan Layanan sehingga OTP tidak masuk.
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+      </Reveal>
     </div>
   );
 }

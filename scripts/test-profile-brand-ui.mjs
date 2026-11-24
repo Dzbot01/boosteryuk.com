@@ -13,7 +13,7 @@ assert.match(read('src/components/Header.tsx'), /aria-label=\{`\$\{settings.bran
 const profile = read('src/pages/ProfilPage.tsx');
 assert.doesNotMatch(profile, /page-align-left/);
 assert.match(profile, /mx-auto w-full max-w-2xl[^"\n]*lg:max-w-5xl/);
-assert.match(profile, /h-32 w-32 lg:h-40 lg:w-40/);
+assert.match(profile, /h-\[420px\] w-full max-w-md sm:h-\[520px\] lg:h-\[600px\]/); // slot kartu Lanyard
 assert.match(profile, /text-2xl lg:text-3xl/);
 assert.match(profile, /p-4 lg:gap-4 lg:p-6/);
 assert.match(profile, /<PengaturanAkunPage embedded \/>/);

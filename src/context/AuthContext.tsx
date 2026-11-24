@@ -204,6 +204,9 @@ const refresh = async () => {
       const data = await res.json();
       if(data.ok){
         localStorage.setItem('token', data.token);
+        // Penanda "baru selesai login" supaya suara Guri Booster hanya play saat login,
+        // bukan saat sesi dipulihkan (refresh/kunjungan berikutnya).
+        try { sessionStorage.setItem('by-just-logged-in', String(Date.now())); } catch { /* private mode */ }
         const avatar = await avatarPreference(data.token);
         setUser({ ...data.user, avatar_variant: avatar.avatar_variant || 'male', token: data.token });
         void fetchPlan(data.token).then((plan) => {
@@ -237,6 +240,8 @@ const refresh = async () => {
       }
       if(data.ok && data.token){
         localStorage.setItem('token', data.token);
+        // Penanda "baru selesai login" (termasuk alur redirect Google).
+        try { sessionStorage.setItem('by-just-logged-in', String(Date.now())); } catch { /* private mode */ }
         const avatar = await avatarPreference(data.token);
         setUser({ ...data.user, avatar_variant: avatar.avatar_variant || 'male', token: data.token });
         void fetchPlan(data.token).then((plan) => {

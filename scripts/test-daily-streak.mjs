@@ -26,7 +26,7 @@ assert.match(read('src/App.tsx'), /path="event\/daily-streak" element=\{<Protect
 assert.doesNotMatch(read('src/pages/EventsPage.tsx'), /DailyStreakModal|streakCall/);
 assert.match(read('src/pages/EventsPage.tsx'), /navigate\('\/event\/daily-streak'\)/);
 assert.doesNotMatch(read('src/components/OwnedTitles.tsx'), /RewardSheet|setOpen/);
-assert.match(read('src/pages/ProfilPage.tsx'), /<UserAvatar user=\{user\}><GoogleProfileFallback/);
+assert.match(read('src/pages/ProfilPage.tsx'), /<Lanyard frontImage=\{profilePhoto\} backImage=\{profilePhoto\}/); // ikon profil = kartu Lanyard animasi
 assert.match(read('src/pages/DailyStreakPage.tsx'), /src=\{TRIAL_AVATAR\}/);
 assert.match(read('php-api/events.php'), /VALUES \(3,'','','standard','upcoming'\)/);
 async function module(p) { const { outputFiles } = await build({ entryPoints: [p], bundle: true, format: 'esm', write: false });return import('data:text/javascript;base64,' + Buffer.from(outputFiles[0].text).toString('base64')); }
