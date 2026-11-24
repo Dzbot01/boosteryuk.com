@@ -113,7 +113,7 @@ async function server4(action: 'refill' | 'refill_status', orderId: string): Pro
     }
     return mapRefill(data, action, orderId);
   } catch (err) {
-    return { ok: false, message: err instanceof Error ? err.message : 'Gagal terhubung ke Server 3 (SMMGen).', refillId: action === 'refill' ? null : orderId, status: null };
+    return { ok: false, message: err instanceof Error ? err.message : 'Gagal terhubung ke Server 3.', refillId: action === 'refill' ? null : orderId, status: null };
   }
 }
 

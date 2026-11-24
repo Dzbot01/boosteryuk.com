@@ -119,7 +119,7 @@ export default function AdminProfitPage() {
           {prov2.fx && <><Row k="Kurs 1 USD" v={rupiah(prov2.fx.rate)} /><Row k="Pembaruan kurs" v={new Date(prov2.fx.updated_at * 1000).toLocaleString('id-ID', {timeZone: 'Asia/Jakarta'}) + ' WIB'} /></>}
         </Card>
 
-        <Card icon={Landmark} tone="bg-indigo-600" label="Saldo provider Server 3" value={prov3.loading ? null : prov3.balance === undefined || prov3.balance === null ? '—' : `USD ${Number(prov3.balance).toLocaleString('en-US', {maximumFractionDigits: 5})}`} sub={prov3.message || 'Saldo SMMGen (USD) — penyedia opsi Server 3 di halaman Buat Pesanan'} />
+        <Card icon={Landmark} tone="bg-indigo-600" label="Saldo provider Server 3" value={prov3.loading ? null : prov3.balance === undefined || prov3.balance === null ? '—' : `USD ${Number(prov3.balance).toLocaleString('en-US', {maximumFractionDigits: 5})}`} sub={prov3.message || 'Saldo provider Server 3 (USD) — penyedia opsi Server 3 di halaman Buat Pesanan'} />
 
         <Card icon={Landmark} tone="bg-slate-800" label="Saldo provider" value={prov.loading ? null : prov.balance === null ? '—' : rupiah(prov.balance)} sub={prov.msg || 'Saldo akun provider layanan SMM (realtime)'}>
           {d && (

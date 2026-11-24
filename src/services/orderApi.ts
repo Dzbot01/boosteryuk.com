@@ -329,10 +329,10 @@ async function lookupServer4Fallback(idStr: string): Promise<Omit<LookupResult, 
     const orders: OrderData[] = [];
     for (const id of idStr.split(',')) {
       const entry = (data.orders as Record<string, { order_status?: string; msg?: string }>)[id];
-      if (entry && entry.order_status) orders.push(makeOrder(id, entry as Record<string, unknown>, 'Pesanan ditemukan di Server 3 (SMMGen).'));
+      if (entry && entry.order_status) orders.push(makeOrder(id, entry as Record<string, unknown>, 'Pesanan ditemukan di Server 3.'));
     }
     if (orders.length === 0) return null;
-    return { ok: true, message: 'Pesanan ditemukan di Server 3 (SMMGen).', orders, failures: [] };
+    return { ok: true, message: 'Pesanan ditemukan di Server 3.', orders, failures: [] };
   } catch {
     return null;
   }

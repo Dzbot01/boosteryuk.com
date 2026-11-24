@@ -21,7 +21,7 @@ const sup=fs.readFileSync('src/supabase.ts','utf8');
 assert.match(sup,/smmgen_services\.php/);assert.match(sup,/smmgen_status\.php/);assert.match(sup,/smmgen_refill\.php/);assert.match(sup,/server4Id/);assert.match(sup,/server\?: 1 \| 2 \| 3 \| 4/);
 const oa=fs.readFileSync('src/services/orderApi.ts','utf8');assert.ok(oa.includes('S4-(?:'));assert.ok(oa.includes('|PENDING-[a-f0-9]+))$'),'parseOrderIds menerima S4-ID');assert.ok(oa.includes('lookupServer4Fallback'));const ra=fs.readFileSync('src/services/refillApi.ts','utf8');assert.ok(ra.includes("startsWith('S4-')) return [4]")&&ra.includes('smmgen_refill.php'),'refill dirutekan ke SMMGen');
 const card=fs.readFileSync('src/components/BuatPesananCard.tsx','utf8');
-assert.match(card,/\{ value: '4', label: 'Server 3 — SMMGen · Layanan Lengkap' \}/,'opsi Server 3 (SMMGen) ada di dropdown');
+assert.match(card,/\{ value: '4', label: 'Server 3 — Layanan Paling Lengkap' \}/,'opsi Server 3 ada di dropdown tanpa nama provider');assert.ok(!/label: 'Server 3 — [^']*SMMGen/.test(card),'label dropdown tidak boleh menyebut SMMGen');
 assert.match(card,/useState<1 \| 2 \| 4>/);assert.match(card,/\(server === 1 \|\| server === 4\) && isCustomCommentService/);
 const api=fs.readFileSync('src/services/servicesApi.ts','utf8');assert.match(api,/server: 1 \| 2 \| 3 \| 4 = 1/);
 const profit=fs.readFileSync('src/pages/admin/AdminProfitPage.tsx','utf8');
