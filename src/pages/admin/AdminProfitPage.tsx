@@ -43,11 +43,13 @@ export default function AdminProfitPage() {
   const [alert, setAlert] = useState('');
   const [prov2, setProv2] = useState<{balance?: number; idr?: number; fx?: {rate: number; updated_at: number}; message?: string; loading: boolean}>({loading: true});
   const [prov, setProv] = useState<{ balance: number | null; msg: string; loading: boolean }>({ balance: null, msg: '', loading: true });
+  const [prov3, setProv3] = useState<{balance?: number | null; currency?: string; message?: string; loading: boolean}>({loading: true});
 
   const load = useCallback(async () => {
     setErr('');
     setProv2(p => ({...p, loading: true}));
     void adminDataApi.provider2Balance().then(b => setProv2(b.ok ? {...b, loading: false} : {loading: false, message: b.message || 'Saldo provider 2 tidak dapat dimuat.'}));
+    void adminDataApi.smmgenBalance().then(b => setProv3(b.ok ? {...b, loading: false} : {loading: false, message: b.message || 'Saldo provider Server 3 tidak dapat dimuat.'}));
     setProv((p) => ({ ...p, loading: true }));
     const [r, b] = await Promise.all([adminDataApi.profit(), adminDataApi.providerHealth()]);
     if (!r.ok) setErr(r.message || 'Gagal memuat data profit.');
@@ -116,6 +118,8 @@ export default function AdminProfitPage() {
           {prov2.idr !== undefined && <Row k="Estimasi rupiah" v={rupiah(prov2.idr)} />}
           {prov2.fx && <><Row k="Kurs 1 USD" v={rupiah(prov2.fx.rate)} /><Row k="Pembaruan kurs" v={new Date(prov2.fx.updated_at * 1000).toLocaleString('id-ID', {timeZone: 'Asia/Jakarta'}) + ' WIB'} /></>}
         </Card>
+
+        <Card icon={Landmark} tone="bg-indigo-600" label="Saldo provider Server 3" value={prov3.loading ? null : prov3.balance === undefined || prov3.balance === null ? '—' : `USD ${Number(prov3.balance).toLocaleString('en-US', {maximumFractionDigits: 5})}`} sub={prov3.message || 'Saldo SMMGen (USD) — penyedia opsi Server 3 di halaman Buat Pesanan'} />
 
         <Card icon={Landmark} tone="bg-slate-800" label="Saldo provider" value={prov.loading ? null : prov.balance === null ? '—' : rupiah(prov.balance)} sub={prov.msg || 'Saldo akun provider layanan SMM (realtime)'}>
           {d && (

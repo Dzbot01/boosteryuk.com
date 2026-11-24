@@ -99,11 +99,30 @@ async function server3(action: 'refill' | 'refill_status', orderId: string): Pro
   }
 }
 
+/** Server 3 di UI (SMMGen, internal 4) melalui smmgen_refill.php; bentuk balasan sama. */
+async function server4(action: 'refill' | 'refill_status', orderId: string): Promise<RefillResult> {
+  try {
+    const response = await fetch(`${MAIN_API}/smmgen_refill.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ action, id: orderId }),
+    });
+    const data = (await response.json()) as RefillResponse;
+    if (!response.ok) {
+      return { ok: false, message: data.msg || `HTTP ${response.status}`, refillId: action === 'refill' ? null : orderId, status: null };
+    }
+    return mapRefill(data, action, orderId);
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : 'Gagal terhubung ke Server 3 (SMMGen).', refillId: action === 'refill' ? null : orderId, status: null };
+  }
+}
+
 /** Urutan percobaan auto-deteksi: prefix menentukan server utama, sisanya coba satu persatu. */
-function providerOrder(orderId: string): Array<1 | 3> {
+function providerOrder(orderId: string): Array<1 | 3 | 4> {
   if (orderId.startsWith('S3-')) return [3];
+  if (orderId.startsWith('S4-')) return [4];
   if (orderId.startsWith('S2-')) return [];
-  return [1, 3];
+  return [1, 3, 4];
 }
 
 async function withFallback(action: 'refill' | 'refill_status', orderId: string): Promise<RefillResult> {
@@ -113,7 +132,7 @@ async function withFallback(action: 'refill' | 'refill_status', orderId: string)
   }
   let last: RefillResult | null = null;
   for (const provider of order) {
-    last = provider === 3 ? await server3(action, orderId) : await server1(action, orderId);
+    last = provider === 3 ? await server3(action, orderId) : provider === 4 ? await server4(action, orderId) : await server1(action, orderId);
     if (last.ok) return last;
   }
   return last ?? { ok: false, message: 'Refill tidak ditemukan.', refillId: action === 'refill' ? null : orderId, status: null };

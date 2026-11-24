@@ -21,8 +21,8 @@ export interface ServiceItem {
   refill: boolean;
   cancel: boolean;
   description: string;
-  /** Server asal layanan (1/2/3). Item Server 3 digabung ke UI Server 1 tanpa teks tambahan. */
-  source?: 1 | 2 | 3;
+  /** Server asal layanan (1/2/3/4). Item Medanpedia digabung ke UI Server 1 tanpa teks tambahan. */
+  source?: 1 | 2 | 3 | 4;
 }
 
 export interface ServicesResult {
@@ -105,7 +105,7 @@ function extractList(data: unknown): RawService[] | null {
 
 /** Fetch every service from the catalogue. */
 /** Fetch every service from the catalogue. */
-export async function fetchServices(server: 1 | 2 | 3 = 1): Promise<ServicesResult> {
+export async function fetchServices(server: 1 | 2 | 3 | 4 = 1): Promise<ServicesResult> {
   const edge = await invokeProxy<unknown>({
     action: 'services',
     server,
@@ -141,7 +141,7 @@ export async function fetchServices(server: 1 | 2 | 3 = 1): Promise<ServicesResu
 
   // Server 3 diberi namespace ID (M3:) agar tidak bertabrakan dengan ID Server 1/2
   // saat daftar digabung dalam satu UI; prefix dilepas kembali hanya saat order.
-  const tagged = safe.map(s => server === 3 ? { ...s, id: `M3:${s.id}`, source: 3 as const } : { ...s, source: server as 1 | 2 });
+  const tagged = safe.map(s => server === 3 ? { ...s, id: `M3:${s.id}`, source: 3 as const } : { ...s, source: server as 1 | 2 | 4 });
 
   if (server !== 1) return { ok: true, message: 'Layanan dimuat.', services: tagged, categories };
 

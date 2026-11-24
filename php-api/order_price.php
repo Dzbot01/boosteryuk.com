@@ -87,6 +87,11 @@ function bk_order_price($conn, $userId, $serviceId, $qty, $apiId, $apiKey, $base
         require_once __DIR__.'/medanpedia_lib.php';
         $svc = mp_validate_service($serviceId, $qty);
         $rates = [(string)$serviceId => (float)$svc['rate']];
+    } elseif ($server === 4) {
+        // Server 3 di UI (SMMGen, internal 4): tarif katalog sudah IDR/1000 (kurs harian).
+        require_once __DIR__.'/smmgen_lib.php';
+        $svc = smg_validate_service($serviceId, $qty);
+        $rates = [(string)$serviceId => (float)$svc['rate']];
     } else {
         $rates = bk_service_rates($apiId, $apiKey, $baseUrl);
     }

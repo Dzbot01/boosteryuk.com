@@ -82,3 +82,9 @@ kategori "Google Map Review" dan layanan "Google Buzzer Indonesia Map Reviews [ 
 [ Custom Comments Reviews ] [ Max 1K ]" dengan label harga "Rp 1.331.000 / 1rb · min 10 – max 1000".
 Katalog asli (Server 1 + Server 3) baru dimuat saat tombol keranjang diklik dan user masuk ke
 halaman /layanan; layanan yang sama dipilih otomatis karena preselect kini cocok lewat ID atau nama.
+
+## Catatan penomoran (sejak adanya SMMGen)
+
+Label UI "Server 3" kini milik provider SMMGen (internal `server=4`, prefix `S4-`, lihat
+docs/server-4-smmgen.md). Medanpedia tetap internal `server=3`/prefix `S3-` tetapi tidak pernah
+tampil sebagai opsi terpisah: katalognya digabung ke daftar Server 1 dan kolom Top Service hardcode.

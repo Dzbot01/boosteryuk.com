@@ -95,6 +95,17 @@ if ($action === 'provider2_balance') {
     } catch(Throwable $e){ad_out(['ok'=>false,'message'=>$e->getMessage()],503);}
 }
 
+// Saldo provider Server 3 (SMMGen) — hanya ditampilkan di halaman admin My Profit.
+if ($action === 'smmgen_balance') {
+    require_once __DIR__ . '/smmgen_lib.php';
+    try {
+        $b = smg_balance();
+        ad_out(['ok' => true, 'balance' => isset($b['balance']) && is_numeric($b['balance']) ? (float)$b['balance'] : null, 'currency' => (string)($b['currency'] ?? 'USD')]);
+    } catch (Throwable $e) {
+        ad_out(['ok' => false, 'message' => $e->getMessage()], 503);
+    }
+}
+
 // Saldo provider dibaca langsung di server, tidak mempercayai nominal dari browser.
 if ($action === 'provider_health') {
     require __DIR__ . '/config.php';

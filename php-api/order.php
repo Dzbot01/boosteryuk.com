@@ -25,7 +25,7 @@ require_once __DIR__ . '/riwayat_schema.php'; // kolom target (link SMM) — riw
 $data = json_decode(file_get_contents("php://input"), true);
 
 $server = $data['server'] ?? 1;
-if (!in_array($server, [1, 2, 3, '1', '2', '3'], true)) { http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Server tidak valid.']);exit; }
+if (!in_array($server, [1, 2, 3, 4, '1', '2', '3', '4'], true)) { http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Server tidak valid.']);exit; }
 $server = (int)$server;
 $token    = trim($data['token'] ?? '');
 $service  = trim($data['serviceId'] ?? $data['service'] ?? '');
@@ -58,9 +58,9 @@ $user_id = (int)$user['id'];
 try {
     $calc = bk_order_price($conn, $user_id, $service, $quantity, $API_ID, $API_KEY, $BASE_URL, $server);
 } catch (Throwable $e) {
-    http_response_code(503);echo json_encode(['ok'=>false,'message'=>in_array($server, [2, 3], true) ? $e->getMessage() : 'Harga tidak dapat diverifikasi.','orderId'=>null]);exit;
+    http_response_code(503);echo json_encode(['ok'=>false,'message'=>in_array($server, [2, 3, 4], true) ? $e->getMessage() : 'Harga tidak dapat diverifikasi.','orderId'=>null]);exit;
 }
-if (($server === 2 || $server === 3) && $calc['price'] === null) { http_response_code(503);echo json_encode(['ok'=>false,'message'=>'Harga Server '.$server.' tidak dapat diverifikasi.']);exit; }
+if (($server === 2 || $server === 3 || $server === 4) && $calc['price'] === null) { http_response_code(503);echo json_encode(['ok'=>false,'message'=>'Harga Server '.$server.' tidak dapat diverifikasi.']);exit; }
 $price = $calc['price'];
 if ($price === null && !empty($calc['unknown'])) {
     http_response_code(400);
@@ -143,6 +143,30 @@ if ($server === 2) {
     } else {
         // Timeout is ambiguous: never automatically resubmit/refund a possibly accepted order.
         $provider_order_id='S3-PENDING-'.bin2hex(random_bytes(8));
+        $provider_msg='Status pengiriman Server 3 belum pasti. Admin akan memeriksa; jangan kirim ulang.';
+    }
+    $serviceName=mb_substr('[Server 3] '.$serviceName,0,255);
+} elseif ($server === 4) {
+    // Server 3 di UI (SMMGen, internal 4): penolakan eksplisit = refund atomik,
+    // timeout/ambigu = ID S4-PENDING-… (saldo tetap, rekonsiliasi manual admin).
+    require_once __DIR__.'/smmgen_lib.php';
+    try {
+        $add = ['service'=>(int)$service,'link'=>$link,'quantity'=>$quantity];
+        if ($comments !== '') $add['comments'] = $comments;
+        $parsed = smg_call('add', $add);
+    } catch (SmgReject $e) {
+        // Explicit provider rejection: no order exists, return the debit atomically.
+        $refund=$conn->prepare('UPDATE users SET balance=balance+? WHERE id=?');
+        $refund->bind_param('di',$price,$user_id);$refund->execute();$refund->close();
+        http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Order ditolak Server 3: '.$e->getMessage().' Saldo telah dikembalikan.','orderId'=>null]);exit;
+    } catch (Throwable $e) { $parsed = null; }
+    $sgOrder = is_array($parsed) ? (string)($parsed['order'] ?? '') : '';
+    if (is_array($parsed) && preg_match('/^[1-9][0-9]*$/', $sgOrder)) {
+        $provider_order_id='S4-'.$sgOrder;
+        $provider_msg='Order berhasil dikirim ke Server 3.';
+    } else {
+        // Timeout is ambiguous: never automatically resubmit/refund a possibly accepted order.
+        $provider_order_id='S4-PENDING-'.bin2hex(random_bytes(8));
         $provider_msg='Status pengiriman Server 3 belum pasti. Admin akan memeriksa; jangan kirim ulang.';
     }
     $serviceName=mb_substr('[Server 3] '.$serviceName,0,255);
