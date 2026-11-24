@@ -9,6 +9,7 @@ import Reveal from '../components/Reveal';
 import { CustomSelect, FormSection } from '../components/BuatPesananCard';
 import { useAuth } from '../context/AuthContext';
 import { otpApi, type OtpCountry, type OtpOrder, type OtpService, type OtpTier } from '../services/otpOrderApi';
+import { CHILD_PANEL_SUB } from '../lib/apiBase';
 
 const COLOR = {
   primary: 'var(--by-primary)',
@@ -21,6 +22,8 @@ const rupiah = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency'
 const angka = (n: number) => new Intl.NumberFormat('id-ID').format(n || 0);
 const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const POPULER = ['whatsapp', 'telegram', 'instagram', 'tiktok', 'shopee', 'google', 'facebook'];
+/** Domain panel yang sedang dibuka: <nama>.boosteryuk.com di child panel, boosteryuk.com di web utama. */
+const PANEL_HOST = CHILD_PANEL_SUB ? `${CHILD_PANEL_SUB}.boosteryuk.com` : 'boosteryuk.com';
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   membeli: { label: 'Memproses nomor', cls: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300' },
   menunggu: { label: 'Menunggu kode', cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
@@ -388,44 +391,15 @@ export default function OrderOtpPage() {
         </div>
       </div>
 
-      {/* Keterangan penting & edukasi shadow ban (lengkap dengan contoh gambar).
-          Judul "Apa itu Shadowban?" di bagian atas dihapus karena penjelasan shadow ban
-          yang lebih detail sudah ada di bawah (satu penjelasan saja, tidak dobel). */}
+      {/* Edukasi shadow ban (lengkap dengan contoh gambar). Bullet promo/tautan qpanel dan
+          judul dobel di atas sudah dihapus; penyebutan server memakai domain panel yang
+          sedang dibuka (CHILD_PANEL_SUB). */}
       <Reveal>
         <section
           className="mt-5 rounded-[18px] border p-4 sm:p-6"
           style={{ borderColor: COLOR.border, background: COLOR.surface }}
           aria-label="Keterangan penting dan penjelasan shadow ban"
         >
-          <ul className="list-disc space-y-1 pl-5 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
-            <li>rate OTP hingga 95%.</li>
-            <li>
-              Tidak menemukan aplikasi? Ajukan di{' '}
-              <a href="https://qpanel.org/panel/requestlayanan" target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>Request Layanan</a>
-            </li>
-            <li>
-              Panduan lengkap & tips optimasi OTP di{' '}
-              <a href="https://tinyurl.com/qpaneldoc" target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>KLIK DISINI</a>.
-            </li>
-            <li>
-              Pantau kondisi layanan OTP real-time melalui{' '}
-              <a href="https://qpanel.org/panel/serverstatus" target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>Server Status</a>
-            </li>
-            <li><b>Pilih OTP Lebih Mahal untuk mendapatkan service terbaik dengan success rate tertinggi.</b></li>
-            <li>
-              <b>PROMO SPESIAL:</b> Cek Nomor OTP hanya Rp.50/Check! &gt;&gt;{' '}
-              <a href="https://qpanel.org/panel/number-checker" target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>Klik Disini</a>
-            </li>
-          </ul>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] font-bold">
-            <a href="https://qpanel.org/panel/order/promo#" target="_blank" rel="noreferrer" className="underline" style={{ color: COLOR.primary }}>SMS Tidak Masuk?</a>
-            <a href="https://qpanel.org/panel/order/promo#" target="_blank" rel="noreferrer" className="underline" style={{ color: COLOR.primary }}>Apa itu Shadow Ban?</a>
-            <a href="https://qpanel.org/panel/order/promo#" target="_blank" rel="noreferrer" className="underline" style={{ color: COLOR.primary }}>Bagaimana Mencari OTP Fresh?</a>
-            <a href="https://qpanel.org/panel/order/promo#" target="_blank" rel="noreferrer" className="underline" style={{ color: COLOR.primary }}>Baca Info Penting!!</a>
-          </div>
-
-          <div className="my-4 h-px w-full" style={{ background: COLOR.border }} />
-
           <h3 className="text-[13.5px] font-bold" style={{ color: COLOR.dark }}>Apa itu Shadow Ban?</h3>
           <p className="mt-1.5 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Penjelasan Shadow Ban</p>
           <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
@@ -434,7 +408,7 @@ export default function OrderOtpPage() {
             Dari sisi pengguna, segalanya tampak berjalan normal—misalnya, Anda masih dapat meminta OTP atau login ke
             aplikasi—tetapi di sisi server mereka, aktivitas Anda diabaikan atau ditolak. Shadow ban ini merupakan salah
             satu faktor yang menyebabkan OTP tidak masuk ke perangkat pengguna/server{' '}
-            <a href="http://QPanel.org" target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>QPanel.org</a>
+            <a href={`http://${PANEL_HOST}`} target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>{PANEL_HOST}</a>
           </p>
 
           <p className="mt-3 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Kenapa Shadow Ban Terjadi?</p>
