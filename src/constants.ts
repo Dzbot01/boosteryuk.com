@@ -356,6 +356,26 @@ export const CATEGORY_BRAND_ICONS: BrandIcon[] = [
   { slug: 'trakt', color: 'ED1C24', keywords: ['trakt'] },
   { slug: 'line', color: '00C300', keywords: ['line'] },
   { slug: 'signal', color: '3A76F0', keywords: ['signal'], initial: 'SG' },
+  // Platform musik/video lain yang muncul di katalog provider (ikon lokal public/brands).
+  { slug: 'audiomack', color: 'FF7A00', keywords: ['audiomack'] },
+  { slug: 'deezer', color: 'A238FF', keywords: ['deezer'] },
+  { slug: 'mixcloud', color: '5000FF', keywords: ['mixcloud'] },
+  { slug: 'soundcloud', color: 'FF5500', keywords: ['soundcloud'] },
+  { slug: 'medium', color: '000000', keywords: ['medium'] },
+  { slug: 'tumblr', color: '36465D', keywords: ['tumblr'] },
+  { slug: 'steam', color: '171A21', keywords: ['steam'] },
+  { slug: 'trustpilot', color: '00B67A', keywords: ['trustpilot'] },
+  { slug: 'tripadvisor', color: '34E0A0', keywords: ['tripadvisor'] },
+  { slug: 'imdb', color: 'F5C518', keywords: ['imdb'] },
+  { slug: 'vk', color: '0077FF', keywords: ['vk', 'vkontakte'] },
+  { slug: 'reddit', color: 'FF4500', keywords: ['reddit'] },
+  { slug: 'kick', color: '53FC18', keywords: ['kick'] },
+  { slug: 'rumble', color: '85C742', keywords: ['rumble'] },
+  { slug: 'quora', color: 'B92B27', keywords: ['quora'] },
+  { slug: 'vimeo', color: '1AB7EA', keywords: ['vimeo'] },
+  { slug: 'dailymotion', color: '0066DC', keywords: ['dailymotion'] },
+  // Kategori situs/web: ikon globe netral (bukan merek tertentu).
+  { slug: 'website', color: '0284C7', keywords: ['website', 'web traffic', 'traffic', 'situs', 'web'], asset: '/brands/website.svg' },
 ];
 
 /**
