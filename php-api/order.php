@@ -130,13 +130,12 @@ if ($server === 2) {
     require_once __DIR__.'/medanpedia_lib.php';
     try {
         $parsed = mp_call('order', ['service'=>(int)$service,'link'=>$link,'quantity'=>$quantity], true);
-    } catch (Throwable $e) { $parsed = null; }
-    if (is_array($parsed) && ($parsed['status'] ?? null) === false) {
+    } catch (MpReject $e) {
         // Explicit provider rejection: no order exists, return the debit atomically.
         $refund=$conn->prepare('UPDATE users SET balance=balance+? WHERE id=?');
         $refund->bind_param('di',$price,$user_id);$refund->execute();$refund->close();
-        http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Order ditolak Server 3. Saldo telah dikembalikan.','orderId'=>null]);exit;
-    }
+        http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Order ditolak Server 3: '.$e->getMessage().' Saldo telah dikembalikan.','orderId'=>null]);exit;
+    } catch (Throwable $e) { $parsed = null; }
     $mpOrder = is_array($parsed) ? (string)($parsed['order'] ?? $parsed['order_id'] ?? (is_array($parsed['data'] ?? null) ? ($parsed['data']['order'] ?? '') : '')) : '';
     if (is_array($parsed) && preg_match('/^[1-9][0-9]*$/', $mpOrder)) {
         $provider_order_id='S3-'.$mpOrder;

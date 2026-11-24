@@ -32,11 +32,7 @@ foreach ($ids as $id) {
 try {
     if ($numeric) {
         $nums = array_values($numeric);
-        $parsed = mp_call('status', count($nums) === 1 ? ['order' => $nums[0]] : ['orders' => implode(',', $nums)], true);
-        if (($parsed['status'] ?? null) === false) {
-            echo json_encode(['status' => false, 'msg' => (string)($parsed['msg'] ?? 'Pesanan tidak ditemukan di Server 3.')]);
-            exit;
-        }
+        $parsed = mp_call('status', count($nums) === 1 ? ['order' => $nums[0]] : ['orders' => implode(',', $nums)]);
         $entries = [];
         if (is_array($parsed['data'] ?? null)) $entries = $parsed['data'];
         elseif (is_array($parsed['orders'] ?? null)) $entries = $parsed['orders'];
@@ -59,6 +55,9 @@ try {
         }
     }
     echo json_encode(['status' => true, 'orders' => (object)$out]);
+} catch (MpReject $e) {
+    // Penolakan eksplisit (mis. order tidak dikenal): biarkan auto-deteksi lanjut ke server lain.
+    echo json_encode(['status' => false, 'msg' => $e->getMessage()]);
 } catch (Throwable $e) {
     // Gagal jaringan/key: beri tahu pemanggil supaya perlakuan auto-deteksi lanjut/berhenti dengan pesan jelas.
     http_response_code(503);
