@@ -11,4 +11,11 @@ assert.match(page,/frontImage=\{profilePhoto\} backImage=\{profilePhoto\}/);
 assert.match(page,/\/images\/google-profile-default\.svg/,'fallback ikon default yang sudah ada');
 assert.ok(!page.includes('UserAvatar'),'card ikon profil lama diganti animasi Lanyard');
 const svg=fs.readFileSync('public/images/google-profile-default.svg','utf8');assert.match(svg,/width="512" height="512"/);
+// Halaman pengaturan profil: ikon statis diganti animasi Lanyard (three.js) yang sama.
+const set=fs.readFileSync('src/pages/PengaturanAkunPage.tsx','utf8');
+assert.match(set,/const Lanyard = lazy\(\(\) => import\('\.\.\/components\/Lanyard'\)\);/,'halaman pengaturan memuat Lanyard malas');
+assert.match(set,/frontImage=\{profilePhoto\} backImage=\{profilePhoto\}/,'kartu animasi memakai ikon profil yang sudah ada');
+assert.match(set,/\/images\/google-profile-default\.svg/,'fallback ikon default di halaman pengaturan');
+assert.match(set,/aria-label="Ikon profil animasi 3D"/,'slot animasi ikon profil ada');
+assert.ok(!set.includes('UserAvatar'),'ikon statis UserAvatar tidak dipakai lagi di halaman pengaturan');
 console.log('PASS profil: card ikon profil memakai animasi Lanyard (three.js) dengan ikon profil yang sudah ada.');
