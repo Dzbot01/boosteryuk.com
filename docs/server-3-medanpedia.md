@@ -73,3 +73,12 @@ tsc hanya dua baseline error DepositInvoicePage/PlaygroundPage.
   `/layanan?service=M3:<id>` (UI Server 1 default); resume setelah login mengikuti pola yang sama.
 - Panel statis "Server 3 — Google Maps Review" di BuatPesananCard dihapus; dropdown server
   tetap hanya Server 1 & Server 2.
+
+## Kolom Top Service di dashboard: konten hardcode
+
+Kolom Kategori/Layanan Google Maps Review di dashboard TIDAK lagi memanggil API
+(sebelumnya fetchServices(3) saat mount + retry). Isinya hardcode sesuai referensi pemilik web:
+kategori "Google Map Review" dan layanan "Google Buzzer Indonesia Map Reviews [ 5 ⭐ ]
+[ Custom Comments Reviews ] [ Max 1K ]" dengan label harga "Rp 1.331.000 / 1rb · min 10 – max 1000".
+Katalog asli (Server 1 + Server 3) baru dimuat saat tombol keranjang diklik dan user masuk ke
+halaman /layanan; layanan yang sama dipilih otomatis karena preselect kini cocok lewat ID atau nama.
