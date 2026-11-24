@@ -59,6 +59,7 @@ export default function TimelineClip({ clip, zoom }: { clip: ClipType; zoom: num
         background: video ? 'linear-gradient(180deg,#1d6f7a,#12454d)' : '#1b3a63',
         boxShadow: on ? `0 0 0 2px ${C.text}` : `inset 0 0 0 1px ${C.border}`,
         transition: dragRef.current ? 'none' : 'box-shadow 120ms',
+        touchAction: 'none',
       }}
     >
       {/* Chips */}

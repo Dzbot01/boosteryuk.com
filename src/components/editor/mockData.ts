@@ -1,5 +1,4 @@
-import type { MediaAsset, MockCard } from './types';
-import { uid } from './types';
+import type { MockCard } from './types';
 
 /** Thumbnail placeholder digambar via canvas (client-side, tanpa aset eksternal). */
 export type ThumbKind = 'mountain' | 'ocean' | 'lake' | 'forest' | 'audio' | 'blank';
@@ -70,24 +69,6 @@ export function makeThumb(kind: ThumbKind, vertical = false): string {
   return c.toDataURL('image/png');
 }
 
-/** 4 mock media sesuai spesifikasi (mountain, ocean vertical, lake, foggy forest). */
-export function seedAssets(): MediaAsset[] {
-  return [
-    { id: uid(), name: 'CRST001334.mov', kind: 'video', url: '', thumb: makeThumb('mountain'), duration: 21, mock: true },
-    { id: uid(), name: 'OCEAN_vertical.mp4', kind: 'video', url: '', thumb: makeThumb('ocean', true), duration: 14, mock: true, vertical: true },
-    { id: uid(), name: 'LAKE_sunset.mp4', kind: 'video', url: '', thumb: makeThumb('lake'), duration: 27.58, mock: true },
-    { id: uid(), name: 'FOGGY_forest.mov', kind: 'video', url: '', thumb: makeThumb('forest'), duration: 18, mock: true },
-  ];
-}
-
-export const AUDIO_TRACKS: MockCard[] = [
-  { id: 'a1', name: 'Morning Drive', category: 'Music' },
-  { id: 'a2', name: 'Neon Nights', category: 'Music' },
-  { id: 'a3', name: 'Whoosh Hit', category: 'Sound effects' },
-  { id: 'a4', name: 'Keyboard Clicks', category: 'Sound effects' },
-  { id: 'a5', name: 'Voiceover Take 03', category: 'Voiceover' },
-  { id: 'a6', name: 'Extracted - CRST001334', category: 'Extracted' },
-];
 export const AUDIO_CATEGORIES = ['Music', 'Sound effects', 'Voiceover', 'Extracted'];
 
 export const TEXT_STYLES: MockCard[] = [

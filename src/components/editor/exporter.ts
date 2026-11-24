@@ -116,8 +116,9 @@ export async function exportVideo(args: Omit<DrawArgs, 'ctx'> & { ctx: CanvasRen
 
   rec.start();
   const startedAt = performance.now();
-  if (videoEl) { videoEl.currentTime = 0; await videoEl.play().catch(() => undefined); }
-  for (const el of audioEls) await el.play().catch(() => undefined);
+  const safePlay = (el: HTMLMediaElement) => { try { const p = (el.play() as unknown as Promise<void> | undefined); if (p && typeof p.catch === 'function') p.catch(() => undefined); } catch { /* abaikan */ } };
+  if (videoEl) { videoEl.currentTime = 0; safePlay(videoEl); }
+  for (const el of audioEls) safePlay(el);
 
   const tick = () => {
     const t = (performance.now() - startedAt) / 1000;
@@ -133,8 +134,8 @@ export async function exportVideo(args: Omit<DrawArgs, 'ctx'> & { ctx: CanvasRen
 
   await new Promise<void>((res) => window.setTimeout(res, duration * 1000 + 300));
   rec.stop();
-  videoEl?.pause();
-  for (const el of audioEls) el.pause();
+  try { videoEl?.pause(); } catch { /* abaikan */ }
+  for (const el of audioEls) { try { el.pause(); } catch { /* abaikan */ } }
   const blob = await done;
   audioCtx?.close().catch(() => undefined);
   download(blob, `${settings.filename}.webm`);

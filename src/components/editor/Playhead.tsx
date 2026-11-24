@@ -1,19 +1,31 @@
-import { useRef } from 'react';
-import { useEditor } from './store';
+import { timelineEnd, useEditor } from './store';
 import { C } from './ui';
 import { tc } from './types';
 
-/** Playhead putih penuh tinggi + handle pentagon di ruler; draggable & snap ke tepi clip. */
-export default function Playhead({ seek }: { seek: (clientX: number, snap: boolean) => void }) {
-  const { clips, playhead, zoom, snapping } = useEditor();
-  const dragging = useRef(false);
+/**
+ * Playhead putih penuh tinggi + handle pentagon di ruler.
+ * Drag mengikuti gerakan pointer 1:1 (delta pixel / zoom) + snap ke tepi clip,
+ * bukan lompat ke posisi klik.
+ */
+export default function Playhead() {
+  const { clips, playhead, setPlayhead, zoom, snapping } = useEditor();
+  const end = timelineEnd(clips);
 
   const onDown = (e: React.PointerEvent) => {
     e.preventDefault();
-    dragging.current = true;
-    const move = (ev: PointerEvent) => seek(ev.clientX, true);
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startT = playhead;
+    const move = (ev: PointerEvent) => {
+      let t = Math.max(0, Math.min(end, startT + (ev.clientX - startX) / zoom));
+      if (snapping) {
+        for (const c of clips) {
+          for (const edge of [c.start, c.start + c.duration]) if (Math.abs(edge - t) * zoom < 7) { t = edge; break; }
+        }
+      }
+      setPlayhead(t);
+    };
     const up = () => {
-      dragging.current = false;
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
     };
@@ -21,22 +33,14 @@ export default function Playhead({ seek }: { seek: (clientX: number, snap: boole
     window.addEventListener('pointerup', up);
   };
 
-  const snapPreview = () => {
-    if (!snapping) return playhead;
-    for (const c of clips) {
-      for (const e of [c.start, c.start + c.duration]) if (Math.abs(e - playhead) * zoom < 7) return e;
-    }
-    return playhead;
-  };
-
   return (
-    <div className="pointer-events-none absolute left-0 top-0 z-20 h-full" style={{ transform: `translateX(${snapPreview() * zoom}px)` }}>
+    <div className="pointer-events-none absolute left-0 top-0 z-20 h-full" style={{ transform: `translateX(${playhead * zoom}px)` }}>
       {/* Handle pentagon */}
       <span
         role="presentation"
         onPointerDown={onDown}
         className="pointer-events-auto absolute -left-[7px] -top-[1px] cursor-ew-resize"
-        style={{ width: 14, height: 16 }}
+        style={{ width: 14, height: 16, touchAction: 'none' }}
       >
         <svg viewBox="0 0 14 16" width="14" height="16" aria-hidden>
           <path d="M0 0h14v9L7 16 0 9z" fill="#ffffff" />

@@ -7,45 +7,30 @@ import Playhead from './Playhead';
 import { C } from './ui';
 
 export default function Timeline() {
-  const { clips, zoom, setZoom, playhead, setPlayhead, snapping } = useEditor();
+  const { clips, zoom, setZoom, playhead, playing } = useEditor();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const end = useMemo(() => timelineEnd(clips), [clips]);
   const width = Math.round(end * zoom);
 
-  const seek = (clientX: number, snap: boolean) => {
-    const host = scrollRef.current;
-    if (!host) return;
-    const rect = host.getBoundingClientRect();
-    const inner = host.querySelector<HTMLElement>('[data-tl-ruler]');
-    const base = inner?.getBoundingClientRect().left ?? rect.left + 60;
-    let t = (clientX - base + host.scrollLeft) / zoom;
-    t = Math.max(0, Math.min(end, t));
-    if (snap && snapping) {
-      for (const c of clips) {
-        for (const e of [c.start, c.start + c.duration]) if (Math.abs(e - t) * zoom < 7) { t = e; break; }
-      }
-    }
-    setPlayhead(t);
-  };
-
-  // Auto-scroll saat playhead keluar viewport.
+  // Auto-scroll halus saat playback berjalan (bukan saat drag manual).
   useEffect(() => {
+    if (!playing) return;
     const view = scrollRef.current;
     if (!view) return;
     const x = playhead * zoom;
     if (x > view.scrollLeft + view.clientWidth - 120 || x < view.scrollLeft) view.scrollLeft = Math.max(0, x - 120);
-  }, [playhead, zoom]);
+  }, [playhead, zoom, playing]);
 
   return (
     <div className="flex h-full min-h-0 flex-col" style={{ background: C.panel }}>
       <TimelineToolbar />
       <div className="flex min-h-0 flex-1">
-        {/* Gutter kiri (sticky) */}
-        <div className="sticky left-0 z-20 w-[60px] shrink-0 border-r" style={{ borderColor: C.border }}>
+        {/* Gutter kiri (tetap terlihat saat scroll horizontal) */}
+        <div className="z-20 w-[60px] shrink-0 border-r" style={{ borderColor: C.border }}>
           <div className="h-6 border-b" style={{ borderColor: C.border, background: '#151518' }} />
           {TRACKS.map((def, i) => <TrackGutter key={i} def={def} index={i} />)}
         </div>
-        {/* Konten: ruler + lanes + playhead */}
+        {/* Konten: ruler + lanes + playhead; bisa digeser (scroll) desktop & mobile */}
         <div
           ref={scrollRef}
           data-tl-scroll
@@ -58,9 +43,7 @@ export default function Timeline() {
           }}
         >
           <div className="relative" style={{ width, minHeight: '100%' }}>
-            <div data-tl-ruler onClick={(e) => seek(e.clientX, false)} className="cursor-pointer">
-              <TimelineRuler width={width} seek={seek} />
-            </div>
+            <TimelineRuler width={width} />
             {TRACKS.map((def, i) => (
               <TimelineTrack
                 key={i}
@@ -71,7 +54,7 @@ export default function Timeline() {
                 clips={def.track === 'empty' ? [] : clips.filter((c) => c.track === def.track)}
               />
             ))}
-            <Playhead seek={seek} />
+            <Playhead />
           </div>
         </div>
       </div>

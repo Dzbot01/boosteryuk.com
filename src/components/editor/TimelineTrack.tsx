@@ -55,9 +55,27 @@ export default function TimelineTrack({ def, clips, zoom, width, index, lockedRe
   const { select, assets, addClip } = useEditor();
   return (
     <div
-      className="relative shrink-0 overflow-hidden border-b"
+      className="relative shrink-0 cursor-grab overflow-hidden border-b active:cursor-grabbing"
       style={{ height: def.height, width, borderColor: C.border, background: index % 2 ? 'rgba(255,255,255,.012)' : 'transparent', opacity: lockedRef?.current.includes(index) ? 0.5 : 1 }}
-      onPointerDown={(e) => { if (e.target === e.currentTarget) select(null); }}
+      onPointerDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        select(null);
+        // Geser (pan) area timeline dengan seret manual di area kosong — desktop & mouse;
+        // di layar sentuh scroll native yang menangani pan.
+        if (e.pointerType === 'touch') return;
+        e.preventDefault();
+        const host = (e.currentTarget as HTMLElement).closest('[data-tl-scroll]') as HTMLElement | null;
+        if (!host) return;
+        const startX = e.clientX;
+        const startScroll = host.scrollLeft;
+        const move = (ev: PointerEvent) => { host.scrollLeft = startScroll - (ev.clientX - startX); };
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+      }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();

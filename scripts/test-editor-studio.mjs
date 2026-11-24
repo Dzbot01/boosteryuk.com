@@ -74,7 +74,12 @@ for (const n of ['Default text', 'Bold title', 'Neon', 'Outline', 'Gradient', 'S
 for (const c of ['Trending', 'Basic', 'Retro', 'Glitch', 'Blur', 'Light']) assert.ok(md.includes(c), `kategori effect ${c}`);
 for (const c of ['Featured', 'Life', 'Cinematic', 'Film', 'Black & White']) assert.ok(md.includes(c), `kategori filter ${c}`);
 for (const n of ['90s', 'Vivid', 'Noir']) assert.ok(md.includes(n), `nama filter ${n}`);
-assert.match(md, /CRST001334\.mov/, 'nama file mock sesuai contoh');
+assert.ok(!md.includes('CRST001334.mov') && !md.includes('Morning Drive'), 'tidak ada media/audio mock tersimpan');
+assert.match(store, /assets: EMPTY_ASSETS/, 'default proyek: tanpa asset');
+assert.match(store, /clips: EMPTY_CLIPS/, 'default proyek: tanpa clip');
+assert.match(store, /previewAssetId: ''/, 'default: tanpa preview media');
+assert.match(store, /previewAssetId: added\[0\]\.id/, 'import → preview Player otomatis menyesuaikan');
+assert.match(store, /pending: asset\.kind !== 'image'/, 'clip menunggu durasi metadata');
 assert.match(md, /makeThumb/, 'thumbnail digenerate canvas');
 
 /* 6. Player */
@@ -180,7 +185,28 @@ const sc = read('src/components/editor/ShortcutModal.tsx');
 assert.match(sc, /SHORTCUTS/, 'daftar shortcut dari mockData');
 assert.match(md, /Space[\s\S]*Ctrl \+ Z[\s\S]*Ctrl \+ Y/, 'isi daftar shortcut');
 
-/* 11. Export nyata tetap berjalan (canvas + MediaRecorder) */
+/* 11. Perilaku baru: kosong default, loop, drag 1:1, pan, fullscreen */
+const studio = read('src/components/editor/Studio.tsx');
+assert.match(player, /next >= end \? 0 : next/, 'durasi habis → playhead balik ke awal (loop)');
+assert.match(player, /projectEnd\(s\.clips\) \|\| pv\?\.duration/, 'clock berhenti di ujung media, bukan ruler kosong');
+assert.match(player, /p-1\.5 sm:p-2/, 'preview Player diperbesar (padding kecil)');
+assert.match(studio, /viewportH \* 0\.34/, 'timeline default lebih tipis → player lebih besar');
+assert.match(ruler, /startT \+ \(ev\.clientX - startX\) \/ zoom/, 'scrub ruler mengikuti gerakan seret 1:1');
+assert.ok(!/onClick=/.test(ruler), 'ruler tidak lompat saat diklik (harus seret manual)');
+assert.match(ph, /startT \+ \(ev\.clientX - startX\) \/ zoom/, 'drag playhead mengikuti gerakan seret 1:1');
+assert.match(tr, /host\.scrollLeft = startScroll - \(ev\.clientX - startX\)/, 'geser/pan area timeline dengan seret di lane kosong');
+assert.match(tr, /cursor-grab/, 'lane kosong bisa digeser');
+assert.match(tr, /e\.pointerType === 'touch'/, 'pan mouse di lane kosong; touch memakai scroll native');
+assert.match(clip, /touchAction: 'none'/, 'clip touch-drag tidak memicu scroll');
+assert.match(media, /assets\.filter\(\(a\) => a\.kind === 'audio'\)/, 'tab Audio hanya menampilkan audio import user');
+assert.match(media, /Belum ada audio tersimpan/, 'tab Audio default kosong');
+assert.match(media, /tidak terlihat oleh user lain/, 'keterangan privasi: media lokal per perangkat');
+const pgs = read('src/pages/PlaygroundPage.tsx');
+assert.match(pgs, /m\.id === 'studio' && document\.documentElement\.requestFullscreen/, 'klik menu studio → fullscreen');
+assert.match(studio, /el\.requestFullscreen\(\)\.catch/, 'studio mencoba fullscreen saat mount');
+assert.match(pgs, /menu !== 'studio' && document\.fullscreenElement/, 'fullscreen dilepas saat keluar studio');
+
+/* 12. Export nyata tetap berjalan (canvas + MediaRecorder) */
 const exp = read('src/components/editor/exporter.ts');
 assert.match(exp, /drawFrame/, 'gambar frame ke canvas');
 assert.match(exp, /canvas\.toBlob\(res, 'image\/png'\)|toBlob\(res, 'image\/png'\)/, 'ekspor PNG');

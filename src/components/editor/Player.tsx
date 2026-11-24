@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Maximize, Menu as MenuIcon, Pause, Play, Ratio, Scan } from 'lucide-react';
-import { previewFilter, timelineEnd, useEditor } from './store';
+import { previewFilter, projectEnd, useEditor } from './store';
+
+/** play()/pause() defensif: beberapa lingkungan (jsdom/SSR) tidak mengembalikan Promise. */
+function safePlay(el: HTMLVideoElement | HTMLAudioElement) {
+  try {
+    const p = el.play() as unknown as Promise<void> | undefined;
+    if (p && typeof p.catch === 'function') p.catch(() => undefined);
+  } catch { /* abaikan */ }
+}
+function safeStop(el: HTMLVideoElement | HTMLAudioElement) {
+  try { el.pause(); } catch { /* abaikan */ }
+}
 import { C, IconBtn } from './ui';
 import { tc } from './types';
 
@@ -19,8 +30,11 @@ function usePlaybackClock() {
       const dt = (now - last) / 1000;
       last = now;
       const s = useEditor.getState();
-      const end = timelineEnd(s.clips);
+      const pv = s.assets.find((a) => a.id === s.previewAssetId);
+      const end = projectEnd(s.clips) || pv?.duration || 0;
+      if (end <= 0) { raf = requestAnimationFrame(loop); return; }
       const next = s.playhead + dt * s.speed;
+      // Durasi media habis → balik lagi dari awal (loop), tidak terus play ke area kosong.
       s.setPlayhead(next >= end ? 0 : next);
       raf = requestAnimationFrame(loop);
     };
@@ -42,10 +56,15 @@ export default function Player() {
   const rulerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const end = useMemo(() => timelineEnd(clips), [clips]);
-  const clip = useMemo(() => clips.find((c) => c.track === 'video' && playhead >= c.start && playhead <= c.start + c.duration) || null, [clips, playhead]);
+  const previewAssetId = useEditor((st) => st.previewAssetId);
   const assets = useEditor((st) => st.assets);
-  const asset = useMemo(() => (clip?.assetId ? assets.find((a) => a.id === clip.assetId) || null : null), [clip, assets]);
+  const clip = useMemo(() => clips.find((c) => c.track === 'video' && playhead >= c.start && playhead <= c.start + c.duration) || null, [clips, playhead]);
+  const clipAsset = useMemo(() => (clip?.assetId ? assets.find((a) => a.id === clip.assetId) || null : null), [clip, assets]);
+  // Media terakhir yang di-import → preview Player otomatis menyesuaikan meski playhead di luar clip.
+  const previewAsset = useMemo(() => assets.find((a) => a.id === previewAssetId) || null, [assets, previewAssetId]);
+  const asset = clipAsset || previewAsset;
+  // Total = ujung project; saat proyek kosong pakai durasi media preview.
+  const end = useMemo(() => projectEnd(clips) || previewAsset?.duration || 0, [clips, previewAsset]);
 
   // Sinkronisasi video asli dengan playhead.
   useEffect(() => {
@@ -59,8 +78,8 @@ export default function Player() {
     if (!v) return;
     v.volume = volume / 100;
     v.playbackRate = speed;
-    if (playing) v.play().catch(() => undefined);
-    else v.pause();
+    if (playing) safePlay(v);
+    else safeStop(v);
   }, [playing, volume, speed, asset]);
 
   const filter = previewFilter({ adjust, filterCss, filterStrength });
@@ -82,12 +101,12 @@ export default function Player() {
       </div>
 
       {/* Preview */}
-      <div className="flex min-h-0 flex-1 items-center justify-center p-4">
+      <div className="flex min-h-0 flex-1 items-center justify-center p-1.5 sm:p-2">
         <div
           ref={boxRef}
           data-player-stage
-          className="relative flex max-h-full w-full items-center justify-center overflow-hidden rounded-[4px] bg-black"
-          style={{ aspectRatio: ratioCss[ratio], maxWidth: ratio === '9:16' || ratio === '3:4' ? '42%' : '100%' }}
+          className="relative flex h-full max-h-full w-full items-center justify-center overflow-hidden rounded-[4px] bg-black"
+          style={{ aspectRatio: ratioCss[ratio], maxWidth: ratio === '9:16' || ratio === '3:4' ? '46%' : '100%' }}
         >
           {asset?.kind === 'video' && asset.url ? (
             <video
