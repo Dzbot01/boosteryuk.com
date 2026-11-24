@@ -14,7 +14,7 @@ halaman Buat Pesanan dengan kategori & layanan terpilih otomatis.
 
 Baru: `medanpedia_lib.php`, `medanpedia_services.php`, `medanpedia_status.php`,
 `medanpedia_refill.php`, dan **privat** `medanpedia_config.php` (salin dari
-`medanpedia_config.example.php`, isi `$MP_API_KEY`; jangan commit). Diperbarui:
+`medanpedia_config.example.php`, isi `$MP_API_ID` dan `$MP_API_KEY`; jangan commit). Diperbarui:
 `order.php`, `order_price.php`. Tidak ada SQL baru; cache file `medanpedia_*_cache.json`
 otomatis (TTL 10 menit). Key hanya dibaca di PHP; semua request keluar memakai TLS
 tervalidasi, timeout, tanpa follow redirect.

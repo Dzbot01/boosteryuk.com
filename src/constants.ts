@@ -327,7 +327,7 @@ export const CATEGORY_BRAND_ICONS: BrandIcon[] = [
   { slug: 'youtube', color: 'FF0000', keywords: ['youtube', 'yt'] },
   { slug: 'whatsapp', color: '25D366', keywords: ['whatsapp', 'wa ', 'channel'] },
   { slug: 'telegram', color: '26A5E4', keywords: ['telegram'] },
-  { slug: 'twitter', color: '000000', keywords: ['twitter', 'x.com', 'tweet'] },
+  { slug: 'x', color: '000000', keywords: ['twitter', 'x.com', 'tweet'] },
   { slug: 'threads', color: '000000', keywords: ['threads'] },
   { slug: 'spotify', color: '1DB954', keywords: ['spotify'] },
   { slug: 'shopee', color: 'EE4D2D', keywords: ['shopee'] },
@@ -340,7 +340,8 @@ export const CATEGORY_BRAND_ICONS: BrandIcon[] = [
   { slug: 'snackvideo', color: 'FF8A00', keywords: ['snack', 'snackvideo'] },
   { slug: 'pinterest', color: 'BD081C', keywords: ['pinterest'] },
   { slug: 'discord', color: '5865F2', keywords: ['discord'] },
-  { slug: 'google', color: '4285F4', keywords: ['google', 'gmaps', 'maps', 'review'] },
+  { slug: 'googlemaps', color: '4285F4', keywords: ['google maps', 'google map', 'gmaps', 'maps'] },
+  { slug: 'google', color: '4285F4', keywords: ['google'] },
   { slug: 'trakt', color: 'ED1C24', keywords: ['trakt'] },
   { slug: 'line', color: '00C300', keywords: ['line'] },
   { slug: 'signal', color: '3A76F0', keywords: ['signal'], initial: 'SG' },
@@ -362,6 +363,10 @@ export function brandForCategory(categoryName: string): BrandIcon | null {
 }
 
 /** CDN URL for a brand mark using the brand colour (white glyph on transparent). */
+/** Slug merek yang ikon aslinya ikut di-bundle lokal (public/brands) agar bebas CDN. */
+export const LOCAL_BRAND_SLUGS = new Set(['google','googlemaps','tiktok','instagram','facebook','youtube','youtubemusic','whatsapp','telegram','threads','x','spotify','shopee','linkedin','roblox','snapchat','twitch','pinterest','discord','trakt','line','signal','reddit','soundcloud','kick','rumble','quora','vimeo','dailymotion','deezer','applemusic','audiomack','mixcloud','medium','tumblr','steam','trustpilot','tripadvisor','imdb','vk']);
+
 export function brandIconUrl(brand: BrandIcon, glyphColor = 'ffffff') {
+  if (LOCAL_BRAND_SLUGS.has(brand.slug)) return `/brands/${brand.slug}.svg`;
   return `https://cdn.simpleicons.org/${brand.slug}/${glyphColor}`;
 }
