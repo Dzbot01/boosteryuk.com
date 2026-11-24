@@ -129,7 +129,7 @@ if ($server === 2) {
     // timeout/ambigu = ID S3-PENDING-… (saldo tetap, rekonsiliasi manual admin).
     require_once __DIR__.'/medanpedia_lib.php';
     try {
-        $parsed = mp_call('order', ['service'=>(int)$service,'link'=>$link,'quantity'=>$quantity], true);
+        $parsed = mp_call('order', ['service'=>(int)$service,'link'=>$link,'quantity'=>$quantity]);
     } catch (MpReject $e) {
         // Explicit provider rejection: no order exists, return the debit atomically.
         $refund=$conn->prepare('UPDATE users SET balance=balance+? WHERE id=?');

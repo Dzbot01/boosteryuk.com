@@ -49,3 +49,7 @@ Dropdown kategori DAN layanan Server 2 memakai badge. Platform yang dikenali men
 Untuk nama tidak dikenal/CDN gagal, gunakan ikon lokal sesuai jenis layanan: pengikut, suka, tayangan, komentar, bagikan, rating, musik, video, traffic/web, game, boost, atau tag generik. Fallback ini tidak bergantung CDN. Pemetaan berbasis kata kunci, bukan daftar katalog live yang sudah diverifikasi: API key/katalog produksi tidak tersedia di sandbox.
 
 Tes tambahan: `NODE_PATH=/tmp/server2-icons-tests/node_modules node scripts/test-server2-presentation.mjs` (jsdom/php-parser test-only). Upload pembaruan `naizop_lib.php` serta hasil build frontend; tidak ada SQL/config/key tambahan.
+
+## Ikon merek asli (self-host)
+
+Ikon kategori/layanan Server 2 (dan badge kategori Server 1) memakai file SVG merek asli yang di-bundle lokal di `public/brands/*.svg` (google, googlemaps, instagram, tiktok, youtube, x, whatsapp, telegram, spotify, linkedin, dll — 40 slug). `brandIconUrl()` memakai file lokal dulu; CDN simpleicons hanya untuk slug yang belum di-bundle; glyph semantik Lucide hanya fallback terakhir bila gambar gagal dimuat. Kategori Google Maps memakai ikon Google Maps asli, bukan glyph rekayasa.

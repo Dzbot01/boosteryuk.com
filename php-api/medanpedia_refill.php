@@ -24,7 +24,7 @@ if ($num === '') { echo json_encode(['status' => false, 'msg' => 'Gunakan ID pes
 
 try {
     $path = $action === 'refill' ? 'refill' : 'refill_status';
-    $parsed = mp_call($path, ['order' => $num], $action === 'refill');
+    $parsed = mp_call($path, ['order' => $num]);
     $data = is_array($parsed['data'] ?? null) ? $parsed['data'] : $parsed;
     echo json_encode([
         'status' => true,

@@ -10,4 +10,5 @@
  */
 
 $MP_BASE_URL = 'https://api.medanpedia.co.id';
+$MP_API_ID   = 0; // API ID Anda (int), contoh: 11
 $MP_API_KEY  = 'ISI_KEY_SERVER_3_DI_SINI';

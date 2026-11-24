@@ -15,6 +15,9 @@ const {server2Label:label,server2Brand:brand,serviceGlyph:glyph,fetchServices,Ba
 for(const input of ["Naizop's",'Naizop’s','Naizop‘s','Naizop`s','Naizop´S','NAIZOPS','naizop','Naizop&#039;s','Naizop&#x27;s','Naizop&amp;#039;s','Naizop&apos;s']) assert.equal(label(input),'Boosteryuk',input);
 assert.equal(label('🏆 Naizop&#039;s Top Facebook Picks 🏆'),'🏆 Boosteryuk Top Facebook Picks 🏆');
 assert.equal(label('Naizop Services'),'Boosteryuk Services');assert.equal(label('notnaizopservice'),'notnaizopservice');
+for(const [text,slug] of [['Google Maps Review','googlemaps'],['Google Reviews','google'],['Gmaps paket ulasan','googlemaps']])assert.equal(brand(text)?.slug,slug,text);
+const constants=fs.readFileSync('src/constants.ts','utf8');assert.match(constants,/LOCAL_BRAND_SLUGS/);assert.match(constants,/`\/brands\/\$\{brand\.slug\}\.svg`/);
+for(const slug of ['google','googlemaps','instagram','tiktok','youtube','x','linkedin'])assert.ok(fs.existsSync('public/brands/'+slug+'.svg'),slug+' lokal');
 for(const [text,slug] of [['Reddit Upvotes','reddit'],['SoundCloud plays','soundcloud'],['Kick Live viewers','kick'],['Trustpilot Reviews','trustpilot'],['Apple Music Streams','applemusic'],['YouTube Music plays','youtubemusic'],['LinkedIn connections','linkedin'],['X Followers','x'],['VK members','vk'],['Facebook likes','facebook']])assert.equal(brand(text)?.slug,slug,text);
 for(const name of ['High Quality','Online views','Channel subscribers','Preview impressions'])assert.equal(brand(name),null,name);
 for(const [name,expected] of [['Followers','users'],['Views','eye'],['Custom comments','message'],['Likes','heart'],['SEO Traffic','globe'],['Reviews','star'],['Reposts','share'],['Song plays','music'],['Unrecognized category','tag']])assert.equal(glyph(name),expected);
