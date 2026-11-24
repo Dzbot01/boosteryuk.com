@@ -21,14 +21,21 @@ assert.doesNotMatch(otp, /<h2[^>]*>Apa itu Shadowban\?<\/h2>/, 'judul shadowban 
 assert.match(otp, /<h3[^>]*>Apa itu Shadow Ban\?<\/h3>/, 'penjelasan shadow ban yang lebih detail tetap ada');
 assert.equal((otp.match(/Penjelasan Shadow Ban/g) || []).length, 1, 'hanya satu blok penjelasan shadow ban');
 assert.match(otp, /aria-label="Keterangan penting dan penjelasan shadow ban"/, 'seksi keterangan tetap ada');
-assert.match(otp, /rate OTP hingga 95%/);
-assert.match(otp, /https:\/\/qpanel\.org\/panel\/requestlayanan/, 'tautan Request Layanan');
-assert.match(otp, /https:\/\/tinyurl\.com\/qpaneldoc/, 'tautan panduan KLIK DISINI');
-assert.match(otp, /https:\/\/qpanel\.org\/panel\/serverstatus/, 'tautan Server Status');
-assert.match(otp, /https:\/\/qpanel\.org\/panel\/number-checker/, 'tautan Number Checker promo');
-for (const t of ['SMS Tidak Masuk?', 'Apa itu Shadow Ban?', 'Bagaimana Mencari OTP Fresh?', 'Baca Info Penting!!']) {
-  assert.ok(otp.includes(t), `tautan cepat ${t}`);
+/* Bullet promo + 4 tautan cepat qpanel sudah dihapus atas permintaan user. */
+assert.doesNotMatch(otp, /qpanel\.org/i, 'tidak ada lagi tautan qpanel.org');
+assert.doesNotMatch(otp, /tinyurl\.com/i, 'tidak ada lagi tautan tinyurl');
+for (const t of ['rate OTP hingga 95%', 'Request Layanan', 'KLIK DISINI', 'Server Status',
+  'Pilih OTP Lebih Mahal untuk mendapatkan service terbaik', 'PROMO SPESIAL', 'Rp.50/Check',
+  'SMS Tidak Masuk?', 'Bagaimana Mencari OTP Fresh?', 'Baca Info Penting!!']) {
+  assert.ok(!otp.includes(t), `teks dihapus: ${t}`);
 }
+assert.doesNotMatch(otp, /<ul className="list-disc/, 'daftar bullet di atas penjelasan hilang');
+/* Penyebutan server kini memakai domain panel yang sedang dibuka, bukan QPanel.org. */
+assert.ok(!/QPanel\.org/i.test(otp.replace(/^.*CHILD_PANEL_SUB.*$/gm, '')), 'teks QPanel.org tidak dipakai lagi');
+assert.match(otp, /import \{ CHILD_PANEL_SUB \} from '\.\.\/lib\/apiBase';/, 'host child panel dipakai');
+assert.match(otp, /const PANEL_HOST = CHILD_PANEL_SUB \? `\$\{CHILD_PANEL_SUB\}\.boosteryuk\.com` : 'boosteryuk\.com';/, 'domain panel: nama child atau boosteryuk.com');
+assert.match(otp, /perangkat pengguna\/server\{' '\}/, 'frasa "perangkat pengguna/server" dipertahankan');
+assert.match(otp, /<a href=\{`http:\/\/\$\{PANEL_HOST\}`\}[^>]*>\{PANEL_HOST\}<\/a>/, 'tautan server = domain panel');
 assert.match(otp, /Penjelasan Shadow Ban/);
 assert.match(otp, /Kenapa Shadow Ban Terjadi\?/);
 assert.match(otp, /Apa itu Fingerprint Perangkat\?/);
@@ -57,4 +64,4 @@ const voice = read('src/services/boostyVoice.ts');
 assert.match(voice, /RETRY_WINDOW_MS = 60_000/, 'jendela retry gesture dibatasi');
 assert.match(voice, /Date\.now\(\) - retryStartedAt > RETRY_WINDOW_MS/, 'klik lama setelah login tidak membunyikan audio');
 
-console.log('PASS Order OTP: Syarat & ketentuan di card Cara pakai, keterangan Shadowban + tautan + 2 gambar contoh, audio Guri hanya saat baru login.');
+console.log('PASS Order OTP: Syarat & ketentuan tetap, bullet promo + tautan qpanel dihapus, server disebut dengan domain panel (CHILD_PANEL_SUB), penjelasan shadow ban + 2 gambar contoh, audio Guri hanya saat baru login.');
