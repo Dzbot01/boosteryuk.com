@@ -1043,3 +1043,17 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .by-hamburger svg, .by-hamburger .by-line { transition: none; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Proteksi asset gambar: tidak bisa diseret, diseleksi, disalin,      */
+/* maupun disimpan lewat menu konteks / long-press mobile.             */
+/* ------------------------------------------------------------------ */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}

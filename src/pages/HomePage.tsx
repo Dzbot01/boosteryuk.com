@@ -200,8 +200,12 @@ export default function HomePage() {
       </section>
 
       <section aria-labelledby="top-service-title" className="mx-auto mt-8 w-full max-w-6xl px-4 sm:px-6">
-        <h2 id="top-service-title" className="mb-4 text-center font-display text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white">Top Service</h2>
-        <img src="/images/top-service-google-maps.png" alt="Top Service Google Maps — ilustrasi tampilan lokasi dan ulasan bisnis" className="mx-auto h-auto w-full max-w-xl rounded-2xl object-contain" loading="lazy" width={1377} height={1223} />
+        <h2 id="top-service-title" className="text-center font-display text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white">Top Service</h2>
+        <div aria-hidden className="mx-auto mt-4 h-px w-full max-w-xl bg-slate-200/90 dark:bg-slate-700/70" />
+        <p className="mx-auto mt-3 w-full max-w-xl text-left text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+          Layanan review Google Maps membantu meningkatkan kepercayaan pelanggan terhadap outlet atau lokasi bisnis Anda. Ulasan yang masuk membuat profil bisnis terlihat aktif, ramai, dan terpercaya di mata calon pelanggan. Seluruh review dikerjakan secara organik, sehingga reputasi bisnis tumbuh alami dan menonjol di hasil pencarian Maps.
+        </p>
+        <img src="/images/top-service-google-maps.png" alt="Top Service Google Maps — ilustrasi tampilan lokasi dan ulasan bisnis" className="mx-auto mt-4 h-auto w-full max-w-xl rounded-2xl object-contain" loading="lazy" width={1377} height={1223} />
         <GoogleMapsReviewColumns />
         <div aria-hidden className="mt-10 h-px w-full bg-slate-200/90 dark:bg-slate-700/70" />
       </section>

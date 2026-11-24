@@ -25,7 +25,7 @@ export default function Layout() {
     if (loading || !user) return;
     let path = '';
     try { path = sessionStorage.getItem(PENDING_ORDER_PATH_KEY) || ''; } catch { path = ''; }
-    if (!/^\/layanan\?server=3&service=[A-Za-z0-9%._-]+$/.test(path)) return;
+    if (!/^\/layanan\?service=[A-Za-z0-9%._-]+$/.test(path)) return;
     try { sessionStorage.removeItem(PENDING_ORDER_PATH_KEY); } catch { /* abaikan */ }
     navigate(path);
   }, [user, loading, navigate]);
@@ -34,6 +34,27 @@ export default function Layout() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [pathname]);
+
+  // Proteksi asset gambar situs: blokir seret (drag) dan menu konteks
+  // (simpan/salin gambar) pada semua <img> di seluruh halaman.
+  useEffect(() => {
+    const isImage = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      return Boolean(el && (el.tagName === 'IMG' || el.closest?.('img')));
+    };
+    const onDragStart = (e: DragEvent) => {
+      if (isImage(e.target)) e.preventDefault();
+    };
+    const onContextMenu = (e: MouseEvent) => {
+      if (isImage(e.target)) e.preventDefault();
+    };
+    document.addEventListener('dragstart', onDragStart);
+    document.addEventListener('contextmenu', onContextMenu);
+    return () => {
+      document.removeEventListener('dragstart', onDragStart);
+      document.removeEventListener('contextmenu', onContextMenu);
+    };
+  }, []);
 
   return (
     <AdminNotificationsProvider><div className={`relative flex min-h-screen flex-col overflow-x-clip bg-[#eef1f5] text-slate-900 transition-[background-color,border-color,color,padding] duration-300 dark:bg-black dark:text-slate-100 lg:pl-16`}>
