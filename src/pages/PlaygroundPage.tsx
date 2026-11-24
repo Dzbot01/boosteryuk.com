@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import EditorStudio from '../components/EditorStudio';
 import {
   Sparkles,
   Captions,
+  Clapperboard,
   AudioLines,
   Copy,
   Check,
@@ -29,20 +31,21 @@ import {
   type TtsVoice,
 } from '../services/playgroundApi';
 
-type Menu = 'overview' | 'hook' | 'caption' | 'tts';
+type Menu = 'overview' | 'hook' | 'caption' | 'tts' | 'studio';
 
 const MENUS: { id: Menu; label: string; icon: typeof Sparkles; desc: string }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutGrid, desc: 'Halaman utama Playground' },
   { id: 'hook', label: 'Hook Generator', icon: Sparkles, desc: 'Bikin hook pembuka konten yang nendang' },
   { id: 'caption', label: 'Auto Caption', icon: Captions, desc: 'Caption otomatis dari deskripsi konten' },
   { id: 'tts', label: 'Teks To Speech', icon: AudioLines, desc: 'Ubah teks jadi suara berkualitas' },
+  { id: 'studio', label: 'Editor Studio', icon: Clapperboard, desc: 'Ruang edit video & foto: cut, musik, teks, ekspor' },
 ];
 
 export default function PlaygroundPage() {
   // Menu disimpan di URL (?m=) agar refresh tidak kembali ke Overview.
   const [params, setParams] = useSearchParams();
   const raw = params.get('m') || 'overview';
-  const menu = (['overview', 'hook', 'caption', 'tts'].includes(raw) ? raw : 'overview') as Menu;
+  const menu = (['overview', 'hook', 'caption', 'tts', 'studio'].includes(raw) ? raw : 'overview') as Menu;
   const setMenu = (m: Menu) => setParams(m === 'overview' ? {} : { m }, { replace: false });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const active = MENUS.find((m) => m.id === menu)!;
@@ -52,7 +55,7 @@ export default function PlaygroundPage() {
 
   return (
     <>
-      <Seo title="Playground" description="Playground Boosteryuk: Hook Generator, Auto Caption, dan Teks To Speech." noindex />
+      <Seo title="Playground" description="Playground Boosteryuk: Hook Generator, Auto Caption, Teks To Speech, dan Editor Studio." noindex />
 
       {menu === 'overview' ? (
         <>
@@ -104,6 +107,7 @@ export default function PlaygroundPage() {
           />
         )}
         {menu === 'tts' && <TtsPanel />}
+        {menu === 'studio' && <EditorStudio />}
         </div>
       </div>
       )}
