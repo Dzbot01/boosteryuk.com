@@ -24,6 +24,12 @@ assert.match(card,/className="ml-auto flex h-8 w-8/,'tombol di pojok kanan heade
 // Panduan khusus followers Instagram: gambar contoh + langkah + penutup.
 assert.ok(fs.existsSync('public/guides/instagram-flag-for-review.png'),'aset gambar panduan Instagram ada');
 assert.match(card,/src="\/guides\/instagram-flag-for-review\.png"/,'gambar contoh dipakai di kartu');
+assert.match(card,/sm:w-\[380px\] sm:max-w-full/,'gambar panduan diperkecil khusus desktop (mobile tetap penuh)');
+const ai=fs.readFileSync('src/components/AiAssistantCard.tsx','utf8');
+assert.match(ai,/import aiAgent from '\.\.\/assets\/ai-agent\.png'/,'ikon AI agent memakai gambar baru');
+assert.match(ai,/src=\{aiAgent\} alt="AI Agent"/,'avatar AI agent diganti gambar robot');
+assert.ok(fs.existsSync('src/assets/ai-agent.png'),'aset ai-agent.png ada');
+assert.ok(!ai.includes('guri.webp'),'avatar lama guri.webp tidak dipakai lagi');
 assert.ok(card.includes('kemungkinan besar karena mereka perlu disetujui secara manual'),'pengantar panduan Instagram');
 for (const s of ['Buka Pengaturan dan Privasi.','Pilih Ikuti dan Undang Teman.','Nonaktifkan opsi Tandai untuk Ditinjau.','Jika baru Nonaktifkan opsi Tandai untuk Ditinjau, kamu bisa test pesan sedikit dulu.']) assert.ok(card.includes(s),`langkah IG: ${s}`);
 assert.ok(card.includes('masuk ke\n              kategori spam')||card.includes('masuk ke kategori spam'),'peringatan mis order spam');

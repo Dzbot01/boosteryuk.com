@@ -1,6 +1,5 @@
 import AvatarPicker from '../components/AvatarPicker';
-import UserAvatar from '../components/UserAvatar';
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendOtpEmail, genOtp, otpVerifRateCheck, otpVerifRateRecord, otpVerifRateStatus, fmtCooldown } from '../services/otp';
 import {
@@ -17,6 +16,9 @@ import {
 } from 'lucide-react';
 import Reveal from '../components/Reveal';
 import { useAuth } from '../context/AuthContext';
+
+/** Kartu ikon profil 3D (three.js) — dependensi animasi yang sama seperti halaman profil. */
+const Lanyard = lazy(() => import('../components/Lanyard'));
 
 export default function PengaturanAkunPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
@@ -42,6 +44,8 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
   // Cooldown progresif untuk tombol 'Verifikasi' (ke-2→1 mnt, ke-3→5 mnt, ke-4→30 mnt, ke-5+→24 jam)
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [cooldownTick, setCooldownTick] = useState(() => Date.now());
+  // Gambar kartu memakai ikon profil yang sudah ada: foto Google atau siluet defaultnya.
+  const profilePhoto = user?.picture && /^https:\/\//i.test(user.picture) ? user.picture : '/images/google-profile-default.svg';
   const sentCode = useRef<string | null>(null);
   const sentAt = useRef<number>(0);
 
@@ -176,9 +180,12 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
 
       <Reveal delay={40}>
         <div className="flex items-center gap-3.5">
-          {!embedded && <span className="flex h-14 w-14 items-center justify-center font-display text-lg font-extrabold text-white">
-            <UserAvatar user={user} fallbackClassName="rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 shadow-lg shadow-cyan-600/25">{user?.initials?? 'U'}</UserAvatar>
-          </span>}
+          {/* Ikon profil beranimasi Lanyard (three.js) — tampil di halaman pengaturan maupun saat embedded. */}
+          <div className="h-[150px] w-[120px] shrink-0" aria-label="Ikon profil animasi 3D">
+            <Suspense fallback={<div className="h-full w-full animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />}>
+              <Lanyard frontImage={profilePhoto} backImage={profilePhoto} imageFit="cover" cardColor="#0e7490" orientation="portrait" finish="glossy" cornerRadius={0.3} size={0.55} anchor="center" strapLength={0.4} strapColor="#111111" strapWidth={0.65} metal="silver" gravity={1} damping={0.5} elasticity={0.5} breeze={0.5} interactive intro />
+            </Suspense>
+          </div>
           <div>
             <h1 className="font-display text-[26px] font-extrabold leading-none tracking-tight text-slate-900 dark:text-white sm:text-[30px]">
               Pengaturan Akun

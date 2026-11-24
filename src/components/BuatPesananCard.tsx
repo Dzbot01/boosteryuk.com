@@ -212,7 +212,7 @@ function OrderGuideCard() {
               src="/guides/instagram-flag-for-review.png"
               alt="Contoh pengaturan Instagram: Settings and privacy, lalu Follow and invite friends, kemudian nonaktifkan sakelar Flag for review (Tandai untuk Ditinjau)."
               loading="lazy"
-              className="mt-3 w-full rounded-xl border border-slate-200 dark:border-slate-700"
+              className="mx-auto mt-3 w-full rounded-xl border border-slate-200 dark:border-slate-700 sm:w-[380px] sm:max-w-full"
             />
             <p className="mt-3 text-[11.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
               Jika Anda tidak melihat pengikut baru, kemungkinan besar karena mereka perlu disetujui secara manual. Untuk
