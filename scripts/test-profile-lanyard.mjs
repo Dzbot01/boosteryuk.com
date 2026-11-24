@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';
+const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));assert.ok(pkg.dependencies.three,'dependensi three terpasang');
+const lanyard=fs.readFileSync('src/components/Lanyard.tsx','utf8');
+assert.ok(lanyard.startsWith('// @ts-nocheck'),'Lanyard.tsx bebas pemeriksaan tipe');
+assert.match(lanyard,/import \* as THREE from 'three';/);assert.match(lanyard,/import '\.\/Lanyard\.css';/);assert.match(lanyard,/export default Lanyard;/);
+assert.match(lanyard,/new THREE\.WebGLRenderer/);assert.match(lanyard,/prefers-reduced-motion/);
+const css=fs.readFileSync('src/components/Lanyard.css','utf8');assert.match(css,/\.lanyard \{/);assert.match(css,/\.lanyard-canvas \{/);
+const page=fs.readFileSync('src/pages/ProfilPage.tsx','utf8');
+assert.match(page,/const Lanyard = lazy\(\(\) => import\('\..\/components\/Lanyard'\)\);/);
+assert.match(page,/frontImage=\{profilePhoto\} backImage=\{profilePhoto\}/);
+assert.match(page,/\/images\/google-profile-default\.svg/,'fallback ikon default yang sudah ada');
+assert.ok(!page.includes('UserAvatar'),'card ikon profil lama diganti animasi Lanyard');
+const svg=fs.readFileSync('public/images/google-profile-default.svg','utf8');assert.match(svg,/width="512" height="512"/);
+console.log('PASS profil: card ikon profil memakai animasi Lanyard (three.js) dengan ikon profil yang sudah ada.');

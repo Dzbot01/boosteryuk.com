@@ -1,13 +1,14 @@
-import GoogleProfileFallback from '../components/GoogleProfileFallback';
 import AvatarPicker from '../components/AvatarPicker';
-import UserAvatar from '../components/UserAvatar';
 import OwnedTitles from '../components/OwnedTitles';
 import PengaturanAkunPage from './PengaturanAkunPage';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Copy, Check, LogOut, Mail, Hash, Wallet, Crown } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { formatRupiah } from '../constants';
+
+/** Kartu ikon profil 3D (three.js) — dimuat malas agar bundle utama tetap ringan. */
+const Lanyard = lazy(() => import('../components/Lanyard'));
 
 export default function ProfilPage() {
   const { user, logout } = useAuth();
@@ -15,6 +16,8 @@ export default function ProfilPage() {
   const [copied, setCopied] = useState(false);
   useEffect(() => { if (hash === '#pengaturan-akun') document.getElementById('pengaturan-akun')?.scrollIntoView({ behavior: 'smooth' }); }, [hash]);
   if (!user) return null;
+  // Gambar kartu memakai ikon profil yang sudah ada: foto Google atau siluet defaultnya.
+  const profilePhoto = user.picture && /^https:\/\//i.test(user.picture) ? user.picture : '/images/google-profile-default.svg';
   const trial = !!user.plan?.plus_trial_active && !user.plan.plus_permanent && !user.plan.extra_active;
   const until = user.plan?.plus_trial_until;
   const copyId = async () => {
@@ -22,7 +25,11 @@ export default function ProfilPage() {
   };
   return <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-10 sm:px-6 lg:max-w-5xl lg:px-8 lg:pt-12">
     <section className="rounded-[28px] border border-slate-200 bg-white p-6 text-center lg:p-10 dark:border-slate-700 dark:bg-slate-900">
-      <div className="mx-auto flex h-32 w-32 lg:h-40 lg:w-40 items-center justify-center text-2xl font-extrabold text-white"><UserAvatar user={user}><GoogleProfileFallback key={user.picture || user.id} src={user.picture}/></UserAvatar></div>
+      <div className="mx-auto h-[420px] w-full max-w-md sm:h-[520px] lg:h-[600px]" aria-label="Kartu ikon profil animasi 3D">
+        <Suspense fallback={<div className="h-full w-full animate-pulse rounded-3xl bg-slate-100 dark:bg-slate-800" />}>
+          <Lanyard frontImage={profilePhoto} backImage={profilePhoto} imageFit="cover" cardColor="#0e7490" orientation="portrait" finish="glossy" cornerRadius={0.3} size={0.6} anchor="center" strapLength={0.5} strapColor="#111111" strapWidth={0.65} metal="silver" gravity={1} damping={0.5} elasticity={0.5} breeze={0.5} interactive intro />
+        </Suspense>
+      </div>
       <h1 className="mt-4 text-2xl lg:text-3xl font-extrabold">{user.name}</h1><p className="mt-1 text-sm lg:text-base break-words text-slate-500">@{user.username} · {user.email}</p>
       <p className="mt-1 text-xs lg:text-sm text-slate-400">Bergabung {user.joined}</p>
       {user.plusActive && <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-extrabold text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"><Crown size={18}/>{trial ? 'PLUS TRIAL' : 'VIP PLUS'}{trial && until && <span className="text-xs font-normal">sampai {new Date(until).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB</span>}</div>}
