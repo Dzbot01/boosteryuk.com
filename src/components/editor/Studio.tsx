@@ -74,6 +74,17 @@ export default function Studio() {
     dragRef.current = { axis, which, start: axis === 'x' ? e.clientX : e.clientY, origin };
   };
 
+  /* ---------- Fullscreen otomatis saat Editor Studio dibuka ---------- */
+  useEffect(() => {
+    const el = document.documentElement;
+    if (!document.fullscreenElement && el.requestFullscreen) {
+      el.requestFullscreen().catch(() => undefined);
+    }
+    return () => {
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
+    };
+  }, []);
+
   /* ---------- Shortcut keyboard (visual + aksi dasar) ---------- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -136,7 +147,7 @@ export default function Studio() {
   );
 
   const viewportH = vh || 900;
-  const tlHeight = tlH || Math.round(viewportH * 0.38);
+  const tlHeight = tlH || Math.round(viewportH * 0.34);
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden" style={{ background: C.app, color: C.text, fontFamily: 'Inter, system-ui, sans-serif' }}>

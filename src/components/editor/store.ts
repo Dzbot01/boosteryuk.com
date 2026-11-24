@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Clip, MediaAsset } from './types';
 import { uid } from './types';
-import { makeThumb, seedAssets } from './mockData';
+import { makeThumb } from './mockData';
 
 export type LeftTab = 'Media' | 'Audio' | 'Text' | 'Stickers' | 'Effects' | 'Transition' | 'Filters';
 export type RightTab = 'Video' | 'Audio' | 'Speed' | 'Animate' | 'Adjust';
@@ -15,6 +15,9 @@ interface EditorState {
   assets: MediaAsset[];
   importFiles: (files: FileList | File[]) => void;
   removeAsset: (id: string) => void;
+  /** Media terakhir yang di-import → preview Player otomatis menyesuaikan. */
+  previewAssetId: string;
+  setPreviewAsset: (id: string) => void;
 
   clips: Clip[];
   selected: string | null;
@@ -78,37 +81,9 @@ interface EditorState {
   setSheet: (s: '' | 'left' | 'right') => void;
 }
 
-const seedClips = (assets: MediaAsset[]): Clip[] => {
-  const video = assets[2];
-  const wave = Array.from({ length: 60 }, (_, i) => 0.25 + Math.abs(Math.sin(i / 4)) * 0.7);
-  return [
-    {
-      id: uid(),
-      track: 'video',
-      assetId: video.id,
-      name: video.name,
-      start: 0,
-      duration: 20,
-      inPoint: 0,
-      thumb: video.thumb,
-      chips: ['Effects - Edit', 'Filters', 'Adjust', video.name, '00:00:00'],
-      mock: true,
-    },
-    {
-      id: uid(),
-      track: 'audio',
-      name: 'Audio.aac',
-      start: 4,
-      duration: 10,
-      inPoint: 0,
-      waveform: wave,
-      chips: ['Speed 2.0x', 'Audio.aac', '00:00:00'],
-      mock: true,
-    },
-  ];
-};
-
-const initialAssets = typeof document === 'undefined' ? [] : seedAssets();
+/** Proyek selalu mulai KOSONG: tidak ada media/clip tersimpan; user import dulu. */
+const EMPTY_ASSETS: MediaAsset[] = [];
+const EMPTY_CLIPS: Clip[] = [];
 
 export const useEditor = create<EditorState>((set, get) => ({
   title: 'This is a title',
@@ -116,7 +91,9 @@ export const useEditor = create<EditorState>((set, get) => ({
   autosave: new Date().toLocaleTimeString('en-GB'),
   stampAutosave: () => set({ autosave: new Date().toLocaleTimeString('en-GB') }),
 
-  assets: initialAssets,
+  assets: EMPTY_ASSETS,
+  previewAssetId: '',
+  setPreviewAsset: (id) => set({ previewAssetId: id }),
   importFiles: (files) => {
     const added: MediaAsset[] = [];
     for (const file of Array.from(files)) {
@@ -125,15 +102,79 @@ export const useEditor = create<EditorState>((set, get) => ({
       added.push({ id: uid(), name: file.name, kind, url: URL.createObjectURL(file), thumb: kind === 'audio' ? makeThumb('audio') : '', duration: 0 });
     }
     if (added.length === 0) return;
-    // Durasi & thumbnail dibaca dari elemen media (client-side).
+    const s0 = get();
+    // Clip dibuat langsung supaya media tampil di Player & Timeline begitu import sukses.
+    s0.pushHistory();
+    const trackEnd = (tr: 'video' | 'audio') => s0.clips.filter((c) => c.track === tr).reduce((m, c) => Math.max(m, c.start + c.duration), 0);
+    let vEnd = trackEnd('video');
+    let aEnd = trackEnd('audio');
+    const newClips: Clip[] = [];
     for (const asset of added) {
-      if (asset.kind === 'audio') continue;
+      const track: 'video' | 'audio' = asset.kind === 'audio' ? 'audio' : 'video';
+      const start = track === 'video' ? vEnd : aEnd;
+      const duration = asset.kind === 'image' ? 8 : 0;
+      if (track === 'video') vEnd += Math.max(duration, 0.1) || 0.1;
+      else aEnd += Math.max(duration, 0.1) || 0.1;
+      newClips.push({
+        id: uid(),
+        track,
+        assetId: asset.id,
+        name: asset.name,
+        start,
+        duration: duration || 0.1,
+        inPoint: 0,
+        thumb: asset.thumb,
+        waveform: track === 'audio' ? Array.from({ length: 60 }, (_, i) => 0.25 + Math.abs(Math.sin(i / 3)) * 0.7) : undefined,
+        chips: track === 'audio' ? ['Audio', asset.name] : ['Name', asset.name],
+        pending: asset.kind !== 'image',
+      });
+      if (track === 'video') vEnd = newClips[newClips.length - 1].start + newClips[newClips.length - 1].duration;
+      else aEnd = newClips[newClips.length - 1].start + newClips[newClips.length - 1].duration;
+    }
+    set((s) => ({
+      assets: [...s.assets, ...added],
+      clips: [...s.clips, ...newClips],
+      selected: newClips[newClips.length - 1].id,
+      previewAssetId: added[0].id,
+      playhead: 0,
+    }));
+
+    // Durasi & thumbnail dibaca dari elemen media (client-side, tanpa server).
+    for (const asset of added) {
+      const applyDuration = (dur: number) => {
+        set((s) => {
+          const track: 'video' | 'audio' = asset.kind === 'audio' ? 'audio' : 'video';
+          // Durasi asli masuk → clip diperbarui lalu track dirapikan agar tidak tumpang tindih.
+          let next = s.clips.map((c) => (c.assetId === asset.id && c.pending ? { ...c, duration: Math.max(0.1, dur), pending: false } : c));
+          let cursor = 0;
+          next = next
+            .map((c, i) => ({ c, i }))
+            .sort((a, b) => a.c.start - b.c.start || a.i - b.i)
+            .map(({ c }) => {
+              if (c.track !== track) return c;
+              const start = Math.max(c.start, cursor);
+              cursor = start + c.duration;
+              return { ...c, start };
+            });
+          return {
+            assets: s.assets.map((a) => (a.id === asset.id ? { ...a, duration: dur } : a)),
+            clips: next,
+          };
+        });
+      };
+      if (asset.kind === 'audio') {
+        const au = new Audio();
+        au.preload = 'metadata';
+        au.src = asset.url;
+        au.onloadedmetadata = () => applyDuration(au.duration || 0);
+        continue;
+      }
       const el: HTMLVideoElement | HTMLImageElement = document.createElement(asset.kind === 'video' ? 'video' : 'img');
       if (asset.kind === 'video') (el as HTMLVideoElement).preload = 'metadata';
       el.src = asset.url;
       el.onloadedmetadata = () => {
         const v = el as HTMLVideoElement;
-        set((s) => ({ assets: s.assets.map((a) => (a.id === asset.id ? { ...a, duration: v.duration || 0 } : a)) }));
+        applyDuration(asset.kind === 'video' ? v.duration || 0 : 8);
         if (asset.kind === 'video') {
           v.currentTime = Math.min(1, (v.duration || 2) / 2);
           v.onseeked = () => {
@@ -143,18 +184,24 @@ export const useEditor = create<EditorState>((set, get) => ({
             const ctx = c.getContext('2d');
             if (!ctx) return;
             ctx.drawImage(v, 0, 0, 160, 100);
-            set((s) => ({ assets: s.assets.map((a) => (a.id === asset.id ? { ...a, thumb: c.toDataURL('image/png') } : a)) }));
+            const dataUrl = c.toDataURL('image/png');
+            set((s) => ({
+              assets: s.assets.map((a) => (a.id === asset.id ? { ...a, thumb: dataUrl } : a)),
+              clips: s.clips.map((cl) => (cl.assetId === asset.id ? { ...cl, thumb: dataUrl } : cl)),
+            }));
           };
         } else {
-          set((s) => ({ assets: s.assets.map((a) => (a.id === asset.id ? { ...a, thumb: asset.url } : a)) }));
+          set((s) => ({
+            assets: s.assets.map((a) => (a.id === asset.id ? { ...a, thumb: asset.url } : a)),
+            clips: s.clips.map((cl) => (cl.assetId === asset.id ? { ...cl, thumb: asset.url } : cl)),
+          }));
         }
       };
     }
-    set((s) => ({ assets: [...s.assets, ...added] }));
   },
   removeAsset: (id) => set((s) => ({ assets: s.assets.filter((a) => a.id !== id) })),
 
-  clips: typeof document === 'undefined' ? [] : seedClips(initialAssets),
+  clips: EMPTY_CLIPS,
   selected: null,
   select: (id) => set({ selected: id }),
   addClip: (asset, at) => {
@@ -220,10 +267,9 @@ export const useEditor = create<EditorState>((set, get) => ({
     if (historyStack.length > 50) historyStack.shift();
   },
   resetProject: () => {
-    const assets = seedAssets();
     historyStack.length = 0;
     redoStack.length = 0;
-    set({ assets, clips: seedClips(assets), selected: null, playhead: 0, title: 'This is a title' });
+    set({ assets: [], clips: [], selected: null, playhead: 0, previewAssetId: '', title: 'This is a title', playing: false });
   },
 
   playhead: 3.2,
@@ -278,8 +324,11 @@ export const useEditor = create<EditorState>((set, get) => ({
 const historyStack: Clip[][] = [];
 const redoStack: Clip[][] = [];
 
-/** Panjang timeline = ujung clip paling akhir (min 30 dtk agar ruler lega). */
-export const timelineEnd = (clips: Clip[]) => Math.max(200, ...clips.map((c) => c.start + c.duration));
+/** Ujung clip paling akhir; 0 saat proyek masih kosong. */
+export const projectEnd = (clips: Clip[]) => (clips.length ? Math.max(...clips.map((c) => c.start + c.duration)) : 0);
+
+/** Lebar area kerja timeline (ruler) — lega untuk menaruh clip baru. */
+export const timelineEnd = (clips: Clip[]) => Math.max(60, projectEnd(clips) + 10);
 
 /** CSS filter gabungan dari tab Adjust + Filters (strength). */
 export function previewFilter(s: { adjust: Record<string, number>; filterCss: string; filterStrength: number }) {

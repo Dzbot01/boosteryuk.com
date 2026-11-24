@@ -53,6 +53,11 @@ export default function PlaygroundPage() {
   // Scroll ke atas tiap ganti menu.
   useEffect(() => { window.scrollTo({ top: 0 }); }, [menu]);
 
+  // Selain Editor Studio: pastikan fullscreen dilepas.
+  useEffect(() => {
+    if (menu !== 'studio' && document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
+  }, [menu]);
+
   return (
     <>
       <Seo title="Playground" description="Playground Boosteryuk: Hook Generator, Auto Caption, Teks To Speech, dan Editor Studio." noindex />
@@ -129,7 +134,14 @@ export default function PlaygroundPage() {
                 return (
                   <button
                     key={m.id}
-                    onClick={() => { setMenu(m.id); setDrawerOpen(false); }}
+                    onClick={() => {
+                      setMenu(m.id);
+                      setDrawerOpen(false);
+                      // Klik menu Editor Studio → langsung masuk fullscreen (user gesture).
+                      if (m.id === 'studio' && document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(() => undefined);
+                      }
+                    }}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
                       on
                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'

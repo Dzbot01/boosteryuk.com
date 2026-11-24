@@ -7,7 +7,7 @@ import { useEditor } from './store';
 import type { LeftTab } from './store';
 import { C, IconBtn } from './ui';
 import {
-  AUDIO_CATEGORIES, AUDIO_TRACKS, EFFECT_CATEGORIES, EFFECTS, FILTER_CATEGORIES, FILTERS,
+  AUDIO_CATEGORIES, EFFECT_CATEGORIES, EFFECTS, FILTER_CATEGORIES, FILTERS,
   STICKER_CHIPS, STICKERS, TEXT_CATEGORIES, TEXT_STYLES, TRANSITION_CATEGORIES, TRANSITIONS, makeThumb,
 } from './mockData';
 import { tcShort } from './types';
@@ -155,7 +155,15 @@ function MediaTab() {
             ))}
           </div>
         )}
-        {list.length === 0 && <p className="py-6 text-center text-[11px]" style={{ color: C.text3 }}>Tidak ada media. Klik Import atau tarik file ke sini.</p>}
+        {list.length === 0 && (
+          <p className="py-6 text-center text-[11px] leading-relaxed" style={{ color: C.text3 }}>
+            Tidak ada media tersimpan — proyek mulai kosong.
+            <br />
+            Klik Import atau tarik file video/image/audio ke sini.
+            <br />
+            Media diproses lokal di perangkatmu dan tidak terlihat oleh user lain.
+          </p>
+        )}
       </div>
 
       <input ref={fileRef} type="file" accept=".mp4,.mov,.webm,.mp3,.aac,.wav,.jpg,.png,.gif,video/*,audio/*,image/*" multiple hidden onChange={(e) => { if (e.target.files) importFiles(e.target.files); e.target.value = ''; }} />
@@ -222,8 +230,28 @@ function MediaCard({ asset, selected, onSelect, onCtx }: { asset: MediaAsset; se
 
 /* ---------------- Audio ---------------- */
 function AudioTab() {
+  const { assets, addClip } = useEditor();
   const [cat, setCat] = useState(AUDIO_CATEGORIES[0]);
-  const [preview, setPreview] = useState('');
+  const [playingId, setPlayingId] = useState('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Hanya audio yang di-import user yang tampil — default kosong, tidak ada audio tersimpan.
+  const list = assets.filter((a) => a.kind === 'audio');
+
+  const toggle = (id: string, url: string) => {
+    if (playingId === id) {
+      try { audioRef.current?.pause(); } catch { /* abaikan */ }
+      audioRef.current = null;
+      setPlayingId('');
+      return;
+    }
+    audioRef.current?.pause();
+    const el = new Audio(url);
+    el.onended = () => setPlayingId('');
+    try { const pr = el.play() as unknown as Promise<void> | undefined; if (pr && typeof pr.catch === 'function') pr.catch(() => undefined); } catch { /* abaikan */ }
+    audioRef.current = el;
+    setPlayingId(id);
+  };
+
   return (
     <div className="flex h-full min-h-0">
       <div className="w-[90px] shrink-0 space-y-1 border-r p-2" style={{ borderColor: C.border }}>
@@ -234,14 +262,21 @@ function AudioTab() {
         ))}
       </div>
       <div className="min-w-0 flex-1 space-y-1 p-2.5">
-        {AUDIO_TRACKS.filter((t) => t.category === cat).map((t) => (
+        {list.length === 0 && (
+          <p className="py-6 text-center text-[11px] leading-relaxed" style={{ color: C.text3 }}>
+            Belum ada audio tersimpan.
+            <br />
+            Import audio lewat tab Media — diproses lokal di perangkatmu.
+          </p>
+        )}
+        {list.map((t) => (
           <div key={t.id} className="flex items-center gap-2 rounded-[4px] px-1.5 py-1.5 transition-colors duration-[120ms] hover:bg-[#232327]">
-            <button type="button" aria-label={`Preview ${t.name}`} onClick={() => setPreview(preview === t.id ? '' : t.id)} className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: preview === t.id ? C.accent : C.raised }}>
-              <Play className="h-3 w-3" style={{ color: preview === t.id ? '#000' : C.text2 }} strokeWidth={2.4} />
+            <button type="button" aria-label={`Preview ${t.name}`} onClick={() => toggle(t.id, t.url)} className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: playingId === t.id ? C.accent : C.raised }}>
+              <Play className="h-3 w-3" style={{ color: playingId === t.id ? '#000' : C.text2 }} strokeWidth={2.4} />
             </button>
             <span className="min-w-0 flex-1 truncate text-[12px]" style={{ color: C.text }}>{t.name}</span>
-            <span className="text-[10px]" style={{ color: C.text3 }}>00:{String(12 + t.id.charCodeAt(1)).padStart(2, '0')}</span>
-            <button type="button" aria-label={`Tambah ${t.name}`} className="flex h-6 w-6 items-center justify-center rounded-[4px]" style={{ background: C.raised }}>
+            <span className="text-[10px]" style={{ color: C.text3 }}>{tcShort(t.duration)}</span>
+            <button type="button" aria-label={`Tambah ${t.name}`} onClick={() => addClip(t)} className="flex h-6 w-6 items-center justify-center rounded-[4px]" style={{ background: C.raised }}>
               <Plus className="h-3.5 w-3.5" style={{ color: C.accent }} strokeWidth={2.6} />
             </button>
           </div>

@@ -27,6 +27,8 @@ export interface Clip {
   waveform?: number[];
   chips: string[];
   mock?: boolean;
+  /** Durasi masih menunggu metadata media terbaca. */
+  pending?: boolean;
 }
 
 export interface MockCard {
