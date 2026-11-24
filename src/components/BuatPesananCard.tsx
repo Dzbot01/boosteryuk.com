@@ -339,7 +339,7 @@ export default function BuatPesananCard() {
       if (result.ok) {
         setServices(result.services);
         // Pilih otomatis layanan dari ?service=ID (mis. dari tombol keranjang di Overview)
-        const pre = preselectId ? result.services.find((x) => x.id === preselectId) : undefined;
+        const pre = preselectId ? result.services.find((x) => x.id === preselectId || x.name === preselectId) : undefined;
         if (pre) {
           setCategory(pre.category.trim());
           setServiceId(pre.id);

@@ -25,7 +25,7 @@ export default function Layout() {
     if (loading || !user) return;
     let path = '';
     try { path = sessionStorage.getItem(PENDING_ORDER_PATH_KEY) || ''; } catch { path = ''; }
-    if (!/^\/layanan\?service=[A-Za-z0-9%._-]+$/.test(path)) return;
+    if (!/^\/layanan\?service=[^&]+$/.test(path)) return;
     try { sessionStorage.removeItem(PENDING_ORDER_PATH_KEY); } catch { /* abaikan */ }
     navigate(path);
   }, [user, loading, navigate]);
