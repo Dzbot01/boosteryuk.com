@@ -318,6 +318,10 @@ export interface BrandIcon {
   keywords: string[];
   /** Fallback mark rendered when the CDN icon is unavailable */
   initial?: string;
+  /** Aset ikon lokal khusus (PNG warna penuh) bila ada, menggantikan SVG/CDN. */
+  asset?: string;
+  /** True bila asset adalah logo warna penuh: badge tanpa lingkaran warna. */
+  fullColor?: boolean;
 }
 
 export const CATEGORY_BRAND_ICONS: BrandIcon[] = [
@@ -325,7 +329,7 @@ export const CATEGORY_BRAND_ICONS: BrandIcon[] = [
   { slug: 'instagram', color: 'E4405F', keywords: ['instagram', 'ig', 'insta'] },
   { slug: 'facebook', color: '0866FF', keywords: ['facebook', 'fb'] },
   { slug: 'youtube', color: 'FF0000', keywords: ['youtube', 'yt'] },
-  { slug: 'whatsapp', color: '25D366', keywords: ['whatsapp', 'wa ', 'channel'] },
+  { slug: 'whatsapp', color: '25D366', keywords: ['whatsapp', 'wa'] },
   { slug: 'telegram', color: '26A5E4', keywords: ['telegram'] },
   { slug: 'x', color: '000000', keywords: ['twitter', 'x.com', 'tweet'] },
   { slug: 'threads', color: '000000', keywords: ['threads'] },
@@ -340,8 +344,8 @@ export const CATEGORY_BRAND_ICONS: BrandIcon[] = [
   { slug: 'snackvideo', color: 'FF8A00', keywords: ['snack', 'snackvideo'] },
   { slug: 'pinterest', color: 'BD081C', keywords: ['pinterest'] },
   { slug: 'discord', color: '5865F2', keywords: ['discord'] },
-  { slug: 'googlemaps', color: '4285F4', keywords: ['google maps', 'google map', 'gmaps', 'maps'] },
-  { slug: 'google', color: '4285F4', keywords: ['google'] },
+  { slug: 'googlemaps', color: '4285F4', keywords: ['google maps', 'google map', 'gmaps', 'maps'], asset: '/brands/googlemaps.png', fullColor: true },
+  { slug: 'google', color: '4285F4', keywords: ['google'], asset: '/brands/google.png', fullColor: true },
   { slug: 'trakt', color: 'ED1C24', keywords: ['trakt'] },
   { slug: 'line', color: '00C300', keywords: ['line'] },
   { slug: 'signal', color: '3A76F0', keywords: ['signal'], initial: 'SG' },
@@ -351,12 +355,33 @@ export const CATEGORY_BRAND_ICONS: BrandIcon[] = [
  * Finds the brand mark matching a given category name.
  * Returns `null` when no brand keyword is present in the text.
  */
+/** Kata generik yang mendeskripsikan layanan, bukan platform (tidak boleh memicu merek). */
+const GENERIC_BRAND_KEYWORDS = new Set(['channel', 'review']);
+
+/** Cocokkan merek pakai word-boundary, keyword terpanjang优先, agar "Telegram Channel" tidak jadi WhatsApp. */
+export function findBrandIcon(text: string, brands: readonly BrandIcon[]): BrandIcon | null {
+  const value = text.toLowerCase();
+  const candidates = brands
+    .flatMap((brand) => brand.keywords.map((keyword) => ({ brand, keyword: keyword.trim() })))
+    .sort((a, b) => b.keyword.length - a.keyword.length);
+  for (const { brand, keyword } of candidates) {
+    if (GENERIC_BRAND_KEYWORDS.has(keyword)) continue;
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`(^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, 'i').test(value)) return brand;
+  }
+  return null;
+}
+
 export function brandForCategory(categoryName: string): BrandIcon | null {
   const name = (categoryName || '').toLowerCase();
   if (!name) return null;
+  const bounded = findBrandIcon(name, CATEGORY_BRAND_ICONS);
+  if (bounded) return bounded;
+  // Fallback substring hanya untuk keyword panjang yang aman (>=5 karakter).
   for (const brand of CATEGORY_BRAND_ICONS) {
     for (const keyword of brand.keywords) {
-      if (name.includes(keyword)) return brand;
+      const k = keyword.trim();
+      if (k.length >= 5 && !GENERIC_BRAND_KEYWORDS.has(k) && name.includes(k)) return brand;
     }
   }
   return null;
@@ -367,6 +392,7 @@ export function brandForCategory(categoryName: string): BrandIcon | null {
 export const LOCAL_BRAND_SLUGS = new Set(['google','googlemaps','tiktok','instagram','facebook','youtube','youtubemusic','whatsapp','telegram','threads','x','spotify','shopee','linkedin','roblox','snapchat','twitch','pinterest','discord','trakt','line','signal','reddit','soundcloud','kick','rumble','quora','vimeo','dailymotion','deezer','applemusic','audiomack','mixcloud','medium','tumblr','steam','trustpilot','tripadvisor','imdb','vk']);
 
 export function brandIconUrl(brand: BrandIcon, glyphColor = 'ffffff') {
+  if (brand.asset) return brand.asset;
   if (LOCAL_BRAND_SLUGS.has(brand.slug)) return `/brands/${brand.slug}.svg`;
   return `https://cdn.simpleicons.org/${brand.slug}/${glyphColor}`;
 }

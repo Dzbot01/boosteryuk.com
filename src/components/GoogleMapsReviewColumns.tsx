@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, MapPin, Layers, CircleAlert, RefreshCw } from 'lucide-react';
 import { fetchServices, formatRate, type ServiceItem } from '../services/servicesApi';
+import { brandForCategory, brandIconUrl } from '../constants';
 import { useAuth } from '../context/AuthContext';
 
 /** Key sessionStorage untuk melanjutkan step order sesudah login Google. */
@@ -93,12 +94,19 @@ export default function GoogleMapsReviewColumns() {
           <p className="mt-2.5 text-[12.5px] leading-relaxed text-slate-500 dark:text-slate-400">Kategori Google Maps Review belum tersedia di Server 3.</p>
         ) : (
           <ul className="mt-2.5 space-y-1.5">
-            {categories.map((c) => (
-              <li key={c} className="flex items-center gap-2 text-[13px] font-semibold text-slate-800 dark:text-slate-100">
-                <MapPin className="h-4 w-4 shrink-0 text-rose-500" strokeWidth={2.2} />
-                {c}
-              </li>
-            ))}
+            {categories.map((c) => {
+              const brand = brandForCategory(c);
+              return (
+                <li key={c} className="flex items-center gap-2 text-[13px] font-semibold text-slate-800 dark:text-slate-100">
+                  {brand ? (
+                    <img src={brandIconUrl(brand)} alt="" className="h-4 w-4 shrink-0 object-contain" loading="lazy" />
+                  ) : (
+                    <MapPin className="h-4 w-4 shrink-0 text-rose-500" strokeWidth={2.2} />
+                  )}
+                  {c}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

@@ -31,11 +31,12 @@ function BrandBadge({ name }: { name: string }) {
   if (!brand) return null;
 
   const initials = name.trim().slice(0, 2).toUpperCase();
+  const full = Boolean(brand.fullColor);
 
   return (
     <span
-      className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full ring-1 ring-black/5"
-      style={{ background: `#${brand.color}` }}
+      className={`flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden ${full ? '' : 'rounded-full ring-1 ring-black/5'}`}
+      style={full ? undefined : { background: `#${brand.color}` }}
       aria-hidden
     >
       {failed ? (
@@ -44,7 +45,7 @@ function BrandBadge({ name }: { name: string }) {
         <img
           src={brandIconUrl(brand, 'ffffff')}
           alt=""
-          className="h-3 w-3 object-contain"
+          className={full ? 'h-4 w-4 object-contain' : 'h-3 w-3 object-contain'}
           loading="lazy"
           onError={() => setFailed(true)}
         />
