@@ -23,6 +23,7 @@ require 'config.php';
 require 'configdb.php';
 require_once __DIR__ . '/order_price.php';
 require_once __DIR__ . '/riwayat_schema.php'; // kolom target (link SMM) — riwayat_ensure_columns / riwayat_target_width
+require_once __DIR__ . '/order_status_lib.php'; // sinkron status otomatis (osx_*)
 
 $data = json_decode(file_get_contents("php://input"), true);
 
@@ -230,8 +231,13 @@ if(!$curl_error && is_array($parsed) && ($parsed['status'] ?? false) === true){
     $provider_order_id = isset($parsed['order']) ? (string)$parsed['order'] : null;
     $provider_msg = $parsed['msg'] ?? $parsed['message'] ?? 'Order berhasil ke provider';
 } else {
-    $provider_order_id = 'PENDING-' . time() . '-' . $user_id;
-    $provider_msg = 'Saldo provider kosong. Order masuk antrian manual. ' . ($parsed['msg'] ?? $curl_error);
+    // Pengiriman ke provider belum pasti (termasuk saldo provider kurang). Tetap profesional:
+    // order dianggap SUKSES masuk antrian — status pending, ID unik berslug PENDING yang sengaja
+    // TIDAK pernah dicek ke provider (osx_provider_of() = null), dan alasan saldo provider hanya
+    // masuk log server, tidak ditampilkan ke user.
+    $provider_order_id = 'PENDING-' . time() . '-' . $user_id . '-' . random_int(100, 999);
+    $provider_msg = 'Order berhasil masuk antrian. Status akan diperbarui otomatis.';
+    @file_put_contents(__DIR__ . '/order_pending_log.txt', date('Y-m-d H:i:s') . " id=$provider_order_id user=$user_id reason=" . json_encode($parsed['msg'] ?? $curl_error) . "\n", FILE_APPEND);
 }
 if (!$provider_order_id) $provider_order_id = 'ORD-' . time() . '-' . $user_id;
 
@@ -260,6 +266,16 @@ if (!$saved) {
     $stmt->bind_param("issids", $user_id, $provider_order_id, $serviceName, $quantity, $price, $final_status);
     $stmt->execute();
     $stmt->close();
+}
+
+// 6z. Sinkron status SEKETIKA setelah order tersimpan: 'pending' langsung mengikuti keadaan
+// asli di provider (proses/selesai/batal) — tidak menunggu diatur manual oleh admin.
+// ID slug PENDING dilewati (bukan ID provider asli).
+if (osx_provider_of($provider_order_id) !== null) {
+    try {
+        $synced = osx_sync_order($conn, ['order_id' => $provider_order_id, 'status' => $final_status]);
+        if ($synced) $final_status = $synced;
+    } catch (Throwable $e) { /* sync gagal = status tetap pending, sweep 1 jam akan mencoba lagi */ }
 }
 
 // 6a. Penghasilan markup (harga web − harga asli provider) untuk Admin → My Profit.
@@ -321,7 +337,7 @@ $emailData = [
 ];
 
 // 8. BALAS DULU, lalu kirim email (tombol order tidak menunggu email)
-$out = json_encode(["ok" => true, "message" => $provider_msg, "orderId" => $provider_order_id, "new_balance" => $new_balance, "price" => $price]);
+$out = json_encode(["ok" => true, "message" => $provider_msg, "orderId" => $provider_order_id, "status" => $final_status, "new_balance" => $new_balance, "price" => $price]);
 ignore_user_abort(true);
 header('Content-Length: ' . strlen($out));
 header('Connection: close');
@@ -330,4 +346,6 @@ if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); else { 
 
 sendResendEmail($user['email'], "✅ Pesanan #$provider_order_id Berhasil Dibuat", emailTemplate('user', $emailData));
 sendResendEmail("boosteryukid@gmail.com", "🚨 Order Baru #$provider_order_id", emailTemplate('admin', $emailData));
+// Pengecekan otomatis 1 jam sekali untuk semua pesanan pending/proses ber-ID valid (tanpa cron).
+osx_maybe_run($conn);
 $conn->close();

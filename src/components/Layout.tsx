@@ -12,6 +12,7 @@ import Footer from './Footer';
 import HeaderOrnament from './HeaderOrnament';
 import SessionGuard from './SessionGuard';
 import NexSpaceBanner from './NexSpaceBanner';
+import OrderReviewBanner from './OrderReviewBanner';
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -74,6 +75,8 @@ export default function Layout() {
       <div className="h-[68px]" />
       {/* Pintu masuk kembali ke Portal Server NexSpace Pro (pesanan belum diambil) */}
       <NexSpaceBanner />
+      {/* Notifikasi pesanan selesai → ajakan beri penilaian (mobile: bawah header, desktop: atas) */}
+      <OrderReviewBanner />
 
       <SideMenu
         isOpen={menuOpen}

@@ -30,6 +30,7 @@ import {
   ClipboardList,
   Users,
   Crown,
+  Star,
 } from 'lucide-react';
 import { useEffect } from 'react';
 
@@ -63,6 +64,7 @@ export type PageId =
   | 'layanan'
   | 'ordervps'
   | 'artikel'
+  | 'papan-penilaian'
   | 'about'
   | 'nokos'
   | 'terms'
@@ -99,6 +101,7 @@ export const ROUTE_PATH: Record<PageId, string> = {
   manualdepo: '/manualdepo',
   nokos: '/otp-service',
   artikel: '/artikel',
+  'papan-penilaian': '/papan-penilaian',
 };
 
 interface SideMenuProps {
@@ -126,6 +129,7 @@ const baseMenu: {
   { id: 'cek-status', icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan' },
   { id: 'event', icon: Gift, label: 'Event', desc: 'Game & event yang berlangsung' },
   { id: 'artikel', icon: BookOpen, label: 'Artikel', desc: 'Panduan & tips' },
+  { id: 'papan-penilaian', icon: Star, label: 'Papan Penilaian', desc: 'Bintang & ulasan user' },
   { id: 'about', icon: Info, label: 'Tentang Kami', desc: 'Tentang Kami' },
   { id: 'terms', icon: FileText, label: 'Syarat & Ketentuan', desc: 'Informasi Syarat dan Ketentuan' },
   { id: 'privacy', icon: ShieldCheck, label: 'Privasi dan Keamanan', desc: 'Informasi Keamanan' },

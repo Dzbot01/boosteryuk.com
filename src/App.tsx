@@ -59,6 +59,8 @@ const AdminServerPage = lazy(() => import('./pages/admin/AdminServerPage'));
 const AdminProfitPage = lazy(() => import('./pages/admin/AdminProfitPage'));
 const AdminBroadcastPage = lazy(() => import('./pages/admin/AdminBroadcastPage'));
 const AdminDatabasePage = lazy(() => import('./pages/admin/AdminDatabasePage'));
+const ReviewSubmitPage = lazy(() => import('./pages/ReviewSubmitPage'));
+const ReviewBoardPage = lazy(() => import('./pages/ReviewBoardPage'));
 
 export default function App() {
   return (
@@ -104,6 +106,8 @@ export default function App() {
 
           {/* Halaman Order Nomor lama (statis) tetap disembunyikan; yang aktif OrderOtpPage di bawah ini. */}
           <Route path="otp-service" element={<ProtectedRoute><OrderOtpPage /></ProtectedRoute>} />
+          <Route path="beri-penilaian" element={<ProtectedRoute><ReviewSubmitPage /></ProtectedRoute>} />
+          <Route path="papan-penilaian" element={<ReviewBoardPage />} />
           {/* Checkout lama digantikan halaman Upgrade (/plus) */}
           <Route path="upgrade-plus" element={<Navigate to="/plus" replace />} />
           <Route path="ordervps" element={<Navigate to="/nexspace" replace />} />
