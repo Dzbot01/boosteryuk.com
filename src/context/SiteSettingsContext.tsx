@@ -50,6 +50,12 @@ export interface SiteSettings {
   headerOrnament: string;
   /** Teks kecil di bawah nama brand pada header (bawaan "SMM Panel"). */
   headerTagline: string;
+  /**
+   * Server yang order-nya DITUTUP sementara oleh admin (Admin → Server Panel).
+   * Nilai = nomor server internal yang dipakai order.php/servicesApi ('1' Fayupedia,
+   * '2' Naizop, '3' Medanpedia/Google Maps Review, '4' SMMGen). [] = semua server terbuka.
+   */
+  closedServers: string[];
 }
 
 interface SiteCtx {
@@ -102,6 +108,7 @@ const SHARED_KEYS = [
   'headerTint',
   'menuActive',
   'headerOrnament',
+  'closedServers',
 ] as const;
 // heroImageUrl TIDAK di SHARED_KEYS untuk penyimpanan: diunggah lewat saveHeroImage()
 // (gambar disimpan terpisah di DB & disajikan site_settings.php?asset=hero).
@@ -192,6 +199,7 @@ const DEFAULTS: SiteSettings = {
   menuActive: '',
   headerOrnament: '',
   headerTagline: '',
+  closedServers: [],
 };
 
 function load(): SiteSettings {
@@ -282,7 +290,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
           const v = remote[k];
           // Kunci tema: '' berarti "kembali ke bawaan" -> tetap dipakai agar cache lama tertimpa.
           const themeKey = (THEME_KEYS as readonly string[]).includes(k);
-          if ((v === '' && !themeKey) || v === null || (Array.isArray(v) && k !== 'infoItems' && v.length === 0)) delete remote[k];
+          if ((v === '' && !themeKey) || v === null || (Array.isArray(v) && k !== 'infoItems' && k !== 'closedServers' && v.length === 0)) delete remote[k];
         }
         if (Object.keys(remote).length) setSettings((s) => ({ ...s, ...remote }));
       })

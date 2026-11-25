@@ -22,7 +22,7 @@ export function IconBtn({ label, onClick, active, children, disabled }: { label:
         aria-label={label}
         disabled={disabled}
         onClick={onClick}
-        className="flex h-7 w-7 items-center justify-center rounded-[4px] transition-colors duration-[120ms] disabled:opacity-40"
+        className="flex h-8 w-8 items-center justify-center rounded-[4px] transition-colors duration-[120ms] disabled:opacity-40 lg:h-7 lg:w-7"
         style={{ background: active ? C.raised : 'transparent', color: active ? C.accent : C.text2, boxShadow: active ? `inset 0 0 0 1px ${C.border}` : undefined }}
         onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = C.text; }}
         onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = C.text2; }}

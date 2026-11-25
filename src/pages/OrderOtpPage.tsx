@@ -2,7 +2,8 @@ import TransactionButton from '../components/TransactionButton';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  AlertCircle, Check, CheckCircle2, Copy, KeyRound, LoaderCircle, RefreshCw, ShoppingCart, Smartphone, Timer, Wallet, X,
+  AlertCircle, Check, CheckCircle2, ChevronDown, ChevronUp, Copy, History, KeyRound, LoaderCircle, RefreshCw,
+  ShoppingCart, Smartphone, Timer, Wallet, X,
 } from 'lucide-react';
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
@@ -24,6 +25,8 @@ const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${St
 const POPULER = ['whatsapp', 'telegram', 'instagram', 'tiktok', 'shopee', 'google', 'facebook'];
 /** Domain panel yang sedang dibuka: <nama>.boosteryuk.com di child panel, boosteryuk.com di web utama. */
 const PANEL_HOST = CHILD_PANEL_SUB ? `${CHILD_PANEL_SUB}.boosteryuk.com` : 'boosteryuk.com';
+/** Jumlah baris maksimum tabel riwayat nomor (pembelian sukses maupun batal). */
+const RIWAYAT_MAX = 10;
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   membeli: { label: 'Memproses nomor', cls: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300' },
   menunggu: { label: 'Menunggu kode', cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
@@ -53,6 +56,8 @@ export default function OrderOtpPage() {
   const [busy, setBusy] = useState('');
   const [copied, setCopied] = useState('');
   const [tick, setTick] = useState(0);
+  /** Penjelasan shadow ban tertutup secara default; dibuka lewat tombol di kanan card. */
+  const [shadowOpen, setShadowOpen] = useState(false);
   const loadedAt = useRef(Date.now());
 
   const loadCatalog = useCallback(async () => {
@@ -105,6 +110,8 @@ export default function OrderOtpPage() {
 
   // Order aktif: cek kode setiap 5 detik, hitung mundur tiap detik.
   const active = orders.filter((o) => o.status === 'menunggu' || o.status === 'membeli');
+  /** Riwayat pembelian yang sudah berakhir (sukses/selesai maupun batal/gagal) — tampil di card tabel terpisah. */
+  const riwayat = orders.filter((o) => o.status !== 'menunggu' && o.status !== 'membeli').slice(0, RIWAYAT_MAX);
   useEffect(() => {
     if (!active.length) return;
     const t1 = window.setInterval(() => setTick((x) => x + 1), 1000);
@@ -198,6 +205,95 @@ export default function OrderOtpPage() {
             Nomor virtual untuk verifikasi WhatsApp, Telegram, dan aplikasi lain. Stok & harga realtime, dibayar pakai saldo.
           </p>
         </div>
+      </Reveal>
+
+      {/* Penjelasan shadow ban: paling atas (sebelum card order), tertutup default,
+          dibuka lewat tombol di sisi kanan card. Bullet promo/tautan qpanel dan judul dobel
+          sudah dihapus; penyebutan server memakai domain panel yang dibuka (CHILD_PANEL_SUB). */}
+      <Reveal>
+        <section
+          className="mb-5 rounded-[18px] border p-4 sm:p-6"
+          style={{ borderColor: COLOR.border, background: COLOR.surface }}
+          aria-label="Keterangan penting dan penjelasan shadow ban"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-[13.5px] font-bold" style={{ color: COLOR.dark }}>Apa itu Shadow Ban?</h3>
+            <button
+              type="button"
+              onClick={() => setShadowOpen((v) => !v)}
+              aria-expanded={shadowOpen}
+              aria-controls="otp-shadowban-body"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11.5px] font-bold transition hover:opacity-80"
+              style={{ borderColor: COLOR.primary, color: COLOR.primary }}
+            >
+              {shadowOpen ? (
+                <><ChevronUp className="h-3.5 w-3.5" strokeWidth={2.4} /> Tutup penjelasan</>
+              ) : (
+                <><ChevronDown className="h-3.5 w-3.5" strokeWidth={2.4} /> Buka penjelasan</>
+              )}
+            </button>
+          </div>
+          <div id="otp-shadowban-body" className={shadowOpen ? 'mt-2' : 'hidden'}>
+            <p className="mt-1.5 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Penjelasan Shadow Ban</p>
+            <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+              Shadow ban adalah mekanisme yang diterapkan oleh aplikasi seperti WhatsApp, Telegram, Gmail, dan lainnya untuk
+              membatasi atau memblokir aktivitas pengguna yang dianggap mencurigakan, tanpa memberi pemberitahuan langsung.
+              Dari sisi pengguna, segalanya tampak berjalan normal—misalnya, Anda masih dapat meminta OTP atau login ke
+              aplikasi—tetapi di sisi server mereka, aktivitas Anda diabaikan atau ditolak. Shadow ban ini merupakan salah
+              satu faktor yang menyebabkan OTP tidak masuk ke perangkat pengguna/server{' '}
+              <a href={`http://${PANEL_HOST}`} target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>{PANEL_HOST}</a>
+            </p>
+
+            <p className="mt-3 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Kenapa Shadow Ban Terjadi?</p>
+            <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+              Shadow ban sering terjadi ketika aplikasi mendeteksi pola penggunaan yang tidak wajar, seperti sering
+              menggunakan nomor telepon berbeda di perangkat yang sama tanpa mengganti fingerprint perangkat, atau
+              menggunakan IP publik yang sama berulang kali. Sistem aplikasi akan menganggap aktivitas ini sebagai spam.
+            </p>
+            <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+              Selain itu, jika Anda tidak menerapkan pengamanan yang memadai, seperti menggunakan browser anti-detect
+              (misalnya Adspower atau merek lain) dan tidak menggunakan IP Proxy Mobile Proxy 4G yang sesuai dengan negara,
+              serta jika perangkat yang dimodifikasi tidak dikonfigurasi dengan benar, risiko deteksi oleh sistem dapat
+              meningkat
+            </p>
+
+            <p className="mt-3 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Apa itu Fingerprint Perangkat?</p>
+            <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+              Fingerprint perangkat adalah data unik yang digunakan oleh aplikasi untuk mengidentifikasi perangkat Anda,
+              termasuk informasi seperti IMEI, device ID, versi browser, alamat IP, dan lainnya. Fingerprint ini
+              memungkinkan aplikasi untuk melacak pola penggunaan Anda.
+            </p>
+
+            <p className="mt-3 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+              <b>Penting:</b> Shadow ban bukan disebabkan oleh boosteryuk.com, melainkan oleh pola penggunaan dan pengamanan
+              yang kurang aman di sisi pengguna.
+            </p>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+              <b>Solusi:</b> Gunakan perangkat baru(fresh) atau modifikasi IMEI/ID DEVICE di ponsel. Untuk PC gunakan browser
+              anti-detect.
+            </p>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
+              <b>Info:</b> Shadow ban adalah pembatasan visibilitas pengguna tanpa pemberitahuan dan tidak bersifat permanen.
+              Biasanya, ini bersifat sementara, sehingga Anda dapat mencoba lagi setelah beberapa waktu
+            </p>
+
+            <p className="mt-4 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Contoh kondisi shadow ban</p>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <figure className="overflow-hidden rounded-xl border" style={{ borderColor: COLOR.border }}>
+                <img src="/images/shadowban-contoh-1.jpg" alt="Contoh shadow ban WhatsApp: notifikasi nomor belum diverifikasi dan pesan bahwa perangkat memerlukan WhatsApp versi resmi untuk login." loading="lazy" className="w-full object-cover" />
+                <figcaption className="px-3 py-2 text-[11px]" style={{ color: COLOR.secondary }}>
+                  Perangkat terdeteksi memakai WhatsApp tidak resmi — permintaan login/OTP ditolak.
+                </figcaption>
+              </figure>
+              <figure className="overflow-hidden rounded-xl border" style={{ borderColor: COLOR.border }}>
+                <img src="/images/shadowban-contoh-2.png" alt="Contoh shadow ban WhatsApp: layar akun ini tidak bisa menggunakan WhatsApp karena aktivitas akun terbaru tidak mematuhi Ketentuan Layanan." loading="lazy" className="w-full object-cover" />
+                <figcaption className="px-3 py-2 text-[11px]" style={{ color: COLOR.secondary }}>
+                  Akun dibatasi: aktivitas dianggap tidak mematuhi Ketentuan Layanan sehingga OTP tidak masuk.
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
       </Reveal>
 
       <div className="w-full rounded-[18px] px-4 py-5 sm:px-6 lg:px-7" style={{ background: COLOR.surface, boxShadow: '0 22px 48px -22px rgba(23,32,51,.32), 0 6px 16px -10px rgba(23,32,51,.14)' }}>
@@ -321,7 +417,7 @@ export default function OrderOtpPage() {
             )}
           </div>
 
-          {/* KANAN: nomor aktif & riwayat */}
+          {/* KANAN: cara pakai + nomor yang sedang aktif (riwayat pindah ke card tabel di bawah) */}
           <div id="otp-aktif" className="mt-6 space-y-3 lg:sticky lg:top-24 lg:mt-0">
             <div className="rounded-xl border p-3.5 text-[12.5px] leading-relaxed" style={{ borderColor: COLOR.border, color: COLOR.secondary }}>
               <p className="text-[13.5px] font-bold text-slate-900 dark:text-white">Cara pakai</p>
@@ -341,8 +437,12 @@ export default function OrderOtpPage() {
               </p>
             </div>
 
-            {orders.length === 0 && <p className="px-1 text-[12px] text-slate-400">Belum ada order nomor.</p>}
-            {orders.slice(0, 8).map((o) => {
+            {!active.length && (
+              <p className="px-1 text-[12px] text-slate-400">
+                Belum ada nomor aktif. Riwayat pembelian (sukses & batal) ada di card <b>Riwayat Nomor</b> di bawah.
+              </p>
+            )}
+            {active.map((o) => {
               const st = STATUS_LABEL[o.status] || STATUS_LABEL.gagal;
               const left = o.seconds_left != null ? Math.max(0, o.seconds_left - elapsed) : null;
               const live = o.status === 'menunggu';
@@ -391,74 +491,101 @@ export default function OrderOtpPage() {
         </div>
       </div>
 
-      {/* Edukasi shadow ban (lengkap dengan contoh gambar). Bullet promo/tautan qpanel dan
-          judul dobel di atas sudah dihapus; penyebutan server memakai domain panel yang
-          sedang dibuka (CHILD_PANEL_SUB). */}
+
+      {/* Riwayat nomor: hasil pembelian yang sudah berakhir — sukses (selesai) maupun batal.
+          Dipisah dari card order di atas menjadi card tabel sendiri, maksimal 10 baris terbaru. */}
       <Reveal>
         <section
           className="mt-5 rounded-[18px] border p-4 sm:p-6"
           style={{ borderColor: COLOR.border, background: COLOR.surface }}
-          aria-label="Keterangan penting dan penjelasan shadow ban"
+          aria-label="Riwayat nomor OTP"
         >
-          <h3 className="text-[13.5px] font-bold" style={{ color: COLOR.dark }}>Apa itu Shadow Ban?</h3>
-          <p className="mt-1.5 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Penjelasan Shadow Ban</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
-            Shadow ban adalah mekanisme yang diterapkan oleh aplikasi seperti WhatsApp, Telegram, Gmail, dan lainnya untuk
-            membatasi atau memblokir aktivitas pengguna yang dianggap mencurigakan, tanpa memberi pemberitahuan langsung.
-            Dari sisi pengguna, segalanya tampak berjalan normal—misalnya, Anda masih dapat meminta OTP atau login ke
-            aplikasi—tetapi di sisi server mereka, aktivitas Anda diabaikan atau ditolak. Shadow ban ini merupakan salah
-            satu faktor yang menyebabkan OTP tidak masuk ke perangkat pengguna/server{' '}
-            <a href={`http://${PANEL_HOST}`} target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: COLOR.primary }}>{PANEL_HOST}</a>
-          </p>
-
-          <p className="mt-3 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Kenapa Shadow Ban Terjadi?</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
-            Shadow ban sering terjadi ketika aplikasi mendeteksi pola penggunaan yang tidak wajar, seperti sering
-            menggunakan nomor telepon berbeda di perangkat yang sama tanpa mengganti fingerprint perangkat, atau
-            menggunakan IP publik yang sama berulang kali. Sistem aplikasi akan menganggap aktivitas ini sebagai spam.
-          </p>
-          <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
-            Selain itu, jika Anda tidak menerapkan pengamanan yang memadai, seperti menggunakan browser anti-detect
-            (misalnya Adspower atau merek lain) dan tidak menggunakan IP Proxy Mobile Proxy 4G yang sesuai dengan negara,
-            serta jika perangkat yang dimodifikasi tidak dikonfigurasi dengan benar, risiko deteksi oleh sistem dapat
-            meningkat
-          </p>
-
-          <p className="mt-3 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Apa itu Fingerprint Perangkat?</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
-            Fingerprint perangkat adalah data unik yang digunakan oleh aplikasi untuk mengidentifikasi perangkat Anda,
-            termasuk informasi seperti IMEI, device ID, versi browser, alamat IP, dan lainnya. Fingerprint ini
-            memungkinkan aplikasi untuk melacak pola penggunaan Anda.
-          </p>
-
-          <p className="mt-3 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
-            <b>Penting:</b> Shadow ban bukan disebabkan oleh boosteryuk.com, melainkan oleh pola penggunaan dan pengamanan
-            yang kurang aman di sisi pengguna.
-          </p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
-            <b>Solusi:</b> Gunakan perangkat baru(fresh) atau modifikasi IMEI/ID DEVICE di ponsel. Untuk PC gunakan browser
-            anti-detect.
-          </p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed" style={{ color: COLOR.secondary }}>
-            <b>Info:</b> Shadow ban adalah pembatasan visibilitas pengguna tanpa pemberitahuan dan tidak bersifat permanen.
-            Biasanya, ini bersifat sementara, sehingga Anda dapat mencoba lagi setelah beberapa waktu
-          </p>
-
-          <p className="mt-4 text-[12.5px] font-bold" style={{ color: COLOR.dark }}>Contoh kondisi shadow ban</p>
-          <div className="mt-2 grid gap-3 sm:grid-cols-2">
-            <figure className="overflow-hidden rounded-xl border" style={{ borderColor: COLOR.border }}>
-              <img src="/images/shadowban-contoh-1.jpg" alt="Contoh shadow ban WhatsApp: notifikasi nomor belum diverifikasi dan pesan bahwa perangkat memerlukan WhatsApp versi resmi untuk login." loading="lazy" className="w-full object-cover" />
-              <figcaption className="px-3 py-2 text-[11px]" style={{ color: COLOR.secondary }}>
-                Perangkat terdeteksi memakai WhatsApp tidak resmi — permintaan login/OTP ditolak.
-              </figcaption>
-            </figure>
-            <figure className="overflow-hidden rounded-xl border" style={{ borderColor: COLOR.border }}>
-              <img src="/images/shadowban-contoh-2.png" alt="Contoh shadow ban WhatsApp: layar akun ini tidak bisa menggunakan WhatsApp karena aktivitas akun terbaru tidak mematuhi Ketentuan Layanan." loading="lazy" className="w-full object-cover" />
-              <figcaption className="px-3 py-2 text-[11px]" style={{ color: COLOR.secondary }}>
-                Akun dibatasi: aktivitas dianggap tidak mematuhi Ketentuan Layanan sehingga OTP tidak masuk.
-              </figcaption>
-            </figure>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <History className="h-[18px] w-[18px]" style={{ color: COLOR.primary }} strokeWidth={2} />
+              <h2 className="text-[15px] font-semibold tracking-tight" style={{ color: COLOR.dark }}>Riwayat Nomor</h2>
+            </div>
+            <span className="shrink-0 text-[11px]" style={{ color: COLOR.secondary }}>
+              {riwayat.length} dari {RIWAYAT_MAX} terbaru · sukses & batal
+            </span>
           </div>
+          <div className="my-3.5 h-px w-full" style={{ background: COLOR.border }} />
+          {!riwayat.length ? (
+            <p className="text-[12px] text-slate-400">
+              Belum ada riwayat nomor. Baris muncul di sini setelah pesanan selesai (kode OTP masuk) atau dibatalkan.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] border-collapse text-left text-[12px]">
+                <caption className="sr-only">Riwayat nomor OTP: waktu, layanan, negara, nomor, kode, harga, dan status</caption>
+                <thead>
+                  <tr style={{ color: COLOR.secondary }}>
+                    {['Waktu', 'Layanan', 'Negara', 'Nomor', 'Kode OTP', 'Harga', 'Status'].map((h) => (
+                      <th key={h} scope="col" className="border-b px-2 py-2 text-[10.5px] font-bold uppercase tracking-wide" style={{ borderColor: COLOR.border }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {riwayat.map((o) => {
+                    const st = STATUS_LABEL[o.status] || STATUS_LABEL.gagal;
+                    const waktu = o.created_at
+                      ? new Date(String(o.created_at).replace(' ', 'T')).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                      : '—';
+                    return (
+                      <tr key={o.order_id} className="align-top">
+                        <td className="border-b px-2 py-2.5 whitespace-nowrap" style={{ borderColor: COLOR.border, color: COLOR.secondary }}>{waktu}</td>
+                        <td className="border-b px-2 py-2.5 font-semibold" style={{ borderColor: COLOR.border, color: COLOR.dark }}>
+                          {o.service}
+                          <span className="block text-[10.5px] font-normal text-slate-400">#{o.order_id}</span>
+                        </td>
+                        <td className="border-b px-2 py-2.5" style={{ borderColor: COLOR.border, color: COLOR.secondary }}>{o.country}</td>
+                        <td className="border-b px-2 py-2.5" style={{ borderColor: COLOR.border }}>
+                          {o.phone ? (
+                            <button
+                              type="button"
+                              onClick={() => copy(o.order_id + 'rp', '+' + o.phone)}
+                              className="inline-flex items-center gap-1.5 font-mono text-[12px] font-bold"
+                              style={{ color: COLOR.dark }}
+                              aria-label={`Salin nomor +${o.phone}`}
+                            >
+                              +{o.phone}
+                              {copied === o.order_id + 'rp' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3 text-slate-400" />}
+                            </button>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="border-b px-2 py-2.5" style={{ borderColor: COLOR.border }}>
+                          {o.code ? (
+                            <button
+                              type="button"
+                              onClick={() => copy(o.order_id + 'rc', o.code!)}
+                              className="inline-flex items-center gap-1.5 font-mono text-[13px] font-extrabold tracking-wider text-emerald-700 dark:text-emerald-300"
+                              aria-label={`Salin kode OTP ${o.code}`}
+                            >
+                              {o.code}
+                              {copied === o.order_id + 'rc' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3 text-emerald-600" />}
+                            </button>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="border-b px-2 py-2.5 whitespace-nowrap font-semibold" style={{ borderColor: COLOR.border, color: COLOR.dark }}>{rupiah(o.price)}</td>
+                        <td className="border-b px-2 py-2.5" style={{ borderColor: COLOR.border }}>
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-[10.5px] font-bold ${st.cls}`}>{st.label}</span>
+                          {o.refunded && (
+                            <span className="mt-1 block text-[10.5px] text-slate-500">saldo dikembalikan{o.note ? ` · ${o.note}` : ''}</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </Reveal>
     </div>

@@ -10,9 +10,16 @@
  *  - Playback preview tersinkron playhead timeline (trim/split/move/undo-redo).
  *  - Export: foto → PNG, video → rekaman canvas + audio (.webm/VP9/Opus).
  * Tidak ada unggahan ke server.
+ *
+ * Studio mengisi seluruh layar (layer fixed inset-0 di PlaygroundPage) dan mendukung
+ * layar sempit: panel jadi bottom sheet, toolbar bisa digeser, semua kontrol pakai pointer.
  */
 import Studio from './editor/Studio';
 
-export default function EditorStudio() {
-  return <Studio />;
+/**
+ * `onOpenMenu` membuka drawer menu Playground dari dalam studio (dipakai saat studio
+ * tampil layar penuh, sehingga tombol menu halaman tidak terlihat lagi).
+ */
+export default function EditorStudio({ onOpenMenu }: { onOpenMenu?: () => void }) {
+  return <Studio onOpenMenu={onOpenMenu} />;
 }

@@ -329,7 +329,9 @@ try {
         }
         $st = cp_q($conn, 'SELECT id,admin_id,amount,note,created_at FROM child_panel_income_adjustments WHERE child_panel_id=? ORDER BY id DESC LIMIT 50', 'i', $pid);
         $credits = $st->get_result()->fetch_all(MYSQLI_ASSOC); $st->close();
-        cp_out(['ok'=>true,'panel'=>['id'=>$pid,'owner_email'=>$panel['owner_email'],'created_at'=>$panel['created_at'],'extra_started'=>$started,'expires_at'=>$panel['expires_at'] ?? null], 'balance'=>cp_wd_balance($conn,$pid), 'credits'=>$credits]);
+        // Total user yang login dari panel ini (unregister + visitor) — diminta admin di kartu Detail.
+        $usersTotal = cp_user_count($conn, $pid);
+        cp_out(['ok'=>true,'panel'=>['id'=>$pid,'owner_email'=>$panel['owner_email'],'created_at'=>$panel['created_at'],'extra_started'=>$started,'expires_at'=>$panel['expires_at'] ?? null], 'balance'=>cp_wd_balance($conn,$pid), 'credits'=>$credits, 'users_total'=>$usersTotal]);
     }
 
     if ($action === 'list') cp_out(['ok' => true, 'panels' => cp_list($conn), 'root' => CP_ROOT_DOMAIN]);

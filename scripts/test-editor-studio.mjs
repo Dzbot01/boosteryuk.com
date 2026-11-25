@@ -8,11 +8,12 @@ const pg = read('src/pages/PlaygroundPage.tsx');
 assert.match(pg, /import EditorStudio from '\.\.\/components\/EditorStudio'/);
 assert.match(pg, /id: 'studio', label: 'Editor Studio'/, 'menu Editor Studio ada di Playground');
 assert.match(pg, /\['overview', 'hook', 'caption', 'tts', 'studio'\]/);
-assert.match(pg, /menu === 'studio' && <EditorStudio \/>/);
+assert.match(pg, /menu === 'studio' \? \(/, 'studio punya cabang render sendiri (layar penuh)');
+assert.ok(!pg.includes('Wand2'), 'ikon badge Playground dihapus bersama teksnya');
 
 const shell = read('src/components/EditorStudio.tsx');
 assert.match(shell, /import Studio from '\.\/editor\/Studio'/, 'EditorStudio merender Studio baru');
-assert.match(shell, /<Studio \/>/);
+assert.match(shell, /<Studio onOpenMenu=\{onOpenMenu\} \/>/);
 
 /* 2. Struktur file komponen */
 for (const f of [
@@ -216,4 +217,34 @@ assert.match(exp, /MediaStreamDestination|createMediaStreamDestination/, 'mix au
 assert.match(exp, /createMediaElementSource/, 'sumber audio video');
 assert.match(read('src/components/editor/store.ts'), /URL\.createObjectURL/, 'media lokal via object URL');
 
-console.log('PASS Editor Studio (CapCut-style): TopBar 44px + menu/auto-save/judul/Export, panel kiri 7 tab (Media/Audio/Text/Stickers/Effects/Transition/Filters), Player + scrub bar + rasio, Inspector 5 tab, Timeline toolbar/ruler/playhead/track/clip, Export & Shortcut modal, shortcut keyboard, divider resizable, export nyata PNG/.webm.');
+/* 13. Playground: teks "Playground" hilang, kartu Studio layar penuh, Editor Studio interaktif di HP */
+assert.ok(!/text-silver-shine">Playground</.test(pg), 'badge teks "Playground" dihapus');
+assert.ok(!/menu === 'studio' && <EditorStudio/.test(pg), 'studio tidak lagi di dalam container max-w-5xl/pt-24');
+assert.match(pg, /<div className="fixed inset-0 z-50 overflow-hidden bg-black">/, 'studio mengisi seluruh layar begitu menu dibuka');
+assert.match(pg, /<EditorStudio onOpenMenu=\{\(\) => setDrawerOpen\(true\)\} \/>/, 'menu Playground tetap bisa dibuka dari studio');
+assert.match(studio, /flex h-full w-full flex-col overflow-hidden/, 'ukuran studio ikut layer (bukan 100vh yang kepotong address bar HP)');
+assert.match(studio, /<TopBar onOpenMenu=\{onOpenMenu\} \/>/);
+assert.match(studio, /<div className="h-\[54vh\] overflow-hidden">/, 'bottom sheet bertinggi pasti → daftar di dalamnya bisa di-scroll');
+assert.match(studio, /min-h-\[46px\]/, 'tombol nav bawah cukup besar untuk jari');
+assert.match(studio, /safe-area-inset-bottom/, 'nav bawah menghormati safe-area');
+assert.match(top, /aria-label="Menu Playground"/, 'tombol menu Playground di TopBar');
+assert.match(top, /document\.addEventListener\('pointerdown', outside\)/, 'dropdown ditutup lewat pointerdown (mouse + sentuh)');
+assert.ok(!/addEventListener\('mousedown', outside\)/.test(top), 'tidak lagi hanya mendengarkan mousedown');
+assert.match(top, /if \(e\.key === 'Escape'\)/, 'Escape menutup dropdown');
+assert.match(top, /hidden text-\[13px\] font-bold lg:inline/, 'nama studio disembunyikan di layar sempit');
+assert.match(top, /max-w-\[26vw\]/, 'judul proyek tidak menimpa tombol di HP');
+assert.match(top, /hidden lg:inline">Shortcut</, 'label teks Shortcut disembunyikan di HP');
+assert.match(player, /className="relative mx-3 h-5 cursor-pointer touch-none"/, 'scrub bar tidak memicu scroll saat digeser');
+assert.match(player, /setPointerCapture\?\.\(e\.pointerId\)/, 'pointer ditangkap supaya geseran tidak lepas');
+assert.match(player, /if \(scrubbing\) setPlayhead\(t\);/, 'playhead mengikuti geseran jari 1:1');
+assert.match(player, /-inset-y-2/, 'area sentuh scrub bar diperbesar');
+assert.match(player, /hidden items-end gap-\[2px\] sm:flex/, 'meter audio disembunyikan di layar sempit');
+assert.match(tb, /overflow-x-auto/, 'toolbar timeline bisa digeser di HP');
+assert.match(tb, /\[&>\*\]:shrink-0/, 'tool tidak menyempit sampai tidak bisa ditekan');
+const uiTsx = read('src/components/editor/ui.tsx');
+assert.match(uiTsx, /h-8 w-8[\s\S]{0,120}lg:h-7 lg:w-7/, 'target sentuh IconBtn 32px di HP, 28px di desktop');
+for (const f of ['ExportModal.tsx', 'ShortcutModal.tsx']) {
+  assert.match(read(`src/components/editor/${f}`), /max-h-\[90vh\] overflow-y-auto ed-scroll/, `modal ${f} bisa di-scroll di layar pendek`);
+}
+
+console.log('PASS Editor Studio (CapCut-style): badge teks Playground dihapus, kartu Studio layar penuh saat menu dibuka, interaksi mobile (scrub pointer, toolbar bisa digeser, bottom sheet dapat di-scroll, dropdown pointerdown, target sentuh 32-46px), TopBar 44px + menu/auto-save/judul/Export, panel kiri 7 tab (Media/Audio/Text/Stickers/Effects/Transition/Filters), Player + scrub bar + rasio, Inspector 5 tab, Timeline toolbar/ruler/playhead/track/clip, Export & Shortcut modal, shortcut keyboard, divider resizable, export nyata PNG/.webm.');

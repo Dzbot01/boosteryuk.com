@@ -102,13 +102,14 @@ export default function AdminProfitPage() {
           )}
         </Card>
 
-        <Card icon={Banknote} tone="bg-violet-600" label="Deposit masuk" value={dep ? rupiah(dep.month + (dep.manual?.month || 0)) : null} sub="Bulan ini (gateway + top up manual admin)">
+        {/* Top up manual admin TIDAK lagi dihitung sebagai deposit masuk (atas permintaan admin) —
+            angka di kartu ini murni deposit gateway. */}
+        <Card icon={Banknote} tone="bg-violet-600" label="Deposit masuk" value={dep ? rupiah(dep.month) : null} sub="Bulan ini (deposit gateway)">
           {dep && (
             <>
-              <Row k="Hari ini" v={rupiah(dep.today + (dep.manual?.today || 0))} />
+              <Row k="Hari ini" v={rupiah(dep.today)} />
               <Row k="Gateway bulan ini" v={`${dep.count_month} deposit · ${rupiah(dep.month)}`} />
-              {dep.manual && <Row k="Manual admin bulan ini" v={rupiah(dep.manual.month)} />}
-              <Row k="Total semua" v={rupiah(dep.all + (dep.manual?.all || 0))} strong />
+              <Row k="Total semua" v={rupiah(dep.all)} strong />
               <div className="pt-1"><Link to="/admin/deposit" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-700 hover:underline dark:text-cyan-400">Lihat Data Deposit <ArrowUpRight className="h-3.5 w-3.5" /></Link></div>
             </>
           )}

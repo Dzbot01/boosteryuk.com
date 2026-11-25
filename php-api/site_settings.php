@@ -7,7 +7,7 @@
  * POST {token, settings}  -> simpan (HANYA admin; token dicek di tabel sessions + users.role = 'admin')
  *
  * Kunci yang disimpan: infoItems (Berita), faviconUrl, overviewTitle, overviewSubtitle,
- * overviewMessage, brandName, brandSuffix, footerText,
+ * overviewMessage, brandName, brandSuffix, footerText, closedServers (server yang order-nya ditutup admin),
  * + Tema: brandAccent, headerTint, menuActive (hex #rrggbb atau ''), headerOrnament (id set),
  *   heroImage (data URL JPEG/PNG/WebP, maks ~2 MB) -> disimpan TERPISAH di baris 'asset_hero'
  *   lalu settings.heroImageUrl = 'asset:hero:<versi>'.
@@ -243,6 +243,18 @@ foreach (['brandAccent', 'headerTint', 'menuActive'] as $k) {
     $v = trim((string)$patch[$k]);
     if ($v !== '' && !preg_match('/^#[0-9a-f]{6}$/i', $v)) out(['ok' => false, 'message' => "Warna $k tidak valid (format #rrggbb)."], 400);
     $clean[$k] = strtolower($v);
+}
+/* ----- Server yang ditutup sementara (Admin -> Server Panel) -----
+   Nilai: daftar nomor server internal ('1'..'4'). [] = semua server menerima order.
+   Dibaca order.php sebelum memotong saldo, dan dipakai web untuk menyembunyikan server itu. */
+if (array_key_exists('closedServers', $patch)) {
+    $list = is_array($patch['closedServers']) ? $patch['closedServers'] : [];
+    $ids = [];
+    foreach (array_slice($list, 0, 4) as $v) {
+        $v = trim((string)$v);
+        if (in_array($v, ['1', '2', '3', '4'], true) && !in_array($v, $ids, true)) $ids[] = $v;
+    }
+    $clean['closedServers'] = $ids;
 }
 if (array_key_exists('headerOrnament', $patch)) {
     $v = trim((string)$patch['headerOrnament']);

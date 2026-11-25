@@ -409,6 +409,15 @@ function cp_order_status_sql($conn) {
 }
 
 /**
+ * Total user (unregister/visitor) yang login & beraktivitas dari child panel ini.
+ * Sumber: child_panel_activity (unregister + visitor), satu baris per (panel, user) → COUNT(*) = jumlah user.
+ */
+function cp_user_count($conn, $panelId) {
+    $row = cp_q($conn, 'SELECT COUNT(*) AS total FROM child_panel_activity WHERE child_panel_id = ?', 's', $panelId);
+    return (int)($row['total'] ?? 0);
+}
+
+/**
  * Saldo pendapatan panel:
  *  - pesanan BATAL tidak dihitung;
  *  - "cleared" (bisa dicairkan) = pesanan selesai, atau tidak batal & sudah lewat CP_WD_HOLD_DAYS hari;

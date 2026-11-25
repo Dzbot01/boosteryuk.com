@@ -35,6 +35,21 @@ function sr_completed($conn,$uid) {
  if($r)return true;
  $st=cp_q($conn,'SELECT user_id FROM daily_streak_receipts WHERE user_id=? AND streak_day=7 LIMIT 1','i',$uid);$r=$st->get_result()->fetch_assoc();$st->close();return (bool)$r;
 }
+/**
+ * Hari (1-6) yang hadiah UANG-nya sudah pernah masuk ke akun ini, di siklus mana pun.
+ * Setelah streak putus dan progres mengulang dari hari 1, hari-hari ini tetap boleh
+ * di-check-in tetapi dibayar 0 — uang harian hanya bisa diterima sekali per akun.
+ */
+function sr_paid_days($conn,$uid) {
+ $st=cp_q($conn,'SELECT DISTINCT streak_day FROM daily_streak_receipts WHERE user_id=? AND streak_day BETWEEN 1 AND 6 AND balance_reward>0 ORDER BY streak_day','i',$uid);
+ $days=[];$result=$st->get_result();while($r=$result->fetch_assoc())$days[]=(int)$r['streak_day'];$st->close();
+ return $days;
+}
+/** Uang yang akan dibayar untuk check-in berikutnya (0 bila hari itu sudah pernah dibayar). */
+function sr_next_cash($day,$paidDays) {
+ if($day>6)return 0;
+ return in_array($day,$paidDays,true)?0:$day*10;
+}
 function sr_state($conn,$uid,$row,$today,$next,$balance,$active) {
  $claimed=$row['last_checkin']===$today;
  $day=(int)$row['streak_day'];
@@ -47,10 +62,13 @@ function sr_state($conn,$uid,$row,$today,$next,$balance,$active) {
  }
 
  $visible=$completed?7:$day;
+ // Hari yang uangnya sudah pernah diterima + nominal check-in berikutnya (0 = tanpa uang).
+ $paidDays=sr_paid_days($conn,$uid);$nextCash=$completed?0:sr_next_cash($day+1,$paidDays);
  $st=cp_q($conn,'SELECT title_code,UNIX_TIMESTAMP(earned_at) AS earned_epoch FROM user_event_titles WHERE user_id=? ORDER BY earned_at DESC','i',$uid);
  $titles=[];$result=$st->get_result();while($r=$result->fetch_assoc())$titles[]=['code'=>$r['title_code'],'earned_at'=>gmdate('Y-m-d\TH:i:s\Z',(int)$r['earned_epoch'])];$st->close();
  return ['day'=>$visible,'last_checkin'=>$row['last_checkin'],'claimed_today'=>$claimed,'can_claim'=>$active&&!$claimed&&!$completed,'completed'=>$completed,'blocked_message'=>$blockedMessage,
   'today'=>$today,'next_day_at'=>$next,'server_time'=>time(),'cycle'=>(int)$row['cycle_no'],
   'reset_notice'=>!$completed && (int)$row['reset_count']>(int)$row['reset_seen'],'reset_version'=>(int)$row['reset_count'],
-  'trial_until'=>pt_trial_until($conn,$uid),'balance'=>(float)$balance,'titles'=>$titles,'event_active'=>$active];
+  'trial_until'=>pt_trial_until($conn,$uid),'balance'=>(float)$balance,'titles'=>$titles,'event_active'=>$active,
+  'paid_days'=>$paidDays,'next_cash'=>$nextCash];
 }

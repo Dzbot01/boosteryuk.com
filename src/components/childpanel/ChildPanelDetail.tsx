@@ -35,10 +35,11 @@ export default function ChildPanelDetail({ panel, onClose }: {panel: ChildPanel;
         <dl className="my-5 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">{[
           ['Email pemilik',data.panel.owner_email || '—'], ['Dibuat',date(data.panel.created_at)],
           ['Awal upgrade EXTRA',date(data.panel.extra_started)], ['Expired panel',data.panel.expires_at ? date(data.panel.expires_at) : 'Tanpa batas waktu (panel admin)'],
+          ['Total user yang login',`${(data.users_total ?? 0).toLocaleString('id-ID')} user`],
           ['Markup Merchant',`${panel.config?.merchantMarkupPct||0}%`],['Markup SMM',`${panel.markup_smm_pct}%`],['Markup Agen AI',`${panel.markup_agent_pct}%`],['Markup OTP',`${panel.markup_otp_pct || 0}%`],
           ['Total pendapatan (termasuk debug)',rupiah(data.balance.earned)],['Total tambahan debug',rupiah(data.balance.debug_credit || 0)],['Pendapatan pesanan',rupiah(data.balance.earned - (data.balance.debug_credit || 0))], ['Bisa dicairkan',rupiah(data.balance.available)],['Tertahan',rupiah(data.balance.held)],['Withdraw pending',rupiah(data.balance.pending)],['Sudah dibayar',rupiah(data.balance.paid)],
         ].map(([k,v]) => <div key={k}><dt className="text-xs text-slate-500 dark:text-slate-400">{k}</dt><dd className="break-all font-semibold">{v}</dd></div>)}</dl>
-        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Awal EXTRA diambil dari tanggal upgrade pertama akun; expired memakai masa aktif panel yang tersimpan, termasuk perpanjangan.</p>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Awal EXTRA diambil dari tanggal upgrade pertama akun; expired memakai masa aktif panel yang tersimpan, termasuk perpanjangan. Total user yang login dihitung dari aktivitas akun (unregister maupun visitor) yang tercatat lewat panel ini.</p>
         <form onSubmit={e => { e.preventDefault(); void credit(); }} className="space-y-3 rounded-xl border border-amber-300 p-4">
           <h3 className="font-bold">Tambah saldo pendapatan (debug)</h3><p className="text-xs text-amber-700">Saldo ini masuk saldo tersedia dan dapat di-withdraw. Semua penambahan dicatat dengan ID admin dan catatan.</p>
           <input required type="number" min="1" max="100000000" step="0.01" aria-label="Nominal tambahan" placeholder="Nominal Rupiah" value={amount} onChange={e => setAmount(e.target.value)} className="w-full rounded border p-2 dark:bg-slate-800"/>

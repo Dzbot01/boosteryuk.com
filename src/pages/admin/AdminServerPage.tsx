@@ -1,22 +1,64 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Server, Wifi, WifiOff, Activity } from 'lucide-react';
+import { ArrowLeft, Server, Wifi, WifiOff, Activity, Lock, LockOpen, Loader2, Ban } from 'lucide-react';
 import Reveal from '../../components/Reveal';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 
 const PING_INTERVAL_MS = 6000;
 const PING_TIMEOUT_MS = 4500;
 
 interface Provider {
+  /** Nomor server internal — sama dengan yang dikirim ke order.php / servicesApi. */
+  server: '1' | '2' | '3' | '4';
+  /** Nama provider (hanya terlihat admin; tidak pernah tampil ke user). */
   name: string;
+  /** API yang benar-benar dipanggil file PHP di folder /api. */
   url: string;
   method?: 'GET' | 'POST';
+  /** Pilihan server yang dikendalikan API ini di form order user. */
+  uiLabel: string;
+  /** Berkas PHP pemanggilnya, supaya admin tahu API ini dipakai di mana. */
+  usedBy: string;
 }
 
+/**
+ * Hanya API yang BENAR-BENAR dipakai web ini (dipetakan dari php-api/*_lib.php + src/supabase.ts).
+ * Provider lama yang tidak lagi dipanggil berkas mana pun sudah dihapus dari daftar:
+ * irvankedesmm.co.id, indosmm.id, djuragansosmed.com.
+ */
 const PROVIDERS: Provider[] = [
-  { name: 'Irvan Kedes SMM', url: 'https://irvankedesmm.co.id/api/services', method: 'POST' },
-  { name: 'IndoSMM', url: 'https://indosmm.id/api/v2', method: 'POST' },
-  { name: 'Djuragan Sosmed', url: 'https://djuragansosmed.com/api/v2', method: 'POST' },
-  { name: 'Fayupedia', url: 'https://fayupedia.id/api/services', method: 'POST' },
+  {
+    server: '1',
+    name: 'Fayupedia',
+    url: 'https://fayupedia.id/api/services',
+    method: 'POST',
+    uiLabel: 'Server 1 — Ringkas & Stabil',
+    usedBy: 'config.php ($BASE_URL) · order.php · order_price.php · status.php · refill.php',
+  },
+  {
+    server: '2',
+    name: 'Naizop',
+    url: 'https://naizop.com/api/v2',
+    method: 'POST',
+    uiLabel: 'Server 2 — Baru · Layanan Lebih Lengkap',
+    usedBy: 'naizop_lib.php · naizop_services.php · naizop_status.php',
+  },
+  {
+    server: '3',
+    name: 'Medanpedia',
+    url: 'https://api.medanpedia.co.id',
+    method: 'POST',
+    uiLabel: 'Layanan Google Maps Review (ikut di dalam Server 1)',
+    usedBy: 'medanpedia_lib.php · medanpedia_services.php · order.php (server 3)',
+  },
+  {
+    server: '4',
+    name: 'SMMGen',
+    url: 'https://my.smmgen.com/api/v2',
+    method: 'POST',
+    uiLabel: 'Server 3 — Lengkap & Murah',
+    usedBy: 'smmgen_lib.php · smmgen_services.php · smmgen_status.php · smmgen_refill.php',
+  },
 ];
 
 interface Row extends Provider {
@@ -75,17 +117,44 @@ function timeAgo(ts: number): string {
 
 export default function AdminServerPage() {
   const navigate = useNavigate();
+  const { settings, updateSettings, sync } = useSiteSettings();
   const [rows, setRows] = useState<Row[]>(
     PROVIDERS.map((p) => ({ ...p, ping: null, status: 'pinging', updatedAt: 0 })),
   );
   const [tick, setTick] = useState(0);
+  /** Server yang sedang dikirim perubahannya (tombol dikunci sebentar agar tidak dobel klik). */
+  const [pending, setPending] = useState('');
   const mountedRef = useRef(true);
+
+  /** Daftar server yang order-nya ditutup (disimpan di database lewat site_settings.php). */
+  const closed = useMemo(
+    () => new Set((settings.closedServers || []).map((s) => String(s))),
+    [settings.closedServers],
+  );
+  useEffect(() => {
+    if (sync.status !== 'saving') setPending('');
+  }, [sync.status]);
+
+  const toggleClosed = (server: Provider['server'], name: string) => {
+    if (pending) return;
+    const isOpen = closed.has(server);
+    const next = isOpen
+      ? Array.from(closed).filter((s) => s !== server)
+      : [...Array.from(closed), server];
+    if (
+      !isOpen &&
+      !window.confirm(
+        `Tutup akses order ${name}?\n\nUser tidak akan bisa memesan layanan dari server ini sampai Anda membukanya lagi. Order yang sudah berjalan tetap diproses.`,
+      )
+    )
+      return;
+    setPending(server);
+    updateSettings({ closedServers: next });
+  };
 
   const runPings = useCallback(async () => {
     // Mark all as pinging
-    setRows((prev) =>
-      prev.map((r) => ({ ...r, status: 'pinging' as const })),
-    );
+    setRows((prev) => prev.map((r) => ({ ...r, status: 'pinging' as const })));
 
     // Ping each provider in parallel; update as results arrive.
     await Promise.all(
@@ -125,6 +194,7 @@ export default function AdminServerPage() {
   }, []);
 
   const okCount = rows.filter((r) => r.status === 'ok').length;
+  const closedCount = rows.filter((r) => closed.has(r.server)).length;
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-32 pt-8 sm:px-6">
@@ -148,7 +218,7 @@ export default function AdminServerPage() {
               Server Panel
             </h1>
             <p className="mt-1.5 text-[13px] text-slate-500 dark:text-slate-400">
-              Ping otomatis ke provider layanan · refresh {PING_INTERVAL_MS / 1000}s
+              {PROVIDERS.length} API yang dipakai web ini · ping otomatis tiap {PING_INTERVAL_MS / 1000}s
             </p>
           </div>
         </div>
@@ -173,62 +243,142 @@ export default function AdminServerPage() {
           </div>
 
           <ul className="divide-y divide-slate-100 dark:divide-slate-700/50">
-            {rows.map((row) => (
-              <li
-                key={row.url}
-                className="flex items-center gap-3.5 px-5 py-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/30"
-              >
-                <span
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                    row.status === 'ok'
-                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/25 dark:text-emerald-400'
-                      : row.status === 'fail'
-                        ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/25 dark:text-rose-400'
-                        : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
+            {rows.map((row) => {
+              const isClosed = closed.has(row.server);
+              const busy = pending === row.server && sync.status === 'saving';
+              return (
+                <li
+                  key={row.url}
+                  className={`flex flex-wrap items-center gap-3.5 px-5 py-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/30 ${
+                    isClosed ? 'bg-rose-50/40 dark:bg-rose-900/10' : ''
                   }`}
                 >
-                  {row.status === 'fail' ? (
-                    <WifiOff className="h-[18px] w-[18px]" strokeWidth={2.1} />
-                  ) : (
-                    <Wifi
-                      className={`h-[18px] w-[18px] ${row.status === 'pinging' ? 'animate-pulse' : ''}`}
-                      strokeWidth={2.1}
-                    />
-                  )}
-                </span>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-[14px] font-bold text-slate-900 dark:text-white">
-                    {row.name}
-                  </p>
-                  <p className="mt-0.5 truncate font-mono text-[11px] text-slate-400 dark:text-slate-500">
-                    {row.url.replace(/^https?:\/\//, '')}
-                  </p>
-                </div>
-
-                <div className="text-right">
                   <span
-                    className={`rounded-lg px-2.5 py-1 font-mono text-[13px] font-extrabold ${pingBadge(
-                      row.ping,
-                      row.status,
-                    )} ${pingColor(row.ping)}`}
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                      row.status === 'ok'
+                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/25 dark:text-emerald-400'
+                        : row.status === 'fail'
+                          ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/25 dark:text-rose-400'
+                          : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
+                    }`}
                   >
-                    {row.status === 'pinging'
-                      ? '…'
-                      : row.ping === null
-                        ? 'timeout'
-                        : `${row.ping}ms`}
+                    {row.status === 'fail' ? (
+                      <WifiOff className="h-[18px] w-[18px]" strokeWidth={2.1} />
+                    ) : (
+                      <Wifi
+                        className={`h-[18px] w-[18px] ${row.status === 'pinging' ? 'animate-pulse' : ''}`}
+                        strokeWidth={2.1}
+                      />
+                    )}
                   </span>
-                  <p
-                    key={tick}
-                    className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-500"
+
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-2 text-[14px] font-bold text-slate-900 dark:text-white">
+                      {row.name}
+                      <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+                        server={row.server}
+                      </span>
+                      {isClosed && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                          <Ban className="h-3 w-3" strokeWidth={2.4} /> Order ditutup
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 truncate font-mono text-[11px] text-slate-400 dark:text-slate-500">
+                      {row.url.replace(/^https?:\/\//, '')}
+                    </p>
+                    <p className="mt-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">{row.uiLabel}</p>
+                    <p className="mt-0.5 truncate font-mono text-[10px] text-slate-400 dark:text-slate-500">
+                      {row.usedBy}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <span
+                      className={`rounded-lg px-2.5 py-1 font-mono text-[13px] font-extrabold ${pingBadge(
+                        row.ping,
+                        row.status,
+                      )} ${pingColor(row.ping)}`}
+                    >
+                      {row.status === 'pinging'
+                        ? '…'
+                        : row.ping === null
+                          ? 'timeout'
+                          : `${row.ping}ms`}
+                    </span>
+                    <p
+                      key={tick}
+                      className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-500"
+                    >
+                      {timeAgo(row.updatedAt)}
+                    </p>
+                  </div>
+
+                  {/* Tutup/buka akses order server ini untuk semua user. */}
+                  <button
+                    type="button"
+                    onClick={() => toggleClosed(row.server, row.name)}
+                    disabled={!!pending}
+                    aria-pressed={isClosed}
+                    className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-[12px] font-bold transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+                      isClosed
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 dark:border-rose-800/50 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-rose-900/20'
+                    }`}
                   >
-                    {timeAgo(row.updatedAt)}
-                  </p>
-                </div>
-              </li>
-            ))}
+                    {busy ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : isClosed ? (
+                      <LockOpen className="h-3.5 w-3.5" strokeWidth={2.4} />
+                    ) : (
+                      <Lock className="h-3.5 w-3.5" strokeWidth={2.4} />
+                    )}
+                    {isClosed ? 'Buka order' : 'Tutup order'}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
+        </div>
+      </Reveal>
+
+      {/* Penjelasan + status penyimpanan ke database. */}
+      <Reveal delay={90}>
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 dark:border-slate-700/60 dark:bg-slate-800/80">
+          <p className="text-[12.5px] font-bold text-slate-900 dark:text-white">Akses order per server</p>
+          <ul className="mt-1.5 list-disc space-y-1 pl-4 text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">
+            <li>
+              <b>Tutup order</b> = server itu hilang dari pilihan di form order dan layanannya tidak
+              ditampilkan lagi; {closedCount > 0 ? `${closedCount} server sedang ditutup.` : 'saat ini semua server terbuka.'}
+            </li>
+            <li>
+              Penolakan juga ditegakkan di <span className="font-mono">order.php</span> (HTTP 403) sebelum
+              saldo dipotong, jadi order tidak bisa lolos lewat request langsung.
+            </li>
+            <li>
+              Pesanan yang sudah masuk tetap diproses & dicek statusnya seperti biasa; yang ditutup hanya
+              pemesanan baru.
+            </li>
+          </ul>
+          <p
+            role="status"
+            aria-live="polite"
+            className={`mt-2 text-[11.5px] font-semibold ${
+              sync.status === 'error'
+                ? 'text-rose-600 dark:text-rose-400'
+                : sync.status === 'saved'
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-slate-400 dark:text-slate-500'
+            }`}
+          >
+            {sync.status === 'saving'
+              ? 'Menyimpan ke database…'
+              : sync.status === 'saved'
+                ? 'Tersimpan ke database — berlaku untuk semua user.'
+                : sync.status === 'error'
+                  ? sync.message || 'Gagal menyimpan ke database.'
+                  : 'Perubahan disimpan ke tabel site_settings (kunci closedServers).'}
+          </p>
         </div>
       </Reveal>
 
