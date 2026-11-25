@@ -75,6 +75,11 @@ assert.match(rev, /AND NOT EXISTS \(SELECT 1 FROM service_reviews v WHERE v\.ord
 assert.match(rev, /if \(\$stars < 1 \|\| \$stars > 5\)/, 'bintang divalidasi 1–5');
 assert.match(rev, /SELECT service_id FROM smm_order_profit WHERE order_id = \? AND user_id = \? LIMIT 1/, 'kunci layanan diambil dari catatan profit order');
 assert.match(rev, /if \(\$action === 'list'\)/, 'papan penilaian publik');
+assert.match(rev, /\$chk = \$conn->query\("SHOW TABLES LIKE 'service_reviews'"\);/, 'CREATE tabel diverifikasi (mysqli tidak melempar exception)');
+assert.match(rev, /ALTER TABLE service_reviews ADD COLUMN service_key/, 'skema parsial dilengkapi otomatis');
+assert.match(rev, /reviews_log\.txt/, 'error penilaian dicatat ke reviews_log.txt');
+assert.match(rev, /'Gagal memuat pesanan selesai: ' \. \$e->getMessage\(\)/, 'pesan pending menyertakan penyebab SQL');
+assert.match(read('src/pages/ReviewSubmitPage.tsx'), /\/404\|405\/\.test\(r\.message/, 'pesan 500 ditampilkan apa adanya sebagai diagnosa');
 
 /* ---------- 4. Frontend: api, banner, route, menu ---------- */
 const api = read('src/services/reviewsApi.ts');

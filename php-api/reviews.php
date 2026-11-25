@@ -28,6 +28,10 @@ require_once __DIR__ . '/child_panel_lib.php'; // cp_q (prepared helper)
 
 function rv_out($d, $code = 200) { http_response_code($code); echo json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); exit; }
 
+function rv_log($text) {
+    @file_put_contents(__DIR__ . '/reviews_log.txt', date('Y-m-d H:i:s') . ' ' . $text . "\n", FILE_APPEND);
+}
+
 function rv_schema($conn) {
     $conn->query("CREATE TABLE IF NOT EXISTS service_reviews (
         id           INT AUTO_INCREMENT PRIMARY KEY,
@@ -41,6 +45,18 @@ function rv_schema($conn) {
         UNIQUE KEY uniq_order (order_id),
         KEY idx_time (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    // mysqli::query TIDAK melempar exception bila CREATE gagal → wajib diverifikasi.
+    $chk = $conn->query("SHOW TABLES LIKE 'service_reviews'");
+    if (!$chk || $chk->num_rows === 0) return false;
+    // Self-heal skema parsial (tabel dibuat manual dari reviews.sql versi awal):
+    // lengkapi kolom yang kurang agar query penilaian tidak gagal lagi.
+    $cols = [];
+    $cr = $conn->query("SHOW COLUMNS FROM service_reviews");
+    while ($cr && ($c = $cr->fetch_assoc())) $cols[] = $c['Field'];
+    if (!in_array('service_key', $cols, true)) $conn->query("ALTER TABLE service_reviews ADD COLUMN service_key VARCHAR(32) NULL AFTER service_name");
+    if (!in_array('review', $cols, true)) $conn->query("ALTER TABLE service_reviews ADD COLUMN review TEXT NULL");
+    if (!in_array('stars', $cols, true)) $conn->query("ALTER TABLE service_reviews ADD COLUMN stars TINYINT NOT NULL DEFAULT 5");
+    return true;
 }
 
 function rv_user_expr($conn) {
@@ -70,8 +86,14 @@ if (!is_array($in)) $in = [];
 $action = (string)($in['action'] ?? '');
 
 try {
-    rv_schema($conn);
-} catch (Throwable $e) { rv_out(['ok' => false, 'message' => 'Tabel penilaian belum tersedia.'], 500); }
+    if (!rv_schema($conn)) {
+        rv_log('schema gagal: tabel service_reviews tidak ada setelah CREATE');
+        rv_out(['ok' => false, 'message' => 'Tabel service_reviews belum ada di database. Jalankan php-api/reviews.sql di MySQL (atau periksa izin CREATE akun database).'], 500);
+    }
+} catch (Throwable $e) {
+    rv_log('schema exception: ' . $e->getMessage());
+    rv_out(['ok' => false, 'message' => 'Tabel penilaian belum tersedia: ' . $e->getMessage()], 500);
+}
 
 /* ---------- daftar penilaian untuk Papan Penilaian (publik) ---------- */
 if ($action === 'list') {
@@ -86,7 +108,7 @@ if ($action === 'list') {
                 'service_key' => $r['service_key'] !== null && $r['service_key'] !== '' ? (string)$r['service_key'] : null,
                 'review' => (string)($r['review'] ?? ''), 'created_at' => (int)$r['created_at']];
         }
-    } catch (Throwable $e) { rv_out(['ok' => false, 'message' => 'Gagal memuat penilaian.'], 500); }
+    } catch (Throwable $e) { rv_log('list: ' . $e->getMessage()); rv_out(['ok' => false, 'message' => 'Gagal memuat penilaian: ' . $e->getMessage()], 500); }
     rv_out(['ok' => true, 'reviews' => $rows]);
 }
 
@@ -104,7 +126,7 @@ if ($action === 'pending') {
         $res = $st->get_result();
         while ($r = $res->fetch_assoc()) $rows[] = ['order_id' => (string)$r['order_id'], 'service_name' => (string)$r['service_name']];
         $st->close();
-    } catch (Throwable $e) { rv_out(['ok' => false, 'message' => 'Gagal memuat pesanan selesai.'], 500); }
+    } catch (Throwable $e) { rv_log('pending: ' . $e->getMessage()); rv_out(['ok' => false, 'message' => 'Gagal memuat pesanan selesai: ' . $e->getMessage()], 500); }
     rv_out(['ok' => true, 'orders' => $rows]);
 }
 

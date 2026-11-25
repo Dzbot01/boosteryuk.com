@@ -33,7 +33,7 @@ export default function ReviewSubmitPage() {
     if (wanted && !(r.orders || []).some((o) => o.order_id === wanted)) {
       setErr(r.ok
         ? 'Pesanan ini sudah dinilai atau belum berstatus selesai.'
-        : (/404|405|500/.test(r.message || '') ? 'Halaman penilaian belum tersedia di server. Admin perlu mengupload reviews.php ke /api.' : (r.message || 'Gagal memuat daftar pesanan.')));
+        : (/404|405/.test(r.message || '') ? 'Halaman penilaian belum tersedia di server. Admin perlu mengupload reviews.php ke /api.' : (r.message || 'Gagal memuat daftar pesanan.')));
     }
   }, [wanted]);
   useEffect(() => { void load(); }, [load]);
