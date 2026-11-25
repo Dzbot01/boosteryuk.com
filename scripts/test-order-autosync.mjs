@@ -73,6 +73,9 @@ assert.match(rev, /UNIQUE KEY uniq_order \(order_id\)/, 'satu penilaian per pesa
 assert.match(rev, /service_name VARCHAR\(255\) NOT NULL COMMENT 'nama layanan saat dinilai — papan tidak perlu load API'/, 'nama layanan dicatat agar papan tidak load API');
 assert.match(rev, /AND NOT EXISTS \(SELECT 1 FROM service_reviews v\s+WHERE v\.order_id COLLATE utf8mb4_unicode_ci = r\.order_id COLLATE utf8mb4_unicode_ci\)/, 'banner hanya untuk pesanan selesai yang belum dinilai (collation eksplisit)');
 assert.match(rev, /if \(\$stars < 1 \|\| \$stars > 5\)/, 'bintang divalidasi 1–5');
+assert.match(rev, /const RV_TYPE_SQL = "CASE/, 'klasifikasi tipe pesanan sama dengan admin_data.php');
+assert.match(rev, /AND \(" \. RV_TYPE_SQL \. "\) = 'smm'/, 'banner/pending hanya pesanan SMM');
+assert.match(rev, /if \(\(string\)\$row\['kind'\] !== 'smm'\) rv_out\(\['ok' => false, 'message' => 'Hanya pesanan layanan SMM/, 'submit menolak pesanan non-SMM');
 assert.match(rev, /SELECT service_id FROM smm_order_profit WHERE order_id = \? AND user_id = \? LIMIT 1/, 'kunci layanan diambil dari catatan profit order');
 assert.match(rev, /if \(\$action === 'list'\)/, 'papan penilaian publik');
 assert.match(rev, /\$chk = \$conn->query\("SHOW TABLES LIKE 'service_reviews'"\);/, 'CREATE tabel diverifikasi (mysqli tidak melempar exception)');
@@ -111,6 +114,11 @@ assert.match(submit, /if \(stars <= 2\) return \['Pengiriman Lama', 'Drop'\];/, 
 assert.match(submit, /if \(stars === 3\) return \['Pengiriman Lama', 'Non Drop'\];/, 'bintang tiga → campuran');
 assert.match(submit, /return \['Pengiriman Cepat', 'Non Drop', 'Rekomendasi'\];/, 'bintang tinggi → komentar positif');
 assert.match(submit, /navigate\('\/overview', \{ replace: true \}\);/, 'selesai menilai → redirect overview');
+assert.ok(!submit.includes('<textarea'), 'kolom ulasan bebas dihapus — hanya komentar cepat');
+assert.match(submit, /const \[chips, setChips\] = useState<string\[\]>\(\[\]\);/, 'ulasan = kumpulan komentar cepat terpilih');
+assert.match(submit, /reviewsApi\.submit\(order\.order_id, stars, chips\.join\(', '\)\)/, 'payload ulasan = chip terpilih digabung');
+assert.match(submit, /Ulasan terkirim:/, 'pratinjau ulasan dari chip terpilih');
+assert.match(banner, /function isSmmOrder\(/, 'banner menyaring pesanan non-SMM di klien');
 const board = read('src/pages/ReviewBoardPage.tsx');
 for (const h of ['Username', 'Bintang', 'Layanan', 'Ulasan', 'Aksi']) assert.ok(board.includes(`>${h}</th>`), `kolom papan: ${h}`);
 assert.match(board, /<ShoppingCart className="h-3\.5 w-3\.5" strokeWidth=\{2\.4\} \/>/, 'ikon keranjang sama seperti overview');
@@ -173,6 +181,7 @@ try {
   const fallbackFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
     if (String(url).includes('riwayat_pesanan.php')) return new Response(JSON.stringify({ ok: true, orders: [
+      { order_id: 'OTP1234567', service_name: 'Nomor OTP WhatsApp • Indonesia', status: 'selesai' },
       { order_id: '777001', service_name: 'Followers Instagram', status: 'selesai' },
       { order_id: '777002', service_name: 'Like TikTok', status: 'proses' },
     ] }));
@@ -184,6 +193,7 @@ try {
   txt = document.getElementById('root').textContent;
   assert.ok(txt.includes('Pesanan #777001 sudah selesai.'), 'banner tetap muncul lewat jalur cadangan riwayat');
   assert.ok(!txt.includes('777002'), 'pesanan non-selesai tidak memunculkan banner');
+  assert.ok(!txt.includes('OTP1234567'), 'pesanan OTP (non-SMM) tidak ditawarkan untuk dinilai');
   await act(async () => root.unmount()); root = null;
   globalThis.fetch = mainFetch;
 
@@ -204,7 +214,9 @@ try {
   assert.ok(txt.includes('Pengiriman Cepat') && txt.includes('Non Drop') && txt.includes('Rekomendasi'), 'bintang 5 → komentar positif');
   const chip = [...document.querySelectorAll('#root button')].find((b) => b.textContent === 'Rekomendasi');
   await act(async () => chip.click());
-  assert.ok(document.querySelector('#root textarea').value.includes('Rekomendasi'), 'chip mengisi ulasan');
+  assert.equal(chip.getAttribute('aria-pressed'), 'true', 'chip terpilih bertanda aria-pressed');
+  assert.ok(document.getElementById('root').textContent.includes('Ulasan terkirim: Rekomendasi'), 'pratinjau ulasan menampilkan chip terpilih');
+  assert.equal(document.querySelector('#root textarea'), null, 'tidak ada kolom ulasan bebas');
   const send = [...document.querySelectorAll('#root button')].find((b) => b.textContent.includes('Kirim penilaian'));
   await act(async () => send.click());
   await act(async () => { await new Promise((r) => setTimeout(r, 20)); });

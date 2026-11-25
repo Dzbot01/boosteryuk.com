@@ -118,7 +118,9 @@ try {
  /* ---- 4. Tanpa riwayat: keterangan kosong di kedua tempat ---- */
  orders = [];
  await mount();
- assert.ok(riwayatSection().textContent.includes('Belum ada riwayat nomor'), 'keterangan riwayat kosong');
+ assert.ok(riwayatSection().textContent.includes('Belum ada riwayat Nomor'), 'keterangan riwayat kosong');
+ assert.ok(riwayatSection().querySelector('[aria-label="Riwayat nomor kosong"]'), 'empty state riwayat nomor = model 3D + teks');
+ assert.equal(riwayatSection().querySelectorAll('table').length, 0, 'tidak ada tabel saat riwayat kosong');
  assert.ok(orderCard().textContent.includes('Belum ada nomor aktif'), 'keterangan nomor aktif kosong');
  assert.equal(rows().length, 0, 'tidak ada baris tabel');
  await unmount();

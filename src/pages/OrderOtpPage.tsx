@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
+import EmptyStateModel from '../components/EmptyStateModel';
 import { CustomSelect, FormSection } from '../components/BuatPesananCard';
 import { useAuth } from '../context/AuthContext';
 import { otpApi, type OtpCountry, type OtpOrder, type OtpService, type OtpTier } from '../services/otpOrderApi';
@@ -514,9 +515,15 @@ export default function OrderOtpPage() {
           </div>
           <div className="my-3.5 h-px w-full" style={{ background: COLOR.border }} />
           {!riwayat.length ? (
-            <p className="text-[12px] text-slate-400">
-              Belum ada riwayat nomor. Baris muncul di sini setelah pesanan selesai (kode OTP masuk) atau dibatalkan.
-            </p>
+            /* Riwayat nomor kosong → model 3D + teks, konsisten dengan riwayat deposit & pesanan. */
+            <EmptyStateModel
+              text="Belum ada riwayat Nomor"
+              sub="Baris muncul di sini setelah pesanan selesai (kode OTP masuk) atau dibatalkan."
+              fallbackIcon={History}
+              height={190}
+              ariaLabel="Riwayat nomor kosong"
+              className="!px-0 !py-4"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] border-collapse text-left text-[12px]">

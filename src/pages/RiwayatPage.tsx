@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { MAIN_API } from '../lib/apiBase';
 import Reveal from '../components/Reveal';
+import EmptyStateModel from '../components/EmptyStateModel';
 import { useAuth } from '../context/AuthContext';
 
 function rupiah(n: number): string {
@@ -309,21 +310,24 @@ if(loading) return <div className="text-center py-20">Loading...</div>;
         <div className="mt-5 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_16px_40px_-24px_rgba(15,23,42,0.25)] dark:border-slate-700/60 dark:bg-slate-800/80">
           {visible.length === 0? (
             <div className="flex flex-col items-center px-6 py-16 text-center">
-              <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500">
-                {orders.length === 0? (
-                  <Inbox className="h-8 w-8" strokeWidth={1.6} />
-                ) : (
-                  <Search className="h-8 w-8" strokeWidth={1.6} />
-                )}
-              </span>
-              <p className="mt-4 font-display text-[16px] font-extrabold text-slate-900 dark:text-white">
-                {orders.length === 0? 'Belum ada riwayat pesanan' : 'Tidak ada yang cocok'}
-              </p>
-              <p className="mt-1.5 max-w-[260px] text-[12.5px] leading-relaxed text-slate-500 dark:text-slate-400">
-                {orders.length === 0
-                 ? 'Pesanan layanan SMM, Sewa Agen AI, NexSpace, dan lainnya akan muncul otomatis di sini.'
-                  : 'Coba kata kunci lain atau ubah filter status / jenis.'}
-              </p>
+              {orders.length === 0 ? (
+                /* Riwayat benar-benar kosong → model 3D + teks, bukan ikon statis. */
+                <EmptyStateModel
+                  text="Belum ada riwayat pesanan"
+                  sub="Pesanan layanan SMM, Sewa Agen AI, NexSpace, dan lainnya akan muncul otomatis di sini."
+                  fallbackIcon={Inbox}
+                  ariaLabel="Riwayat pesanan kosong"
+                  className="!px-0 !py-0"
+                />
+              ) : (
+                <>
+                  <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500">
+                    <Search className="h-8 w-8" strokeWidth={1.6} />
+                  </span>
+                  <p className="mt-4 font-display text-[16px] font-extrabold text-slate-900 dark:text-white">Tidak ada yang cocok</p>
+                  <p className="mt-1.5 max-w-[260px] text-[12.5px] leading-relaxed text-slate-500 dark:text-slate-400">Coba kata kunci lain atau ubah filter status / jenis.</p>
+                </>
+              )}
               {orders.length === 0 && (
                 <button
                   onClick={() => navigate('/layanan')}
