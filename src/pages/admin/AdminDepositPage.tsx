@@ -35,11 +35,13 @@ export default function AdminDepositPage() {
     return () => window.clearInterval(t);
   }, [load]);
 
-  const today = stats ? stats.today + (stats.manual?.today || 0) : null;
-  const month = stats ? stats.month + (stats.manual?.month || 0) : null;
+  // Top up manual admin TIDAK dihitung (permintaan admin): total halaman ini murni deposit
+  // gateway. Baris manual tetap tampil di tabel sebagai catatan, tanpa ikut menjumlah.
+  const today = stats ? stats.today : null;
+  const month = stats ? stats.month : null;
 
   return (
-    <AdminShell title="Data Deposit" desc="10 deposit terbaru dari semua user, langsung dari database (pembayaran gateway & top up manual admin)." loading={loading} onRefresh={() => void load()}>
+    <AdminShell title="Data Deposit" desc="10 deposit terbaru dari semua user, langsung dari database. Top up manual admin tampil sebagai baris catatan tetapi TIDAK dihitung pada total." loading={loading} onRefresh={() => void load()}>
       <p className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600"><Radio className="h-3.5 w-3.5 animate-pulse" /> Realtime · diperbarui tiap 15 detik{at && ` · terakhir ${at}`}</p>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
