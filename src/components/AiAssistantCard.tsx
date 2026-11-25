@@ -59,7 +59,7 @@ export default function AiAssistantCard({
   const [thinking, setThinking] = useState(false);
   const [version, setVersion] = useState(0);
 
-  // ====== Suara + subtitle "Guri Booster" ======
+  // ====== Suara + subtitle asisten "AI" ======
   // Sesi login memulai controller; gesture biasa melanjutkan jika autoplay diblokir.
   const voiceState = useSyncExternalStore(boostyVoice.subscribe, boostyVoice.getState);
   const activeVoice = voiceState.voice;
@@ -212,7 +212,7 @@ export default function AiAssistantCard({
         <img src={aiAgent} alt="AI Agent" className="h-11 w-11 shrink-0 select-none object-contain" draggable={false} />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 font-display text-[13.5px] font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Guri Booster
+            AI
           </p>
         </div>
       </div>

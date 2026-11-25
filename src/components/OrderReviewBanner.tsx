@@ -109,7 +109,6 @@ export default function OrderReviewBanner() {
             >
               disini
             </Link>
-            <span className="mt-0.5 block text-[11.5px] text-slate-500 dark:text-slate-400">{order.service_name}</span>
           </p>
         </div>
       </div>

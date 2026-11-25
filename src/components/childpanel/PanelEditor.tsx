@@ -482,7 +482,7 @@ export function PanelEditor({
 
           {/* Voice */}
           <section className={sec}>
-            <h3 className={h3}><Mic className="h-4 w-4 text-slate-400" /> Voice Guri Booster saat login</h3>
+            <h3 className={h3}><Mic className="h-4 w-4 text-slate-400" /> Voice AI saat login</h3>
             <div className="grid gap-2 sm:grid-cols-3">
               {([
                 ['welcome', 'Sapaan saja'],

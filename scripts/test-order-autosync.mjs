@@ -84,6 +84,10 @@ assert.match(rev, /reviews_log\.txt/, 'error penilaian dicatat ke reviews_log.tx
 assert.match(rev, /'Gagal memuat pesanan selesai: ' \. \$e->getMessage\(\)/, 'pesan pending menyertakan penyebab SQL');
 assert.match(rev, /v\.order_id COLLATE utf8mb4_unicode_ci = r\.order_id COLLATE utf8mb4_unicode_ci/, 'join order_id pakai collation eksplisit (anti illegal mix)');
 assert.match(rev, /ALTER TABLE service_reviews CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci/, 'collation tabel disamakan dengan riwayat_pesanan');
+assert.match(rev, /FROM riwayat_pesanan r WHERE r\.user_id = \? AND r\.order_id = \? LIMIT 1/, 'lookup submit memakai alias r agar RV_TYPE_SQL valid');
+assert.match(rev, /'Gagal memeriksa pesanan: ' \. \$e->getMessage\(\)/, 'error lookup submit tidak ditelan diam-diam');
+assert.ok(!rev.includes('catch (Throwable $e) { $row = null; }'), 'catch penelan error lookup submit dihapus');
+assert.ok(!read('src/components/OrderReviewBanner.tsx').includes('{order.service_name}'), 'banner tidak menampilkan nama layanan');
 assert.match(read('src/components/OrderReviewBanner.tsx'), /icon-banner-selesai\.gif/, 'ikon banner = GIF centang dari pemilik');
 assert.match(read('src/pages/ReviewSubmitPage.tsx'), /icon-beri-penilaian\.gif/, 'ikon halaman penilaian = GIF dokumen bintang dari pemilik');
 assert.match(read('src/pages/ReviewSubmitPage.tsx'), /\/404\|405\/\.test\(r\.message/, 'pesan 500 ditampilkan apa adanya sebagai diagnosa');
@@ -169,6 +173,7 @@ try {
   let txt = document.getElementById('root').textContent;
   assert.ok(txt.includes('Pesanan #123456 sudah selesai.'), 'banner menyebut ID pesanan selesai');
   assert.ok(txt.includes('Bagaimana pendapatmu? Beri penilaian disini'), 'ajakan penilaian dengan tautan disini');
+  assert.ok(!txt.includes('Followers Instagram'), 'nama layanan tidak ditampilkan di banner');
   const link = document.querySelector('#root a[href*="beri-penilaian"]');
   assert.ok(link, 'tautan ke halaman beri penilaian ada');
   await act(async () => document.querySelector('#root button[aria-label="Tutup notifikasi"]').click());
