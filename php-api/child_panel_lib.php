@@ -413,7 +413,11 @@ function cp_order_status_sql($conn) {
  * Sumber: child_panel_activity (unregister + visitor), satu baris per (panel, user) → COUNT(*) = jumlah user.
  */
 function cp_user_count($conn, $panelId) {
-    $row = cp_q($conn, 'SELECT COUNT(*) AS total FROM child_panel_activity WHERE child_panel_id = ?', 's', $panelId);
+    // cp_q() mengembalikan objek mysqli_stmt → hasilnya WAJIB diambil lewat get_result(),
+    // stmt tidak boleh dipakai sebagai array (fatal: "Cannot use object of type mysqli_stmt as array").
+    $st = cp_q($conn, 'SELECT COUNT(*) AS total FROM child_panel_activity WHERE child_panel_id = ?', 'i', (int)$panelId);
+    $row = $st->get_result()->fetch_assoc();
+    $st->close();
     return (int)($row['total'] ?? 0);
 }
 
