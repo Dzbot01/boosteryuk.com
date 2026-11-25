@@ -46,8 +46,15 @@ try {
     $stmt->execute();
     $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    echo json_encode(["ok" => true, "orders" => $orders], JSON_UNESCAPED_UNICODE);
+    $out = json_encode(["ok" => true, "orders" => $orders], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(["ok" => false, "message" => "Gagal memuat riwayat", "orders" => []]);
+    $out = json_encode(["ok" => false, "message" => "Gagal memuat riwayat", "orders" => []]);
 }
+// Balas dulu, baru pengecekan status otomatis 1 jam sekali (tanpa cron) — user tidak menunggu provider.
+header('Content-Length: ' . strlen($out));
+header('Connection: close');
+echo $out;
+if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); else { @ob_flush(); flush(); }
+require_once __DIR__ . '/order_status_lib.php';
+osx_maybe_run($conn);
