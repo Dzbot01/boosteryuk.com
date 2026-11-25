@@ -13,12 +13,12 @@ const AdminEventDataPage = lazy(() => import('./pages/admin/AdminEventDataPage')
 const AdminEventsPage = lazy(() => import('./pages/admin/AdminEventsPage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
 const CekStatusPage = lazy(() => import('./pages/CekStatusPage'));
-// DISEMBUNYIKAN DARI UI (atas permintaan): fitur "Order Nomor" tidak ditampilkan.
-// File halaman & datanya SENGAJA TIDAK DIHAPUS; aktifkan lagi dengan meng-uncomment
-// import + route di bawah bila ingin ditampilkan kembali.
+// Halaman Order Nomor versi LAMA (statis) tetap disembunyikan; kode dipertahankan.
+// Yang aktif sekarang: OrderOtpPage (OTP realtime, bayar saldo) — tampil di menu
+// ROOT DOMAIN maupun child panel, dan pendapatannya dicatat di My Profit admin.
 // const OrderNomorGuidePage = lazy(() => import('./pages/OrderNomorGuidePage'));
 // const OrderNomorPage = lazy(() => import('./pages/OrderNomorPage'));
-// Order Nomor OTP realtime (bayar saldo) — ditampilkan di menu CHILD PANEL.
+// Order Nomor OTP realtime (bayar saldo) — UI sama di root domain & child panel.
 const OrderOtpPage = lazy(() => import('./pages/OrderOtpPage'));
 const ArtikelIndexPage = lazy(() => import('./pages/artikel/ArtikelIndexPage'));
 const ArtikelPage = lazy(() => import('./pages/artikel/ArtikelPage'));
@@ -102,9 +102,7 @@ export default function App() {
           <Route path="riwayat-deposit" element={<ProtectedRoute><DepositHistoryPage /></ProtectedRoute>} />
           <Route path="deposit/:method" element={<ProtectedRoute><DepositMethodPage /></ProtectedRoute>} />
 
-          {/* Order Nomor disembunyikan dari UI (kode dipertahankan):
-          <Route path="otp-service/panduan" element={<OrderNomorGuidePage />} />
-          <Route path="otp-service" element={<ProtectedRoute><OrderNomorPage /></ProtectedRoute>} /> */}
+          {/* Halaman Order Nomor lama (statis) tetap disembunyikan; yang aktif OrderOtpPage di bawah ini. */}
           <Route path="otp-service" element={<ProtectedRoute><OrderOtpPage /></ProtectedRoute>} />
           {/* Checkout lama digantikan halaman Upgrade (/plus) */}
           <Route path="upgrade-plus" element={<Navigate to="/plus" replace />} />

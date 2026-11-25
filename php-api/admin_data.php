@@ -437,14 +437,29 @@ if ($action === 'profit') {
             if ($r['ts'] >= $t0) $upg['today'] += $price;
         }
     }
+    // 4) Margin Order OTP (root domain & child panel): base_price − biaya provider (max_usd × kurs).
+    //    Hanya order selesai & tidak di-refund. Markup child panel (price − base_price) milik
+    //    pemilik panel (child_panel_orders) → tidak dihitung sebagai penghasilan web utama.
+    $otp = ['today' => 0.0, 'month' => 0.0, 'all' => 0.0, 'orders' => 0];
+    if (ad_cols($conn, 'otp_orders')) {
+        $otpCfg = is_file(__DIR__ . '/otp_config.php') ? (include __DIR__ . '/otp_config.php') : [];
+        $kurs = (float)(is_array($otpCfg) && isset($otpCfg['kurs']) ? $otpCfg['kurs'] : 17000);
+        $res = $conn->query("SELECT base_price, max_usd, UNIX_TIMESTAMP(created_at) ts FROM otp_orders WHERE status = 'selesai' AND refunded = 0");
+        while ($res && ($r = $res->fetch_assoc())) {
+            $mk = max(0.0, (float)$r['base_price'] - (float)$r['max_usd'] * $kurs);
+            $otp['all'] += $mk; $otp['orders']++;
+            if ($r['ts'] >= $m0) $otp['month'] += $mk;
+            if ($r['ts'] >= $t0) $otp['today'] += $mk;
+        }
+    }
     $users = $conn->query("SELECT COUNT(*) n, COALESCE(SUM(balance),0) saldo FROM users")->fetch_assoc();
-    // Penghasilan = markup SMM + sewa Agen AI + paket Upgrade (Plus & EXTRA). Pesanan batal tidak dihitung.
+    // Penghasilan = markup SMM + sewa Agen AI + paket Upgrade + margin Order OTP. Pesanan batal tidak dihitung.
     $smm = ['today' => $rec['today'] + $est['today'], 'month' => $rec['month'] + $est['month'], 'all' => $rec['all'] + $est['all'], 'orders' => $rec['orders'] + $est['orders']];
     ad_out(['ok' => true, 'income' => ['recorded' => $rec, 'estimated' => $est, 'smm' => $smm,
-            'agent_ai' => $agent, 'upgrade' => $upg,
-            'today' => $smm['today'] + $agent['today'] + $upg['today'],
-            'month' => $smm['month'] + $agent['month'] + $upg['month'],
-            'all' => $smm['all'] + $agent['all'] + $upg['all']],
+            'agent_ai' => $agent, 'upgrade' => $upg, 'otp' => $otp,
+            'today' => $smm['today'] + $agent['today'] + $upg['today'] + $otp['today'],
+            'month' => $smm['month'] + $agent['month'] + $upg['month'] + $otp['month'],
+            'all' => $smm['all'] + $agent['all'] + $upg['all'] + $otp['all']],
         'transactions' => $trx, 'deposits' => ad_deposit_stats($conn),
         'users' => ['total' => (int)$users['n'], 'balance' => (float)$users['saldo']], 'server_time' => date('Y-m-d H:i:s')]);
 }

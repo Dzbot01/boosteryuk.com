@@ -164,10 +164,9 @@ export const ADMIN_MENU = [
 export function getUserMenuItems(signedIn: boolean, isAdmin: boolean, child: boolean) {
   const AUTH_REQUIRED = ['event', 'layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'riwayat-deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
 
-  // Child panel: menu "Order Nomor" (OTP) tampil setelah "Buat Pesanan".
-  const base = child
-    ? [baseMenu[0], baseMenu[1], baseMenu[2], { id: 'nokos' as PageId, icon: Smartphone, label: 'Order Nomor', desc: 'Nomor OTP WhatsApp, Telegram, dll' }, ...baseMenu.slice(3)]
-    : baseMenu;
+  // Menu "Order Nomor" (OTP) tampil di ROOT DOMAIN maupun child panel, setelah "Buat Pesanan" —
+  // UI halamannya sama (OrderOtpPage); pendapatan OTP root dicatat di My Profit admin.
+  const base = [baseMenu[0], baseMenu[1], baseMenu[2], { id: 'nokos' as PageId, icon: Smartphone, label: 'Order Nomor', desc: 'Nomor OTP WhatsApp, Telegram, dll' }, ...baseMenu.slice(3)];
   const combined = signedIn
    ? [base[0], base[1], base[2],...authMenu,...base.slice(3)]
     : base;
