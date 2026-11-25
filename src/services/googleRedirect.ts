@@ -5,9 +5,11 @@ const GOOGLE_API = '/api/google_auth.php';
 export const GOOGLE_PROOF_KEY = 'by_google_login_proof';
 export async function startGoogleLogin() {
   // Detect an old/incomplete PHP deployment before leaving the child panel.
-  const response = await fetch(`${GOOGLE_API}?action=oauth_status`, { cache: 'no-store', referrerPolicy: 'no-referrer' }).catch(() => { throw new Error('Tidak dapat menghubungi server login pusat. Periksa koneksi lalu coba lagi.'); });
+  const response = await fetch(`${GOOGLE_API}?action=oauth_status`, { cache: 'no-store', referrerPolicy: 'no-referrer' }).catch(() => { throw Object.assign(new Error('Tidak dapat menghubungi server login pusat. Periksa koneksi lalu coba lagi.'), { serverDown: true }); });
   const status = await response.json().catch(() => null);
-  if (!response.ok || status?.protocol !== 1) throw new Error('Server login masih versi lama atau tidak dapat dihubungi. Admin perlu upload google_auth.php dan google_oauth_flow.php terbaru.');
+  // PHP tidak membalas JSON/HTTP ok = tidak dapat dihubungi → modal menampilkan cooldown, bukan error.
+  if (!response.ok || status === null) throw Object.assign(new Error('Server login tidak dapat dihubungi.'), { serverDown: true });
+  if (status.protocol !== 1) throw new Error('Server login masih versi lama. Admin perlu upload google_auth.php dan google_oauth_flow.php terbaru.');
   if (!status.redirect_ready) throw new Error(status.message || 'Login Google belum dikonfigurasi di server.');
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   const verifier = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');

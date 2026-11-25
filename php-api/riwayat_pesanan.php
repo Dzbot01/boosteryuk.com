@@ -56,5 +56,6 @@ header('Content-Length: ' . strlen($out));
 header('Connection: close');
 echo $out;
 if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); else { @ob_flush(); flush(); }
-require_once __DIR__ . '/order_status_lib.php';
-osx_maybe_run($conn);
+if (is_file(__DIR__ . '/order_status_lib.php')) require_once __DIR__ . '/order_status_lib.php';
+if (function_exists('osx_sync_user_orders')) osx_sync_user_orders($conn, $user_id); // status user ini segar saat reload berikut
+if (function_exists('osx_maybe_run')) osx_maybe_run($conn);

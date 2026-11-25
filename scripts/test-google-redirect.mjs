@@ -27,12 +27,14 @@ await assert.rejects(expired.finishGoogleLogin(),/kedaluwarsa/);
 console.log('PASS: central URL, browser proof SHA-256, query cleanup, single exchange (StrictMode), session storage, missing proof, cancellation, expired token.');
 
 assigned = '';
-globalThis.fetch = async () => ({ok:false,json:async()=>({ok:false,message:'Metode tidak didukung.'})});
+globalThis.fetch = async () => ({ok:true,json:async()=>({ok:true,protocol:0})});
 await assert.rejects(m.startGoogleLogin(),/versi lama/); assert.equal(assigned,'');
+globalThis.fetch = async () => ({ok:false,json:async()=>({ok:false,message:'Metode tidak didukung.'})});
+await assert.rejects(m.startGoogleLogin(),/tidak dapat dihubungi/); assert.equal(assigned,'');
 globalThis.fetch = async () => ({ok:true,json:async()=>({ok:true,protocol:1,redirect_ready:false,message:'Secret belum diisi'})});
 await assert.rejects(m.startGoogleLogin(),/Secret belum diisi/); assert.equal(assigned,'');
 globalThis.fetch = async () => ({ok:true,json:async()=>{throw new Error('HTML');}});
-await assert.rejects(m.startGoogleLogin(),/versi lama/); assert.equal(assigned,'');
+await assert.rejects(m.startGoogleLogin(),/tidak dapat dihubungi/); assert.equal(assigned,'');
 console.log('PASS: stale PHP, incomplete OAuth config, and HTML errors block redirect and surface actionable errors.');
 
 const network = await load('network'); window.location.search = '?token=' + grant;

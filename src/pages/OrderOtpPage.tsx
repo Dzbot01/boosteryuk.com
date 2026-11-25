@@ -432,7 +432,10 @@ export default function OrderOtpPage() {
                 Nomor yang sudah mendapatkan kode OTP dinyatakan Pesanan Sukses, tidak bisa di refund jika suatu saat nomor
                 bermasalah, Saat mendapatkan Nomor Segera lakukan verifikasi pada aplikasi layanan yang Anda pilih untuk
                 meminta kode OTP, kode akan muncul disini dan pastikan menunggu minimal 3 menit untuk menunggu kode OTP
-                muncul jika masin belum muncul artinya stok yang di pilih pada harga tersebut sedang sedikit atau kosong -
+                muncul.
+              </p>
+              <p className="mt-1 text-[12px] leading-relaxed">
+                Jika masih belum muncul artinya stok yang di pilih pada harga tersebut sedang sedikit atau kosong -
                 Pilih harga yang lebih tinggi untuk mendapatkan Rate OTP tinggi.
               </p>
             </div>

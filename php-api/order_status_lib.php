@@ -32,14 +32,23 @@ if (!function_exists('osx_is_pending_slug')) {
         return null;
     }
 
-    /** Status mentah provider → status riwayat: selesai / batal / proses; null = respons tak dikenal. */
+    /** Status mentah provider → status riwayat. Balasan provider yang dikenali (bukan pesan
+     *  error) dianggap order sedang berjalan → 'proses', sehingga pesanan tidak menempel di
+     *  'pending' hanya karena sebutan status provider tidak sama dengan daftar kita. */
     function osx_map_status($raw) {
         $s = strtolower(trim((string)$raw));
-        if ($s === '') return null;
+        if ($s === '' || $s === '0' || $s === 'false') return null;
         if (in_array($s, ['completed', 'complete', 'selesai', 'finished', 'done'], true)) return 'selesai';
-        if (in_array($s, ['canceled', 'cancelled', 'refunded', 'batal', 'error', 'failed'], true)) return 'batal';
-        if (in_array($s, ['pending', 'processing', 'in progress', 'inprogress', 'partial', 'queued', 'queue', 'proses'], true)) return 'proses';
-        return null;
+        if (in_array($s, ['canceled', 'cancelled', 'refunded', 'batal', 'failed'], true)) return 'batal';
+        // pesan error/temuan-bukan-order → jangan ubah status
+        if (strpos($s, 'not found') !== false || strpos($s, 'invalid') !== false || strpos($s, 'error') !== false
+            || strpos($s, 'unknown') !== false || strpos($s, 'tidak ditemukan') !== false) return null;
+        return 'proses'; // pending/processing/in progress/partial/queue/sebutan lain = sedang berjalan
+    }
+
+    /** Jejak sync untuk debugging di hosting (id, balasan mentah, hasil pemetaan). */
+    function osx_log($text) {
+        @file_put_contents(__DIR__ . '/order_status_log.txt', date('Y-m-d H:i:s') . ' ' . $text . "\n", FILE_APPEND);
     }
 
     function osx_fayupedia_status($num) {
@@ -47,18 +56,29 @@ if (!function_exists('osx_is_pending_slug')) {
         // dari endpoint lain, muat sekali di scope fungsi ini.
         if (!isset($GLOBALS['BASE_URL']) && is_file(__DIR__ . '/config.php')) include_once __DIR__ . '/config.php';
         if (empty($GLOBALS['BASE_URL']) || empty($GLOBALS['API_KEY'])) return null;
-        $ch = curl_init($GLOBALS['BASE_URL'] . 'status');
-        curl_setopt_array($ch, [
-            CURLOPT_POST => 1,
-            CURLOPT_POSTFIELDS => http_build_query(['api_id' => (int)($GLOBALS['API_ID'] ?? 0), 'api_key' => $GLOBALS['API_KEY'], 'order' => $num]),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 10,
-        ]);
-        $body = curl_exec($ch);
-        curl_close($ch);
-        $j = json_decode((string)$body, true);
-        if (!is_array($j)) return null;
-        return $j['status'] ?? $j['order_status'] ?? null;
+        $key = ['api_id' => (int)($GLOBALS['API_ID'] ?? 0), 'api_key' => $GLOBALS['API_KEY'], 'order' => $num];
+        // Dua bentuk permintaan yang umum dipakai panel SMM: path /status dan param action=status.
+        $tries = [
+            [$GLOBALS['BASE_URL'] . 'status', $key],
+            [$GLOBALS['BASE_URL'], $key + ['action' => 'status']],
+        ];
+        foreach ($tries as [$url, $fields]) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_POST => 1,
+                CURLOPT_POSTFIELDS => http_build_query($fields),
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 10,
+            ]);
+            $body = curl_exec($ch);
+            curl_close($ch);
+            $j = json_decode((string)$body, true);
+            if (!is_array($j)) continue;
+            $st = $j['status'] ?? $j['order_status'] ?? (is_array($j['order'] ?? null) ? ($j['order']['status'] ?? null) : null);
+            if (is_string($st) && $st !== '') return $st;
+            if ($st === false || $st === null) continue; // coba bentuk berikutnya
+        }
+        return null;
     }
 
     /** Ambil status mentah satu pesanan dari providernya; null = gagal/tidak dikenal (status tidak diubah). */
@@ -106,6 +126,7 @@ if (!function_exists('osx_is_pending_slug')) {
         if (osx_provider_of($oid) === null) return null; // slug PENDING & ID tak valid dilewati
         $raw = osx_fetch_status($oid);
         $map = osx_map_status($raw);
+        osx_log("sync id=$oid raw=" . json_encode($raw) . " map=" . json_encode($map) . " lama=" . json_encode($row['status']));
         if ($map === null || $map === (string)$row['status']) return null;
         try {
             $st = $conn->prepare("UPDATE riwayat_pesanan SET status = ? WHERE order_id = ? AND status IN ('pending','proses')");
@@ -116,6 +137,26 @@ if (!function_exists('osx_is_pending_slug')) {
             return $done ? $map : null;
         } catch (Throwable $e) {
             return null;
+        }
+    }
+
+    /**
+     * Sinkron pesanan SATU user yang masih pending/proses (dipanggil sesudah respons
+     * riwayat_pesanan.php) — sehingga status terbaru terlihat saat user memuat ulang
+     * riwayat, tanpa menunggu sweep 1 jam.
+     */
+    function osx_sync_user_orders($conn, $userId, $limit = 10) {
+        try {
+            $res = $conn->query("SELECT id, order_id, status FROM riwayat_pesanan
+                                 WHERE user_id = " . (int)$userId . " AND status IN ('pending','proses') AND order_id NOT LIKE '%PENDING-%'
+                                 ORDER BY id DESC LIMIT " . (int)$limit);
+            $changed = 0;
+            while ($res && ($r = $res->fetch_assoc())) {
+                try { if (osx_sync_order($conn, $r) !== null) $changed++; } catch (Throwable $e) { /* lanjut */ }
+            }
+            return $changed;
+        } catch (Throwable $e) {
+            return 0;
         }
     }
 

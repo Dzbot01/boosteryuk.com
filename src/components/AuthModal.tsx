@@ -16,8 +16,8 @@ interface Props {
  * AuthModal — login & daftar HANYA lewat Google (tidak ada kolom username/email/password).
  * Alur redirect melalui boosteryuk.com; tidak memuat Google Identity Services.
  */
-/** Durasi tunggu simulasi pemulihan server PHP bila login gagal terhubung (2 menit). */
-const RECOVERY_SECONDS = 120;
+/** Durasi tunggu simulasi pemulihan server PHP bila login gagal terhubung (3 menit). */
+const RECOVERY_SECONDS = 180;
 
 function isServerDownMessage(message: string): boolean {
   return /menghubungi server login pusat|failed to fetch|networkerror|load failed|network request failed/i.test(message);
@@ -80,9 +80,15 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }: Prop
     catch (e) {
       setLoading(false);
       const msg = e instanceof Error ? e.message : '';
-      setError(msg || 'Ups! Tunggu sebentar lalu coba lagi.');
-      // PHP down / tidak dapat dihubungi: tampilkan timer 2 menit simulasi tunggu pulih.
-      if (isServerDownMessage(msg) || e instanceof TypeError) setCountdown(RECOVERY_SECONDS);
+      const down = (e as { serverDown?: boolean }).serverDown === true || isServerDownMessage(msg) || e instanceof TypeError;
+      if (down) {
+        // PHP tidak dapat dihubungi: JANGAN tampilkan pesan error — ganti timer cooldown
+        // 3 menit (simulasi) dengan percobaan ulang otomatis saat hitung mundur selesai.
+        setError('');
+        setCountdown(RECOVERY_SECONDS);
+      } else {
+        setError(msg || 'Ups! Tunggu sebentar lalu coba lagi.');
+      }
     }
   };
   retryRef.current = () => { void handleGoogleLogin(); };
@@ -117,7 +123,7 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }: Prop
 
           {countdown !== null && (
             <p className="authflip-footnote w-full" role="status" style={{ margin: 0 }}>
-              Server tidak dapat dihubungi. Mencoba ulang otomatis dalam{' '}
+              Server login tidak dapat dihubungi. Mencoba ulang otomatis dalam{' '}
               <b>{Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}</b> …
             </p>
           )}
