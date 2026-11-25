@@ -128,6 +128,9 @@ export default defineConfig({
           if (id.includes('firebase')) return 'firebase';
           if (id.includes('chart.js')) return 'charts';
           if (id.includes('/ogl/')) return 'ogl';
+          // three.js (dipakai Lanyard & empty state 3D) dipisah agar TIDAK ikut chunk vendor
+          // yang dimuat setiap halaman — keduanya di-import malas/dinamis.
+          if (id.includes('/three/') || id.includes('three/examples') || id.includes('three/addons')) return 'three';
           if (id.includes('lucide-react')) return 'icons';
           return 'vendor';
         },

@@ -175,9 +175,21 @@ export function getUserMenuItems(signedIn: boolean, isAdmin: boolean, child: boo
    ? [base[0], base[1], base[2],...authMenu,...base.slice(3)]
     : base;
 
+  // Dua menu riwayat harus BERDEKATAN: "Riwayat Pesanan" digeser tepat setelah "Riwayat Deposit"
+  // (sebelumnya terpisah jauh: Riwayat Deposit di grup deposit, Riwayat Pesanan setelah Sewa Agen AI).
+  const grouped = (() => {
+    const iPesanan = combined.findIndex((item) => item.id === 'riwayat');
+    const iDeposit = combined.findIndex((item) => item.id === 'riwayat-deposit');
+    if (iPesanan < 0 || iDeposit < 0) return combined;
+    const out = [...combined];
+    const [pesanan] = out.splice(iPesanan, 1);
+    out.splice(out.findIndex((item) => item.id === 'riwayat-deposit') + 1, 0, pesanan);
+    return out;
+  })();
+
   const menuItems = isAdmin
    ? []
-    : combined
+    : grouped
        .filter(
           (item) =>
            !HIDDEN_USER_ITEMS.includes(item.id) &&
