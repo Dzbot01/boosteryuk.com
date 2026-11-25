@@ -67,7 +67,34 @@ if (!function_exists('osx_is_pending_slug')) {
         return null;
     }
 
+    /**
+     * Status Server 1 lewat PROXY yang SAMA dengan halaman Cek Status Pesanan:
+     * POST JSON {id} ke /api/status.php → {status:true, orders:{id:{order_status,…}}}.
+     * Proxy ini sudah terbukti bekerja di produksi, jadi sync tidak menebak bentuk API.
+     */
+    function osx_status_via_proxy($id, $file = 'status.php') {
+        $url = 'https://boosteryuk.com/api/' . $file;
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => 1,
+            CURLOPT_POSTFIELDS => json_encode(['id' => (string)$id]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+        ]);
+        $body = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($code !== 200) return null;
+        $j = json_decode((string)$body, true);
+        if (!is_array($j) || ($j['status'] ?? null) === false) return null;
+        $entry = is_array($j['orders'] ?? null) ? ($j['orders'][(string)$id] ?? null) : null;
+        if (is_array($entry)) { $st = osx_extract_status($entry); if ($st !== null) return $st; }
+        return osx_extract_status($j);
+    }
+
     function osx_fayupedia_status($num, $maxTries = 4) {
+        // Cadangan bila proxy Cek Status tak terjangkau: panggil API provider langsung.
         // config.php ($API_ID,$API_KEY,$BASE_URL) dimuat pemanggil (order.php); bila lib dipanggil
         // dari endpoint lain, muat sekali di scope fungsi ini.
         if (!isset($GLOBALS['BASE_URL']) && is_file(__DIR__ . '/config.php')) include_once __DIR__ . '/config.php';
@@ -110,6 +137,15 @@ if (!function_exists('osx_is_pending_slug')) {
         $prov = osx_provider_of($id);
         if ($prov === null) return null;
         try {
+            // 1) Fungsi cek status yang SAMA dengan halaman Cek Status Pesanan: proxy PHP
+            //    sesuai prefix ID (status.php / naizop_status.php / medanpedia_status.php /
+            //    smmgen_status.php) dipanggil lewat HTTP dengan body JSON {id}.
+            $proxyFile = ['fayupedia' => 'status.php', 'naizop' => 'naizop_status.php',
+                'medanpedia' => 'medanpedia_status.php', 'smmgen' => 'smmgen_status.php'][$prov];
+            $st = osx_status_via_proxy($id, $proxyFile);
+            if ($st !== null) return $st;
+            if ($maxTries <= 1) return null;
+            // 2) Cadangan: panggil API provider langsung dari lib.
             if ($prov === 'fayupedia') {
                 return osx_fayupedia_status((string)$id, $maxTries);
             }

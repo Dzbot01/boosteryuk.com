@@ -36,6 +36,10 @@ assert.match(lib, /\[\$GLOBALS\['BASE_URL'\] \. 'status', \$auth \+ \['id' => \$
 assert.match(lib, /\[\$GLOBALS\['BASE_URL'\], \$auth \+ \['action' => 'status', 'order' => \$num\]\],/, 'status Server 1: action=status + order');
 assert.match(lib, /\[\$GLOBALS\['BASE_URL'\], \$auth \+ \['action' => 'status', 'id' => \$num\]\],/, 'status Server 1: action=status + id');
 assert.match(lib, /function osx_extract_status\(\$j, \$depth = 0\)/, 'status dicari rekursif di respons bentuk apa pun');
+assert.match(lib, /function osx_status_via_proxy\(\$id, \$file = 'status\.php'\)/, 'proxy cek status dipakai dari server');
+assert.match(lib, /\$url = 'https:\/\/boosteryuk\.com\/api\/' \. \$file;/, 'proxy dipanggil di host pusat (database & provider sama)');
+assert.match(lib, /\$proxyFile = \['fayupedia' => 'status\.php', 'naizop' => 'naizop_status\.php',/, 'dispatch proxy sama dengan halaman Cek Status (per prefix ID)');
+assert.match(lib, /\$st = osx_status_via_proxy\(\$id, \$proxyFile\);/, 'percobaan pertama = fungsi cek status halaman Cek Status');
 assert.match(lib, /if \(isset\(\$j\[\$want\]\) && is_string\(\$j\[\$want\]\) && \$j\[\$want\] !== ''\) return \$j\[\$want\];/, 'nilai bool pada kunci status diabaikan');
 assert.match(lib, /osx_log\("fayupedia status gagal id=\$num body="/, 'balasan mentah dicatat bila semua bentuk gagal');
 assert.match(lib, /order_status_log\.txt/, 'jejak sync untuk debugging di hosting');
