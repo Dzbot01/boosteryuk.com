@@ -2,7 +2,7 @@ import AdminDataDot from '../../components/AdminDataDot';
 import { useAdminNotifications } from '../../context/AdminNotificationsContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Gift, Settings, Server, Shield, ArrowUpRight, DollarSign, Globe, Banknote, Crown, ClipboardList, Users, Wallet } from 'lucide-react';
+import { Gift, Settings, Server, Shield, ArrowUpRight, Database, DollarSign, Globe, Banknote, Crown, ClipboardList, Users, Wallet } from 'lucide-react';
 import { nexspaceApi } from '../../services/nexspaceApi';
 import { withdrawApi } from '../../services/childPanelApi';
 import Reveal from '../../components/Reveal';
@@ -71,8 +71,15 @@ const CARDS = [
     path: '/admin/server',
     icon: Server,
     title: 'Server Panel',
-    desc: 'Pantau latensi ke provider API secara real-time.',
+    desc: 'Pantau latensi API yang dipakai & tutup/buka akses order per server.',
     color: 'from-slate-700 to-slate-900',
+  },
+  {
+    path: '/admin/database',
+    icon: Database,
+    title: 'Pengaturan Database',
+    desc: 'Pembersihan rutin otomatis: semua riwayat order & deposit > 1 tahun (tiap tahun) dan data gagal > 1 bulan (tiap bulan).',
+    color: 'from-slate-600 to-cyan-900',
   },
 ];
 

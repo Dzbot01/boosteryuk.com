@@ -47,7 +47,8 @@ async function call<T>(action: string, body: Record<string, unknown> = {}): Prom
   }
 }
 
-export interface PanelDetail { panel: { id: number; owner_email: string | null; created_at: string; extra_started: string | null; expires_at: string | null }; balance: WdBalance & {debug_credit?: number}; credits: {id: number; admin_id: number; amount: number; note: string; created_at: string}[] }
+/** Detail panel untuk admin: info panel, saldo pencairan, riwayat debug, dan total user yang login dari panel. */
+export interface PanelDetail { panel: { id: number; owner_email: string | null; created_at: string; extra_started: string | null; expires_at: string | null }; balance: WdBalance & {debug_credit?: number}; credits: {id: number; admin_id: number; amount: number; note: string; created_at: string}[]; /** Jumlah user (unregister/visitor) berbeda yang login & beraktivitas dari panel ini. */ users_total?: number }
 
 export const childPanelApi = {
   detail: (id: number) => call<PanelDetail>('admin_detail', {id}),

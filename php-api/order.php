@@ -5,6 +5,8 @@
  *     Harga kiriman browser hanya dipakai bila daftar layanan provider tidak bisa dimuat.
  *  2. Saldo dipotong ATOMIK (UPDATE ... WHERE balance >= harga) → tidak bisa minus / order ganda.
  *  3. Order lewat child panel langsung dicatat sebagai pendapatan panel di server.
+ *  3b. Server yang ditutup admin (site_settings.closedServers, diatur di Admin -> Server Panel)
+ *      menolak order sebelum saldo dipotong.
  *  4. API key Resend TIDAK lagi ditulis di file ini → isi 'resend_key' di agent_config.php
  *     (atau env RESEND_API_KEY). Tanpa key, email dikirim lewat Worker email.
  * Membutuhkan: config.php ($API_ID, $API_KEY, $BASE_URL), configdb.php, order_price.php,
@@ -27,6 +29,35 @@ $data = json_decode(file_get_contents("php://input"), true);
 $server = $data['server'] ?? 1;
 if (!in_array($server, [1, 2, 3, 4, '1', '2', '3', '4'], true)) { http_response_code(400);echo json_encode(['ok'=>false,'message'=>'Server tidak valid.']);exit; }
 $server = (int)$server;
+
+/**
+ * Server yang order-nya DITUTUP sementara oleh admin (Admin -> Server Panel) tidak boleh
+ * menerima pesanan baru. Daftar disimpan di site_settings baris 'site' sebagai closedServers
+ * (lihat site_settings.php). Gagal baca pengaturan = anggap semua server terbuka.
+ */
+if (!function_exists('bk_server_closed')) {
+    function bk_server_closed($conn, $server) {
+        try {
+            $st = $conn->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'site' LIMIT 1");
+            if (!$st) return false;
+            $st->execute();
+            $row = $st->get_result()->fetch_assoc();
+            $st->close();
+            $val = $row ? json_decode((string)$row['setting_value'], true) : null;
+            $closed = is_array($val['closedServers'] ?? null) ? $val['closedServers'] : [];
+            foreach ($closed as $c) if ((string)$c === (string)$server) return true;
+            return false;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+}
+if (bk_server_closed($conn, $server)) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'message' => 'Server yang Anda pilih sedang ditutup sementara oleh admin. Silakan pilih server lain.', 'orderId' => null]);
+    exit;
+}
+
 $token    = trim($data['token'] ?? '');
 $service  = trim($data['serviceId'] ?? $data['service'] ?? '');
 $link     = trim($data['target'] ?? $data['link'] ?? '');

@@ -26,7 +26,12 @@ assert.match(card,/useState<1 \| 2 \| 4>/);assert.match(card,/\(server === 1 \|\
 const api=fs.readFileSync('src/services/servicesApi.ts','utf8');assert.match(api,/server: 1 \| 2 \| 3 \| 4 = 1/);
 const profit=fs.readFileSync('src/pages/admin/AdminProfitPage.tsx','utf8');
 assert.match(profit,/smmgenBalance\(\)/);assert.match(profit,/Saldo provider Server 3/);
-const others=fs.readdirSync('src/pages/admin').filter(f=>f!=='AdminProfitPage.tsx').some(f=>fs.readFileSync('src/pages/admin/'+f,'utf8').includes('smmgen'));
+// Saldo provider hanya dipanggil dari My Profit. Server Panel (khusus admin) boleh menyebut
+// nama/berkas API provider sebagai dokumentasi, tetapi tidak boleh memanggil saldo provider.
+const others=fs.readdirSync('src/pages/admin').filter(f=>f!=='AdminProfitPage.tsx').some(f=>fs.readFileSync('src/pages/admin/'+f,'utf8').includes('smmgenBalance'));
 assert.equal(others,false,'saldo SMMGen hanya di halaman My Profit');
+const srvPage=fs.readFileSync('src/pages/admin/AdminServerPage.tsx','utf8');
+assert.match(srvPage,/smmgen_lib\.php/,'Server Panel mendokumentasikan API yang benar-benar dipakai');
+assert.ok(!srvPage.includes('smmgenBalance'),'Server Panel tidak memanggil saldo provider');
 assert.ok(!fs.existsSync('src/pages/admin/../../components/BuatPesananCard.tsx.bak'));
 console.log('PASS Server 3 (SMMGen): kontrak PHP services/order/status/refill/balance, routing frontend, dropdown, saldo hanya di My Profit. No live SMMGen calls.');

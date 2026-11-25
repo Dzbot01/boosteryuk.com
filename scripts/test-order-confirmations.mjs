@@ -10,7 +10,7 @@ globalThis.DOMParser=dom.window.DOMParser;globalThis.window=dom.window;globalThi
 globalThis.MessageChannel=class{port1={onmessage:null};port2={postMessage:()=>setImmediate(()=>this.port1.onmessage?.())};};
 const dir=mkdtempSync(path.join(tmpdir(),'confirm-order-'));let root;
 try{
-const {outputFiles}=await build({stdin:{contents:"export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {MemoryRouter} from 'react-router-dom';export {default as Card} from './src/components/BuatPesananCard';",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',write:false,jsx:'automatic',plugins:[{name:'mocks',setup(b){
+const {outputFiles}=await build({stdin:{contents:"export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {MemoryRouter} from 'react-router-dom';export {default as Card} from './src/components/BuatPesananCard';",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',write:false,jsx:'automatic',define:{__MUSIC_URL__:JSON.stringify('/boosteryuk-official-music.mp3')},plugins:[{name:'mocks',setup(b){
  b.onResolve({filter:/(AuthContext|OrderHistoryContext|servicesApi|checkoutApi|AiAssistantCard|LinkPreview|TransactionButton)$/},a=>({path:a.path.split('/').pop(),namespace:'mock'}));
  b.onLoad({filter:/.*/,namespace:'mock'},a=>({resolveDir:process.cwd(),contents:({
  AuthContext:'export const useAuth=()=>({user:{balance:10000},topUp:()=>{}});',

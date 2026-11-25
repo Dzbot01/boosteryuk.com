@@ -5,8 +5,16 @@ export interface StreakState {
   today: string; next_day_at: number; server_time: number; cycle: number;
   reset_notice: boolean; reset_version: number; trial_until: string | null;
   balance: number; titles: EarnedTitle[]; event_active: boolean;
+  /**
+   * Hari 1-6 yang hadiah UANG-nya sudah pernah masuk ke akun ini (siklus mana pun).
+   * Setelah streak putus dan progres mengulang, hari-hari ini tetap bisa di-check-in
+   * tetapi tanpa uang — hadiah harian hanya diterima sekali per akun.
+   */
+  paid_days?: number[];
+  /** Nominal yang akan masuk pada check-in berikutnya (0 = check-in tanpa hadiah uang). */
+  next_cash?: number;
 }
-export interface StreakResult { state: StreakState; reward: { day: number; cash: number; trial_until: string | null } | null }
+export interface StreakResult { state: StreakState; reward: { day: number; cash: number; already_paid?: boolean; trial_until: string | null } | null }
 export async function streakCall(action: 'get' | 'claim' | 'ack_reset', version?: number): Promise<StreakResult> {
   const token = localStorage.getItem('token') || '';
   const response = await fetch(`${MAIN_API}/daily_streak.php`, { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, token, ...(version === undefined ? {} : { version }) }) });

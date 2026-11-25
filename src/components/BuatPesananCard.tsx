@@ -24,6 +24,7 @@ import AiAssistantCard from './AiAssistantCard';
 import LinkPreview from './LinkPreview';
 import { applyMarkup, formatRate, fetchServices, isCustomCommentService, type ServiceItem } from '../services/servicesApi';
 import { placeOrder } from '../services/checkoutApi';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import { brandForCategory, brandIconUrl } from '../constants';
 
 
@@ -252,6 +253,17 @@ const COLOR = {
 };
 
 interface Option { value: string; label: string; iconHint?: string }
+
+/**
+ * Pilihan server di form order. `value` = nomor server INTERNAL (yang dikirim ke order.php),
+ * `label` = nama yang dilihat user. Server yang ditutup admin (site_settings.closedServers,
+ * diatur di Admin → Server Panel) disaring keluar dari daftar ini.
+ */
+const SERVER_CHOICES: Option[] = [
+  { value: '1', label: 'Server 1 — Ringkas & Stabil' },
+  { value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap' },
+  { value: '4', label: 'Server 3 — Lengkap & Murah' },
+];
 
 /** Kunci pembanding kategori: huruf kecil + spasi tunggal (pengelompokan stabil). */
 function normCategory(value: string): string {
@@ -521,6 +533,26 @@ export default function BuatPesananCard() {
   const [ordering, setOrdering] = useState(false);
   const [orderNotice, setOrderNotice] = useState<{ ok: boolean; message: string } | null>(null);
   const [successInfo, setSuccessInfo] = useState<SuccessInfo | null>(null);
+  const { settings } = useSiteSettings();
+  /** Server yang order-nya ditutup admin — tidak bisa dipilih & layanannya tidak ditampilkan. */
+  const closedServers = useMemo(
+    () => new Set((settings.closedServers || []).map((v) => String(v))),
+    [settings.closedServers],
+  );
+  const serverOptions = useMemo(
+    () => SERVER_CHOICES.filter((o) => !closedServers.has(o.value)),
+    [closedServers],
+  );
+
+  // Server yang baru saja ditutup admin: pindahkan user ke server lain yang masih terbuka.
+  useEffect(() => {
+    if (!closedServers.has(String(server))) return;
+    const next = SERVER_CHOICES.find((o) => !closedServers.has(o.value));
+    if (!next) return;
+    setLoading(true);setServices([]);setCategory('');setServiceId('');setTarget('');setQuantity('');setComments('');setDescriptionRead(false);setTargetConfirmed(false);setSuccessInfo(null);
+    setOrderNotice({ ok: false, message: 'Server yang dipilih sedang ditutup sementara oleh admin. Pesanan dialihkan ke server lain yang masih terbuka.' });
+    setServer(next.value === '2' ? 2 : next.value === '4' ? 4 : 1);
+  }, [closedServers, server]);
 
   useEffect(() => {
     let alive = true;
@@ -530,7 +562,7 @@ export default function BuatPesananCard() {
       if (result.ok) {
         setServices(result.services);
         // Pilih otomatis layanan dari ?service=ID (mis. dari tombol keranjang di Overview)
-        const pre = preselectId ? result.services.find((x) => x.id === preselectId || x.name === preselectId) : undefined;
+        const pre = preselectId ? result.services.find((x) => (x.id === preselectId || x.name === preselectId) && !closedServers.has(String(x.source))) : undefined;
         if (pre) {
           setCategory(normCategory(pre.category));
           setServiceId(pre.id);
@@ -542,11 +574,20 @@ export default function BuatPesananCard() {
     return () => { alive = false; };
   }, [server]);
 
+  /**
+   * Layanan yang boleh dipesan: buang layanan milik server yang ditutup admin
+   * (mis. layanan Google Maps Review yang digabung ke daftar Server 1).
+   */
+  const openServices = useMemo(
+    () => services.filter((s) => !closedServers.has(String(s.source))),
+    [services, closedServers],
+  );
+
   // Kunci kategori dinormalisasi (huruf kecil + spasi tunggal) supaya varian
   // "Audiomack"/"Audiomack " /"AUDIOMACK" tetap SATU kelompok, tidak terpisah.
   const categoryOptions = useMemo<Option[]>(() => {
     const seen = new Map<string, string>();
-    for (const item of services) {
+    for (const item of openServices) {
       const raw = item.category.trim();
       if (!raw) continue;
       const key = normCategory(raw);
@@ -555,10 +596,10 @@ export default function BuatPesananCard() {
     return Array.from(seen.entries())
       .sort((a, b) => a[1].localeCompare(b[1]))
       .map(([value, label]) => ({ value, label }));
-  }, [services]);
-  const filteredServices = useMemo(() => category ? services.filter((s) => normCategory(s.category) === category) : services, [services, category]);
+  }, [openServices]);
+  const filteredServices = useMemo(() => category ? openServices.filter((s) => normCategory(s.category) === category) : openServices, [openServices, category]);
   const serviceOptions = useMemo<Option[]>(() => filteredServices.map((s) => ({ value: s.id, label: s.name, iconHint: `${s.name} ${s.category}` })), [filteredServices]);
-  const selected = useMemo(() => services.find((s) => s.id === serviceId) || null, [services, serviceId]);
+  const selected = useMemo(() => openServices.find((s) => s.id === serviceId) || null, [openServices, serviceId]);
   useEffect(() => { setDescriptionRead(false);setTargetConfirmed(false); }, [serviceId, category]);
   useEffect(() => { setTargetConfirmed(false); }, [target]);
   const description = selected ? parseDescription(selected.description) : null;
@@ -738,7 +779,7 @@ const handleOrder = async () => {
         {/* ============ KIRI: input pesanan ============ */}
         <div className="space-y-5">
         <FormSection label="Server">
-          <CustomSelect id="buat-pesanan-server" wrapText value={String(server)} options={[{ value: '1', label: 'Server 1 — Ringkas & Stabil' }, { value: '2', label: 'Server 2 — Baru · Layanan Lebih Lengkap' }, { value: '4', label: 'Server 3 — Lengkap & Murah' }]} disabled={ordering} onChange={(value) => {
+          <CustomSelect id="buat-pesanan-server" wrapText value={String(server)} options={serverOptions} disabled={ordering || !serverOptions.length} placeholder={serverOptions.length ? 'Pilih...' : 'Semua server sedang ditutup'} onChange={(value) => {
             if (value === String(server)) return;
             setLoading(true);setServices([]);setCategory('');setServiceId('');setTarget('');setQuantity('');setComments('');setDescriptionRead(false);setTargetConfirmed(false);setSuccessInfo(null);setServer(value === '2' ? 2 : value === '4' ? 4 : 1);
           }} />

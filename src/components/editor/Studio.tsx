@@ -37,7 +37,7 @@ const SHEET_ITEMS: { id: LeftTab | 'Properties'; icon: typeof Film; label: strin
   { id: 'Properties', icon: SlidersHorizontal, label: 'Properties' },
 ];
 
-export default function Studio() {
+export default function Studio({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const { leftW, setLeftW, rightW, setRightW, tlH, setTlH, sheet, setSheet, leftTab, setLeftTab } = useEditor();
   const narrow = useNarrow();
   const [busy, setBusy] = useState(false);
@@ -150,15 +150,17 @@ export default function Studio() {
   const tlHeight = tlH || Math.round(viewportH * 0.34);
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden" style={{ background: C.app, color: C.text, fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <TopBar />
+    /* h-full/w-full (bukan 100vh): studio mengisi layer fixed inset-0 di PlaygroundPage sehingga
+       bar navigasi bawah tidak terdorong keluar layar oleh address bar browser di HP. */
+    <div className="flex h-full w-full flex-col overflow-hidden" style={{ background: C.app, color: C.text, fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <TopBar onOpenMenu={onOpenMenu} />
 
       {narrow ? (
         <>
           {/* Layout sederhana: player atas, timeline bawah, panel jadi bottom sheet */}
           <div className="min-h-0 flex-1"><Player /></div>
           <div style={{ height: Math.min(tlHeight, viewportH * 0.42) }}><Timeline /></div>
-          <nav className="flex shrink-0 items-center gap-1 overflow-x-auto border-t px-2 py-1.5 ed-scroll-x" style={{ background: C.panel, borderColor: C.border }}>
+          <nav className="flex shrink-0 items-center gap-1 overflow-x-auto border-t px-2 py-1.5 pb-[max(6px,env(safe-area-inset-bottom))] ed-scroll-x" style={{ background: C.panel, borderColor: C.border }}>
             {SHEET_ITEMS.map((it) => {
               const Icon = it.icon;
               const on = sheet !== '' && (it.id === 'Properties' ? sheet === 'right' : sheet === 'left' && leftTab === it.id);
@@ -174,7 +176,7 @@ export default function Studio() {
                       setSheet(sheet === 'left' && leftTab === it.id ? '' : 'left');
                     }
                   }}
-                  className="flex shrink-0 flex-col items-center gap-0.5 rounded-[4px] px-2 py-1"
+                  className="flex min-h-[46px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-[4px] px-2.5 py-1"
                   style={{ background: on ? C.raised : 'transparent', color: on ? C.accent : C.text2 }}
                 >
                   <Icon className="h-4 w-4" strokeWidth={2} />
@@ -189,7 +191,9 @@ export default function Studio() {
                 <span className="text-[12px] font-bold">{sheet === 'right' ? 'Properties' : leftTab}</span>
                 <button type="button" aria-label="Tutup panel" onClick={() => setSheet('')} style={{ color: C.text2 }}><X className="h-4 w-4" strokeWidth={2} /></button>
               </div>
-              <div className="max-h-[54vh] overflow-hidden">
+              {/* Tinggi pasti (bukan max-h) → panel di dalamnya punya area scroll sendiri,
+                  jadi daftar media/properties tidak terpotong dan tetap bisa digeser di HP. */}
+              <div className="h-[54vh] overflow-hidden">
                 {sheet === 'right' ? <Inspector /> : <MediaPanel />}
               </div>
             </div>

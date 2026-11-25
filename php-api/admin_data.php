@@ -9,6 +9,8 @@
  *   user_balance  {id, amount, note}               → tambah (+) / kurangi (−) saldo, tercatat di admin_balance_log
  *   profit                                         → penghasilan (SMM + Agen AI + Upgrade), transaksi, deposit masuk
  *   deposits      {limit?}                         → deposit terbaru semua user (maks 10)
+ * Setiap request admin juga memicu dr_maybe_run() (data_retention_lib.php): pembersihan rutin
+ * riwayat order & deposit tanpa cron — tahunan (semua data > 1 tahun) dan bulanan (data gagal > 1 bulan).
  *
  * Penghasilan = markup SMM (harga web utama − harga asli provider, per order SMM; tabel smm_order_profit, diisi order.php)
  *             + sewa Agen AI (harga dasar paket; tanpa markup child panel — itu milik pemilik panel)
@@ -26,6 +28,7 @@ error_reporting(0);
 
 require 'configdb.php';
 require_once __DIR__ . '/child_panel_lib.php'; // cp_q, cp_require_admin, cp_str
+require_once __DIR__ . '/data_retention_lib.php'; // dr_maybe_run: pembersihan rutin riwayat (tanpa cron)
 if (isset($conn) && $conn instanceof mysqli) $conn->set_charset('utf8mb4');
 
 function ad_out($d, $c = 200) { http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); exit; }
@@ -35,6 +38,11 @@ $in = json_decode(file_get_contents('php://input'), true);
 if (!is_array($in)) ad_out(['ok' => false, 'message' => 'Body JSON tidak valid.'], 400);
 $adminId = cp_require_admin($conn, $in['token'] ?? '', function ($m, $c) { ad_out(['ok' => false, 'message' => $c === 403 ? 'Hanya admin yang boleh membuka halaman ini.' : $m], $c); });
 $action = (string)($in['action'] ?? '');
+
+/* Pembersihan rutin data riwayat (tanpa cron): tiap admin membuka halaman data, jadwal yang
+   sudah jatuh tempo dijalankan — maksimal sekali per bulan (data gagal) dan sekali per tahun
+   (semua riwayat > 1 tahun). Tidak pernah menggagalkan halaman walau tabelnya belum ada. */
+dr_maybe_run($conn);
 const AD_PAGE = 25;
 
 /* ---------- util skema ---------- */

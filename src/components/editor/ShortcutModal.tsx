@@ -15,7 +15,7 @@ export default function ShortcutModal() {
   if (modal !== 'shortcut') return null;
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Shortcut">
-      <div className="w-full max-w-[360px] overflow-hidden rounded-[6px] border shadow-2xl" style={{ background: C.panel, borderColor: C.border }}>
+      <div className="w-full max-w-[360px] max-h-[90vh] overflow-y-auto ed-scroll rounded-[6px] border shadow-2xl" style={{ background: C.panel, borderColor: C.border }}>
         <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: C.border }}>
           <h3 className="text-[13px] font-bold" style={{ color: C.text }}>Shortcut</h3>
           <button type="button" aria-label="Tutup dialog shortcut" onClick={() => setModal('')} style={{ color: C.text2 }}>

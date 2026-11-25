@@ -10,13 +10,14 @@ export default function TimelineToolbar() {
   const [tool, setTool] = useState(false);
   const [toolName, setToolName] = useState('Select');
   return (
-    <div className="flex h-10 shrink-0 items-center gap-1 px-2" style={{ background: '#151518', borderBottom: `1px solid ${C.border}` }}>
+    /* overflow-x-auto: di layar sempit semua tool tetap bisa dijangkau dengan menggeser toolbar. */
+    <div className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto px-2 ed-scroll-x [&>*]:shrink-0" style={{ background: '#151518', borderBottom: `1px solid ${C.border}` }}>
       {/* Kiri: tools */}
       <span className="relative flex items-center">
         <button
           type="button"
           onClick={() => setTool((t) => !t)}
-          className="flex h-7 items-center gap-1 rounded-[4px] px-2 text-[11px] font-semibold"
+          className="flex h-8 shrink-0 items-center gap-1 rounded-[4px] px-2 text-[11px] font-semibold lg:h-7"
           style={{ background: C.raised, color: C.accent, boxShadow: `inset 0 0 0 1px ${C.border}` }}
         >
           <MousePointer2 className="h-3.5 w-3.5" strokeWidth={2.2} /> {toolName}

@@ -36,7 +36,13 @@ try {
   if(!$existing){
    if(sr_completed($conn,$uid))throw new DomainException('Event sudah kamu selesaikan.');
    $day=(int)$row['streak_day']+1;
-   $cash=$day<=6?$day*10:0;$until=null;
+   // Hadiah uang harian hanya bisa diterima SEKALI per akun. Bila streak putus lalu progres
+   // mengulang dari hari 1, check-in tetap tercatat & maju, tetapi hari yang uangnya sudah
+   // pernah masuk dibayar 0. Hari yang belum pernah diterima (misalnya claim hari berikutnya
+   // dulu gagal) tetap dibayar penuh. Hari 7 (trial + title) dijaga sr_completed() di atas.
+   $paidDays=sr_paid_days($conn,$uid);
+   $alreadyPaid=$day<=6&&in_array($day,$paidDays,true);
+   $cash=$alreadyPaid?0:($day<=6?$day*10:0);$until=null;
    if($day===7){
     $st=cp_q($conn,'SELECT expires_at FROM user_plus_trials WHERE user_id=? FOR UPDATE','i',$uid);$trial=$st->get_result()->fetch_assoc();$st->close();
     $base=$trial?max(time(),strtotime($trial['expires_at'].' UTC')):time();$until=gmdate('Y-m-d H:i:s',$base+86400);
@@ -47,7 +53,7 @@ try {
    if($cash){cp_q($conn,'UPDATE users SET balance=balance+? WHERE id=?','ii',$cash,$uid)->close();$u['balance']+=$cash;}
    cp_q($conn,'UPDATE user_daily_streaks SET last_checkin=?,streak_day=?,cycle_no=? WHERE user_id=?','siii',$today,$day,(int)$row['cycle_no'],$uid)->close();
    $row['last_checkin']=$today;$row['streak_day']=$day;
-   $reward=['day'=>$day,'cash'=>$cash,'trial_until'=>$until?str_replace(' ','T',$until).'Z':null];
+   $reward=['day'=>$day,'cash'=>$cash,'already_paid'=>$alreadyPaid,'trial_until'=>$until?str_replace(' ','T',$until).'Z':null];
   }
  }
  sr_newyear_title($conn,$uid);

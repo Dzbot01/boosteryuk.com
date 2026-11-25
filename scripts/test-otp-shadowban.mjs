@@ -47,6 +47,35 @@ assert.match(otp, /src="\/images\/shadowban-contoh-2\.png"/, 'gambar contoh 2 di
 assert.ok(fs.existsSync('public/images/shadowban-contoh-1.jpg'), 'aset gambar contoh 1 ada');
 assert.ok(fs.existsSync('public/images/shadowban-contoh-2.png'), 'aset gambar contoh 2 ada');
 
+/* 2b. Kartu shadow ban pindah ke atas (sebelum card order), tertutup default, tombol buka di kanan */
+const iShadow = otp.indexOf('aria-label="Keterangan penting dan penjelasan shadow ban"');
+const iOrderCard = otp.indexOf('Buat Pesanan Nomor');
+assert.ok(iShadow > -1 && iOrderCard > -1, 'kedua card ada');
+assert.ok(iShadow < iOrderCard, 'card shadow ban berada di atas card order OTP');
+assert.match(otp, /const \[shadowOpen, setShadowOpen\] = useState\(false\);/, 'penjelasan shadow ban tertutup secara default');
+assert.match(otp, /aria-expanded=\{shadowOpen\}/, 'tombol toggle melaporkan status buka/tutup');
+assert.match(otp, /aria-controls="otp-shadowban-body"/, 'tombol toggle menautkan isi card');
+assert.match(otp, /className=\{shadowOpen \? 'mt-2' : 'hidden'\}/, 'isi card disembunyikan saat tertutup');
+assert.match(otp, /Buka penjelasan/, 'label tombol saat tertutup');
+assert.match(otp, /Tutup penjelasan/, 'label tombol saat terbuka');
+/* Tombol toggle ada di sisi kanan card: satu baris flex bersama judul. */
+const headerBlock = otp.slice(iShadow, otp.indexOf('otp-shadowban-body'));
+assert.match(headerBlock, /<div className="flex items-center justify-between gap-3">/, 'header card: judul kiri, tombol kanan');
+assert.ok(headerBlock.indexOf('Apa itu Shadow Ban?') < headerBlock.indexOf('onClick={() => setShadowOpen((v) => !v)}'), 'tombol setelah judul (posisi kanan)');
+
+/* 2c. Riwayat nomor (sukses & batal) dipisah jadi card tabel di bawah card order, maks 10 baris */
+assert.match(otp, /const RIWAYAT_MAX = 10;/, 'batas 10 baris riwayat');
+assert.match(otp, /\.slice\(0, RIWAYAT_MAX\)/, 'riwayat dipotong maksimal 10 baris');
+assert.match(otp, /orders\.filter\(\(o\) => o\.status !== 'menunggu' && o\.status !== 'membeli'\)/, 'riwayat = pesanan yang sudah berakhir (sukses/batal)');
+const iRiwayat = otp.indexOf('aria-label="Riwayat nomor OTP"');
+assert.ok(iRiwayat > iOrderCard, 'card riwayat berada di bawah card order');
+assert.match(otp, /<h2[^>]*>Riwayat Nomor<\/h2>/, 'judul card riwayat nomor');
+assert.ok(!/orders\.slice\(0, 8\)/.test(otp), 'daftar riwayat lama di dalam card order sudah dihapus');
+assert.match(otp, /\{active\.map\(\(o\) => \{/, 'card order hanya menampilkan nomor aktif');
+assert.match(otp, /<table className="w-full min-w-\[760px\] border-collapse text-left text-\[12px\]">/, 'riwayat tampil sebagai tabel');
+assert.match(otp, /\['Waktu', 'Layanan', 'Negara', 'Nomor', 'Kode OTP', 'Harga', 'Status'\]/, 'kolom tabel riwayat');
+assert.ok(otp.indexOf('Belum ada nomor aktif') < iRiwayat, 'keterangan nomor aktif tetap di card order');
+
 /* 3. Bug audio Guri Booster: hanya play saat baru selesai login */
 const ses = read('src/components/GuriVoiceSession.tsx');
 assert.match(ses, /const JUST_LOGIN_KEY = 'by-just-logged-in'/, 'kunci penanda login baru');
@@ -64,4 +93,4 @@ const voice = read('src/services/boostyVoice.ts');
 assert.match(voice, /RETRY_WINDOW_MS = 60_000/, 'jendela retry gesture dibatasi');
 assert.match(voice, /Date\.now\(\) - retryStartedAt > RETRY_WINDOW_MS/, 'klik lama setelah login tidak membunyikan audio');
 
-console.log('PASS Order OTP: Syarat & ketentuan tetap, bullet promo + tautan qpanel dihapus, server disebut dengan domain panel (CHILD_PANEL_SUB), penjelasan shadow ban + 2 gambar contoh, audio Guri hanya saat baru login.');
+console.log('PASS Order OTP: card shadow ban di atas & tertutup default (tombol kanan), riwayat nomor (sukses/batal) jadi card tabel maks 10 baris di bawah card order, Syarat & ketentuan tetap, bullet promo + tautan qpanel dihapus, audio Guri hanya saat baru login.');

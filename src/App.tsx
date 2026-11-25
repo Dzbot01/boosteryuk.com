@@ -58,6 +58,7 @@ const AdminWebsitePage = lazy(() => import('./pages/admin/AdminWebsitePage'));
 const AdminServerPage = lazy(() => import('./pages/admin/AdminServerPage'));
 const AdminProfitPage = lazy(() => import('./pages/admin/AdminProfitPage'));
 const AdminBroadcastPage = lazy(() => import('./pages/admin/AdminBroadcastPage'));
+const AdminDatabasePage = lazy(() => import('./pages/admin/AdminDatabasePage'));
 
 export default function App() {
   return (
@@ -124,6 +125,7 @@ export default function App() {
           <Route path="admin/nexspace" element={<ProtectedRoute adminOnly><AdminNexSpacePage /></ProtectedRoute>} />
           <Route path="admin/withdraw" element={<ProtectedRoute adminOnly><AdminWithdrawPage /></ProtectedRoute>} />
           <Route path="admin/server" element={<ProtectedRoute adminOnly><AdminServerPage /></ProtectedRoute>} />
+          <Route path="admin/database" element={<ProtectedRoute adminOnly><AdminDatabasePage /></ProtectedRoute>} />
 
           <Route path="s/:slug" element={<StrukSuksesPage />} />
           <Route path="struk/:slug" element={<StrukSuksesPage />} />

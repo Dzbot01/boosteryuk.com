@@ -12,7 +12,6 @@ import {
   Lock,
   LoaderCircle,
   X,
-  Wand2,
   Menu as MenuIcon,
   LayoutGrid,
 } from 'lucide-react';
@@ -69,6 +68,12 @@ export default function PlaygroundPage() {
             <OverviewDesc />
           </div>
         </>
+      ) : menu === 'studio' ? (
+        /* Kartu Boosteryuk Studio memenuhi SELURUH layar begitu menu ini dibuka: tidak dibatasi
+           max-width/padding halaman, dan tombol menu Playground pindah ke TopBar studio. */
+        <div className="fixed inset-0 z-50 overflow-hidden bg-black">
+          <EditorStudio onOpenMenu={() => setDrawerOpen(true)} />
+        </div>
       ) : (
       <div className="mx-auto max-w-5xl px-4 pb-32 pt-24 sm:px-6">
         {/* Tombol menu — pojok KIRI atas, di bawah header (hitam, tanpa teks, ukuran sama dengan hamburger header) */}
@@ -80,13 +85,9 @@ export default function PlaygroundPage() {
           <MenuIcon className="h-6 w-6" strokeWidth={2.2} />
         </button>
 
-        {/* Judul menu aktif */}
+        {/* Judul menu aktif (badge teks "Playground" di atas judul sudah dihapus) */}
         <div className="mb-5">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ring-1 ring-slate-600/40 dark:bg-slate-800">
-            <Wand2 className="h-3 w-3 text-slate-300" strokeWidth={2.6} />
-            <span className="text-silver-shine">Playground</span>
-          </span>
-          <h1 className="mt-2 font-display text-2xl font-black tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+          <h1 className="font-display text-2xl font-black tracking-tight text-slate-900 sm:text-3xl dark:text-white">
             {active.label}
           </h1>
         </div>
@@ -112,7 +113,6 @@ export default function PlaygroundPage() {
           />
         )}
         {menu === 'tts' && <TtsPanel />}
-        {menu === 'studio' && <EditorStudio />}
         </div>
       </div>
       )}
