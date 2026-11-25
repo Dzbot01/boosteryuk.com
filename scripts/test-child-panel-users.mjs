@@ -14,6 +14,9 @@ assert.match(lib, /PRIMARY KEY \(child_panel_id, user_id\)/, 'satu baris aktivit
 assert.match(lib, /INSERT INTO child_panel_activity \(child_panel_id, user_id, first_seen, last_seen, visits, last_action\)/, 'aktivitas dicatat saat user login/order lewat panel');
 assert.match(lib, /function cp_user_count\(\$conn, \$panelId\)/, 'helper penghitung total user panel');
 assert.match(lib, /SELECT COUNT\(\*\) AS total FROM child_panel_activity WHERE child_panel_id = \?/, 'hitung user per panel (prepared statement)');
+assert.match(lib, /\$st = cp_q\(\$conn, 'SELECT COUNT\(\*\) AS total FROM child_panel_activity WHERE child_panel_id = \?', 'i', \(int\)\$panelId\);/, 'parameter panel di-bind sebagai integer');
+assert.match(lib, /\$row = \$st->get_result\(\)->fetch_assoc\(\);\s*\$st->close\(\);\s*return \(int\)\(\$row\['total'\] \?\? 0\);/, 'hasil diambil lewat get_result() lalu stmt ditutup');
+assert.ok(!/\$row = cp_q\(/.test(lib), 'mysqli_stmt dari cp_q() tidak boleh dipakai sebagai array (fatal di hosting)');
 assert.match(lib, /return \(int\)\(\$row\['total'\] \?\? 0\);/, 'selalu membalas angka');
 
 // Dikirim ke admin lewat aksi admin_detail (dan setelah admin_income_credit).
