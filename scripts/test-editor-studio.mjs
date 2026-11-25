@@ -7,7 +7,7 @@ const read = (p) => fs.readFileSync(p, 'utf8');
 const pg = read('src/pages/PlaygroundPage.tsx');
 assert.match(pg, /import EditorStudio from '\.\.\/components\/EditorStudio'/);
 assert.match(pg, /id: 'studio', label: 'Editor Studio'/, 'menu Editor Studio ada di Playground');
-assert.match(pg, /\['overview', 'hook', 'caption', 'tts', 'studio'\]/);
+assert.match(pg, /\['overview', 'hook', 'caption', 'tts', 'studio', 'gen3d'\]/);
 assert.match(pg, /menu === 'studio' \? \(/, 'studio punya cabang render sendiri (layar penuh)');
 assert.ok(!pg.includes('Wand2'), 'ikon badge Playground dihapus bersama teksnya');
 

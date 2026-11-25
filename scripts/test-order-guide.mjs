@@ -30,6 +30,18 @@ assert.match(ai,/import aiAgent from '\.\.\/assets\/ai-agent\.png'/,'ikon AI age
 assert.match(ai,/src=\{aiAgent\} alt="AI Agent"/,'avatar AI agent diganti gambar robot');
 assert.ok(fs.existsSync('src/assets/ai-agent.png'),'aset ai-agent.png ada');
 assert.ok(!ai.includes('guri.webp'),'avatar lama guri.webp tidak dipakai lagi');
+// Nama card asisten diganti dari "Guri Booster" menjadi "AI".
+assert.match(ai,/dark:text-white">\s*AI\s*<\/p>/,'nama card asisten diganti menjadi AI');
+assert.ok(!ai.includes('Guri Booster'),'nama lama Guri Booster tidak tampil lagi di card');
+const pe=fs.readFileSync('src/components/childpanel/PanelEditor.tsx','utf8');
+assert.match(pe,/Voice AI saat login/,'label admin suara mengikuti nama baru');
+// Ikon agen AI aktif di data riwayat = ikon yang dipakai card AI (ai-agent.png).
+const sewa=fs.readFileSync('src/pages/SewaAgenAiPage.tsx','utf8');
+assert.match(sewa,/import aiAgent from '\.\.\/assets\/ai-agent\.png'/,'halaman Sewa Agen AI memakai ikon card AI');
+assert.match(sewa,/Ikon agen aktif sama dengan ikon card AI/,'ikon agen aktif diganti ikon card AI');
+const saya=fs.readFileSync('src/pages/AgenAiSayaPage.tsx','utf8');
+assert.match(saya,/<img src=\{aiAgent\} alt="AI Agent"/,'header data riwayat agen memakai ikon card AI');
+assert.ok(!saya.includes('{ Bot,'),'ikon Bot lama di header riwayat agen diganti');
 assert.ok(card.includes('kemungkinan besar karena mereka perlu disetujui secara manual'),'pengantar panduan Instagram');
 for (const s of ['Buka Pengaturan dan Privasi.','Pilih Ikuti dan Undang Teman.','Nonaktifkan opsi Tandai untuk Ditinjau.','Jika baru Nonaktifkan opsi Tandai untuk Ditinjau, kamu bisa test pesan sedikit dulu.']) assert.ok(card.includes(s),`langkah IG: ${s}`);
 assert.ok(card.includes('masuk ke\n              kategori spam')||card.includes('masuk ke kategori spam'),'peringatan mis order spam');

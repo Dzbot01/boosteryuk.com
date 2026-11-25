@@ -8,6 +8,7 @@ import AiAssistantCard from '../components/AiAssistantCard';
 import { socialIconUrl } from '../constants';
 import { useSlides } from '../lib/useSlides';
 import { markupFactor } from '../lib/tenant';
+import aiAgent from '../assets/ai-agent.png';
 import { useAuth } from '../context/AuthContext';
 import { isValidEmail } from '../services/otp';
 import { orderAgent, resendAgentCode, getAgentStatus, getMyAgents, type MyAgent } from '../services/agentApi';
@@ -686,8 +687,13 @@ function MyActiveAgents({ refreshKey, onOpen }: { refreshKey: string; onOpen: ()
                 onClick={onOpen}
                 className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition-colors hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-emerald-700"
               >
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${aktif ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'}`}>
-                  <Bot className="h-5 w-5" strokeWidth={2.2} />
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${aktif ? 'bg-emerald-500/10' : 'bg-amber-500/10 text-amber-600'}`}>
+                  {aktif ? (
+                    /* Ikon agen aktif sama dengan ikon card AI (ai-agent.png). */
+                    <img src={aiAgent} alt="AI Agent" className="h-8 w-8 select-none object-contain" draggable={false} />
+                  ) : (
+                    <Bot className="h-5 w-5" strokeWidth={2.2} />
+                  )}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{a.nama_ai || 'Agen AI WhatsApp'}</span>

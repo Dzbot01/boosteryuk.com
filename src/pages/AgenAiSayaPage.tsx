@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot, Plus, RefreshCw, Copy, Check, CalendarClock, AlertTriangle, Loader2, Inbox } from 'lucide-react';
+import { Plus, RefreshCw, Copy, Check, CalendarClock, AlertTriangle, Loader2, Inbox } from 'lucide-react';
+import aiAgent from '../assets/ai-agent.png';
 import Seo from '../components/Seo';
 import { getMyAgents, resendAgentCode, type MyAgent } from '../services/agentApi';
 
@@ -89,8 +90,9 @@ export default function AgenAiSayaPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-500 text-white">
-            <Bot className="h-5 w-5" strokeWidth={2.2} />
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-500/10">
+            {/* Ikon agen aktif sama dengan ikon card AI (ai-agent.png). */}
+            <img src={aiAgent} alt="AI Agent" className="h-8 w-8 select-none object-contain" draggable={false} />
           </span>
           <div>
             <h1 className="text-[20px] font-bold leading-tight text-slate-900 dark:text-white">Agen AI Saya</h1>

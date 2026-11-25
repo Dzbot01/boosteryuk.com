@@ -155,10 +155,17 @@ if ($action === 'submit') {
     if ($stars < 1 || $stars > 5) rv_out(['ok' => false, 'message' => 'Bintang harus 1 sampai 5.'], 400);
     if (mb_strlen($review) > 500) rv_out(['ok' => false, 'message' => 'Ulasan maksimal 500 karakter.'], 400);
     try {
-        $st = cp_q($conn, "SELECT order_id, service_name, status, (" . RV_TYPE_SQL . ") AS kind FROM riwayat_pesanan WHERE user_id = ? AND order_id = ? LIMIT 1", 'is', $uid, $orderId);
+        // Alias tabel WAJIB 'r': RV_TYPE_SQL merujuk r.order_id/r.service_name — tanpa alias
+        // query melempar "Unknown column 'r.order_id'" lalu tertelan catch dan semua submit
+        // balasya "Pesanan tidak ditemukan milik akun ini." padahal riwayatnya ada.
+        $st = cp_q($conn, "SELECT r.order_id, r.service_name, r.status, (" . RV_TYPE_SQL . ") AS kind
+                           FROM riwayat_pesanan r WHERE r.user_id = ? AND r.order_id = ? LIMIT 1", 'is', $uid, $orderId);
         $row = $st->get_result()->fetch_assoc();
         $st->close();
-    } catch (Throwable $e) { $row = null; }
+    } catch (Throwable $e) {
+        rv_log('submit lookup: ' . $e->getMessage());
+        rv_out(['ok' => false, 'message' => 'Gagal memeriksa pesanan: ' . $e->getMessage()], 500);
+    }
     if (!$row) rv_out(['ok' => false, 'message' => 'Pesanan tidak ditemukan milik akun ini.'], 404);
     if ((string)$row['status'] !== 'selesai') rv_out(['ok' => false, 'message' => 'Penilaian dibuka setelah pesanan selesai.'], 409);
     if ((string)$row['kind'] !== 'smm') rv_out(['ok' => false, 'message' => 'Hanya pesanan layanan SMM (Server 1/2/3) yang dapat dinilai.'], 409);
