@@ -29,7 +29,12 @@ assert.match(lib, /if \(preg_match\('\/\^S2-\[0-9\]\+\$\/', \$id\)\) return 'nai
 assert.match(lib, /if \(preg_match\('\/\^\[0-9\]\+\$\/', \$id\)\) return 'fayupedia';/, 'ID angka = Server 1');
 assert.match(lib, /return 'selesai';/, 'completed → selesai');
 assert.match(lib, /return 'batal';/, 'canceled/refunded → batal');
-assert.match(lib, /\['pending', 'processing', 'in progress', 'inprogress', 'partial', 'queued', 'queue', 'proses'\], true\)\) return 'proses';/, 'status antrean provider → proses');
+assert.match(lib, /return 'proses'; \/\/ pending\/processing\/in progress\/partial\/queue\/sebutan lain = sedang berjalan/, 'sebutan status provider apa pun (selain selesai/batal/error) → proses, pesanan tidak menempel di pending');
+assert.match(lib, /strpos\(\$s, 'not found'\) !== false/, 'balasan error/"tidak ditemukan" tidak mengubah status');
+assert.match(lib, /\[\$GLOBALS\['BASE_URL'\] \. 'status', \$key\],/, 'status Server 1: bentuk path /status');
+assert.match(lib, /\[\$GLOBALS\['BASE_URL'\], \$key \+ \['action' => 'status'\]\],/, 'status Server 1: fallback param action=status');
+assert.match(lib, /order_status_log\.txt/, 'jejak sync untuk debugging di hosting');
+assert.match(lib, /function osx_sync_user_orders\(\$conn, \$userId, \$limit = 10\)/, 'sync pesanan satu user seusai respons riwayat');
 assert.match(lib, /UPDATE riwayat_pesanan SET status = \? WHERE order_id = \? AND status IN \('pending','proses'\)/, 'sync hanya menggeser pending/proses');
 assert.match(lib, /if \(\$last && \(time\(\) - strtotime\(\(string\)\$last\)\) < 3600\) return null; \/\/ belum 1 jam/, 'sweep maksimal 1 jam sekali');
 assert.match(lib, /WHERE status IN \('pending','proses'\) AND order_id NOT LIKE '%PENDING-%'/, 'sweep melewatkan ID slug PENDING');
@@ -38,17 +43,19 @@ assert.match(lib, /catch \(Throwable \$e\) \{\s*return null; \/\/ provider tak m
 
 /* ---------- 2. order.php: sync seketika + pesan profesional ---------- */
 const order = read('php-api/order.php');
-assert.match(order, /require_once __DIR__ \. '\/order_status_lib\.php';/, 'order.php memuat lib sync');
+assert.match(order, /if \(is_file\(__DIR__ \. '\/order_status_lib\.php'\)\) require_once __DIR__ \. '\/order_status_lib\.php';/, 'order.php memuat lib sync (toleran deploy parsial)');
+assert.match(order, /if \(function_exists\('osx_provider_of'\) && osx_provider_of\(\$provider_order_id\) !== null\)/, 'sync seketika dibungkus function_exists');
 assert.ok(!order.includes('Saldo provider kosong'), 'pesan saldo provider tidak lagi dikirim ke user');
 assert.match(order, /\$provider_msg = 'Order berhasil masuk antrian\. Status akan diperbarui otomatis\.';/, 'pesan profesional untuk order antrian');
 assert.match(order, /\$provider_order_id = 'PENDING-' \. time\(\) \. '-' \. \$user_id \. '-' \. random_int\(100, 999\);/, 'ID antrian unik berslug PENDING');
 assert.match(order, /order_pending_log\.txt/, 'alasan saldo provider hanya masuk log server');
-assert.match(order, /if \(osx_provider_of\(\$provider_order_id\) !== null\) \{\s*try \{\s*\$synced = osx_sync_order\(\$conn, \['order_id' => \$provider_order_id, 'status' => \$final_status\]\);/, 'cek status dijalankan otomatis begitu order tersimpan');
+assert.match(order, /if \(function_exists\('osx_provider_of'\) && osx_provider_of\(\$provider_order_id\) !== null\) \{\s*try \{\s*\$synced = osx_sync_order\(\$conn, \['order_id' => \$provider_order_id, 'status' => \$final_status\]\);/, 'cek status dijalankan otomatis begitu order tersimpan');
 assert.match(order, /"orderId" => \$provider_order_id, "status" => \$final_status,/, 'respons order menyertakan status terbaru');
 assert.ok(order.indexOf('osx_sync_order') < order.indexOf('// 7. EMAIL'), 'sync terjadi sebelum respons akhir');
 assert.match(order, /osx_maybe_run\(\$conn\);\s*\$conn->close\(\);/, 'sweep 1 jam ikut terpicu seusai order (setelah respons)');
 const rip = read('php-api/riwayat_pesanan.php');
-assert.match(rip, /if \(function_exists\('fastcgi_finish_request'\)\) fastcgi_finish_request\(\); else \{ @ob_flush\(\); flush\(\); \}\s*require_once __DIR__ \. '\/order_status_lib\.php';\s*osx_maybe_run\(\$conn\);/, 'riwayat user memicu sweep setelah respons dikirim');
+assert.match(rip, /osx_sync_user_orders\(\$conn, \$user_id\);/, 'riwayat user: pesanan user ini disinkron sesudah respons');
+assert.match(rip, /if \(function_exists\('osx_maybe_run'\)\) osx_maybe_run\(\$conn\);/, 'riwayat user memicu sweep setelah respons dikirim');
 
 /* ---------- 3. reviews.php ---------- */
 const rev = read('php-api/reviews.php');
@@ -71,7 +78,9 @@ assert.match(banner, /sudah selesai\./, 'teks notifikasi pesanan selesai');
 assert.match(banner, /<Link\s*to=\{`\/beri-penilaian\?order=/, 'tautan "disini" ke halaman Beri Penilaian');
 assert.match(banner, /className="font-bold text-emerald-700 underline underline-offset-2/, 'teks "disini" bergaris bawah');
 assert.match(banner, /by-review-banner-dismissed/, 'banner tetap muncul sampai ditutup (disimpan per ID)');
-assert.match(banner, /window\.setInterval\(load, 60_000\)/, 'banner mengikuti sync status otomatis');
+assert.match(banner, /window\.setInterval\(load, 30_000\)/, 'banner mengecek ulang tiap 30 detik');
+assert.match(banner, /document\.addEventListener\('visibilitychange', wake\);/, 'banner segar saat tab kembali aktif');
+assert.match(banner, /window\.addEventListener\('focus', wake\);/, 'banner segar saat jendela mendapat fokus');
 assert.match(read('src/components/Layout.tsx'), /<OrderReviewBanner \/>/, 'banner dipasang di Layout global');
 const app = read('src/App.tsx');
 assert.match(app, /<Route path="beri-penilaian" element=\{<ProtectedRoute><ReviewSubmitPage \/><\/ProtectedRoute>\} \/>/, 'route halaman penilaian');

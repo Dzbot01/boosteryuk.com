@@ -23,7 +23,8 @@ require 'config.php';
 require 'configdb.php';
 require_once __DIR__ . '/order_price.php';
 require_once __DIR__ . '/riwayat_schema.php'; // kolom target (link SMM) — riwayat_ensure_columns / riwayat_target_width
-require_once __DIR__ . '/order_status_lib.php'; // sinkron status otomatis (osx_*)
+// Lib sync status dimuat bila ada (deploy parsial tidak membuat order fatal).
+if (is_file(__DIR__ . '/order_status_lib.php')) require_once __DIR__ . '/order_status_lib.php';
 
 $data = json_decode(file_get_contents("php://input"), true);
 
@@ -271,7 +272,7 @@ if (!$saved) {
 // 6z. Sinkron status SEKETIKA setelah order tersimpan: 'pending' langsung mengikuti keadaan
 // asli di provider (proses/selesai/batal) — tidak menunggu diatur manual oleh admin.
 // ID slug PENDING dilewati (bukan ID provider asli).
-if (osx_provider_of($provider_order_id) !== null) {
+if (function_exists('osx_provider_of') && osx_provider_of($provider_order_id) !== null) {
     try {
         $synced = osx_sync_order($conn, ['order_id' => $provider_order_id, 'status' => $final_status]);
         if ($synced) $final_status = $synced;
@@ -347,5 +348,5 @@ if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); else { 
 sendResendEmail($user['email'], "✅ Pesanan #$provider_order_id Berhasil Dibuat", emailTemplate('user', $emailData));
 sendResendEmail("boosteryukid@gmail.com", "🚨 Order Baru #$provider_order_id", emailTemplate('admin', $emailData));
 // Pengecekan otomatis 1 jam sekali untuk semua pesanan pending/proses ber-ID valid (tanpa cron).
-osx_maybe_run($conn);
+if (function_exists('osx_maybe_run')) osx_maybe_run($conn);
 $conn->close();

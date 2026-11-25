@@ -35,9 +35,19 @@ export default function OrderReviewBanner() {
       setOrder((r.orders || []).find((o) => !dismissed.includes(o.order_id)) ?? null);
     };
     void load();
-    // Status pesanan disinkron otomatis (seketika + sweep 1 jam) → cek ulang berkala.
-    const t = window.setInterval(load, 60_000);
-    return () => { alive = false; window.clearInterval(t); };
+    // Status pesanan disinkron otomatis (seketika + sync per user + sweep 1 jam) → banner
+    // mengecek ulang tiap 30 detik DAN setiap tab kembali aktif/fokus, sehingga begitu
+    // admin/provider menandai selesai, banner langsung muncul tanpa reload halaman.
+    const t = window.setInterval(load, 30_000);
+    const wake = () => { if (document.visibilityState === 'visible') void load(); };
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('focus', wake);
+    return () => {
+      alive = false;
+      window.clearInterval(t);
+      document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('focus', wake);
+    };
   }, [user]);
 
   if (!order) return null;

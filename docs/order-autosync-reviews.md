@@ -11,9 +11,16 @@
   `riwayat_pesanan.php` (`fastcgi_finish_request`/flush dulu agar user tidak menunggu).
   Sweep menyinkronkan maksimal 50 pesanan `pending`/`proses` terbaru, sekali per jam lewat
   tabel `order_status_sweep_log`.
-- Pemetaan status provider: `completed/…` → `selesai`; `canceled/cancelled/refunded/…` →
-  `batal`; `pending/processing/in progress/partial/…` → `proses`. Respons tak dikenal atau
-  provider diam = status dibiarkan, dicoba lagi jam berikutnya.
+- Pemetaan status provider: `completed/…` → `selesai`; `canceled/cancelled/refunded/failed` →
+  `batal`; **sebutan lain apa pun** (pending/processing/in progress/partial/queue/dll) → `proses`,
+  supaya pesanan tidak menempel di `pending` hanya karena sebutan provider berbeda; balasan
+  bernada error (`not found`, `invalid`, `error`, …) = status dibiarkan.
+- Status Server 1 dicoba dua bentuk permintaan (path `/status`, lalu param `action=status`).
+- Sync tambahan per user: seusai respons `riwayat_pesanan.php`, pesanan `pending`/`proses` milik
+  user itu disinkronkan (maks 10) sehingga reload riwayat langsung menampilkan status baru.
+- Jejak debugging: `order_status_log.txt` (id, balasan mentah provider, hasil pemetaan).
+- Deploy parsial aman: `order.php`/`riwayat_pesanan.php` memuat lib hanya bila berkasnya ada
+  (`is_file` + `function_exists`).
 
 ## 2. Order gagal karena saldo provider = tetap profesional
 
@@ -34,7 +41,8 @@
   **disini*** — "disini" bergaris bawah menuju `/beri-penilaian?order=<id>`.
 - Banner tetap muncul sampai user menutupnya lewat tombol silang kecil pojok kanan atas;
   penutupan disimpan per ID di `localStorage['by-review-banner-dismissed']`. Dicek ulang
-  tiap 60 detik mengikuti sync status otomatis.
+  tiap **30 detik** dan setiap tab kembali aktif / jendela mendapat fokus, sehingga status
+  yang baru diubah admin/provider langsung memunculkan banner tanpa reload halaman.
 
 ## 4. Halaman Beri Penilaian (`/beri-penilaian`, login)
 
