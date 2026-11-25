@@ -51,43 +51,103 @@ if (!function_exists('osx_is_pending_slug')) {
         @file_put_contents(__DIR__ . '/order_status_log.txt', date('Y-m-d H:i:s') . ' ' . $text . "\n", FILE_APPEND);
     }
 
-    function osx_fayupedia_status($num) {
+    /**
+     * Cari string status di respons JSON provider dalam bentuk apa pun:
+     * kunci order_status/status berisi string (bool true diabaikan), termasuk
+     * bila tersarang di dalam objek/array (maks 3 level).
+     */
+    function osx_extract_status($j, $depth = 0) {
+        if (!is_array($j) || $depth > 3) return null;
+        foreach (['order_status', 'status'] as $want) {
+            if (isset($j[$want]) && is_string($j[$want]) && $j[$want] !== '') return $j[$want];
+        }
+        foreach ($j as $v) {
+            if (is_array($v)) { $r = osx_extract_status($v, $depth + 1); if ($r !== null) return $r; }
+        }
+        return null;
+    }
+
+    /**
+     * Status Server 1 lewat PROXY yang SAMA dengan halaman Cek Status Pesanan:
+     * POST JSON {id} ke /api/status.php → {status:true, orders:{id:{order_status,…}}}.
+     * Proxy ini sudah terbukti bekerja di produksi, jadi sync tidak menebak bentuk API.
+     */
+    function osx_status_via_proxy($id, $file = 'status.php') {
+        $url = 'https://boosteryuk.com/api/' . $file;
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => 1,
+            CURLOPT_POSTFIELDS => json_encode(['id' => (string)$id]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+        ]);
+        $body = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($code !== 200) return null;
+        $j = json_decode((string)$body, true);
+        if (!is_array($j) || ($j['status'] ?? null) === false) return null;
+        $entry = is_array($j['orders'] ?? null) ? ($j['orders'][(string)$id] ?? null) : null;
+        if (is_array($entry)) { $st = osx_extract_status($entry); if ($st !== null) return $st; }
+        return osx_extract_status($j);
+    }
+
+    function osx_fayupedia_status($num, $maxTries = 4) {
+        // Cadangan bila proxy Cek Status tak terjangkau: panggil API provider langsung.
         // config.php ($API_ID,$API_KEY,$BASE_URL) dimuat pemanggil (order.php); bila lib dipanggil
         // dari endpoint lain, muat sekali di scope fungsi ini.
         if (!isset($GLOBALS['BASE_URL']) && is_file(__DIR__ . '/config.php')) include_once __DIR__ . '/config.php';
         if (empty($GLOBALS['BASE_URL']) || empty($GLOBALS['API_KEY'])) return null;
-        $key = ['api_id' => (int)($GLOBALS['API_ID'] ?? 0), 'api_key' => $GLOBALS['API_KEY'], 'order' => $num];
-        // Dua bentuk permintaan yang umum dipakai panel SMM: path /status dan param action=status.
+        $auth = ['api_id' => (int)($GLOBALS['API_ID'] ?? 0), 'api_key' => $GLOBALS['API_KEY']];
+        // Beberapa bentuk permintaan status yang umum dipakai panel SMM.
         $tries = [
-            [$GLOBALS['BASE_URL'] . 'status', $key],
-            [$GLOBALS['BASE_URL'], $key + ['action' => 'status']],
+            [$GLOBALS['BASE_URL'] . 'status', $auth + ['order' => $num]],
+            [$GLOBALS['BASE_URL'] . 'status', $auth + ['id' => $num]],
+            [$GLOBALS['BASE_URL'], $auth + ['action' => 'status', 'order' => $num]],
+            [$GLOBALS['BASE_URL'], $auth + ['action' => 'status', 'id' => $num]],
         ];
-        foreach ($tries as [$url, $fields]) {
+        $lastBody = '';
+        foreach (array_slice($tries, 0, max(1, min(4, (int)$maxTries))) as [$url, $fields]) {
             $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_POST => 1,
                 CURLOPT_POSTFIELDS => http_build_query($fields),
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 10,
+                CURLOPT_TIMEOUT => 8,
             ]);
             $body = curl_exec($ch);
             curl_close($ch);
-            $j = json_decode((string)$body, true);
-            if (!is_array($j)) continue;
-            $st = $j['status'] ?? $j['order_status'] ?? (is_array($j['order'] ?? null) ? ($j['order']['status'] ?? null) : null);
-            if (is_string($st) && $st !== '') return $st;
-            if ($st === false || $st === null) continue; // coba bentuk berikutnya
+            $lastBody = (string)$body;
+            $j = json_decode($lastBody, true);
+            if (is_array($j)) {
+                $st = osx_extract_status($j);
+                if ($st !== null) return $st;
+                continue;
+            }
+            // Respons non-JSON: coba tarik sebutan status langsung dari teks.
+            if (preg_match('/(order_status|status)["\s:=]*["\s:]*([A-Za-z][A-Za-z ]{2,24})/i', $lastBody, $m)) return trim($m[2]);
         }
+        osx_log("fayupedia status gagal id=$num body=" . str_replace(["\r", "\n"], ' ', substr($lastBody, 0, 300)));
         return null;
     }
 
     /** Ambil status mentah satu pesanan dari providernya; null = gagal/tidak dikenal (status tidak diubah). */
-    function osx_fetch_status($id) {
+    function osx_fetch_status($id, $maxTries = 4) {
         $prov = osx_provider_of($id);
         if ($prov === null) return null;
         try {
+            // 1) Fungsi cek status yang SAMA dengan halaman Cek Status Pesanan: proxy PHP
+            //    sesuai prefix ID (status.php / naizop_status.php / medanpedia_status.php /
+            //    smmgen_status.php) dipanggil lewat HTTP dengan body JSON {id}.
+            $proxyFile = ['fayupedia' => 'status.php', 'naizop' => 'naizop_status.php',
+                'medanpedia' => 'medanpedia_status.php', 'smmgen' => 'smmgen_status.php'][$prov];
+            $st = osx_status_via_proxy($id, $proxyFile);
+            if ($st !== null) return $st;
+            if ($maxTries <= 1) return null;
+            // 2) Cadangan: panggil API provider langsung dari lib.
             if ($prov === 'fayupedia') {
-                return osx_fayupedia_status((string)$id);
+                return osx_fayupedia_status((string)$id, $maxTries);
             }
             if ($prov === 'naizop') {
                 require_once __DIR__ . '/naizop_lib.php';
@@ -121,10 +181,10 @@ if (!function_exists('osx_is_pending_slug')) {
      * $row minimal: ['id'=>int, 'order_id'=>string, 'status'=>string].
      * Mengembalikan status baru atau null bila tidak berubah/tidak bisa dicek.
      */
-    function osx_sync_order($conn, $row) {
+    function osx_sync_order($conn, $row, $maxTries = 4) {
         $oid = (string)($row['order_id'] ?? '');
         if (osx_provider_of($oid) === null) return null; // slug PENDING & ID tak valid dilewati
-        $raw = osx_fetch_status($oid);
+        $raw = osx_fetch_status($oid, $maxTries);
         $map = osx_map_status($raw);
         osx_log("sync id=$oid raw=" . json_encode($raw) . " map=" . json_encode($map) . " lama=" . json_encode($row['status']));
         if ($map === null || $map === (string)$row['status']) return null;

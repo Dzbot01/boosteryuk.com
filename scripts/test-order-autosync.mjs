@@ -31,8 +31,17 @@ assert.match(lib, /return 'selesai';/, 'completed → selesai');
 assert.match(lib, /return 'batal';/, 'canceled/refunded → batal');
 assert.match(lib, /return 'proses'; \/\/ pending\/processing\/in progress\/partial\/queue\/sebutan lain = sedang berjalan/, 'sebutan status provider apa pun (selain selesai/batal/error) → proses, pesanan tidak menempel di pending');
 assert.match(lib, /strpos\(\$s, 'not found'\) !== false/, 'balasan error/"tidak ditemukan" tidak mengubah status');
-assert.match(lib, /\[\$GLOBALS\['BASE_URL'\] \. 'status', \$key\],/, 'status Server 1: bentuk path /status');
-assert.match(lib, /\[\$GLOBALS\['BASE_URL'\], \$key \+ \['action' => 'status'\]\],/, 'status Server 1: fallback param action=status');
+assert.match(lib, /\[\$GLOBALS\['BASE_URL'\] \. 'status', \$auth \+ \['order' => \$num\]\],/, 'status Server 1: path /status + param order');
+assert.match(lib, /\[\$GLOBALS\['BASE_URL'\] \. 'status', \$auth \+ \['id' => \$num\]\],/, 'status Server 1: path /status + param id');
+assert.match(lib, /\[\$GLOBALS\['BASE_URL'\], \$auth \+ \['action' => 'status', 'order' => \$num\]\],/, 'status Server 1: action=status + order');
+assert.match(lib, /\[\$GLOBALS\['BASE_URL'\], \$auth \+ \['action' => 'status', 'id' => \$num\]\],/, 'status Server 1: action=status + id');
+assert.match(lib, /function osx_extract_status\(\$j, \$depth = 0\)/, 'status dicari rekursif di respons bentuk apa pun');
+assert.match(lib, /function osx_status_via_proxy\(\$id, \$file = 'status\.php'\)/, 'proxy cek status dipakai dari server');
+assert.match(lib, /\$url = 'https:\/\/boosteryuk\.com\/api\/' \. \$file;/, 'proxy dipanggil di host pusat (database & provider sama)');
+assert.match(lib, /\$proxyFile = \['fayupedia' => 'status\.php', 'naizop' => 'naizop_status\.php',/, 'dispatch proxy sama dengan halaman Cek Status (per prefix ID)');
+assert.match(lib, /\$st = osx_status_via_proxy\(\$id, \$proxyFile\);/, 'percobaan pertama = fungsi cek status halaman Cek Status');
+assert.match(lib, /if \(isset\(\$j\[\$want\]\) && is_string\(\$j\[\$want\]\) && \$j\[\$want\] !== ''\) return \$j\[\$want\];/, 'nilai bool pada kunci status diabaikan');
+assert.match(lib, /osx_log\("fayupedia status gagal id=\$num body="/, 'balasan mentah dicatat bila semua bentuk gagal');
 assert.match(lib, /order_status_log\.txt/, 'jejak sync untuk debugging di hosting');
 assert.match(lib, /function osx_sync_user_orders\(\$conn, \$userId, \$limit = 10\)/, 'sync pesanan satu user seusai respons riwayat');
 assert.match(lib, /UPDATE riwayat_pesanan SET status = \? WHERE order_id = \? AND status IN \('pending','proses'\)/, 'sync hanya menggeser pending/proses');
@@ -49,7 +58,7 @@ assert.ok(!order.includes('Saldo provider kosong'), 'pesan saldo provider tidak 
 assert.match(order, /\$provider_msg = 'Order berhasil masuk antrian\. Status akan diperbarui otomatis\.';/, 'pesan profesional untuk order antrian');
 assert.match(order, /\$provider_order_id = 'PENDING-' \. time\(\) \. '-' \. \$user_id \. '-' \. random_int\(100, 999\);/, 'ID antrian unik berslug PENDING');
 assert.match(order, /order_pending_log\.txt/, 'alasan saldo provider hanya masuk log server');
-assert.match(order, /if \(function_exists\('osx_provider_of'\) && osx_provider_of\(\$provider_order_id\) !== null\) \{\s*try \{\s*\$synced = osx_sync_order\(\$conn, \['order_id' => \$provider_order_id, 'status' => \$final_status\]\);/, 'cek status dijalankan otomatis begitu order tersimpan');
+assert.match(order, /\$synced = osx_sync_order\(\$conn, \['order_id' => \$provider_order_id, 'status' => \$final_status\], 2\);/, 'cek status seketika (2 percobaan cepat) begitu order tersimpan');
 assert.match(order, /"orderId" => \$provider_order_id, "status" => \$final_status,/, 'respons order menyertakan status terbaru');
 assert.ok(order.indexOf('osx_sync_order') < order.indexOf('// 7. EMAIL'), 'sync terjadi sebelum respons akhir');
 assert.match(order, /osx_maybe_run\(\$conn\);\s*\$conn->close\(\);/, 'sweep 1 jam ikut terpicu seusai order (setelah respons)');
@@ -134,6 +143,7 @@ try {
     if (body?.action === 'submit') { submitted = body; return new Response(JSON.stringify({ ok: true })); }
     return new Response(JSON.stringify({ ok: true, reviews: [] }));
   };
+  const mainFetch = globalThis.fetch;
 
   /* banner muncul, link disini, ditutup lewat silang */
   root = createRoot(document.getElementById('root'));
@@ -148,6 +158,25 @@ try {
   assert.equal(document.getElementById('root').textContent, '', 'banner hilang setelah ditutup');
   assert.ok(JSON.parse(localStorage.getItem('by-review-banner-dismissed')).includes('123456'), 'penutupan disimpan per ID');
   await act(async () => root.unmount()); root = null;
+
+  /* banner jalur cadangan: reviews.php 404 → riwayat pesanan selesai tetap memunculkan banner */
+  localStorage.removeItem('by-review-banner-dismissed');
+  const fallbackFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes('riwayat_pesanan.php')) return new Response(JSON.stringify({ ok: true, orders: [
+      { order_id: '777001', service_name: 'Followers Instagram', status: 'selesai' },
+      { order_id: '777002', service_name: 'Like TikTok', status: 'proses' },
+    ] }));
+    return new Response(JSON.stringify({ ok: false, message: 'Server membalas HTTP 404.' }), { status: 404 });
+  };
+  root = createRoot(document.getElementById('root'));
+  await act(async () => root.render(h(MemoryRouter, null, h(Banner))));
+  await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+  txt = document.getElementById('root').textContent;
+  assert.ok(txt.includes('Pesanan #777001 sudah selesai.'), 'banner tetap muncul lewat jalur cadangan riwayat');
+  assert.ok(!txt.includes('777002'), 'pesanan non-selesai tidak memunculkan banner');
+  await act(async () => root.unmount()); root = null;
+  globalThis.fetch = mainFetch;
 
   /* halaman penilaian: bintang → komentar cepat → submit → redirect overview */
   localStorage.removeItem('by-review-banner-dismissed');

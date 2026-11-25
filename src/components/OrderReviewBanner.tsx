@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquarePlus, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { MAIN_API } from '../lib/apiBase';
 import { reviewsApi, type PendingReviewOrder } from '../services/reviewsApi';
 
 const LS_KEY = 'by-review-banner-dismissed';
@@ -30,9 +31,20 @@ export default function OrderReviewBanner() {
     let alive = true;
     const load = async () => {
       const r = await reviewsApi.pending();
+      let list: PendingReviewOrder[] = r.ok ? (r.orders || []) : [];
+      if (!r.ok) {
+        // reviews.php belum ada/gagal di hosting → jalur cadangan lewat riwayat pesanan,
+        // supaya banner "pesanan selesai" tetap muncul tanpa menunggu upload file baru.
+        try {
+          const tk = localStorage.getItem('token') || '';
+          const rr = await fetch(`${MAIN_API}/riwayat_pesanan.php?token=${encodeURIComponent(tk)}`, { cache: 'no-store' });
+          const rj = (await rr.json().catch(() => null)) as { ok?: boolean; orders?: { order_id: string; service_name: string; status: string }[] } | null;
+          if (rj?.ok) list = (rj.orders || []).filter((o) => o.status === 'selesai').map((o) => ({ order_id: o.order_id, service_name: o.service_name }));
+        } catch { /* biarkan kosong */ }
+      }
       if (!alive) return;
       const dismissed = readDismissed();
-      setOrder((r.orders || []).find((o) => !dismissed.includes(o.order_id)) ?? null);
+      setOrder(list.find((o) => !dismissed.includes(o.order_id)) ?? null);
     };
     void load();
     // Status pesanan disinkron otomatis (seketika + sync per user + sweep 1 jam) → banner
