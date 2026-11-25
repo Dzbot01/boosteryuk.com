@@ -274,7 +274,7 @@ if (!$saved) {
 // ID slug PENDING dilewati (bukan ID provider asli).
 if (function_exists('osx_provider_of') && osx_provider_of($provider_order_id) !== null) {
     try {
-        $synced = osx_sync_order($conn, ['order_id' => $provider_order_id, 'status' => $final_status]);
+        $synced = osx_sync_order($conn, ['order_id' => $provider_order_id, 'status' => $final_status], 2);
         if ($synced) $final_status = $synced;
     } catch (Throwable $e) { /* sync gagal = status tetap pending, sweep 1 jam akan mencoba lagi */ }
 }
