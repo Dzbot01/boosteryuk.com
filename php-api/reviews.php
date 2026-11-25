@@ -26,6 +26,15 @@ require 'configdb.php';
 if (isset($conn) && $conn instanceof mysqli) $conn->set_charset('utf8mb4');
 require_once __DIR__ . '/child_panel_lib.php'; // cp_q (prepared helper)
 
+/** Klasifikasi tipe pesanan SAMAA dengan admin_data.php (AD_TYPE_SQL): hanya 'smm' yang boleh dinilai. */
+const RV_TYPE_SQL = "CASE
+    WHEN r.order_id LIKE 'EVG%' OR r.service_name LIKE 'Event Merchant:%' THEN 'event'
+    WHEN r.order_id LIKE 'NX%' OR r.service_name LIKE 'NexSpace%' THEN 'nexspace'
+    WHEN r.order_id LIKE 'OTP%' OR r.service_name LIKE 'Nomor OTP%' THEN 'otp'
+    WHEN r.order_id REGEXP '^AI[0-9]{6}' OR r.service_name LIKE '%Agen AI%' THEN 'agent_ai'
+    WHEN r.order_id REGEXP '^UP[0-9]' OR r.service_name LIKE '%Boosteryuk Plus%' OR r.service_name LIKE '%Boosteryuk EXTRA%' THEN 'upgrade'
+    ELSE 'smm' END";
+
 function rv_out($d, $code = 200) { http_response_code($code); echo json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); exit; }
 
 function rv_log($text) {
@@ -127,6 +136,7 @@ if ($action === 'pending') {
     try {
         $st = cp_q($conn, "SELECT r.order_id, r.service_name FROM riwayat_pesanan r
                            WHERE r.user_id = ? AND r.status = 'selesai'
+                             AND (" . RV_TYPE_SQL . ") = 'smm'
                              AND NOT EXISTS (SELECT 1 FROM service_reviews v
                                     WHERE v.order_id COLLATE utf8mb4_unicode_ci = r.order_id COLLATE utf8mb4_unicode_ci)
                            ORDER BY r.id DESC LIMIT 10", 'i', $uid);
@@ -145,12 +155,13 @@ if ($action === 'submit') {
     if ($stars < 1 || $stars > 5) rv_out(['ok' => false, 'message' => 'Bintang harus 1 sampai 5.'], 400);
     if (mb_strlen($review) > 500) rv_out(['ok' => false, 'message' => 'Ulasan maksimal 500 karakter.'], 400);
     try {
-        $st = cp_q($conn, "SELECT order_id, service_name, status FROM riwayat_pesanan WHERE user_id = ? AND order_id = ? LIMIT 1", 'is', $uid, $orderId);
+        $st = cp_q($conn, "SELECT order_id, service_name, status, (" . RV_TYPE_SQL . ") AS kind FROM riwayat_pesanan WHERE user_id = ? AND order_id = ? LIMIT 1", 'is', $uid, $orderId);
         $row = $st->get_result()->fetch_assoc();
         $st->close();
     } catch (Throwable $e) { $row = null; }
     if (!$row) rv_out(['ok' => false, 'message' => 'Pesanan tidak ditemukan milik akun ini.'], 404);
     if ((string)$row['status'] !== 'selesai') rv_out(['ok' => false, 'message' => 'Penilaian dibuka setelah pesanan selesai.'], 409);
+    if ((string)$row['kind'] !== 'smm') rv_out(['ok' => false, 'message' => 'Hanya pesanan layanan SMM (Server 1/2/3) yang dapat dinilai.'], 409);
     $key = null;
     try {
         $st = cp_q($conn, 'SELECT service_id FROM smm_order_profit WHERE order_id = ? AND user_id = ? LIMIT 1', 'si', $orderId, $uid);

@@ -6,6 +6,14 @@ import { useAuth } from '../context/AuthContext';
 import { MAIN_API } from '../lib/apiBase';
 import { reviewsApi, type PendingReviewOrder } from '../services/reviewsApi';
 
+/** Hanya pesanan SMM (Server 1/2/3) yang boleh dinilai — OTP/Agen AI/NexSpace/Upgrade/Event dilewati. */
+function isSmmOrder(o: { order_id: string; service_name: string }): boolean {
+  if (/^(EVG|NX|OTP)/.test(o.order_id)) return false;
+  if (/^AI\d{6}/.test(o.order_id)) return false;
+  if (/^UP\d/.test(o.order_id)) return false;
+  return !/Event Merchant:|NexSpace|Nomor OTP|Agen AI|Boosteryuk Plus|Boosteryuk EXTRA/.test(o.service_name);
+}
+
 const LS_KEY = 'by-review-banner-dismissed';
 
 function readDismissed(): string[] {
@@ -40,12 +48,12 @@ export default function OrderReviewBanner() {
           const tk = localStorage.getItem('token') || '';
           const rr = await fetch(`${MAIN_API}/riwayat_pesanan.php?token=${encodeURIComponent(tk)}`, { cache: 'no-store' });
           const rj = (await rr.json().catch(() => null)) as { ok?: boolean; orders?: { order_id: string; service_name: string; status: string }[] } | null;
-          if (rj?.ok) list = (rj.orders || []).filter((o) => o.status === 'selesai').map((o) => ({ order_id: o.order_id, service_name: o.service_name }));
+          if (rj?.ok) list = (rj.orders || []).filter((o) => o.status === 'selesai' && isSmmOrder(o)).map((o) => ({ order_id: o.order_id, service_name: o.service_name }));
         } catch { /* biarkan kosong */ }
       }
       if (!alive) return;
       const dismissed = readDismissed();
-      setOrder(list.find((o) => !dismissed.includes(o.order_id)) ?? null);
+      setOrder(list.find((o) => isSmmOrder(o) && !dismissed.includes(o.order_id)) ?? null);
     };
     void load();
     // Status pesanan disinkron otomatis (seketika + sync per user + sweep 1 jam) → banner

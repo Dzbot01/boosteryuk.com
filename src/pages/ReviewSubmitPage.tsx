@@ -14,8 +14,9 @@ export function quickComments(stars: number): string[] {
 
 /**
  * Beri Penilaian & ulasan layanan — dibuka dari banner "Pesanan #… sudah selesai".
- * Kartu modal: bintang 1–5 → komentar cepat sesuai ekspresi bintang → ulasan →
- * selesai, user otomatis diarahkan ke halaman Overview.
+ * Kartu modal: bintang 1–5 → komentar cepat sesuai ekspresi bintang (ulasan disusun
+ * otomatis dari komentar cepat terpilih, tanpa kolom teks bebas) → selesai, user
+ * otomatis diarahkan ke halaman Overview.
  */
 export default function ReviewSubmitPage() {
   const [params] = useSearchParams();
@@ -24,7 +25,8 @@ export default function ReviewSubmitPage() {
   const [orders, setOrders] = useState<PendingReviewOrder[] | null>(null);
   const [picked, setPicked] = useState(wanted);
   const [stars, setStars] = useState(0);
-  const [review, setReview] = useState('');
+  /** Ulasan disusun HANYA dari komentar cepat yang dipilih (tanpa kolom teks bebas). */
+  const [chips, setChips] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -40,12 +42,12 @@ export default function ReviewSubmitPage() {
   useEffect(() => { void load(); }, [load]);
 
   const order = useMemo(() => (orders || []).find((o) => o.order_id === picked) || null, [orders, picked]);
-  const chips = stars > 0 ? quickComments(stars) : [];
+  const quick = stars > 0 ? quickComments(stars) : [];
 
   const submit = async () => {
     if (!order || stars < 1) { setErr('Pilih bintang 1 sampai 5 dulu.'); return; }
     setBusy(true); setErr('');
-    const r = await reviewsApi.submit(order.order_id, stars, review.trim());
+    const r = await reviewsApi.submit(order.order_id, stars, chips.join(', '));
     setBusy(false);
     if (!r.ok) { setErr(r.message || 'Gagal mengirim penilaian.'); return; }
     navigate('/overview', { replace: true });
@@ -76,7 +78,7 @@ export default function ReviewSubmitPage() {
                 Pesanan yang dinilai
                 <select
                   value={picked}
-                  onChange={(e) => { setPicked(e.target.value); setStars(0); setReview(''); setErr(''); }}
+                  onChange={(e) => { setPicked(e.target.value); setStars(0); setChips([]); setErr(''); }}
                   className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 >
                   {orders.map((o) => <option key={o.order_id} value={o.order_id}>#{o.order_id} — {o.service_name}</option>)}
@@ -97,7 +99,7 @@ export default function ReviewSubmitPage() {
                     role="radio"
                     aria-checked={stars === n}
                     aria-label={`${n} bintang`}
-                    onClick={() => { setStars(n); setErr(''); }}
+                    onClick={() => { setStars(n); setChips([]); setErr(''); }}
                     className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-all ${stars >= n ? 'border-amber-400 bg-amber-50 text-amber-500 dark:bg-amber-950/40' : 'border-slate-200 bg-white text-slate-300 hover:text-amber-400 dark:border-slate-700 dark:bg-slate-800'}`}
                   >
                     <Star className="h-5 w-5" fill={stars >= n ? 'currentColor' : 'none'} strokeWidth={2} />
@@ -113,17 +115,14 @@ export default function ReviewSubmitPage() {
                   Komentar cepat
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {chips.map((c) => {
-                    const on = review.split('\n').includes(c);
+                  {quick.map((c) => {
+                    const on = chips.includes(c);
                     return (
                       <button
                         key={c}
                         type="button"
-                        onClick={() => {
-                          const parts = review.split('\n').filter((x) => x.trim() !== '');
-                          const next = on ? parts.filter((x) => x !== c) : [...parts, c];
-                          setReview(next.join('\n'));
-                        }}
+                        aria-pressed={on}
+                        onClick={() => setChips((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]))}
                         className={`rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors ${on ? 'border-emerald-500 bg-emerald-500 text-white' : stars >= 4 ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-950/40 dark:text-rose-200'}`}
                       >
                         {c}
@@ -134,17 +133,11 @@ export default function ReviewSubmitPage() {
               </div>
             )}
 
-            <label className="mt-4 block text-[12px] font-bold uppercase tracking-[0.12em] text-slate-400">
-              Ulasan
-              <textarea
-                value={review}
-                onChange={(e) => setReview(e.target.value.slice(0, 500))}
-                rows={4}
-                placeholder="Ceritakan pengalamanmu memakai layanan ini…"
-                className="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-800 normal-case tracking-normal dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-              />
-            </label>
-            <p className="mt-1 text-right text-[11px] text-slate-400">{review.length}/500</p>
+            {chips.length > 0 && (
+              <p className="mt-4 rounded-xl bg-slate-50 px-3 py-2 text-[12.5px] font-semibold text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+                Ulasan terkirim: <span className="font-bold text-slate-800 dark:text-slate-100">{chips.join(', ')}</span>
+              </p>
+            )}
 
             {err && <p role="alert" className="mt-3 rounded-xl bg-rose-50 px-4 py-2.5 text-[12.5px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{err}</p>}
 
