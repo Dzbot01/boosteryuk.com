@@ -67,6 +67,8 @@ export interface ProfitData {
     agent_ai: Period & { orders: number };
     /** Upgrade Boosteryuk Plus & EXTRA (harga penuh). */
     upgrade: Period & { orders: number };
+    /** Margin Order OTP (base_price − biaya provider max_usd × kurs; markup panel milik pemilik panel). */
+    otp: Period & { orders: number };
   };
   transactions: { smm: { n: number; omzet: number }; lain: { n: number; omzet: number }; today: { n: number; omzet: number }; month: { n: number; omzet: number }; batal: number };
   deposits: Period & { source: string | null; count_month: number; manual?: Period };
