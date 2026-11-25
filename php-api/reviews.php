@@ -56,6 +56,12 @@ function rv_schema($conn) {
     if (!in_array('service_key', $cols, true)) $conn->query("ALTER TABLE service_reviews ADD COLUMN service_key VARCHAR(32) NULL AFTER service_name");
     if (!in_array('review', $cols, true)) $conn->query("ALTER TABLE service_reviews ADD COLUMN review TEXT NULL");
     if (!in_array('stars', $cols, true)) $conn->query("ALTER TABLE service_reviews ADD COLUMN stars TINYINT NOT NULL DEFAULT 5");
+    // Samakan collation dengan riwayat_pesanan (utf8mb4_unicode_ci) agar perbandingan
+    // order_id tidak melempar "Illegal mix of collations" di hosting.
+    $ts = $conn->query("SELECT TABLE_COLLATION c FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'service_reviews'")->fetch_assoc()['c'] ?? '';
+    if ($ts !== '' && $ts !== 'utf8mb4_unicode_ci') {
+        $conn->query("ALTER TABLE service_reviews CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    }
     return true;
 }
 
@@ -121,7 +127,8 @@ if ($action === 'pending') {
     try {
         $st = cp_q($conn, "SELECT r.order_id, r.service_name FROM riwayat_pesanan r
                            WHERE r.user_id = ? AND r.status = 'selesai'
-                             AND NOT EXISTS (SELECT 1 FROM service_reviews v WHERE v.order_id = r.order_id)
+                             AND NOT EXISTS (SELECT 1 FROM service_reviews v
+                                    WHERE v.order_id COLLATE utf8mb4_unicode_ci = r.order_id COLLATE utf8mb4_unicode_ci)
                            ORDER BY r.id DESC LIMIT 10", 'i', $uid);
         $res = $st->get_result();
         while ($r = $res->fetch_assoc()) $rows[] = ['order_id' => (string)$r['order_id'], 'service_name' => (string)$r['service_name']];

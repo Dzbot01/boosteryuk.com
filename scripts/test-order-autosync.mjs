@@ -71,7 +71,7 @@ const rev = read('php-api/reviews.php');
 assert.match(rev, /CREATE TABLE IF NOT EXISTS service_reviews/, 'tabel penilaian dibuat otomatis');
 assert.match(rev, /UNIQUE KEY uniq_order \(order_id\)/, 'satu penilaian per pesanan');
 assert.match(rev, /service_name VARCHAR\(255\) NOT NULL COMMENT 'nama layanan saat dinilai — papan tidak perlu load API'/, 'nama layanan dicatat agar papan tidak load API');
-assert.match(rev, /AND NOT EXISTS \(SELECT 1 FROM service_reviews v WHERE v\.order_id = r\.order_id\)/, 'banner hanya untuk pesanan selesai yang belum dinilai');
+assert.match(rev, /AND NOT EXISTS \(SELECT 1 FROM service_reviews v\s+WHERE v\.order_id COLLATE utf8mb4_unicode_ci = r\.order_id COLLATE utf8mb4_unicode_ci\)/, 'banner hanya untuk pesanan selesai yang belum dinilai (collation eksplisit)');
 assert.match(rev, /if \(\$stars < 1 \|\| \$stars > 5\)/, 'bintang divalidasi 1–5');
 assert.match(rev, /SELECT service_id FROM smm_order_profit WHERE order_id = \? AND user_id = \? LIMIT 1/, 'kunci layanan diambil dari catatan profit order');
 assert.match(rev, /if \(\$action === 'list'\)/, 'papan penilaian publik');
@@ -79,6 +79,10 @@ assert.match(rev, /\$chk = \$conn->query\("SHOW TABLES LIKE 'service_reviews'"\)
 assert.match(rev, /ALTER TABLE service_reviews ADD COLUMN service_key/, 'skema parsial dilengkapi otomatis');
 assert.match(rev, /reviews_log\.txt/, 'error penilaian dicatat ke reviews_log.txt');
 assert.match(rev, /'Gagal memuat pesanan selesai: ' \. \$e->getMessage\(\)/, 'pesan pending menyertakan penyebab SQL');
+assert.match(rev, /v\.order_id COLLATE utf8mb4_unicode_ci = r\.order_id COLLATE utf8mb4_unicode_ci/, 'join order_id pakai collation eksplisit (anti illegal mix)');
+assert.match(rev, /ALTER TABLE service_reviews CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci/, 'collation tabel disamakan dengan riwayat_pesanan');
+assert.match(read('src/components/OrderReviewBanner.tsx'), /icon-banner-selesai\.gif/, 'ikon banner = GIF centang dari pemilik');
+assert.match(read('src/pages/ReviewSubmitPage.tsx'), /icon-beri-penilaian\.gif/, 'ikon halaman penilaian = GIF dokumen bintang dari pemilik');
 assert.match(read('src/pages/ReviewSubmitPage.tsx'), /\/404\|405\/\.test\(r\.message/, 'pesan 500 ditampilkan apa adanya sebagai diagnosa');
 
 /* ---------- 4. Frontend: api, banner, route, menu ---------- */
@@ -122,7 +126,7 @@ const dir = mkdtempSync(path.join(tmpdir(), 'order-autosync-')); let root = null
 try {
   const { outputFiles } = await build({
     stdin: { contents: `export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {MemoryRouter,useLocation} from 'react-router-dom';export {default as Banner} from './src/components/OrderReviewBanner';export {default as Submit, quickComments} from './src/pages/ReviewSubmitPage';`, resolveDir: process.cwd() },
-    bundle: true, platform: 'node', format: 'cjs', write: false, jsx: 'automatic', loader: { '.css': 'empty', '.png': 'dataurl', '.mp3': 'dataurl', '.webp': 'dataurl' },
+    bundle: true, platform: 'node', format: 'cjs', write: false, jsx: 'automatic', loader: { '.css': 'empty', '.png': 'dataurl', '.mp3': 'dataurl', '.webp': 'dataurl', '.gif': 'dataurl' },
     define: { 'process.env.NODE_ENV': '"development"', __MUSIC_URL__: '"/boosteryuk-official-music.mp3"' },
     plugins: [{ name: 'mocks', setup(b) {
       b.onResolve({ filter: /context\/AuthContext$/ }, () => ({ path: 'auth', namespace: 'mock' }));

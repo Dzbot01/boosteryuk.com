@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageSquarePlus, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import iconBannerSelesai from '../assets/icon-banner-selesai.gif';
 import { useAuth } from '../context/AuthContext';
 import { MAIN_API } from '../lib/apiBase';
 import { reviewsApi, type PendingReviewOrder } from '../services/reviewsApi';
@@ -90,9 +91,7 @@ export default function OrderReviewBanner() {
           <X className="h-3.5 w-3.5" strokeWidth={2.6} />
         </button>
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white">
-            <MessageSquarePlus className="h-[18px] w-[18px]" strokeWidth={2.2} />
-          </span>
+          <img src={iconBannerSelesai} alt="" aria-hidden="true" className="mt-0.5 h-10 w-10 shrink-0" />
           <p className="text-[13px] leading-relaxed text-slate-700 dark:text-slate-200">
             <span className="font-extrabold text-slate-900 dark:text-white">Pesanan #{order.order_id}</span> sudah selesai.
             {' '}Bagaimana pendapatmu? Beri penilaian{' '}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Star, ThumbsDown, ThumbsUp, Megaphone } from 'lucide-react';
+import { Star, ThumbsDown, ThumbsUp } from 'lucide-react';
+import iconBeriPenilaian from '../assets/icon-beri-penilaian.gif';
 import Seo from '../components/Seo';
 import { reviewsApi, type PendingReviewOrder } from '../services/reviewsApi';
 
@@ -55,7 +56,7 @@ export default function ReviewSubmitPage() {
       <Seo title="Beri Penilaian — Boosteryuk" description="Nilai layanan dengan bintang 1–5 dan ulasan cepat." />
       <div className="rounded-[22px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 dark:border-slate-700 dark:bg-slate-900">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500 text-white"><Megaphone className="h-5 w-5" /></span>
+          <img src={iconBeriPenilaian} alt="" aria-hidden="true" className="h-12 w-12 shrink-0" />
           <div>
             <h1 className="font-display text-[20px] font-extrabold text-slate-900 dark:text-white">Beri Penilaian</h1>
             <p className="text-[12.5px] text-slate-500 dark:text-slate-400">Penilaian & ulasan pada layanan ini</p>
