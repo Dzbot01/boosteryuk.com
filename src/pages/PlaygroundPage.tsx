@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import EditorStudio from '../components/EditorStudio';
+const Generator3dStudio = lazy(() => import('../components/Generator3dStudio'));
 import {
   Sparkles,
   Captions,
@@ -14,6 +15,7 @@ import {
   X,
   Menu as MenuIcon,
   LayoutGrid,
+  Boxes,
 } from 'lucide-react';
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
@@ -30,7 +32,7 @@ import {
   type TtsVoice,
 } from '../services/playgroundApi';
 
-type Menu = 'overview' | 'hook' | 'caption' | 'tts' | 'studio';
+type Menu = 'overview' | 'hook' | 'caption' | 'tts' | 'studio' | 'gen3d';
 
 const MENUS: { id: Menu; label: string; icon: typeof Sparkles; desc: string }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutGrid, desc: 'Halaman utama Playground' },
@@ -38,13 +40,14 @@ const MENUS: { id: Menu; label: string; icon: typeof Sparkles; desc: string }[] 
   { id: 'caption', label: 'Auto Caption', icon: Captions, desc: 'Caption otomatis dari deskripsi konten' },
   { id: 'tts', label: 'Teks To Speech', icon: AudioLines, desc: 'Ubah teks jadi suara berkualitas' },
   { id: 'studio', label: 'Editor Studio', icon: Clapperboard, desc: 'Ruang edit video & foto: cut, musik, teks, ekspor' },
+  { id: 'gen3d', label: 'Generate 3D Model', icon: Boxes, desc: 'Dashboard AI 3D Model Generator (V2Fun)' },
 ];
 
 export default function PlaygroundPage() {
   // Menu disimpan di URL (?m=) agar refresh tidak kembali ke Overview.
   const [params, setParams] = useSearchParams();
   const raw = params.get('m') || 'overview';
-  const menu = (['overview', 'hook', 'caption', 'tts', 'studio'].includes(raw) ? raw : 'overview') as Menu;
+  const menu = (['overview', 'hook', 'caption', 'tts', 'studio', 'gen3d'].includes(raw) ? raw : 'overview') as Menu;
   const setMenu = (m: Menu) => setParams(m === 'overview' ? {} : { m }, { replace: false });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const active = MENUS.find((m) => m.id === menu)!;
@@ -59,7 +62,7 @@ export default function PlaygroundPage() {
 
   return (
     <>
-      <Seo title="Playground" description="Playground Boosteryuk: Hook Generator, Auto Caption, Teks To Speech, dan Editor Studio." noindex />
+      <Seo title="Playground" description="Playground Boosteryuk: Hook Generator, Auto Caption, Teks To Speech, Editor Studio, dan Generate 3D Model." noindex />
 
       {menu === 'overview' ? (
         <>
@@ -68,6 +71,13 @@ export default function PlaygroundPage() {
             <OverviewDesc />
           </div>
         </>
+      ) : menu === 'gen3d' ? (
+        /* Dashboard AI 3D Model Generator memenuhi SELURUH layar (100vh, tanpa scroll halaman). */
+        <div className="fixed inset-0 z-50 overflow-hidden bg-[#0f0f0f]">
+          <Suspense fallback={<div className="flex h-full items-center justify-center text-[#8a8a8a]">Memuat studio 3D…</div>}>
+            <Generator3dStudio onOpenMenu={() => setDrawerOpen(true)} />
+          </Suspense>
+        </div>
       ) : menu === 'studio' ? (
         /* Kartu Boosteryuk Studio memenuhi SELURUH layar begitu menu ini dibuka: tidak dibatasi
            max-width/padding halaman, dan tombol menu Playground pindah ke TopBar studio. */
