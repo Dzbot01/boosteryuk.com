@@ -1,13 +1,16 @@
-// Preview link (WhatsApp/Google/Telegram): og-image.jpg harus gambar screenshot asli
-// halaman saat ini (1200x630 JPEG tajam, tidak buram), URL absolut + cache-buster baru,
-// dan deskripsi panjang yang informatif (bukan sekadar judul) yang konsisten di
+// Preview link (WhatsApp/Google/Telegram): gambar OG harus screenshot asli halaman
+// saat ini (1200x630 JPEG tajam), disajikan dari CDN ramah crawler (Supabase edge
+// function `og-image`) dengan kandidat fallback same-origin, URL absolut, dan
+// deskripsi panjang yang informatif (bukan sekadar judul) yang konsisten di
 // meta description, og:description, twitter:description, config SEO, dan pages.json.
 //
 // NODE_PATH=/tmp/server3-tests/node_modules node scripts/test-og-preview.mjs
 import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
 
-/* ---------- 1. File gambar OG: JPEG 1200x630, ukuran wajar (tajam tapi ringan) ---------- */
+const FN_OG = 'https://dzvsjcjvnpasrwuuopeg.supabase.co/functions/v1/og-image';
+
+/* ---------- 1. File gambar OG lokal: JPEG 1200x630, ukuran wajar (tajam tapi ringan) ---------- */
 const buf = readFileSync('public/og-image.jpg');
 assert.equal(buf.readUInt16BE(0), 0xffd8, 'magic JPEG SOI');
 function jpegSize(b) {
@@ -31,11 +34,14 @@ assert.ok(kb > 40 && kb < 400, `ukuran OG wajar untuk crawler WhatsApp (${kb.toF
 /* ---------- 2. index.html: tag statis untuk crawler tanpa JS ---------- */
 const html = readFileSync('index.html', 'utf8');
 assert.ok(!html.includes('og-image.jpg?v=4'), 'cache-buster gambar lama dihapus');
-for (const prop of ['og:image', 'og:image:secure_url', 'twitter:image']) {
-  const m = html.match(new RegExp(`<meta (?:property|name)="${prop}"[^>]*content="([^"]+)"`));
-  assert.ok(m, `tag ${prop} ada`);
-  assert.match(m[1], /^__SITE_URL__\/og-image\.jpg\?v=5$/, `${prop} absolut + v=5 (diganti URL situs saat build)`);
-}
+// og:image utama = edge function Supabase (CDN ramah crawler); kandidat kedua same-origin.
+const ogImages = [...html.matchAll(/<meta property="og:image" (?:data-seo-static )?content="([^"]+)" \/>/g)].map((m) => m[1]);
+assert.equal(ogImages[0], FN_OG, 'og:image utama = edge function Supabase');
+assert.match(ogImages[1] || '', /^__SITE_URL__\/og-image\.jpg\?v=5$/, 'og:image kandidat kedua = same-origin absolut + v=5');
+const sec = html.match(/<meta property="og:image:secure_url" content="([^"]+)" \/>/);
+assert.ok(sec && sec[1] === FN_OG, 'og:image:secure_url = edge function');
+const tw = html.match(/<meta name="twitter:image" data-seo-static content="([^"]+)" \/>/);
+assert.ok(tw && tw[1] === FN_OG, 'twitter:image = edge function');
 assert.match(html, /<meta property="og:image:width" content="1200" \/>/, 'lebar OG dideklarasikan');
 assert.match(html, /<meta property="og:image:height" content="630" \/>/, 'tinggi OG dideklarasikan');
 assert.match(html, /<meta property="og:image:type" content="image\/jpeg" \/>/, 'tipe OG jpeg');
@@ -53,7 +59,7 @@ assert.match(html, /<meta property="og:title" data-seo-static content="Boosteryu
 
 /* ---------- 3. Config SEO & pages.json konsisten ---------- */
 const cfg = readFileSync('src/seo/config.ts', 'utf8');
-assert.match(cfg, /export const DEFAULT_OG_IMAGE = '\/og-image\.jpg\?v=5';/, 'DEFAULT_OG_IMAGE v=5');
+assert.ok(cfg.includes(`export const DEFAULT_OG_IMAGE = '${FN_OG}';`), 'DEFAULT_OG_IMAGE = edge function Supabase');
 const mDesc = cfg.match(/export const DEFAULT_DESC =\n?\s*'([^']+)'/);
 assert.ok(mDesc, 'DEFAULT_DESC ada');
 assert.equal(mDesc[1], metaDesc, 'DEFAULT_DESC sama dengan deskripsi statis index.html');
@@ -61,7 +67,7 @@ const pages = JSON.parse(readFileSync('src/seo/pages.json', 'utf8'));
 const home = pages.static.find((p) => p.path === '/');
 assert.equal(home.description, metaDesc, 'deskripsi home di pages.json sama (sumber prerender & sitemap)');
 
-/* ---------- 4. Build mengganti __SITE_URL__ menjadi URL absolut ---------- */
+/* ---------- 4. Build mengganti __SITE_URL__ menjadi URL absolut (kandidat og:image kedua) ---------- */
 const vite = readFileSync('vite.config.ts', 'utf8');
 assert.match(vite, /__SITE_URL__/, 'plugin build mengganti placeholder __SITE_URL__');
 
@@ -69,4 +75,4 @@ assert.match(vite, /__SITE_URL__/, 'plugin build mengganti placeholder __SITE_UR
 const homePage = readFileSync('src/pages/HomePage.tsx', 'utf8');
 assert.match(homePage, /bareOnHome/, 'homepage tidak menimpa tag OG statis');
 
-console.log('PASS Preview link: og-image.jpg screenshot asli 1200x630 (v=5, absolut), deskripsi panjang konsisten di meta/og/twitter/config/pages.json untuk preview WhatsApp & Google.');
+console.log('PASS Preview link: og-image di-CDN-kan via edge function Supabase (+fallback same-origin v=5, 1200x630), deskripsi panjang konsisten di meta/og/twitter/config/pages.json untuk preview WhatsApp & Google.');
