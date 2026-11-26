@@ -243,6 +243,9 @@ assert.match(top, /hidden lg:inline">Shortcut</, 'label teks Shortcut disembunyi
 assert.match(player, /className="relative mx-3 h-5 cursor-pointer touch-none"/, 'scrub bar tidak memicu scroll saat digeser');
 assert.match(player, /setPointerCapture\?\.\(e\.pointerId\)/, 'pointer ditangkap supaya geseran tidak lepas');
 assert.match(player, /if \(scrubbing\) setPlayhead\(t\);/, 'playhead mengikuti geseran jari 1:1');
+assert.match(player, /if \(playing\) return; \/\/ saat play: sinkron_native \+ koreksi drift di efek bawah/, 'efek seek pause terpisah dari playback');
+assert.match(player, /const want = clip \? \(clip\.inPoint \|\| 0\) \+ \(playhead - clip\.start\) : 0;/, 'waktu seek = posisi playhead di dalam clip');
+assert.match(player, /v\.addEventListener\('loadedmetadata', seek, \{ once: true \}\)/, 'seek ditunda bila metadata video belum siap');
 assert.match(player, /-inset-y-2/, 'area sentuh scrub bar diperbesar');
 assert.match(player, /hidden items-end gap-\[2px\] sm:flex/, 'meter audio disembunyikan di layar sempit');
 assert.match(tb, /overflow-x-auto/, 'toolbar timeline bisa digeser di HP');
@@ -283,13 +286,13 @@ const dirEd = mkdtempSync(path.join(tmpdir(), 'editor-studio-'));
 let rootEd = null;
 try {
   const { outputFiles } = await build({
-    stdin: { contents: `export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {useEditor} from './src/components/editor/store';export {default as TimelineClip} from './src/components/editor/TimelineClip';`, resolveDir: process.cwd(), sourcefile: 'entry.tsx' },
+    stdin: { contents: `export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {useEditor} from './src/components/editor/store';export {default as TimelineClip} from './src/components/editor/TimelineClip';export {default as Player} from './src/components/editor/Player';`, resolveDir: process.cwd(), sourcefile: 'entry.tsx' },
     bundle: true, platform: 'node', format: 'cjs', write: false, jsx: 'automatic',
     loader: { '.css': 'empty', '.png': 'dataurl', '.gif': 'dataurl', '.mp3': 'dataurl', '.wav': 'dataurl' },
     define: { 'process.env.NODE_ENV': '"development"', 'import.meta.env': '{}' },
   });
   const fileEd = path.join(dirEd, 'bundle.cjs'); writeFileSync(fileEd, outputFiles[0].text);
-  const { createElement: h, act, createRoot, useEditor, TimelineClip } = require(fileEd);
+  const { createElement: h, act, createRoot, useEditor, TimelineClip, Player } = require(fileEd);
   const ZOOM = 50;
   const mkClip = (id) => ({ id, track: 'video', assetId: 'asset-1', name: 'Klip Uji', start: 2, duration: 10, inPoint: 0, chips: [], mock: true });
 
@@ -366,6 +369,27 @@ try {
   assert.ok(stAfterAudio.clips.filter((c) => c.track === 'video').length === 1, 'clip media tetap di track video (audio di bawahnya)');
   assert.ok(stAfterAudio.assets.some((a) => a.kind === 'audio' && a.name === 'lagu-demo.mp3'), 'asset audio masuk daftar media');
   assert.equal(stAfterAudio.selected, audioClip.id, 'clip audio baru langsung terpilih');
+
+  /* preview video me-render frame posisi playhead saat pause (bukan frame awal) */
+  useEditor.setState({
+    assets: [{ id: 'av1', name: 'v.mp4', kind: 'video', url: 'blob:mock/1', thumb: '', duration: 10 }],
+    clips: [{ id: 'v1', track: 'video', assetId: 'av1', name: 'v.mp4', start: 2, duration: 6, inPoint: 1, chips: [] }],
+    selected: null, playhead: 2, playheadTouched: true, playing: false, previewAssetId: 'av1',
+  });
+  rootEd = createRoot(document.getElementById('root'));
+  await act(async () => rootEd.render(h(Player, {})));
+  const vid = document.querySelector('#root video');
+  assert.ok(vid, 'elemen video preview dirender');
+  Object.defineProperty(vid, 'readyState', { value: 2, configurable: true });
+  let ct = 0;
+  Object.defineProperty(vid, 'currentTime', { configurable: true, get: () => ct, set: (x) => { ct = x; } });
+  await act(async () => { useEditor.getState().setPlayhead(4); });
+  assert.ok(Math.abs(ct - 3) < 1e-9, `pause + geser playhead => preview frame posisi playhead (1+(4-2)=3, dapat ${ct})`);
+  await act(async () => { useEditor.getState().setPlayhead(7); });
+  assert.ok(Math.abs(ct - 6) < 1e-9, `preview terus mengikuti playhead (7 => 6, dapat ${ct})`);
+  await act(async () => { useEditor.getState().setPlayhead(9.5); });
+  assert.equal(ct, 0, 'playhead di luar clip => preview kembali ke awal media');
+  await act(async () => rootEd.unmount()); rootEd = null;
 } finally {
   if (rootEd) { const { act } = require(path.join(dirEd, 'bundle.cjs')); await act(async () => rootEd.unmount()); }
 }
