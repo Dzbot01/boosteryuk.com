@@ -1,7 +1,7 @@
 import './HomePage.hero-desktop.css';
 import Seo from '../components/Seo';
 import { SITE_URL } from '../seo/config';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 // FIX: hapus import ikon yang tidak dipakai (ShieldCheck, Rocket, Gauge) agar lolos typecheck.
 import {
   Star,
@@ -39,6 +39,24 @@ export default function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
+  const location = useLocation();
+
+  // Navigasi masuk dari halaman lain (mis. teks "login" di navbar Generate 3D Model)
+  // membawa state openLogin atau flag sessionStorage -> langsung buka modal login.
+  useEffect(() => {
+    const viaState = Boolean((location.state as { openLogin?: boolean } | null)?.openLogin);
+    let viaFlag = false;
+    try {
+      viaFlag = sessionStorage.getItem('by-open-login-on-home') === '1';
+      sessionStorage.removeItem('by-open-login-on-home');
+    } catch { /* mode privat */ }
+    if (viaState || viaFlag) {
+      setAuthMode('login');
+      setAuthOpen(true);
+      if (viaState) window.history.replaceState({}, '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Tombol keranjang Google Maps Review (tamu) meminta modal login dibuka.
   useEffect(() => {
