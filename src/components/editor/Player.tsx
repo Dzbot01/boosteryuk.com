@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Maximize, Menu as MenuIcon, Pause, Play, Ratio, Scan } from 'lucide-react';
 import { previewFilter, projectEnd, useEditor } from './store';
 
@@ -101,7 +101,15 @@ export default function Player() {
   }, [playing, volume, speed, asset]);
 
   const filter = previewFilter({ adjust, filterCss, filterStrength });
-  const scale = 0.6 + (zoomPct / 100) * 0.9;
+  // 100% = ukuran asli 1:1 (tanpa upscale/downscale => resolusi & ketajaman utuh).
+  const scale = zoomPct / 100;
+  // Style panggung: saat default (filter none, opacity 100, zoom 100, pos 0) TIDAK ada
+  // filter/opacity/transform sama sekali sehingga preview = media asli apa adanya.
+  const stageStyle: CSSProperties = {
+    filter: filter === 'none' ? undefined : filter,
+    opacity: opacity === 100 ? undefined : opacity / 100,
+    transform: posX !== 0 || posY !== 0 || scale !== 1 ? `translate(${posX}px, ${posY}px) scale(${scale})` : undefined,
+  };
 
   const seekFromRuler = (clientX: number) => {
     const r = rulerRef.current;
@@ -132,12 +140,12 @@ export default function Player() {
               src={asset.url}
               playsInline
               className="max-h-full max-w-full"
-              style={{ filter, opacity: opacity / 100, transform: `translate(${posX}px, ${posY}px) scale(${scale})` }}
+              style={stageStyle}
             />
           ) : asset?.kind === 'image' && asset.url ? (
-            <img src={asset.url} alt="" className="max-h-full max-w-full" style={{ filter, opacity: opacity / 100, transform: `translate(${posX}px, ${posY}px) scale(${scale})` }} />
+            <img src={asset.url} alt="" className="max-h-full max-w-full" style={stageStyle} />
           ) : clip?.thumb ? (
-            <img src={clip.thumb} alt="" className="h-full w-full object-cover" style={{ filter, opacity: opacity / 100, transform: `translate(${posX}px, ${posY}px) scale(${scale})` }} />
+            <img src={clip.thumb} alt="" className="h-full w-full object-cover" style={stageStyle} />
           ) : (
             <span className="text-[12px]" style={{ color: C.text3 }}>Tidak ada clip video di playhead</span>
           )}

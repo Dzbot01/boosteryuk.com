@@ -246,6 +246,16 @@ assert.match(player, /if \(scrubbing\) setPlayhead\(t\);/, 'playhead mengikuti g
 assert.match(player, /if \(playing\) return; \/\/ saat play: sinkron_native \+ koreksi drift di efek bawah/, 'efek seek pause terpisah dari playback');
 assert.match(player, /const want = clip \? \(clip\.inPoint \|\| 0\) \+ \(playhead - clip\.start\) : 0;/, 'waktu seek = posisi playhead di dalam clip');
 assert.match(player, /v\.addEventListener\('loadedmetadata', seek, \{ once: true \}\)/, 'seek ditunda bila metadata video belum siap');
+assert.match(store, /zoomPct: 100,/, 'default zoom 100% = ukuran asli 1:1');
+assert.match(store, /if \(Object\.values\(a\)\.every\(\(v\) => v === 0\) && !extra\) return 'none';/, 'filter netral = none (media asli tanpa pipeline CSS)');
+assert.match(player, /const scale = zoomPct \/ 100;/, 'scale langsung dari persen zoom');
+assert.match(player, /filter: filter === 'none' \? undefined : filter,/, 'style panggung murni saat default');
+assert.match(read('src/components/editor/InspectorVideo.tsx'), /min=\{10\} max=\{300\}/, 'slider zoom 10-300%');
+assert.match(media, /Upload Audio \(MP3\/WAV\)/, 'tombol upload audio di tab Audio panel kiri');
+assert.match(media, /const \{ assets, addClip, importAudioFiles \} = useEditor\(\);/, 'AudioTab memakai importAudioFiles');
+assert.match(store, /filterName: '',\n  filterCss: '',\n  filterStrength: 0,/, 'default tanpa preset filter (warna media asli)');
+assert.match(media, /Filter Original \(media asli\)/, 'kartu Original untuk kembali ke media asli');
+assert.match(read('src/components/editor/InspectorVideo.tsx'), /filterName \|\| `Original`/, 'label filter kosong tampil sebagai Original');
 assert.match(player, /-inset-y-2/, 'area sentuh scrub bar diperbesar');
 assert.match(player, /hidden items-end gap-\[2px\] sm:flex/, 'meter audio disembunyikan di layar sempit');
 assert.match(tb, /overflow-x-auto/, 'toolbar timeline bisa digeser di HP');
@@ -286,13 +296,13 @@ const dirEd = mkdtempSync(path.join(tmpdir(), 'editor-studio-'));
 let rootEd = null;
 try {
   const { outputFiles } = await build({
-    stdin: { contents: `export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {useEditor} from './src/components/editor/store';export {default as TimelineClip} from './src/components/editor/TimelineClip';export {default as Player} from './src/components/editor/Player';`, resolveDir: process.cwd(), sourcefile: 'entry.tsx' },
+    stdin: { contents: `export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {useEditor} from './src/components/editor/store';export {default as TimelineClip} from './src/components/editor/TimelineClip';export {default as Player} from './src/components/editor/Player';export {previewFilter} from './src/components/editor/store';`, resolveDir: process.cwd(), sourcefile: 'entry.tsx' },
     bundle: true, platform: 'node', format: 'cjs', write: false, jsx: 'automatic',
     loader: { '.css': 'empty', '.png': 'dataurl', '.gif': 'dataurl', '.mp3': 'dataurl', '.wav': 'dataurl' },
     define: { 'process.env.NODE_ENV': '"development"', 'import.meta.env': '{}' },
   });
   const fileEd = path.join(dirEd, 'bundle.cjs'); writeFileSync(fileEd, outputFiles[0].text);
-  const { createElement: h, act, createRoot, useEditor, TimelineClip, Player } = require(fileEd);
+  const { createElement: h, act, createRoot, useEditor, TimelineClip, Player, previewFilter } = require(fileEd);
   const ZOOM = 50;
   const mkClip = (id) => ({ id, track: 'video', assetId: 'asset-1', name: 'Klip Uji', start: 2, duration: 10, inPoint: 0, chips: [], mock: true });
 
@@ -389,6 +399,20 @@ try {
   assert.ok(Math.abs(ct - 6) < 1e-9, `preview terus mengikuti playhead (7 => 6, dapat ${ct})`);
   await act(async () => { useEditor.getState().setPlayhead(9.5); });
   assert.equal(ct, 0, 'playhead di luar clip => preview kembali ke awal media');
+
+  /* preview murni saat default: tanpa filter/transform/opacity; berubah hanya saat user mengatur */
+  assert.equal(previewFilter({ adjust: { Brightness: 0, Contrast: 0, Saturation: 0, Sharpness: 0, Highlight: 0, Shadow: 0, Temperature: 0, Tint: 0 }, filterCss: '', filterStrength: 0 }), 'none', 'previewFilter netral = none');
+  assert.ok(previewFilter({ adjust: { Brightness: 20 }, filterCss: '', filterStrength: 0 }).includes('brightness(1.2)'), 'adjust menghasilkan filter CSS');
+  await act(async () => { useEditor.getState().setPlayhead(4); });
+  assert.equal(vid.style.filter, '', 'default: elemen video tanpa filter CSS (warna asli)');
+  assert.equal(vid.style.transform, '', 'default: elemen video tanpa transform (zoom 100% = 1:1, tidak buram)');
+  assert.equal(vid.style.opacity, '', 'default: elemen video tanpa opacity custom');
+  await act(async () => { useEditor.getState().setZoomPct(150); });
+  assert.ok(vid.style.transform.includes('scale(1.5)'), 'zoom 150% => scale 1.5');
+  await act(async () => { useEditor.getState().setAdjust('Brightness', 20); });
+  assert.ok(vid.style.filter.includes('brightness(1.2)'), 'adjust brightness => filter aktif');
+  await act(async () => { useEditor.getState().setZoomPct(100); useEditor.getState().setAdjust('Brightness', 0); });
+  assert.equal(vid.style.transform, '', 'kembali default => transform hilang');
   await act(async () => rootEd.unmount()); rootEd = null;
 } finally {
   if (rootEd) { const { act } = require(path.join(dirEd, 'bundle.cjs')); await act(async () => rootEd.unmount()); }

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import {
   Film, Music, Type, Sticker, Sparkles, Shuffle, SlidersHorizontal,
-  Plus, LayoutGrid, List, Play, ChevronDown, Search,
+  Plus, LayoutGrid, List, Play, ChevronDown, Search, Upload,
 } from 'lucide-react';
 import { useEditor } from './store';
 import type { LeftTab } from './store';
@@ -230,7 +230,8 @@ function MediaCard({ asset, selected, onSelect, onCtx }: { asset: MediaAsset; se
 
 /* ---------------- Audio ---------------- */
 function AudioTab() {
-  const { assets, addClip } = useEditor();
+  const { assets, addClip, importAudioFiles } = useEditor();
+  const uploadRef = useRef<HTMLInputElement | null>(null);
   const [cat, setCat] = useState(AUDIO_CATEGORIES[0]);
   const [playingId, setPlayingId] = useState('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -262,11 +263,31 @@ function AudioTab() {
         ))}
       </div>
       <div className="min-w-0 flex-1 space-y-1 p-2.5">
+        <button
+          type="button"
+          onClick={() => uploadRef.current?.click()}
+          className="flex w-full items-center justify-center gap-1.5 rounded-[4px] px-2 py-2 text-[11px] font-bold transition-colors duration-[120ms] hover:brightness-125"
+          style={{ background: C.raised, color: C.accent, boxShadow: `inset 0 0 0 1px ${C.border}` }}
+        >
+          <Upload className="h-3.5 w-3.5" strokeWidth={2.4} /> Upload Audio (MP3/WAV)
+        </button>
+        <input
+          ref={uploadRef}
+          type="file"
+          accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac"
+          multiple
+          hidden
+          aria-label="Upload file audio"
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) importAudioFiles(e.target.files);
+            e.target.value = '';
+          }}
+        />
         {list.length === 0 && (
           <p className="py-6 text-center text-[11px] leading-relaxed" style={{ color: C.text3 }}>
             Belum ada audio tersimpan.
             <br />
-            Import audio lewat tab Media — diproses lokal di perangkatmu.
+            Klik “Upload Audio (MP3/WAV)” — diproses lokal di perangkatmu.
           </p>
         )}
         {list.map((t) => (
@@ -383,6 +404,7 @@ function FiltersTab() {
   const [cat, setCat] = useState(FILTER_CATEGORIES[0]);
   const active = useEditor((s) => s.filterName);
   const setFilter = useEditor((s) => s.setFilter);
+  const setFilterStrength = useEditor((s) => s.setFilterStrength);
   return (
     <div className="flex h-full min-h-0">
       <div className="w-[90px] shrink-0 space-y-1 border-r p-2" style={{ borderColor: C.border }}>
@@ -393,6 +415,17 @@ function FiltersTab() {
         ))}
       </div>
       <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 p-2.5">
+        {/* Kembali ke media asli: tanpa filter & strength 0. */}
+        <button
+          type="button"
+          aria-label="Filter Original (media asli)"
+          onClick={() => { setFilter('', ''); setFilterStrength(0); }}
+          className="group relative overflow-hidden rounded-[6px] transition-transform duration-[120ms] hover:scale-[1.02]"
+          style={{ background: C.raised, boxShadow: active === '' ? `0 0 0 2px ${C.accent}` : undefined }}
+        >
+          <span className="block aspect-[16/10]" style={{ backgroundImage: `url(${sample})`, backgroundSize: 'cover' }} />
+          <span className="block truncate px-1.5 py-1 text-left text-[10.5px]" style={{ color: C.text2 }}>Original</span>
+        </button>
         {FILTERS.filter((f) => f.category === cat).map((f) => (
           <button key={f.id} type="button" aria-label={`Filter ${f.name}`} onClick={() => setFilter(f.name, f.css || '')} className="group relative overflow-hidden rounded-[6px] transition-transform duration-[120ms] hover:scale-[1.02]" style={{ background: C.raised, boxShadow: active === f.name ? `0 0 0 2px ${C.accent}` : undefined }}>
             <span className="block aspect-[16/10]" style={{ backgroundImage: `url(${sample})`, backgroundSize: 'cover', filter: f.css }} />

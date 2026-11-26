@@ -368,9 +368,10 @@ export const useEditor = create<EditorState>((set, get) => ({
   modal: '',
   setModal: (m) => set({ modal: m }),
 
-  filterName: '90s',
-  filterCss: 'sepia(.5) contrast(1.1) saturate(.8)',
-  filterStrength: 50,
+  // Default NETRAL: preview memakai media ASLI (tanpa preset filter apa pun).
+  filterName: '',
+  filterCss: '',
+  filterStrength: 0,
   setFilter: (name, css) => set({ filterName: name, filterCss: css }),
   setFilterStrength: (v) => set({ filterStrength: v }),
   volume: 80,
@@ -379,7 +380,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   setSpeed: (v) => set({ speed: v }),
   opacity: 100,
   setOpacity: (v) => set({ opacity: v }),
-  zoomPct: 50,
+  zoomPct: 100,
   setZoomPct: (v) => set({ zoomPct: v }),
   posX: 0,
   posY: 0,
@@ -406,11 +407,15 @@ export const timelineEnd = (clips: Clip[]) => Math.max(60, projectEnd(clips) + 1
 /** CSS filter gabungan dari tab Adjust + Filters (strength). */
 export function previewFilter(s: { adjust: Record<string, number>; filterCss: string; filterStrength: number }) {
   const a = s.adjust;
+  const extra = s.filterStrength > 0 && s.filterCss ? s.filterCss : '';
+  // Netral tanpa filter preset => 'none': preview memakai media ASLI tanpa pipeline
+  // filter CSS sama sekali (warna/kualitas identik dengan sumbernya).
+  if (Object.values(a).every((v) => v === 0) && !extra) return 'none';
   const parts = [
     `brightness(${(100 + a.Brightness) / 100})`,
     `contrast(${(100 + a.Contrast) / 100})`,
     `saturate(${(100 + a.Saturation) / 100})`,
   ];
-  if (s.filterStrength > 0 && s.filterCss) parts.push(s.filterCss);
+  if (extra) parts.push(extra);
   return parts.join(' ');
 }
