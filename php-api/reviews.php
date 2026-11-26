@@ -71,6 +71,15 @@ function rv_schema($conn) {
     if ($ts !== '' && $ts !== 'utf8mb4_unicode_ci') {
         $conn->query("ALTER TABLE service_reviews CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
     }
+    // Tabel penanda "banner sudah ditutup user" — disimpan server-side supaya penutupan
+    // banner bertahan lintas refresh/perangkat dan pesanan tidak ditawarkan dua kali.
+    $conn->query("CREATE TABLE IF NOT EXISTS service_reviews_dismissed (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        user_id    INT NOT NULL,
+        order_id   VARCHAR(64) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_user_order (user_id, order_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     return true;
 }
 
@@ -139,12 +148,28 @@ if ($action === 'pending') {
                              AND (" . RV_TYPE_SQL . ") = 'smm'
                              AND NOT EXISTS (SELECT 1 FROM service_reviews v
                                     WHERE v.order_id COLLATE utf8mb4_unicode_ci = r.order_id COLLATE utf8mb4_unicode_ci)
+                             AND NOT EXISTS (SELECT 1 FROM service_reviews_dismissed d
+                                    WHERE d.user_id = r.user_id
+                                      AND d.order_id COLLATE utf8mb4_unicode_ci = r.order_id COLLATE utf8mb4_unicode_ci)
                            ORDER BY r.id DESC LIMIT 10", 'i', $uid);
         $res = $st->get_result();
         while ($r = $res->fetch_assoc()) $rows[] = ['order_id' => (string)$r['order_id'], 'service_name' => (string)$r['service_name']];
         $st->close();
     } catch (Throwable $e) { rv_log('pending: ' . $e->getMessage()); rv_out(['ok' => false, 'message' => 'Gagal memuat pesanan selesai: ' . $e->getMessage()], 500); }
     rv_out(['ok' => true, 'orders' => $rows]);
+}
+
+/* ---------- tandai banner pesanan selesai sebagai ditutup (persisten per user) ---------- */
+if ($action === 'dismiss') {
+    $orderId = trim((string)($in['order_id'] ?? ''));
+    if ($orderId === '' || mb_strlen($orderId) > 64) rv_out(['ok' => false, 'message' => 'Pesanan tidak valid.'], 400);
+    try {
+        cp_q($conn, 'INSERT IGNORE INTO service_reviews_dismissed (user_id, order_id) VALUES (?,?)', 'is', $uid, $orderId)->close();
+    } catch (Throwable $e) {
+        rv_log('dismiss: ' . $e->getMessage());
+        rv_out(['ok' => false, 'message' => 'Gagal menyimpan penutupan banner: ' . $e->getMessage()], 500);
+    }
+    rv_out(['ok' => true]);
 }
 
 if ($action === 'submit') {

@@ -38,6 +38,8 @@ export const reviewsApi = {
   /** Pesanan SELESAI milik user yang belum dinilai (sumber banner notifikasi). */
   pending: () => call<{ orders?: PendingReviewOrder[] }>({ action: 'pending' }),
   submit: (orderId: string, stars: number, review: string) => call<object>({ action: 'submit', order_id: orderId, stars, review }),
+  /** Tandai banner pesanan selesai sebagai ditutup — disimpan server-side per user. */
+  dismiss: (orderId: string) => call<{ ok?: boolean }>({ action: 'dismiss', order_id: orderId }),
   /** 100 penilaian terbaru untuk Papan Penilaian (publik). */
   list: () => call<{ reviews?: ReviewItem[] }>({ action: 'list' }),
 };
