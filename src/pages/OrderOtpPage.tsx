@@ -203,7 +203,7 @@ export default function OrderOtpPage() {
         <div className="mb-5">
           <h1 className="font-display text-[24px] font-extrabold tracking-tight" style={{ color: COLOR.dark }}>Order Nomor OTP</h1>
           <p className="mt-1 text-[13px]" style={{ color: COLOR.secondary }}>
-            Nomor virtual untuk verifikasi WhatsApp, Telegram, dan aplikasi lain. Stok & harga realtime, dibayar pakai saldo.
+            Nomor virtual untuk verifikasi WhatsApp, Telegram, dan aplikasi lain. Stok & harga realtime.
           </p>
         </div>
       </Reveal>
