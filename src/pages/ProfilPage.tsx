@@ -1,5 +1,6 @@
 import AvatarPicker from '../components/AvatarPicker';
 import OwnedTitles from '../components/OwnedTitles';
+import TikTokAnalytics from '../components/TikTokAnalytics';
 import PengaturanAkunPage from './PengaturanAkunPage';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Copy, Check, LogOut, Mail, Hash, Wallet, Crown } from 'lucide-react';
@@ -40,6 +41,7 @@ export default function ProfilPage() {
       <div className="flex items-center gap-3 p-4 lg:gap-4 lg:p-6"><Mail className="text-cyan-500" size={18}/><span className="truncate text-sm lg:text-base">{user.email}</span></div>
       <div className="flex items-center gap-3 p-4 lg:gap-4 lg:p-6"><Wallet className="text-cyan-500" size={18}/><span className="flex-1 text-sm lg:text-base">Saldo website</span><strong>{formatRupiah(user.balance || 0)}</strong></div>
     </section>
+    <TikTokAnalytics />
     <OwnedTitles />
     <div className="mt-5 flex gap-3"><Link to="/deposit" className="flex-1 rounded-xl bg-cyan-600 p-3 text-center text-sm lg:p-4 lg:text-base font-bold text-white">Isi saldo</Link><button onClick={logout} className="flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-3 text-sm lg:px-6 lg:py-4 lg:text-base text-rose-500"><LogOut size={16}/> Keluar</button></div>
     <PengaturanAkunPage embedded />

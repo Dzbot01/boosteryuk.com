@@ -9,7 +9,7 @@ export default function TimelineClip({ clip, zoom }: { clip: ClipType; zoom: num
   const { selected, select, moveClip, trimClip, pushHistory, snapping, clips } = useEditor();
   const on = selected === clip.id;
   const video = clip.track === 'video';
-  const dragRef = useRef<{ mode: 'move' | 'left' | 'right'; startX: number; origin: number } | null>(null);
+  const dragRef = useRef<{ mode: 'move' | 'left' | 'right'; startX: number; lastX: number; origin: number } | null>(null);
 
   const snapTo = (t: number) => {
     if (!snapping) return t;
@@ -24,13 +24,22 @@ export default function TimelineClip({ clip, zoom }: { clip: ClipType; zoom: num
     e.stopPropagation();
     pushHistory();
     select(clip.id);
-    dragRef.current = { mode, startX: e.clientX, origin: clip.start };
+    dragRef.current = { mode, startX: e.clientX, lastX: e.clientX, origin: clip.start };
     const move = (ev: PointerEvent) => {
       const d = dragRef.current;
       if (!d) return;
       const deltaSec = (ev.clientX - d.startX) / zoom;
-      if (d.mode === 'move') moveClip(clip.id, snapTo(d.origin + deltaSec));
-      else trimClip(clip.id, d.mode, deltaSec);
+      if (d.mode === 'move') {
+        moveClip(clip.id, snapTo(d.origin + deltaSec));
+      } else {
+        // Trim mengirim delta INKREMENTAL (sejak event pointer sebelumnya): store
+        // menerapkan delta terhadap state terkini, sehingga tepi clip menempel 1:1
+        // ke kursor. Mengirim delta kumulatif membuat clip melebar berlipat tiap
+        // event (bug lama: ditarik sedikit, modal langsung melebar jauh).
+        const inc = (ev.clientX - d.lastX) / zoom;
+        d.lastX = ev.clientX;
+        trimClip(clip.id, d.mode, inc);
+      }
     };
     const up = () => {
       dragRef.current = null;
@@ -97,7 +106,7 @@ export default function TimelineClip({ clip, zoom }: { clip: ClipType; zoom: num
             role="presentation"
             onPointerDown={begin('left')}
             className="absolute left-0 top-0 flex h-full w-2.5 cursor-ew-resize items-center justify-center rounded-l-[6px]"
-            style={{ background: 'rgba(255,255,255,.9)' }}
+            style={{ background: 'rgba(255,255,255,.9)', touchAction: 'none' }}
           >
             <span className="h-4 w-px bg-black/60" />
           </span>
@@ -105,7 +114,7 @@ export default function TimelineClip({ clip, zoom }: { clip: ClipType; zoom: num
             role="presentation"
             onPointerDown={begin('right')}
             className="absolute right-0 top-0 flex h-full w-2.5 cursor-ew-resize items-center justify-center rounded-r-[6px]"
-            style={{ background: 'rgba(255,255,255,.9)' }}
+            style={{ background: 'rgba(255,255,255,.9)', touchAction: 'none' }}
           >
             <span className="h-4 w-px bg-black/60" />
           </span>
