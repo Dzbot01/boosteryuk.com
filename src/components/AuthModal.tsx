@@ -16,8 +16,26 @@ interface Props {
  * AuthModal — login & daftar HANYA lewat Google (tidak ada kolom username/email/password).
  * Alur redirect melalui boosteryuk.com; tidak memuat Google Identity Services.
  */
-/** Durasi tunggu simulasi pemulihan server PHP bila login gagal terhubung (3 menit). */
-const RECOVERY_SECONDS = 180;
+/** Durasi antrean simulasi saat server login tidak dapat dihubungi (5 menit). */
+const RECOVERY_SECONDS = 300;
+/** Deadline antrean disimpan di localStorage supaya TIDAK reset oleh refresh/close modal. */
+const QUEUE_LS_KEY = 'by-login-queue-until';
+
+function readQueueUntil(): number | null {
+  try {
+    const v = Number(localStorage.getItem(QUEUE_LS_KEY) || 0);
+    return Number.isFinite(v) && v > Date.now() ? Math.floor(v) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeQueueUntil(until: number | null) {
+  try {
+    if (until === null) localStorage.removeItem(QUEUE_LS_KEY);
+    else localStorage.setItem(QUEUE_LS_KEY, String(until));
+  } catch { /* private mode: antrean tetap jalan seumur sesi ini */ }
+}
 
 function isServerDownMessage(message: string): boolean {
   return /menghubungi server login pusat|failed to fetch|networkerror|load failed|network request failed/i.test(message);
@@ -27,8 +45,9 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }: Prop
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  /** Hitung mundur detik menuju percobaan ulang otomatis; null = tidak aktif. */
-  const [countdown, setCountdown] = useState<number | null>(null);
+  /** Deadline (epoch ms) antrean cooldown; null = tidak aktif. Disimpan di localStorage. */
+  const [queueUntil, setQueueUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const rootRef = useRef<HTMLDivElement>(null);
   const retryRef = useRef<() => void>(() => {});
@@ -37,20 +56,26 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }: Prop
     if (!open) return;
     setError('');
     setLoading(false);
-    setCountdown(null);
+    // Antrean DIPULIHKAN dari localStorage: refresh halaman atau tutup-buka modal tidak mereset.
+    setQueueUntil(readQueueUntil());
+    setNow(Date.now());
   }, [open, initialMode]);
 
-  // Timer pemulihan: hitung mundur 2 menit, lalu coba login ulang otomatis sekali.
+  // Tick 1 detik selama antrean aktif; saat habis → bersihkan penyimpanan & coba ulang sekali.
   useEffect(() => {
-    if (countdown === null) return;
-    if (countdown <= 0) {
-      setCountdown(null);
-      retryRef.current();
-      return;
-    }
-    const t = window.setTimeout(() => setCountdown((c) => (c === null ? null : c - 1)), 1000);
-    return () => window.clearTimeout(t);
-  }, [countdown]);
+    if (queueUntil === null) return;
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [queueUntil]);
+  useEffect(() => {
+    if (queueUntil === null || now < queueUntil) return;
+    writeQueueUntil(null);
+    setQueueUntil(null);
+    retryRef.current();
+  }, [now, queueUntil]);
+
+  /** Hitung mundur detik untuk tampilan (m:ss). */
+  const countdown = queueUntil === null ? null : Math.max(0, Math.ceil((queueUntil - now) / 1000));
 
   useEffect(() => {
     if (!open) return;
@@ -82,10 +107,14 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }: Prop
       const msg = e instanceof Error ? e.message : '';
       const down = (e as { serverDown?: boolean }).serverDown === true || isServerDownMessage(msg) || e instanceof TypeError;
       if (down) {
-        // PHP tidak dapat dihubungi: JANGAN tampilkan pesan error — ganti timer cooldown
-        // 3 menit (simulasi) dengan percobaan ulang otomatis saat hitung mundur selesai.
+        // PHP tidak dapat dihubungi: JANGAN tampilkan pesan error — ganti dengan antrean
+        // 5 menit (simulasi) yang deadline-nya tersimpan di localStorage (tahan refresh &
+        // tutup modal) plus percobaan ulang otomatis saat hitung mundur selesai.
         setError('');
-        setCountdown(RECOVERY_SECONDS);
+        const until = Date.now() + RECOVERY_SECONDS * 1000;
+        writeQueueUntil(until);
+        setNow(Date.now());
+        setQueueUntil(until);
       } else {
         setError(msg || 'Ups! Tunggu sebentar lalu coba lagi.');
       }
@@ -123,8 +152,8 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }: Prop
 
           {countdown !== null && (
             <p className="authflip-footnote w-full" role="status" style={{ margin: 0 }}>
-              Server login tidak dapat dihubungi. Mencoba ulang otomatis dalam{' '}
-              <b>{Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}</b> …
+              Server sedang ramai, anda sedang dalam antrian.{' '}
+              <b>{Math.floor((countdown ?? 0) / 60)}:{String((countdown ?? 0) % 60).padStart(2, '0')}</b>
             </p>
           )}
 

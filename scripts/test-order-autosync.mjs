@@ -88,6 +88,10 @@ assert.match(rev, /FROM riwayat_pesanan r WHERE r\.user_id = \? AND r\.order_id 
 assert.match(rev, /'Gagal memeriksa pesanan: ' \. \$e->getMessage\(\)/, 'error lookup submit tidak ditelan diam-diam');
 assert.ok(!rev.includes('catch (Throwable $e) { $row = null; }'), 'catch penelan error lookup submit dihapus');
 assert.ok(!read('src/components/OrderReviewBanner.tsx').includes('{order.service_name}'), 'banner tidak menampilkan nama layanan');
+assert.match(rev, /CREATE TABLE IF NOT EXISTS service_reviews_dismissed/, 'tabel penanda banner ditutup dibuat otomatis');
+assert.match(rev, /AND NOT EXISTS \(SELECT 1 FROM service_reviews_dismissed d/, 'pending melewatkan pesanan yang bannernya sudah ditutup');
+assert.match(rev, /INSERT IGNORE INTO service_reviews_dismissed/, 'action dismiss menyimpan penanda per user');
+assert.match(read('src/services/reviewsApi.ts'), /dismiss: \(orderId: string\) => call/, 'klien punya action dismiss');
 assert.match(read('src/components/OrderReviewBanner.tsx'), /icon-banner-selesai\.gif/, 'ikon banner = GIF centang dari pemilik');
 assert.match(read('src/pages/ReviewSubmitPage.tsx'), /icon-beri-penilaian\.gif/, 'ikon halaman penilaian = GIF dokumen bintang dari pemilik');
 assert.match(read('src/pages/ReviewSubmitPage.tsx'), /\/404\|405\/\.test\(r\.message/, 'pesan 500 ditampilkan apa adanya sebagai diagnosa');
@@ -97,6 +101,8 @@ const api = read('src/services/reviewsApi.ts');
 assert.match(api, /pending: \(\) => call<\{ orders\?: PendingReviewOrder\[\] \}>\(\{ action: 'pending' }\)/, 'api pending untuk banner');
 assert.match(api, /list: \(\) => call<\{ reviews\?: ReviewItem\[\] \}>\(\{ action: 'list' }\)/, 'api list untuk papan');
 const banner = read('src/components/OrderReviewBanner.tsx');
+assert.match(banner, /const dismissedThisSession = new Set<string>\(\);/, 'lapis sesi untuk penutupan banner');
+assert.match(banner, /void reviewsApi\.dismiss\(id\);/, 'penutupan banner disimpan server-side (tahan lintas perangkat)');
 assert.match(banner, /className="fixed left-1\/2 top-\[76px\] z-\[80\] w-\[min\(92vw,600px\)\] -translate-x-1\/2 md:top-4"/, 'mobile di bawah header (76px), desktop di layar atas');
 assert.match(banner, /aria-label="Tutup notifikasi"/, 'tombol silang kecil pojok kanan atas');
 assert.match(banner, /sudah selesai\./, 'teks notifikasi pesanan selesai');
@@ -179,6 +185,13 @@ try {
   await act(async () => document.querySelector('#root button[aria-label="Tutup notifikasi"]').click());
   assert.equal(document.getElementById('root').textContent, '', 'banner hilang setelah ditutup');
   assert.ok(JSON.parse(localStorage.getItem('by-review-banner-dismissed')).includes('123456'), 'penutupan disimpan per ID');
+  await act(async () => root.unmount()); root = null;
+
+  /* banner yang sudah ditutup TIDAK muncul lagi saat mount ulang (simulasi refresh halaman) */
+  root = createRoot(document.getElementById('root'));
+  await act(async () => root.render(h(MemoryRouter, null, h(Banner))));
+  await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+  assert.equal(document.getElementById('root').textContent, '', 'banner tertutup tidak muncul lagi setelah refresh (mount ulang)');
   await act(async () => root.unmount()); root = null;
 
   /* banner jalur cadangan: reviews.php 404 → riwayat pesanan selesai tetap memunculkan banner */

@@ -16,6 +16,14 @@ function isSmmOrder(o: { order_id: string; service_name: string }): boolean {
 
 const LS_KEY = 'by-review-banner-dismissed';
 
+/**
+ * ID pesanan yang bannernya sudah ditutup user pada SESI ini (lapisan pertama), dilengkapi
+ * localStorage (tahan refresh) dan penanda server-side via reviews.php action `dismiss`
+ * (tahan lintas perangkat / bila storage browser diblokir). Dengan tiga lapisan ini info
+ * pesanan yang sudah ditutup tidak muncul lagi — baik saat refresh maupun kedua kalinya.
+ */
+const dismissedThisSession = new Set<string>();
+
 function readDismissed(): string[] {
   try {
     const v = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
@@ -23,6 +31,13 @@ function readDismissed(): string[] {
   } catch {
     return [];
   }
+}
+
+/** Gabungan penutup dari localStorage + sesi ini untuk penyaringan cepat di klien. */
+function dismissedIds(): Set<string> {
+  const set = new Set(readDismissed());
+  dismissedThisSession.forEach((id) => set.add(id));
+  return set;
 }
 
 /**
@@ -52,8 +67,8 @@ export default function OrderReviewBanner() {
         } catch { /* biarkan kosong */ }
       }
       if (!alive) return;
-      const dismissed = readDismissed();
-      setOrder(list.find((o) => isSmmOrder(o) && !dismissed.includes(o.order_id)) ?? null);
+      const dismissed = dismissedIds();
+      setOrder(list.find((o) => isSmmOrder(o) && !dismissed.has(o.order_id)) ?? null);
     };
     void load();
     // Status pesanan disinkron otomatis (seketika + sync per user + sweep 1 jam) → banner
@@ -74,11 +89,15 @@ export default function OrderReviewBanner() {
   if (!order) return null;
 
   const close = () => {
+    const id = order.order_id;
+    dismissedThisSession.add(id);
     try {
       const d = readDismissed();
-      if (!d.includes(order.order_id)) d.push(order.order_id);
+      if (!d.includes(id)) d.push(id);
       localStorage.setItem(LS_KEY, JSON.stringify(d.slice(-50)));
-    } catch { /* penyimpanan penuh/private: banner tetap bisa ditutup sesi ini */ }
+    } catch { /* penyimpanan penuh/private: masih ada lapis sesi + server */ }
+    // Lapis server-side: pesanan tidak ditawarkan lagi meski storage browser hilang.
+    void reviewsApi.dismiss(id);
     setOrder(null);
   };
 
