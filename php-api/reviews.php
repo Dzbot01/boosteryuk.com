@@ -156,7 +156,9 @@ if ($action === 'pending') {
         while ($r = $res->fetch_assoc()) $rows[] = ['order_id' => (string)$r['order_id'], 'service_name' => (string)$r['service_name']];
         $st->close();
     } catch (Throwable $e) { rv_log('pending: ' . $e->getMessage()); rv_out(['ok' => false, 'message' => 'Gagal memuat pesanan selesai: ' . $e->getMessage()], 500); }
-    rv_out(['ok' => true, 'orders' => $rows]);
+    // user_id ikut dibalas supaya klien bisa memverifikasi bahwa daftar ini benar-benar
+    // milik sesi peminta (banner tidak boleh tampil ke admin/user lain).
+    rv_out(['ok' => true, 'orders' => $rows, 'user_id' => $uid]);
 }
 
 /* ---------- tandai banner pesanan selesai sebagai ditutup (persisten per user) ---------- */

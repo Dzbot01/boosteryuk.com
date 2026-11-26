@@ -98,11 +98,15 @@ assert.match(read('src/pages/ReviewSubmitPage.tsx'), /\/404\|405\/\.test\(r\.mes
 
 /* ---------- 4. Frontend: api, banner, route, menu ---------- */
 const api = read('src/services/reviewsApi.ts');
-assert.match(api, /pending: \(\) => call<\{ orders\?: PendingReviewOrder\[\] \}>\(\{ action: 'pending' }\)/, 'api pending untuk banner');
+assert.match(api, /pending: \(\) => call<\{ orders\?: PendingReviewOrder\[\]; user_id\?: number \}>\(\{ action: 'pending' }\)/, 'api pending untuk banner');
 assert.match(api, /list: \(\) => call<\{ reviews\?: ReviewItem\[\] \}>\(\{ action: 'list' }\)/, 'api list untuk papan');
 const banner = read('src/components/OrderReviewBanner.tsx');
 assert.match(banner, /const dismissedThisSession = new Set<string>\(\);/, 'lapis sesi untuk penutupan banner');
 assert.match(banner, /void reviewsApi\.dismiss\(id\);/, 'penutupan banner disimpan server-side (tahan lintas perangkat)');
+assert.match(rev, /'orders' => \$rows, 'user_id' => \$uid/, 'pending membalas user_id peminta untuk verifikasi cakupan');
+assert.match(read('php-api/riwayat_pesanan.php'), /"user_id" => \(int\)\$user_id, "orders"/, 'riwayat_pesanan membalas user_id terautentikasi');
+assert.match(banner, /function sameOwner\(/, 'banner memverifikasi kepemilikan daftar pesanan');
+assert.match(banner, /if \(rj\?\.ok && sameOwner\(rj, uid\)\)/, 'jalur cadangan wajib membawa user_id yang cocok (file lama bocor ditolak)');
 assert.match(banner, /className="fixed left-1\/2 top-\[76px\] z-\[80\] w-\[min\(92vw,600px\)\] -translate-x-1\/2 md:top-4"/, 'mobile di bawah header (76px), desktop di layar atas');
 assert.match(banner, /aria-label="Tutup notifikasi"/, 'tombol silang kecil pojok kanan atas');
 assert.match(banner, /sudah selesai\./, 'teks notifikasi pesanan selesai');
@@ -198,7 +202,7 @@ try {
   localStorage.removeItem('by-review-banner-dismissed');
   const fallbackFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
-    if (String(url).includes('riwayat_pesanan.php')) return new Response(JSON.stringify({ ok: true, orders: [
+    if (String(url).includes('riwayat_pesanan.php')) return new Response(JSON.stringify({ ok: true, user_id: 9, orders: [
       { order_id: 'OTP1234567', service_name: 'Nomor OTP WhatsApp • Indonesia', status: 'selesai' },
       { order_id: '777001', service_name: 'Followers Instagram', status: 'selesai' },
       { order_id: '777002', service_name: 'Like TikTok', status: 'proses' },
@@ -212,6 +216,34 @@ try {
   assert.ok(txt.includes('Pesanan #777001 sudah selesai.'), 'banner tetap muncul lewat jalur cadangan riwayat');
   assert.ok(!txt.includes('777002'), 'pesanan non-selesai tidak memunculkan banner');
   assert.ok(!txt.includes('OTP1234567'), 'pesanan OTP (non-SMM) tidak ditawarkan untuk dinilai');
+  await act(async () => root.unmount()); root = null;
+
+  /* jalur cadangan dengan user_id LAIN (mis. file lama bocor) → banner tidak tampil */
+  localStorage.removeItem('by-review-banner-dismissed');
+  globalThis.fetch = async (url) => {
+    if (String(url).includes('riwayat_pesanan.php')) return new Response(JSON.stringify({ ok: true, user_id: 424242, orders: [
+      { order_id: '888001', service_name: 'Followers Instagram', status: 'selesai' },
+    ] }));
+    return new Response(JSON.stringify({ ok: false, message: 'Server membalas HTTP 404.' }), { status: 404 });
+  };
+  root = createRoot(document.getElementById('root'));
+  await act(async () => root.render(h(MemoryRouter, null, h(Banner))));
+  await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+  assert.equal(document.getElementById('root').textContent, '', 'banner tidak tampil bila cakupan riwayat bukan milik sesi ini');
+  assert.ok(!document.getElementById('root').textContent.includes('888001'), 'pesanan user lain tidak ditawarkan');
+  await act(async () => root.unmount()); root = null;
+
+  /* pending dengan user_id tidak cocok → banner tidak tampil */
+  localStorage.removeItem('by-review-banner-dismissed');
+  globalThis.fetch = async (url, options) => {
+    const body = options?.body ? JSON.parse(options.body) : null;
+    if (body?.action === 'pending') return new Response(JSON.stringify({ ok: true, user_id: 555, orders: [{ order_id: '999001', service_name: 'Followers Instagram' }] }));
+    return new Response(JSON.stringify({ ok: true, reviews: [] }));
+  };
+  root = createRoot(document.getElementById('root'));
+  await act(async () => root.render(h(MemoryRouter, null, h(Banner))));
+  await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+  assert.equal(document.getElementById('root').textContent, '', 'banner tidak tampil bila pending membalas user_id lain');
   await act(async () => root.unmount()); root = null;
   globalThis.fetch = mainFetch;
 

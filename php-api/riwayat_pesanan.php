@@ -46,7 +46,9 @@ try {
     $stmt->execute();
     $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    $out = json_encode(["ok" => true, "orders" => $orders], JSON_UNESCAPED_UNICODE);
+    // user_id peminta ikut dibalas: klien (banner pesanan selesai) memakai ini untuk
+    // memverifikasi cakupan — respons tanpa user_id yang cocok dianggap tidak terpercaya.
+    $out = json_encode(["ok" => true, "user_id" => (int)$user_id, "orders" => $orders], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     http_response_code(500);
     $out = json_encode(["ok" => false, "message" => "Gagal memuat riwayat", "orders" => []]);
