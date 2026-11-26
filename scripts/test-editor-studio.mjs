@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { build } = require('esbuild');
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 
@@ -241,10 +247,76 @@ assert.match(player, /-inset-y-2/, 'area sentuh scrub bar diperbesar');
 assert.match(player, /hidden items-end gap-\[2px\] sm:flex/, 'meter audio disembunyikan di layar sempit');
 assert.match(tb, /overflow-x-auto/, 'toolbar timeline bisa digeser di HP');
 assert.match(tb, /\[&>\*\]:shrink-0/, 'tool tidak menyempit sampai tidak bisa ditekan');
+/* 12. Hapus media membuang clip timeline + trim mengikuti kursor (regresi bug melebar) */
+assert.match(store, /removeAsset: \(id\) =>\n    set\(\(s\) => \{/, 'removeAsset memakai body penuh');
+assert.match(store, /const clips = s\.clips\.filter\(\(c\) => c\.assetId !== id\);/, 'clip milik media yang dihapus ikut dibuang');
+assert.match(store, /selected: clips\.some\(\(c\) => c\.id === s\.selected\) \? s\.selected : null/, 'selection dibersihkan bila clip terpilih ikut terhapus');
+const clipSrc = read('src/components/editor/TimelineClip.tsx');
+assert.match(clipSrc, /lastX: number/, 'drag menyimpan posisi pointer terakhir');
+assert.match(clipSrc, /const inc = \(ev\.clientX - d\.lastX\) \/ zoom;/, 'trim mengirim delta inkremental per event');
+assert.equal((clipSrc.match(/touchAction: 'none'/g) || []).length, 3, 'clip + dua handle trim tidak memicu scroll saat drag (mobile)');
+
 const uiTsx = read('src/components/editor/ui.tsx');
 assert.match(uiTsx, /h-8 w-8[\s\S]{0,120}lg:h-7 lg:w-7/, 'target sentuh IconBtn 32px di HP, 28px di desktop');
 for (const f of ['ExportModal.tsx', 'ShortcutModal.tsx']) {
   assert.match(read(`src/components/editor/${f}`), /max-h-\[90vh\] overflow-y-auto ed-scroll/, `modal ${f} bisa di-scroll di layar pendek`);
 }
 
-console.log('PASS Editor Studio (CapCut-style): badge teks Playground dihapus, kartu Studio layar penuh saat menu dibuka, interaksi mobile (scrub pointer, toolbar bisa digeser, bottom sheet dapat di-scroll, dropdown pointerdown, target sentuh 32-46px), TopBar 44px + menu/auto-save/judul/Export, panel kiri 7 tab (Media/Audio/Text/Stickers/Effects/Transition/Filters), Player + scrub bar + rasio, Inspector 5 tab, Timeline toolbar/ruler/playhead/track/clip, Export & Shortcut modal, shortcut keyboard, divider resizable, export nyata PNG/.webm.');
+/* 13. Fungsional jsdom: removeAsset menghapus clip + drag trim sinkron 1:1 dengan kursor */
+const { JSDOM } = require('jsdom');
+const dom = new JSDOM('<div id="root"></div>', { url: 'https://boosteryuk.com/playground?m=studio' });
+globalThis.window = dom.window; globalThis.document = dom.window.document;
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.matchMedia = (q) => ({ matches: false, media: q, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false });
+globalThis.ResizeObserver = class { observe() {} disconnect() {} unobserve() {} };
+const dirEd = mkdtempSync(path.join(tmpdir(), 'editor-studio-'));
+let rootEd = null;
+try {
+  const { outputFiles } = await build({
+    stdin: { contents: `export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {useEditor} from './src/components/editor/store';export {default as TimelineClip} from './src/components/editor/TimelineClip';`, resolveDir: process.cwd(), sourcefile: 'entry.tsx' },
+    bundle: true, platform: 'node', format: 'cjs', write: false, jsx: 'automatic',
+    loader: { '.css': 'empty', '.png': 'dataurl', '.gif': 'dataurl', '.mp3': 'dataurl', '.wav': 'dataurl' },
+    define: { 'process.env.NODE_ENV': '"development"', 'import.meta.env': '{}' },
+  });
+  const fileEd = path.join(dirEd, 'bundle.cjs'); writeFileSync(fileEd, outputFiles[0].text);
+  const { createElement: h, act, createRoot, useEditor, TimelineClip } = require(fileEd);
+  const ZOOM = 50;
+  const mkClip = (id) => ({ id, track: 'video', assetId: 'asset-1', name: 'Klip Uji', start: 2, duration: 10, inPoint: 0, chips: [], mock: true });
+
+  /* hapus media => clip timeline + selection ikut terhapus */
+  useEditor.setState({ assets: [{ id: 'asset-1', name: 'uji.mp4', kind: 'video', url: '', thumb: '', duration: 10, mock: true }], clips: [mkClip('c1')], selected: 'c1' });
+  await act(async () => { useEditor.getState().removeAsset('asset-1'); });
+  assert.deepEqual(useEditor.getState().clips, [], 'clip timeline terhapus bersama medianya');
+  assert.equal(useEditor.getState().selected, null, 'selection clip yang ikut terhapus dibersihkan');
+  assert.deepEqual(useEditor.getState().assets, [], 'media hilang dari panel');
+
+  /* drag handle kanan: 3 event pointer +10px masing-masing => durasi +3*(10/50)=+0.6 dtk */
+  useEditor.setState({ assets: [], clips: [mkClip('c2')], selected: 'c2' });
+  rootEd = createRoot(document.getElementById('root'));
+  await act(async () => rootEd.render(h(TimelineClip, { clip: useEditor.getState().clips[0], zoom: ZOOM })));
+  const handles = [...document.querySelectorAll('#root span.cursor-ew-resize')];
+  assert.equal(handles.length, 2, 'dua handle trim tampil pada clip terpilih');
+  const down = (el, x) => act(async () => el.dispatchEvent(new dom.window.MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: x })));
+  const moveWin = (x) => act(async () => dom.window.dispatchEvent(new dom.window.MouseEvent('pointermove', { bubbles: true, clientX: x })));
+  const upWin = () => act(async () => dom.window.dispatchEvent(new dom.window.MouseEvent('pointerup', { bubbles: true })));
+  await down(handles[1], 1000);
+  await moveWin(1010); await moveWin(1020); await moveWin(1030);
+  await upWin();
+  const after = useEditor.getState().clips[0];
+  assert.ok(Math.abs(after.duration - 10.6) < 1e-9, `durasi mengikuti kursor 1:1 (10.6 dtk, dapat ${after.duration})`);
+  assert.equal(after.start, 2, 'handle kanan tidak menggeser posisi mulai');
+
+  /* drag handle kiri: 2 event +10px => start +0.4, duration -0.4, inPoint +0.4 */
+  await down(handles[0], 500);
+  await moveWin(510); await moveWin(520);
+  await upWin();
+  const left = useEditor.getState().clips[0];
+  assert.ok(Math.abs(left.start - 2.4) < 1e-9 && Math.abs(left.duration - 10.2) < 1e-9 && Math.abs(left.inPoint - 0.4) < 1e-9, `trim kiri sinkron kursor (start 2.4 / durasi 10.2, dapat ${left.start}/${left.duration})`);
+
+  await act(async () => rootEd.unmount()); rootEd = null;
+} finally {
+  if (rootEd) { const { act } = require(path.join(dirEd, 'bundle.cjs')); await act(async () => rootEd.unmount()); }
+}
+
+console.log('PASS Editor Studio (CapCut-style): badge teks Playground dihapus, kartu Studio layar penuh saat menu dibuka, interaksi mobile (scrub pointer, toolbar bisa digeser, bottom sheet dapat di-scroll, dropdown pointerdown, target sentuh 32-46px), TopBar 44px + menu/auto-save/judul/Export, panel kiri 7 tab (Media/Audio/Text/Stickers/Effects/Transition/Filters), Player + scrub bar + rasio, Inspector 5 tab, Timeline toolbar/ruler/playhead/track/clip, Export & Shortcut modal, shortcut keyboard, divider resizable, export nyata PNG/.webm, hapus media membuang clip timeline, dan drag trim clip sinkron 1:1 dengan kursor (desktop & mobile).');
+process.exit(0);

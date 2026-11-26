@@ -199,7 +199,20 @@ export const useEditor = create<EditorState>((set, get) => ({
       };
     }
   },
-  removeAsset: (id) => set((s) => ({ assets: s.assets.filter((a) => a.id !== id) })),
+  removeAsset: (id) =>
+    set((s) => {
+      const gone = s.assets.find((a) => a.id === id);
+      // Object URL file lokal dilepas agar memori tidak bocor setelah media dihapus.
+      if (gone?.url.startsWith('blob:')) URL.revokeObjectURL(gone.url);
+      // Clip yang memakai media ini ikut dibuang dari timeline (kartu/overlay trimnya
+      // tidak boleh tertinggal saat medianya sudah tidak ada).
+      const clips = s.clips.filter((c) => c.assetId !== id);
+      return {
+        assets: s.assets.filter((a) => a.id !== id),
+        clips,
+        selected: clips.some((c) => c.id === s.selected) ? s.selected : null,
+      };
+    }),
 
   clips: EMPTY_CLIPS,
   selected: null,
