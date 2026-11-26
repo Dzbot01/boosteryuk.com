@@ -4,7 +4,7 @@
 //    pesan jelas bila key belum diset;
 //  • klien src/services/v2funApi.ts lewat MAIN_API/v2fun.php (key tidak pernah di browser);
 //  • PlaygroundPage: menu baru "Generate 3D Model" (?m=gen3d) fullscreen seperti studio;
-//  • UI dashboard sesuai brief: navbar V2FUN, sidebar Image/Model/Animation/Tutorials,
+//  • UI dashboard sesuai brief: navbar tanpa brand V2FUN (avatar user / teks login), sidebar Image/Model/Animation/Tutorials,
 //    panel pengaturan (dropzone, dropdown Standard/Pro/Ultra, toggle tekstur), canvas
 //    empty state, Asset Library + pagination; Generate disabled tanpa input;
 //  • perilaku jsdom: mode teks → Generate aktif → task QUEUED→RUNNING→COMPLETED →
@@ -53,13 +53,13 @@ assert.match(pg, /\{ id: 'gen3d', label: 'Generate 3D Model', icon: Boxes/, 'men
 assert.match(pg, /\['overview', 'hook', 'caption', 'tts', 'studio', 'gen3d'\]/, 'menu gen3d diterima dari URL');
 assert.match(pg, /const Generator3dStudio = lazy\(\(\) => import\('\.\.\/components\/Generator3dStudio'\)\)/, 'studio dimuat malas');
 assert.match(pg, /menu === 'gen3d' \? \(\s*\/\* Dashboard AI 3D Model Generator memenuhi SELURUH layar/, 'halaman fullscreen 100vh');
-assert.match(pg, /<Generator3dStudio onOpenMenu=\{\(\) => setDrawerOpen\(true\)\} \/>/, 'tombol menu Playground tersedia di navbar studio');
+assert.match(pg, /<Generator3dStudio onOpenMenu=\{\(\) => setDrawerOpen\(true\)\} onLoginClick=\{\(\) => navigate\('\/'\)\} \/>/, 'tombol menu Playground + onLoginClick tersedia di navbar studio');
 
 /* ---------- 4. UI dashboard sesuai brief ---------- */
 const studio = read('src/components/Generator3dStudio.tsx');
 for (const hex of ['#0f0f0f', '#1a1a1a', '#2a2a2a', '#00d4c8', '#f472b6']) assert.ok(studio.includes(hex), `palet warna ${hex}`);
 for (const txt of [
-  'V2FUN', 'Workspace', 'Resources', 'Subscribe',
+  'Workspace', 'Resources', 'Subscribe',
   'Reference Image', 'AI 3D Model', 'Texture',
   'Upload / Drag &amp; Drop Image', 'Supported: .jpg, .jpeg, .png, .webp', 'Image Size: 64–4096 px', 'Max 20MB',
   'Generate Now', 'Estimated 2 min', 'Credit Details &gt;',
@@ -68,6 +68,15 @@ for (const txt of [
   'Tutorials',
 ]) assert.ok(studio.includes(txt), `teks UI: ${txt}`);
 assert.match(studio, /\['Standard', 'Pro', 'Ultra'\] as Tier\[\]/, 'dropdown model Standard/Pro/Ultra');
+assert.ok(!studio.includes('/> V2FUN'), 'judul+logo V2FUN dihapus dari navbar studio');
+assert.match(studio, /useContext\(AuthContext\)/, 'navbar membaca user login dari AuthContext');
+assert.match(studio, /<UserAvatar user=\{user\}/, 'avatar bulat navbar memakai UserAvatar (ikon profil user login)');
+assert.match(studio, /underline underline-offset-4/, 'teks login tamu bergaris bawah');
+assert.match(studio, /sessionStorage\.setItem\('by-open-login-on-home', '1'\)/, 'klik login menyetel flag pembuka modal di dasbor');
+assert.match(pg, /onLoginClick=\{\(\) => navigate\('\/'\)\}/, 'PlaygroundPage meneruskan onLoginClick navigasi ke dasbor');
+const home = read('src/pages/HomePage.tsx');
+assert.match(home, /by-open-login-on-home/, 'HomePage membaca flag login dari navbar studio');
+assert.match(home, /openLogin\?: boolean/, 'HomePage mendukung state openLogin');
 assert.match(studio, /const TIER_COST: Record<Tier, number> = \{ Standard: 30, Pro: 60, Ultra: 120 \}/, 'biaya kredit per tier');
 assert.match(studio, /segTab === 'text' \? prompt\.trim\(\).length > 0 : refImage !== null/, 'Generate aktif hanya bila ada input');
 assert.match(studio, /disabled=\{!canGenerate\}/, 'tombol Generate punya state disabled');
@@ -84,17 +93,18 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 globalThis.matchMedia = (q) => ({ matches: false, media: q, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false });
 globalThis.IntersectionObserver = class { constructor(cb) { this.cb = cb; } observe() {} disconnect() {} unobserve() {} };
 globalThis.ResizeObserver = class { observe() {} disconnect() {} unobserve() {} };
+globalThis.sessionStorage = dom.window.sessionStorage;
 const dir = mkdtempSync(path.join(tmpdir(), 'playground-3d-'));
 let root = null;
 try {
   const { outputFiles } = await build({
-    stdin: { contents: `export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {default as Studio} from './src/components/Generator3dStudio';`, resolveDir: process.cwd(), sourcefile: 'entry.tsx' },
+    stdin: { contents: `export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';export {default as Studio} from './src/components/Generator3dStudio';export {AuthContext} from './src/context/AuthContext';`, resolveDir: process.cwd(), sourcefile: 'entry.tsx' },
     bundle: true, platform: 'node', format: 'cjs', write: false, jsx: 'automatic',
-    loader: { '.css': 'empty', '.png': 'dataurl', '.gif': 'dataurl' },
-    define: { 'process.env.NODE_ENV': '"development"' },
+    loader: { '.css': 'empty', '.png': 'dataurl', '.gif': 'dataurl', '.mp3': 'dataurl', '.wav': 'dataurl' },
+    define: { 'process.env.NODE_ENV': '"development"', 'import.meta.env': '{}' },
   });
   const file = path.join(dir, 'bundle.cjs'); writeFileSync(file, outputFiles[0].text);
-  const { createElement: h, act, createRoot, Studio } = require(file);
+  const { createElement: h, act, createRoot, Studio, AuthContext } = require(file);
 
   let taskCalls = 0;
   globalThis.fetch = async (url, options) => {
@@ -113,10 +123,11 @@ try {
     return new Response(JSON.stringify({ ok: true }));
   };
 
+  let loginSpyCalls = 0;
   root = createRoot(document.getElementById('root'));
-  await act(async () => root.render(h(Studio, {})));
+  await act(async () => root.render(h(Studio, { onLoginClick: () => { loginSpyCalls++; } })));
   const txt0 = document.getElementById('root').textContent;
-  for (const t of ['V2FUN', 'Workspace', 'Subscribe', '320', 'Image', 'Model', 'Animation', 'Tutorials', 'Reference Image', 'AI 3D Model', 'Texture', 'Upload / Drag & Drop Image', 'Asset Library', 'Generate a creation or select from your asset library.', 'View All (1)']) {
+  for (const t of ['Workspace', 'Subscribe', '320', 'Image', 'Model', 'Animation', 'Tutorials', 'Reference Image', 'AI 3D Model', 'Texture', 'Upload / Drag & Drop Image', 'Asset Library', 'Generate a creation or select from your asset library.', 'View All (1)']) {
     assert.ok(txt0.includes(t), `UI awal memuat "${t}"`);
   }
   const genBtn = () => [...document.querySelectorAll('#root button')].find((b) => b.textContent.includes('Generate Now'));
@@ -148,8 +159,26 @@ try {
   assert.ok(dl, 'viewer gagal di jsdom → tautan unduh GLB tampil');
   assert.equal(dl.getAttribute('href'), 'https://asset.v2fun.ai/download/models/x.glb', 'tautan unduh memakai download_url task');
 
+  /* navbar: judul/logo V2FUN hilang; tamu melihat teks "login" bergaris bawah */
+  assert.ok(!txt0.includes('V2FUN'), 'judul/logo V2FUN tidak lagi dirender di navbar');
+  const loginBtn = [...document.querySelectorAll('#root button')].find((b) => b.textContent.trim() === 'login');
+  assert.ok(loginBtn, 'tamu melihat teks login di navbar studio');
+  assert.ok(loginBtn.className.includes('underline'), 'teks login bergaris bawah');
+  await act(async () => loginBtn.click());
+  assert.equal(loginSpyCalls, 1, 'klik login memanggil onLoginClick (navigasi SPA ke dasbor)');
+  assert.equal(dom.window.sessionStorage.getItem('by-open-login-on-home'), '1', 'flag pembuka modal login dasbor diset');
+
+  /* user login: avatar bulat navbar = UserAvatar + initials user, teks login hilang */
   await act(async () => root.unmount()); root = null;
-  console.log('PASS Playground Generate 3D Model: menu + halaman fullscreen, dashboard V2FUN (navbar/sidebar/panel/canvas/pustaka), proxy PHP Bearer key + polling task, dan alur generate→COMPLETED→aset+kredit.');
+  const fakeUser = { id: 7, name: 'Dz Bot', username: 'dzbot', email: 'dz@bot.id', initials: 'DZ', joined: '', phone: '', timezone: 'WIB', balance: 0, role: 'user', plusActive: false };
+  root = createRoot(document.getElementById('root'));
+  await act(async () => root.render(h(AuthContext.Provider, { value: { user: fakeUser } }, h(Studio, {}))));
+  const txt2 = document.getElementById('root').textContent;
+  assert.ok(txt2.includes('DZ'), 'initials user login tampil di avatar navbar');
+  assert.ok(![...document.querySelectorAll('#root button')].some((b) => b.textContent.trim() === 'login'), 'teks login hilang saat user sudah login');
+
+  await act(async () => root.unmount()); root = null;
+  console.log('PASS Playground Generate 3D Model: menu + halaman fullscreen, dashboard tanpa brand V2FUN (avatar user/login di navbar), proxy PHP Bearer key + polling task, dan alur generate→COMPLETED→aset+kredit.');
 } finally {
   if (root) { const { act } = require(path.join(dir, 'bundle.cjs')); await act(async () => root.unmount()); }
   dom.window.close(); rmSync(dir, { recursive: true, force: true });

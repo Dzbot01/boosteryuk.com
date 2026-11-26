@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import EditorStudio from '../components/EditorStudio';
 const Generator3dStudio = lazy(() => import('../components/Generator3dStudio'));
 import {
@@ -46,6 +46,7 @@ const MENUS: { id: Menu; label: string; icon: typeof Sparkles; desc: string }[] 
 export default function PlaygroundPage() {
   // Menu disimpan di URL (?m=) agar refresh tidak kembali ke Overview.
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const raw = params.get('m') || 'overview';
   const menu = (['overview', 'hook', 'caption', 'tts', 'studio', 'gen3d'].includes(raw) ? raw : 'overview') as Menu;
   const setMenu = (m: Menu) => setParams(m === 'overview' ? {} : { m }, { replace: false });
@@ -75,7 +76,7 @@ export default function PlaygroundPage() {
         /* Dashboard AI 3D Model Generator memenuhi SELURUH layar (100vh, tanpa scroll halaman). */
         <div className="fixed inset-0 z-50 overflow-hidden bg-[#0f0f0f]">
           <Suspense fallback={<div className="flex h-full items-center justify-center text-[#8a8a8a]">Memuat studio 3D…</div>}>
-            <Generator3dStudio onOpenMenu={() => setDrawerOpen(true)} />
+            <Generator3dStudio onOpenMenu={() => setDrawerOpen(true)} onLoginClick={() => navigate('/')} />
           </Suspense>
         </div>
       ) : menu === 'studio' ? (

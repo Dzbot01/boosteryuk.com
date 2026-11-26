@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowUpDown,
   Bell,
@@ -31,6 +31,8 @@ import {
   Upload,
 } from 'lucide-react';
 import { v2funGenerate, v2funTask, v2funGlbUrl, v2funStatusLabel } from '../services/v2funApi';
+import { AuthContext } from '../context/AuthContext';
+import UserAvatar from './UserAvatar';
 
 /**
  * Generator3dStudio — dashboard "AI 3D Model Generator" (menu Playground: Generate 3D Model).
@@ -69,7 +71,7 @@ interface GenState {
   taskUuid: string;
 }
 
-export default function Generator3dStudio({ onOpenMenu }: { onOpenMenu?: () => void }) {
+export default function Generator3dStudio({ onOpenMenu, onLoginClick }: { onOpenMenu?: () => void; onLoginClick?: () => void }) {
   /* ---------------- state utama ---------------- */
   const [sideTab, setSideTab] = useState<SideTab>('model');
   const [segTab, setSegTab] = useState<SegTab>('image');
@@ -205,7 +207,7 @@ export default function Generator3dStudio({ onOpenMenu }: { onOpenMenu?: () => v
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#0f0f0f] font-sans text-white">
-      <Navbar credits={credits} onOpenMenu={onOpenMenu} />
+      <Navbar credits={credits} onOpenMenu={onOpenMenu} onLoginClick={onLoginClick} />
       <div className="flex min-h-0 flex-1 gap-4 p-4">
         <Sidebar tab={sideTab} onTab={setSideTab} />
 
@@ -442,8 +444,11 @@ export default function Generator3dStudio({ onOpenMenu }: { onOpenMenu?: () => v
 }
 
 /* ================= Navbar ================= */
-function Navbar({ credits, onOpenMenu }: { credits: number; onOpenMenu?: () => void }) {
+function Navbar({ credits, onOpenMenu, onLoginClick }: { credits: number; onOpenMenu?: () => void; onLoginClick?: () => void }) {
   const [wsOpen, setWsOpen] = useState(false);
+  // Profil mengikuti user yang sedang login (context auth); tanpa provider (test) => tamu.
+  const auth = useContext(AuthContext);
+  const user = auth?.user ?? null;
   return (
     <header className="flex h-16 shrink-0 items-center gap-3 border-b border-[#2a2a2a] px-4">
       {onOpenMenu && (
@@ -451,9 +456,6 @@ function Navbar({ credits, onOpenMenu }: { credits: number; onOpenMenu?: () => v
           <MenuIcon className="h-5 w-5" strokeWidth={2.2} />
         </button>
       )}
-      <span className="flex items-center gap-1.5 text-[17px] font-extrabold tracking-tight">
-        <Rabbit className="h-5 w-5 text-[#00d4c8]" strokeWidth={2.2} /> V2FUN
-      </span>
       <div className="relative">
         <button onClick={() => setWsOpen((o) => !o)} className="flex items-center gap-1.5 rounded-xl border border-[#00d4c8]/50 px-3 py-1.5 text-[12.5px] font-bold text-[#00d4c8] transition-colors duration-150 hover:bg-[#00d4c8]/10">
           Workspace <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-150 ${wsOpen ? 'rotate-180' : ''}`} />
@@ -493,7 +495,24 @@ function Navbar({ credits, onOpenMenu }: { credits: number; onOpenMenu?: () => v
         <button aria-label="Notifikasi" className="flex h-9 w-9 items-center justify-center rounded-xl text-[#8a8a8a] transition-colors duration-150 hover:bg-[#1a1a1a] hover:text-white">
           <Bell className="h-4 w-4" strokeWidth={2.2} />
         </button>
-        <span className="flex h-9 w-9 select-none items-center justify-center rounded-full bg-[#2a2a2a] text-[13px] font-extrabold">R</span>
+        {user ? (
+          <span title={user.username} className="flex h-9 w-9 select-none items-center justify-center overflow-hidden rounded-full text-[13px] font-extrabold text-white">
+            <UserAvatar user={user} fallbackClassName={`rounded-full ${user.plusActive ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 ring-2 ring-amber-300' : 'bg-gradient-to-br from-cyan-500 to-cyan-700'}`}>{user.initials || 'U'}</UserAvatar>
+          </span>
+        ) : (
+          <button
+            onClick={() => {
+              // Penanda dibaca HomePage (dasbor) agar modal login langsung terbuka setelah navigasi.
+              try { sessionStorage.setItem('by-open-login-on-home', '1'); } catch { /* mode privat */ }
+              if (onLoginClick) onLoginClick();
+              else window.location.assign('/');
+            }}
+            aria-label="Login ke dasbor"
+            className="px-1 text-[13px] font-bold text-[#00d4c8] underline underline-offset-4 transition-colors duration-150 hover:text-white"
+          >
+            login
+          </button>
+        )}
       </div>
     </header>
   );
