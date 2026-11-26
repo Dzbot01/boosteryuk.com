@@ -26,7 +26,7 @@ export default function InspectorVideo() {
       {seg === 'Basic' && (
         <div className="mt-1">
           <SectionHead title="Filters">
-            <p className="pb-1 text-[12px] font-bold" style={{ color: C.text }}>{filterName}</p>
+            <p className="pb-1 text-[12px] font-bold" style={{ color: C.text }}>{filterName || `Original`}</p>
             <SliderRow label="Strength" value={filterStrength} min={0} max={100} suffix="%" onChange={setFilterStrength} diamond />
           </SectionHead>
 
@@ -47,7 +47,7 @@ export default function InspectorVideo() {
           </SectionHead>
 
           <SectionHead title="Position & Size" collapsed={collapsed['Position & Size']} onToggle={() => toggle('Position & Size')}>
-            <SliderRow label="Zoom" value={zoomPct} min={0} max={200} suffix="%" onChange={setZoomPct} diamond />
+            <SliderRow label="Zoom" value={zoomPct} min={10} max={300} suffix="%" onChange={setZoomPct} diamond />
             <div className="flex items-center gap-2 py-1.5">
               <span className="w-[76px] shrink-0 text-[11px]" style={{ color: C.text2 }}>Position X</span>
               <Stepper value={posX} onChange={(x) => setPos(x, posY)} />
