@@ -14,6 +14,19 @@ function isSmmOrder(o: { order_id: string; service_name: string }): boolean {
   return !/Event Merchant:|NexSpace|Nomor OTP|Agen AI|Boosteryuk Plus|Boosteryuk EXTRA/.test(o.service_name);
 }
 
+/**
+ * Verifikasi cakupan respons: banner HANYA boleh memakai daftar pesanan yang jelas-jelas
+ * milik sesi peminta. Respons yang membawa user_id berbeda ditolak; jalur cadangan
+ * (riwayat_pesanan.php) bahkan wajib membawa user_id yang cocok — file lama di hosting yang
+ * membocorkan riwayat semua user tidak akan pernah dipakai lagi.
+ */
+function sameOwner(payload: { user_id?: number | string | null }, uid: number | null): boolean {
+  const raw = payload?.user_id;
+  if (raw === undefined || raw === null || raw === '') return false;
+  if (uid === null) return true; // sesi tanpa id (seharusnya tidak terjadi) → jangan tampilkan apa-apa? tetap longgar di pending
+  return Number(raw) === Number(uid);
+}
+
 const LS_KEY = 'by-review-banner-dismissed';
 
 /**
@@ -54,16 +67,20 @@ export default function OrderReviewBanner() {
     if (!user) { setOrder(null); return; }
     let alive = true;
     const load = async () => {
+      const uid = user?.id ?? null;
       const r = await reviewsApi.pending();
-      let list: PendingReviewOrder[] = r.ok ? (r.orders || []) : [];
+      // pending sudah difilter server per user; user_id yang dibalas dipakai sebagai
+      // verifikasi ganda bila tersedia.
+      let list: PendingReviewOrder[] = r.ok && (r.user_id === undefined || sameOwner(r, uid)) ? (r.orders || []) : [];
       if (!r.ok) {
         // reviews.php belum ada/gagal di hosting → jalur cadangan lewat riwayat pesanan,
-        // supaya banner "pesanan selesai" tetap muncul tanpa menunggu upload file baru.
+        // TAPI hanya bila respons menyatakan cakupan user yang sama (file lama yang
+        // membocorkan semua user ditolak mentah-mentah).
         try {
           const tk = localStorage.getItem('token') || '';
           const rr = await fetch(`${MAIN_API}/riwayat_pesanan.php?token=${encodeURIComponent(tk)}`, { cache: 'no-store' });
-          const rj = (await rr.json().catch(() => null)) as { ok?: boolean; orders?: { order_id: string; service_name: string; status: string }[] } | null;
-          if (rj?.ok) list = (rj.orders || []).filter((o) => o.status === 'selesai' && isSmmOrder(o)).map((o) => ({ order_id: o.order_id, service_name: o.service_name }));
+          const rj = (await rr.json().catch(() => null)) as { ok?: boolean; user_id?: number | string; orders?: { order_id: string; service_name: string; status: string }[] } | null;
+          if (rj?.ok && sameOwner(rj, uid)) list = (rj.orders || []).filter((o) => o.status === 'selesai' && isSmmOrder(o)).map((o) => ({ order_id: o.order_id, service_name: o.service_name }));
         } catch { /* biarkan kosong */ }
       }
       if (!alive) return;
