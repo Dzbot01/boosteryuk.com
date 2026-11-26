@@ -68,7 +68,23 @@ export default function Player() {
   // Total = ujung project; saat proyek kosong pakai durasi media preview.
   const end = useMemo(() => projectEnd(clips) || previewAsset?.duration || 0, [clips, previewAsset]);
 
-  // Sinkronisasi video asli dengan playhead.
+  // Preview mengikuti POSISI playhead walau sedang pause (scrub/klik clip/geser
+  // ruler): elemen video di-seek ke waktu clip di bawah playhead, bukan tetap di
+  // frame awal. Bila metadata belum siap, seek ditunda sampai loadedmetadata.
+  useEffect(() => {
+    if (playing) return; // saat play: sinkron_native + koreksi drift di efek bawah
+    const v = videoRef.current;
+    if (!v) return;
+    const want = clip ? (clip.inPoint || 0) + (playhead - clip.start) : 0;
+    const seek = () => {
+      if (Math.abs(v.currentTime - want) > 0.02) v.currentTime = Math.max(0, want);
+    };
+    if (v.readyState >= 1) seek();
+    else v.addEventListener('loadedmetadata', seek, { once: true });
+    return () => v.removeEventListener('loadedmetadata', seek);
+  }, [playhead, clip, asset, playing]);
+
+  // Sinkronisasi video asli dengan playhead saat playback (koreksi drift > 0.35 dtk).
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !playing) return;
