@@ -255,6 +255,16 @@ const clipSrc = read('src/components/editor/TimelineClip.tsx');
 assert.match(clipSrc, /lastX: number/, 'drag menyimpan posisi pointer terakhir');
 assert.match(clipSrc, /const inc = \(ev\.clientX - d\.lastX\) \/ zoom;/, 'trim mengirim delta inkremental per event');
 assert.equal((clipSrc.match(/touchAction: 'none'/g) || []).length, 3, 'clip + dua handle trim tidak memicu scroll saat drag (mobile)');
+assert.match(store, /playheadTouched: false/, 'guard playhead belum disentuh');
+assert.match(store, /setPlayheadDefault: \(t\) => set\(\(s\) => \(s\.playheadTouched \? \{\} : \{ playhead: Math\.max\(0, t\) \}\)\)/, 'default playhead hanya selama belum disentuh');
+assert.match(tl, /setPlayheadDefault\(\(view\.scrollLeft \+ view\.clientWidth \/ 2\) \/ zoom\)/, 'default cursor timeline = tengah viewport');
+assert.match(clipSrc, /setPlayhead\(clip\.start \+ \(e\.clientX - rect\.left\) \/ zoom\)/, 'klik clip memindahkan playhead ke posisi klik');
+assert.match(store, /const under = s\.clips\.find\(\(c\) => s\.playhead >= c\.start && s\.playhead <= c\.start \+ c\.duration\);/, 'cut memakai clip di bawah garis playhead');
+assert.match(store, /importAudioFiles: \(files\) => \{/, 'store punya importAudioFiles');
+assert.match(tb, /accept="audio\/\*,\.mp3,\.wav,\.m4a,\.aac,\.ogg,\.flac"/, 'input file audio mp3/wav dll.');
+assert.match(tb, /importAudioFiles\(e\.target\.files\)/, 'toolbar meneruskan file audio ke store');
+assert.match(tb, /const canSplit = Boolean\(selected\) \|\| clips\.some/, 'tombol Split aktif bila playhead di atas clip');
+assert.match(tb, /disabled=\{!canSplit\}/, 'Split memakai canSplit');
 
 const uiTsx = read('src/components/editor/ui.tsx');
 assert.match(uiTsx, /h-8 w-8[\s\S]{0,120}lg:h-7 lg:w-7/, 'target sentuh IconBtn 32px di HP, 28px di desktop');
@@ -312,8 +322,50 @@ try {
   await upWin();
   const left = useEditor.getState().clips[0];
   assert.ok(Math.abs(left.start - 2.4) < 1e-9 && Math.abs(left.duration - 10.2) < 1e-9 && Math.abs(left.inPoint - 0.4) < 1e-9, `trim kiri sinkron kursor (start 2.4 / durasi 10.2, dapat ${left.start}/${left.duration})`);
-
   await act(async () => rootEd.unmount()); rootEd = null;
+
+  /* playhead default tengah: berlaku hanya selama belum disentuh user */
+  useEditor.setState({ clips: [], selected: null, playhead: 0, playheadTouched: false });
+  useEditor.getState().setPlayheadDefault(12.5);
+  assert.equal(useEditor.getState().playhead, 12.5, 'default tengah dapat menimpa selama belum disentuh');
+  useEditor.getState().setPlayhead(3);
+  useEditor.getState().setPlayheadDefault(99);
+  assert.equal(useEditor.getState().playhead, 3, 'posisi user tidak ditimpa default setelah disentuh');
+
+  /* klik body clip => playhead otomatis ke posisi klik (rect jsdom nol => t = start + clientX/zoom) */
+  useEditor.setState({ clips: [mkClip('c3')], selected: null, playhead: 0, playheadTouched: true });
+  rootEd = createRoot(document.getElementById('root'));
+  await act(async () => rootEd.render(h(TimelineClip, { clip: useEditor.getState().clips[0], zoom: ZOOM })));
+  const body = document.querySelector('#root [role="button"]');
+  await down(body, 150);
+  assert.equal(useEditor.getState().playhead, 2 + 150 / ZOOM, 'klik clip memindahkan cursor timeline ke posisi klik');
+  await upWin();
+  await act(async () => rootEd.unmount()); rootEd = null;
+
+  /* cut mengikuti garis playhead walau tanpa selection */
+  useEditor.setState({ clips: [mkClip('c4')], selected: null, playhead: 5 });
+  await act(async () => { useEditor.getState().splitSelected(); });
+  const parts = useEditor.getState().clips;
+  assert.equal(parts.length, 2, 'Split memotong clip di bawah garis playhead walau tanpa selection');
+  assert.ok(Math.abs(parts[0].duration - 3) < 1e-9 && Math.abs(parts[1].start - 5) < 1e-9 && Math.abs(parts[1].duration - 7) < 1e-9, `potongan sesuai garis playhead (3 + 7 dtk, dapat ${parts[0].duration} + ${parts[1].duration})`);
+
+  /* upload audio (mp3) => asset + clip audio di track audio mulai garis playhead */
+  // Node menolak File jsdom di createObjectURL & jsdom tidak menyediakannya => shim blob URL.
+  globalThis.URL = dom.window.URL;
+  let blobSeq = 0;
+  dom.window.URL.createObjectURL = () => `blob:https://boosteryuk.com/mock-${++blobSeq}`;
+  dom.window.URL.revokeObjectURL = () => {};
+  globalThis.Audio = dom.window.Audio;
+  const fileMp3 = new dom.window.File([new Uint8Array(32)], 'lagu-demo.mp3', { type: 'audio/mpeg' });
+  useEditor.setState({ clips: [mkClip('c5')], selected: null, playhead: 4 });
+  await act(async () => { useEditor.getState().importAudioFiles([fileMp3]); });
+  const stAfterAudio = useEditor.getState();
+  const audioClip = stAfterAudio.clips.find((c) => c.track === 'audio');
+  assert.ok(audioClip, 'clip audio terbentuk dari upload mp3');
+  assert.equal(audioClip.start, 4, 'clip audio mulai dari garis playhead');
+  assert.ok(stAfterAudio.clips.filter((c) => c.track === 'video').length === 1, 'clip media tetap di track video (audio di bawahnya)');
+  assert.ok(stAfterAudio.assets.some((a) => a.kind === 'audio' && a.name === 'lagu-demo.mp3'), 'asset audio masuk daftar media');
+  assert.equal(stAfterAudio.selected, audioClip.id, 'clip audio baru langsung terpilih');
 } finally {
   if (rootEd) { const { act } = require(path.join(dirEd, 'bundle.cjs')); await act(async () => rootEd.unmount()); }
 }

@@ -14,6 +14,8 @@ interface EditorState {
 
   assets: MediaAsset[];
   importFiles: (files: FileList | File[]) => void;
+  /** Upload audio (mp3 dll.) dari toolbar timeline → clip di track audio. */
+  importAudioFiles: (files: FileList | File[]) => void;
   removeAsset: (id: string) => void;
   /** Media terakhir yang di-import → preview Player otomatis menyesuaikan. */
   previewAssetId: string;
@@ -34,6 +36,10 @@ interface EditorState {
 
   playhead: number;
   setPlayhead: (t: number) => void;
+  /** True setelah playhead disentuh user/player; dipakai guard default-tengah. */
+  playheadTouched: boolean;
+  /** Set posisi default (tengah viewport timeline) hanya selama belum disentuh. */
+  setPlayheadDefault: (t: number) => void;
   playing: boolean;
   setPlaying: (p: boolean) => void;
   zoom: number;
@@ -199,6 +205,54 @@ export const useEditor = create<EditorState>((set, get) => ({
       };
     }
   },
+  importAudioFiles: (files) => {
+    const added: MediaAsset[] = [];
+    for (const file of Array.from(files)) {
+      const isAudio = file.type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name);
+      if (!isAudio) continue;
+      added.push({ id: uid(), name: file.name, kind: 'audio', url: URL.createObjectURL(file), thumb: makeThumb('audio'), duration: 0 });
+    }
+    if (added.length === 0) return;
+    const s0 = get();
+    s0.pushHistory();
+    // Clip audio muncul di track audio (di bawah clip media) mulai dari GARIS playhead.
+    let cursor = s0.playhead;
+    const newClips: Clip[] = [];
+    for (const asset of added) {
+      newClips.push({
+        id: uid(),
+        track: 'audio',
+        assetId: asset.id,
+        name: asset.name,
+        start: cursor,
+        duration: 0.1,
+        inPoint: 0,
+        thumb: asset.thumb,
+        waveform: Array.from({ length: 60 }, (_, i) => 0.25 + Math.abs(Math.sin(i / 3)) * 0.7),
+        chips: ['Audio', asset.name],
+        pending: true,
+      });
+      cursor = newClips[newClips.length - 1].start + 0.1;
+    }
+    set((s) => ({
+      assets: [...s.assets, ...added],
+      clips: [...s.clips, ...newClips],
+      selected: newClips[newClips.length - 1].id,
+    }));
+    for (const asset of added) {
+      const au = new Audio();
+      au.preload = 'metadata';
+      au.src = asset.url;
+      au.onloadedmetadata = () => {
+        const dur = au.duration || 0;
+        if (!dur) return;
+        set((s) => ({
+          assets: s.assets.map((a) => (a.id === asset.id ? { ...a, duration: dur } : a)),
+          clips: s.clips.map((c) => (c.assetId === asset.id && c.pending ? { ...c, duration: Math.max(0.1, dur), pending: false } : c)),
+        }));
+      };
+    }
+  },
   removeAsset: (id) =>
     set((s) => {
       const gone = s.assets.find((a) => a.id === id);
@@ -243,13 +297,17 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
   splitSelected: () => {
     const s = get();
-    const clip = s.clips.find((c) => c.id === s.selected);
+    // Cut mengikuti GARIS playhead: clip terpilih dipakai bila playhead memang di
+    // dalamnya; bila tidak (atau tak ada selection), clip di bawah garis yang dipotong.
+    const under = s.clips.find((c) => s.playhead >= c.start && s.playhead <= c.start + c.duration);
+    let clip = s.clips.find((c) => c.id === s.selected);
+    if (!clip || s.playhead < clip.start || s.playhead > clip.start + clip.duration) clip = under ?? clip;
     if (!clip) return;
     const t = s.playhead - clip.start;
     if (t <= 0.2 || t >= clip.duration - 0.2) return;
     s.pushHistory();
     const right: Clip = { ...clip, id: uid(), start: clip.start + t, duration: clip.duration - t, inPoint: clip.inPoint + t, chips: [...clip.chips] };
-    set({ clips: [...s.clips.map((c) => (c.id === clip.id ? { ...c, duration: t } : c)), right] });
+    set({ clips: [...s.clips.map((c) => (c.id === clip.id ? { ...c, duration: t } : c)), right], selected: clip.id });
   },
   moveClip: (id, start) => set((s) => ({ clips: s.clips.map((c) => (c.id === id ? { ...c, start: Math.max(0, start) } : c)) })),
   trimClip: (id, side, delta) =>
@@ -282,11 +340,13 @@ export const useEditor = create<EditorState>((set, get) => ({
   resetProject: () => {
     historyStack.length = 0;
     redoStack.length = 0;
-    set({ assets: [], clips: [], selected: null, playhead: 0, previewAssetId: '', title: 'This is a title', playing: false });
+    set({ assets: [], clips: [], selected: null, playhead: 0, playheadTouched: false, previewAssetId: '', title: 'This is a title', playing: false });
   },
 
   playhead: 3.2,
-  setPlayhead: (t) => set({ playhead: Math.max(0, t) }),
+  playheadTouched: false,
+  setPlayhead: (t) => set({ playhead: Math.max(0, t), playheadTouched: true }),
+  setPlayheadDefault: (t) => set((s) => (s.playheadTouched ? {} : { playhead: Math.max(0, t) })),
   playing: false,
   setPlaying: (p) => set({ playing: p }),
   zoom: 42,

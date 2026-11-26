@@ -6,7 +6,7 @@ import { tcShort } from './types';
 
 /** Clip di timeline: drag horizontal, trim dua sisi, klik pilih. */
 export default function TimelineClip({ clip, zoom }: { clip: ClipType; zoom: number }) {
-  const { selected, select, moveClip, trimClip, pushHistory, snapping, clips } = useEditor();
+  const { selected, select, moveClip, trimClip, pushHistory, snapping, clips, setPlayhead } = useEditor();
   const on = selected === clip.id;
   const video = clip.track === 'video';
   const dragRef = useRef<{ mode: 'move' | 'left' | 'right'; startX: number; lastX: number; origin: number } | null>(null);
@@ -22,6 +22,12 @@ export default function TimelineClip({ clip, zoom }: { clip: ClipType; zoom: num
   const begin = (mode: 'move' | 'left' | 'right') => (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // Klik body clip = kursor timeline otomatis loncat ke posisi klik (tak perlu
+    // digeser manual); handle trim tidak memindahkan playhead.
+    if (mode === 'move') {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setPlayhead(clip.start + (e.clientX - rect.left) / zoom);
+    }
     pushHistory();
     select(clip.id);
     dragRef.current = { mode, startX: e.clientX, lastX: e.clientX, origin: clip.start };

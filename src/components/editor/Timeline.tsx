@@ -7,10 +7,19 @@ import Playhead from './Playhead';
 import { C } from './ui';
 
 export default function Timeline() {
-  const { clips, zoom, setZoom, playhead, playing } = useEditor();
+  const { clips, zoom, setZoom, playhead, playing, setPlayheadDefault } = useEditor();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const end = useMemo(() => timelineEnd(clips), [clips]);
   const width = Math.round(end * zoom);
+
+  // Default cursor timeline (playhead) berada di TENGAH area tampilan selama user
+  // belum memindahkannya sendiri (guard playheadTouched di store).
+  useEffect(() => {
+    const view = scrollRef.current;
+    if (!view) return;
+    setPlayheadDefault((view.scrollLeft + view.clientWidth / 2) / zoom);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-scroll halus saat playback berjalan (bukan saat drag manual).
   useEffect(() => {

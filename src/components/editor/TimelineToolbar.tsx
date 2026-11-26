@@ -1,13 +1,16 @@
-import { useState } from 'react';
-import { ChevronDown, Delete, Link2, Link2Off, Mic, MousePointer2, Magnet, Music2, Redo2, Scissors, Split, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { ChevronDown, Delete, Link2, Link2Off, Mic, MousePointer2, Magnet, Music2, Redo2, Scissors, Split, Undo2, Upload, ZoomIn, ZoomOut } from 'lucide-react';
 import { useEditor } from './store';
 import { C, IconBtn } from './ui';
 
 const SELECT_TOOLS = ['Select', 'Select all', 'Box select'];
 
 export default function TimelineToolbar() {
-  const { undo, redo, splitSelected, deleteSelected, selected, zoom, setZoom, snapping, toggleSnapping, clips } = useEditor();
+  const { undo, redo, splitSelected, deleteSelected, selected, zoom, setZoom, snapping, toggleSnapping, clips, playhead, importAudioFiles } = useEditor();
   const [tool, setTool] = useState(false);
+  const audioInput = useRef<HTMLInputElement | null>(null);
+  // Cut mengikuti garis playhead: aktif bila ada selection ATAU playhead di atas clip.
+  const canSplit = Boolean(selected) || clips.some((c) => playhead >= c.start && playhead <= c.start + c.duration);
   const [toolName, setToolName] = useState('Select');
   return (
     /* overflow-x-auto: di layar sempit semua tool tetap bisa dijangkau dengan menggeser toolbar. */
@@ -38,11 +41,24 @@ export default function TimelineToolbar() {
       </span>
       <IconBtn label="Undo (Ctrl+Z)" onClick={undo}><Undo2 className="h-4 w-4" strokeWidth={2} /></IconBtn>
       <IconBtn label="Redo (Ctrl+Y)" onClick={redo}><Redo2 className="h-4 w-4" strokeWidth={2} /></IconBtn>
-      <IconBtn label="Split (S)" disabled={!selected} onClick={splitSelected}><Scissors className="h-4 w-4" strokeWidth={2} /></IconBtn>
+      <IconBtn label="Split (S)" disabled={!canSplit} onClick={splitSelected}><Scissors className="h-4 w-4" strokeWidth={2} /></IconBtn>
       <IconBtn label="Delete (Delete)" disabled={!selected} onClick={deleteSelected}><Delete className="h-4 w-4" strokeWidth={2} /></IconBtn>
 
       <span className="ml-auto flex items-center gap-1">
         <IconBtn label="Record"><Mic className="h-4 w-4" strokeWidth={2} /></IconBtn>
+        <IconBtn label="Upload audio (MP3/WAV)" onClick={() => audioInput.current?.click()}><Upload className="h-4 w-4" strokeWidth={2} /></IconBtn>
+        <input
+          ref={audioInput}
+          type="file"
+          accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac"
+          multiple
+          hidden
+          aria-label="Upload file audio"
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) importAudioFiles(e.target.files);
+            e.target.value = '';
+          }}
+        />
         <IconBtn label="Link clips"><Link2 className="h-4 w-4" strokeWidth={2} /></IconBtn>
         <IconBtn label="Snapping" active={snapping} onClick={toggleSnapping}><Magnet className="h-4 w-4" strokeWidth={2} /></IconBtn>
         <IconBtn label="Unlink clips"><Link2Off className="h-4 w-4" strokeWidth={2} /></IconBtn>
