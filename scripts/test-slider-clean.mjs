@@ -62,7 +62,7 @@ assert.ok(!/OrbitControls|interactive/.test(esm), 'tetap tanpa kontrol geser POV
 
 /* ---------- 4. Panggung 3D Order OTP TIDAK ikut terhapus ---------- */
 const otp = read('src/pages/OrderOtpPage.tsx');
-assert.match(otp, /const OTP_SCENE_MODEL_URL = '\/models\/scene\.glb\?v=1';/, 'scene.glb Order OTP tetap ada (aset lokal /models/scene.glb)');
+assert.match(otp, /const OTP_SCENE_MODEL_URL = '\/models\/scene\.glb\?v=2';/, 'scene.glb Order OTP tetap ada (aset lokal /models/scene.glb)');
 assert.match(otp, /aria-label="Scene 3D animasi"/, 'section scene 3D Order OTP tetap ada');
 assert.match(otp, /height=\{560\}/, 'ukuran panggung Order OTP tidak berubah');
 assert.ok(!/scene%20\(1\)/.test(otp), 'Order OTP tidak memakai GLB model slider');
