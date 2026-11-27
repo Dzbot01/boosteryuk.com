@@ -66,6 +66,73 @@ function tv_log($txt) {
     @file_put_contents(__DIR__ . '/tokovoucher_log.txt', date('Y-m-d H:i:s') . ' ' . $txt . "\n", FILE_APPEND);
 }
 
+/** Kandidat rumus signature endpoint ber-signature (docs tidak menyebutkan rumusnya). */
+function tv_sig_candidates($c) {
+    $mc = (string)$c['member_code'];
+    $sc = (string)$c['secret'];
+    return [
+        md5($mc . ':' . $sc),
+        md5($mc . $sc),
+        md5($sc . ':' . $mc),
+        md5($sc . $mc),
+        md5($mc . ':' . $sc . ':' . date('ymd')),
+        md5(strtoupper($mc) . ':' . strtoupper($sc)),
+    ];
+}
+
+function tv_sig_cache_read() {
+    $f = __DIR__ . '/tokovoucher_pricelist_cache.json';
+    $j = is_file($f) ? json_decode((string)file_get_contents($f), true) : null;
+    return is_array($j) && isset($j['__sig__']) ? (int)$j['__sig__'] : null;
+}
+
+function tv_sig_cache_write($i) {
+    $f = __DIR__ . '/tokovoucher_pricelist_cache.json';
+    $j = is_file($f) ? json_decode((string)file_get_contents($f), true) : null;
+    if (!is_array($j)) $j = [];
+    $j['__sig__'] = (int)$i;
+    @file_put_contents($f, json_encode($j, JSON_UNESCAPED_UNICODE));
+}
+
+function tv_is_sig_error($j) {
+    if (!is_array($j)) return false;
+    foreach (['error_msg', 'message', 'msg', 'error'] as $k) {
+        if (isset($j[$k]) && is_string($j[$k]) && stripos($j[$k], 'signature') !== false) return true;
+    }
+    return false;
+}
+
+/**
+ * GET ke endpoint yang mungkin menuntut `signature`: coba dulu tanpa signature,
+ * bila dibalas "signature not valid" coba kandidat rumus satu per satu dan
+ * INGAT rumus yang berhasil (cache) supaya permintaan berikutnya langsung tepat.
+ */
+function tv_api_get_authed($path, array $extra = []) {
+    $c = tv_cfg();
+    if ($c['member_code'] === '' || $c['secret'] === '') return ['res' => null, 'json' => null];
+    $base = array_merge(['member_code' => $c['member_code'], 'secret' => $c['secret']], $extra);
+    $try = function (array $q) use ($path) {
+        $r = tv_api_get($path, $q, 15);
+        $j = $r['body'] !== null ? json_decode((string)$r['body'], true) : null;
+        return [$r, $j];
+    };
+    list($r, $j) = $try($base);
+    if (!tv_is_sig_error($j)) return ['res' => $r, 'json' => $j];
+    $cands = tv_sig_candidates($c);
+    $saved = tv_sig_cache_read();
+    $order = array_values(array_unique(array_merge($saved !== null ? [$saved] : [], array_keys($cands))));
+    foreach ($order as $i) {
+        if (!isset($cands[$i])) continue;
+        list($r2, $j2) = $try(array_merge($base, ['signature' => $cands[$i]]));
+        if (!tv_is_sig_error($j2)) {
+            tv_sig_cache_write($i);
+            tv_log('signature endpoint ' . $path . ' cocok rumus #' . $i);
+            return ['res' => $r2, 'json' => $j2];
+        }
+    }
+    return ['res' => $r, 'json' => $j];
+}
+
 /** GET ke penyedia (JSON) — semua endpoint docs memakai method GET. */
 function tv_api_get($path, array $query, $timeout = 20) {
     $c = tv_cfg();
@@ -182,22 +249,18 @@ function tv_provider_products() {
     }
     $c = tv_cfg();
     if ($c['member_code'] === '' || $c['secret'] === '') return null;
+    $a = tv_api_get_authed('/produk/code');
+    $r = $a['res'];
+    $j = $a['json'];
     $items = [];
-    $rawLog = '';
-    foreach ([
-        ['member_code' => $c['member_code'], 'secret' => $c['secret']],
-        ['member_code' => $c['member_code'], 'secret' => $c['secret'], 'code' => ''],
-    ] as $q) {
-        $r = tv_api_get('/produk/code', $q, 15);
-        $j = $r['body'] !== null ? json_decode((string)$r['body'], true) : null;
-        if (!is_array($j)) { $rawLog = 'http=' . $r['code'] . ' raw=' . substr((string)$r['body'], 0, 200); continue; }
+    if (is_array($j)) {
         $found = [];
         tv_walk_products($j, '', $found);
-        if ($found) { $items = array_values($found); break; }
-        $rawLog = 'http=' . $r['code'] . ' PARSE_KOSONG raw=' . substr((string)$r['body'], 0, 200);
+        $items = array_values($found);
     }
     if (!$items) {
-        if ($rawLog !== '') tv_log('pricelist /produk/code ' . str_replace($c['secret'], '***', $rawLog));
+        $rawLog = 'http=' . ($r !== null ? $r['code'] : 0) . ' PARSE_KOSONG raw=' . substr((string)($r !== null ? $r['body'] : ''), 0, 200);
+        tv_log('pricelist /produk/code ' . str_replace($c['secret'], '***', $rawLog));
         return null;
     }
     $cache['__all__'] = ['ts' => $now, 'items' => $items];
@@ -292,9 +355,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $out = ['ok' => true, 'configured' => ($c['member_code'] !== '' && $c['secret'] !== ''), 'member_code' => tv_mask_code($c['member_code'])];
         // Info member (saldo dll) bila penyedia membalas — field rahasia dibuang.
         if ($c['member_code'] !== '' && $c['secret'] !== '') {
-            $r = tv_api_get('/member', ['member_code' => $c['member_code'], 'secret' => $c['secret']], 10);
-            $j = $r['body'] !== null ? json_decode($r['body'], true) : null;
-            if (is_array($j)) $out['member'] = tv_sanitize($j);
+            $a = tv_api_get_authed('/member');
+            if (is_array($a['json'])) $out['member'] = tv_sanitize($a['json']);
         }
         tv_out($out);
     }
@@ -347,11 +409,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if ($ref === '') tv_out(['ok' => false, 'message' => 'ref_id wajib diisi.'], 400);
         $c = tv_cfg();
         if ($c['member_code'] === '' || $c['secret'] === '') tv_out(['ok' => false, 'message' => 'Integrasi top up belum dikonfigurasi di server.'], 503);
-        $r = tv_api_get('/v1/transaksi/status', ['ref_id' => $ref, 'member_code' => $c['member_code'], 'secret' => $c['secret']]);
-        if ($r['body'] === null || $r['code'] === 0) {
-            tv_out(['ok' => false, 'message' => 'Tidak dapat menghubungi server penyedia (' . ($r['error'] !== '' ? $r['error'] : 'timeout') . ').'], 502);
+        $a = tv_api_get_authed('/v1/transaksi/status', ['ref_id' => $ref]);
+        $r = $a['res'];
+        if ($r === null || $r['body'] === null || $r['code'] === 0) {
+            tv_out(['ok' => false, 'message' => 'Tidak dapat menghubungi server penyedia (' . ($r !== null && $r['error'] !== '' ? $r['error'] : 'timeout') . ').'], 502);
         }
-        $j = json_decode((string)$r['body'], true);
+        $j = $a['json'];
         tv_out(['ok' => true, 'ref_id' => $ref, 'provider' => tv_sanitize(is_array($j) ? $j : ['raw' => substr((string)$r['body'], 0, 300)])]);
     }
 
