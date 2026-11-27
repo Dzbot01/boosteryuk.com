@@ -86,3 +86,13 @@ export interface TvPricelist {
  */
 export const tvPricelist = (game?: string) =>
   get<TvPricelist>('action=pricelist' + (game ? `&game=${encodeURIComponent(game)}` : ''));
+
+export interface TvCekStatus {
+  ref_id: string;
+  /** Balasan mentah penyedia (sudah dibersihkan) berisi status transaksi. */
+  provider?: Record<string, unknown>;
+}
+
+/** Cek status transaksi per ref_id lewat GET /v1/transaksi/status di penyedia. */
+export const tvCekStatus = (ref_id: string) =>
+  get<TvCekStatus>('action=cek_status&ref_id=' + encodeURIComponent(ref_id));

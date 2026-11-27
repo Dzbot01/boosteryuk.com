@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Gamepad2, LoaderCircle, Server, ShieldAlert, UserRound } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
-import { tvPricelist, tvStatus, tvTransaksi } from '../services/tokovoucherApi';
+import { tvCekStatus, tvPricelist, tvStatus, tvTransaksi } from '../services/tokovoucherApi';
 import type { TvPricelistItem } from '../services/tokovoucherApi';
 import { TOPUP_GAMES, hargaJual, rupiah } from '../data/topupGames';
 
@@ -25,6 +25,7 @@ export default function TopupGameDetailPage() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [live, setLive] = useState<{ source: string; items: TvPricelistItem[]; updated_at?: string } | null>(null);
   const [katBusy, setKatBusy] = useState(false);
+  const [cekBusy, setCekBusy] = useState(false);
 
   /** Produk tampil: katalog ASLI dari server bila ada, selain itu snapshot repo. */
   const produkList = useMemo(() => {
@@ -241,6 +242,31 @@ export default function TopupGameDetailPage() {
                   <>
                     {' '}Ref: <code className="rounded bg-white/70 px-1 font-bold">{result.refId}</code>
                   </>
+                ) : null}
+                {result.refId ? (
+                  <button
+                    type="button"
+                    disabled={cekBusy}
+                    onClick={() => {
+                      setCekBusy(true);
+                      tvCekStatus(result.refId as string).then((r) => {
+                        setCekBusy(false);
+                        const pv = (r.provider || {}) as Record<string, unknown>;
+                        const st = pv.status ?? pv.state ?? pv.status_transaksi;
+                        const msg = pv.message ?? pv.msg ?? pv.keterangan;
+                        setResult({
+                          ok: !!r.ok,
+                          message: r.ok
+                            ? `Status terakhir: ${String(st ?? msg ?? 'diterima penyedia')}${msg && st ? ` — ${String(msg)}` : ''}.`
+                            : r.message || 'Gagal mengecek status.',
+                          refId: result.refId,
+                        });
+                      });
+                    }}
+                    className="mt-1.5 block rounded-full border border-current/30 px-3.5 py-1 text-[11px] font-bold transition hover:bg-white/60 disabled:opacity-60"
+                  >
+                    {cekBusy ? 'Mengecek…' : 'Cek status pesanan'}
+                  </button>
                 ) : null}
               </span>
             </div>
