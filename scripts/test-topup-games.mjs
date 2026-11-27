@@ -233,51 +233,87 @@ assert.ok(!ids(getUserMenuItems(true, true, false)).length, 'admin memang tidak 
 // ---------- Nama produk manusiawi (kode penyedia -> nama baca) ----------
 assert.ok(existsSync('src/lib/topupDisplayName.ts'), 'helper nama tampilan top up ada');
 const dname = read('src/lib/topupDisplayName.ts');
-for (const t of ['Membership Mingguan', 'Membership Bulanan', 'Level Up Pass', 'BP Card', 'Weekly Diamond Pass', 'Twilight Pass'])
+for (const t of ['Membership Mingguan', 'Membership Bulanan', 'Level Up Pass', 'Booyah Pass', 'Weekly Diamond Pass', 'Twilight Pass'])
   assert.ok(dname.includes(t), `token khusus "${t}" mengikuti pricelist resmi penyedia`);
+assert.ok(dname.includes("'free-fire': { root: 'FF', kanalDepan: ['M'] }"), 'Free Fire dikunci ke kanal resmi M (daftar 122 kode MFF dari web penyedia)');
 assert.ok(!detail.includes('Katalog live dari pricelist penyedia'), 'teks log "Katalog live … diperbarui" dihapus dari halaman detail');
 assert.ok(detail.includes('rapihkanKatalog('), 'halaman detail merapikan katalog lewat rapihkanKatalog');
+assert.ok(detail.includes('Paket &amp; Membership'), 'halaman detail punya seksi Paket & Membership di atas list eceran');
+assert.ok(detail.includes('>Eceran<'), 'halaman detail punya judul seksi Eceran');
 // Uji perilaku helper (type-stripping Node) terhadap kode asli dari /produk/code.
 const perilaku = execFileSync(
   process.execPath,
   ['--experimental-strip-types', '--input-type=module', '-e', `
     import { namaTampilanTopup, rapihkanKatalog } from './src/lib/topupDisplayName.ts';
     const kasus = [
-      ['free-fire', 'FF5', 'FF5', '5 Diamond'],
-      ['free-fire', 'KPPFF5', 'KPPFF5', '5 Diamond'],
-      ['free-fire', 'KPPFF12', 'KPPFF12', '12 Diamond'],
-      ['free-fire', 'PFF100', 'PFF100', '100 Diamond'],
+      ['free-fire', 'MFF5', 'MFF5', '5 Diamond'],
       ['free-fire', 'MFF2020', 'MFF2020', '2020 Diamond'],
-      ['free-fire', 'FFM', 'FFM', 'Membership Mingguan'],
-      ['free-fire', 'FFB', 'FFB', 'Membership Bulanan'],
-      ['free-fire', 'FFLUP', 'FFLUP', 'Level Up Pass'],
-      ['free-fire', 'FFBP', 'FFBP', 'BP Card'],
+      ['free-fire', 'MFFM', 'MFFM', 'Membership Mingguan'],
+      ['free-fire', 'MFFB', 'MFFB', 'Membership Bulanan'],
+      ['free-fire', 'MFFLUP', 'MFFLUP', 'Level Up Pass'],
+      ['free-fire', 'MFFBP', 'MFFBP', 'Booyah Pass'],
+      ['free-fire', 'MFF5', 'Free Fire 5 Diamonds', 'Free Fire 5 Diamonds'],
       ['free-fire', 'GMXFF1', 'GMXFF1', 'GMXFF 1'],
-      ['free-fire', 'FF5', 'Free Fire 5 Diamonds', 'Free Fire 5 Diamonds'],
       ['mobile-legends', 'MLA85', 'MLA85', '85 Diamond'],
       ['mobile-legends', 'MLBB875', 'MLBB875', '875 Diamond'],
       ['mobile-legends', 'MLC17', 'MLC17', '17 Diamond'],
-      ['mobile-legends', 'MLRU55', 'MLRU55', '55 Diamond (RU)'],
       ['mobile-legends', 'MLWDP2', 'MLWDP2', 'Weekly Diamond Pass 2'],
       ['mobile-legends', 'MLATP', 'MLATP', 'Twilight Pass'],
-      ['mobile-legends', 'LMLM', 'LMLM', 'LMLM'],
     ];
     for (const [slug, kode, nama, ingin] of kasus) {
       const dapat = namaTampilanTopup(slug, kode, nama);
       if (dapat !== ingin) throw new Error(slug + ' ' + kode + ' => ' + dapat + ' (ingin ' + ingin + ')');
     }
-    const rapih = rapihkanKatalog('free-fire', [
-      { kode: 'FF70', nama: 'FF70', harga: 8886 },
-      { kode: 'PFF70', nama: 'PFF70', harga: 8719 },
-      { kode: 'MFF70', nama: 'MFF70', harga: 7950 },
+    // FF: hanya kanal resmi M yang lolos; kode kanal aneh dibuang walau lebih murah;
+    // pass/membership masuk kelompok paket.
+    const ff = rapihkanKatalog('free-fire', [
+      { kode: 'MFF5', nama: 'MFF5', harga: 800 },
+      { kode: 'KPPFF5', nama: 'KPPFF5', harga: 790 },
+      { kode: 'FF5', nama: 'FF5', harga: 780 },
+      { kode: 'ZFF5', nama: 'ZFF5', harga: 770 },
+      { kode: 'IDFF4', nama: 'IDFF4', harga: 16000 },
+      { kode: 'VFFGLOBAL100', nama: 'VFFGLOBAL100', harga: 17600 },
+      { kode: 'FFMY100', nama: 'FFMY100', harga: 16500 },
+      { kode: 'FFPH100', nama: 'FFPH100', harga: 17800 },
+      { kode: 'FFGLOBAL100', nama: 'FFGLOBAL100', harga: 18400 },
+      { kode: 'GMXFF1', nama: 'GMXFF1', harga: 22705 },
       { kode: 'CEKFF', nama: 'CEKFF', harga: 5 },
-      { kode: 'FF5', nama: 'FF5', harga: 814 },
-      { kode: 'KPPFF5', nama: 'KPPFF5', harga: 800 },
+      { kode: 'MFF10', nama: 'MFF10', harga: 1508 },
+      { kode: 'MFFM', nama: 'MFFM', harga: 25138 },
+      { kode: 'MFFBP', nama: 'MFFBP', harga: 37708 },
     ]);
-    if (rapih.length !== 2) throw new Error('dedupe+filter CEK gagal: ' + rapih.length);
-    if (rapih[0].nama !== '5 Diamond' || rapih[1].nama !== '70 Diamond') throw new Error('urutan/nama dedupe salah');
-    if (rapih[0].kode !== 'KPPFF5' || rapih[0].harga !== 800) throw new Error('kanal termurah KPPFF5 harus menang untuk 5 Diamond');
-    if (rapih[1].kode !== 'MFF70' || rapih[1].harga !== 7950) throw new Error('dedupe harus menyimpan kanal termurah');
+    if (ff.eceran.length !== 2) throw new Error('eceran FF harus 2 (kode aneh dibuang): ' + ff.eceran.length);
+    if (ff.eceran[0].kode !== 'MFF5' || ff.eceran[0].nama !== '5 Diamond') throw new Error('eceran FF[0] salah');
+    if (ff.eceran[1].kode !== 'MFF10' || ff.eceran[1].nama !== '10 Diamond') throw new Error('eceran FF[1] salah');
+    if (ff.paket.length !== 2) throw new Error('paket FF harus 2: ' + ff.paket.length);
+    if (ff.paket[0].nama !== 'Membership Mingguan' || ff.paket[1].nama !== 'Booyah Pass') throw new Error('isi/urutan paket FF salah');
+    // ML: kanal denominasi resmi digabung ke termurah; RU/LMLM/GMX/CEK dibuang; WDP = paket.
+    const ml = rapihkanKatalog('mobile-legends', [
+      { kode: 'MLA85', nama: 'MLA85', harga: 24479 },
+      { kode: 'MLBB85', nama: 'MLBB85', harga: 24854 },
+      { kode: 'MLRU55', nama: 'MLRU55', harga: 18081 },
+      { kode: 'LMLM', nama: 'LMLM', harga: 88957 },
+      { kode: 'GMXML1', nama: 'GMXML1', harga: 22855 },
+      { kode: 'MLWDP2', nama: 'MLWDP2', harga: 61516 },
+      { kode: 'CEKML', nama: 'CEKML', harga: 5 },
+    ]);
+    if (ml.eceran.length !== 1 || ml.eceran[0].kode !== 'MLA85' || ml.eceran[0].nama !== '85 Diamond') throw new Error('eceran ML salah');
+    if (ml.paket.length !== 1 || ml.paket[0].nama !== 'Weekly Diamond Pass 2') throw new Error('paket ML salah');
+    // Game tanpa aturan resmi: tampil apa adanya (humanis) sebagai eceran.
+    const pb = rapihkanKatalog('pubg-mobile', [{ kode: 'UC60', nama: '', harga: 1000 }]);
+    if (pb.eceran.length !== 1 || pb.eceran[0].nama !== 'UC 60') throw new Error('game tanpa aturan harus humanis: ' + pb.eceran[0]?.nama);
+    // Daftar 122 kode RESMI Free Fire dari web penyedia (dikonfirmasi pemilik 27 Nov 2026):
+    // semuanya harus lolos tampil, tepat 118 eceran + 4 paket.
+    const RESMI_FF = ('MFF5 MFF10 MFF12 MFF15 MFF20 MFF25 MFF30 MFF50 MFF40 MFF55 MFF60 MFF70 MFF75 MFF80 MFF90 MFF100 MFF95 MFFLUP ' +
+      'MFF120 MFF130 MFF140 MFF145 MFF150 MFF160 MFF165 MFF170 MFF175 MFF190 MFF180 MFF185 MFF200 MFF210 MFFM MFF215 MFF220 MFF235 MFF240 ' +
+      'MFF250 MFF265 MFF280 MFF290 MFF300 MFFBP MFF330 MFF355 MFF350 MFF360 MFF365 MFF370 MFF375 MFF380 MFF400 MFF405 MFF415 MFF420 MFF425 ' +
+      'MFF430 MFF440 MFF455 MFF465 MFF475 MFF480 MFF495 MFF500 MFF505 MFF510 MFF512 MFF515 MFF520 MFF545 MFF565 MFF600 MFF635 MFFB MFF645 ' +
+      'MFF655 MFF720 MFF710 MFF700 MFF725 MFF740 MFF770 MFF790 MFF800 MFF860 MFF925 MFF930 MFF1000 MFF1050 MFF1060 MFF1075 MFF1080 MFF1200 ' +
+      'MFF1215 MFF1300 MFF1440 MFF1450 MFF1490 MFF1510 MFF1580 MFF1795 MFF1800 MFF2000 MFF2020 MFF2050 MFF2070 MFF2140 MFF2160 MFF2190 ' +
+      'MFF2200 MFF2210 MFF2280 MFF2350 MFF2355 MFF2400 MFF2720 MFF3620 MFF3640 MFF3800 MFF4000 MFF4720 MFF7290').split(/\\s+/);
+    if (RESMI_FF.length !== 122) throw new Error('daftar resmi FF harus 122 kode: ' + RESMI_FF.length);
+    const ff2 = rapihkanKatalog('free-fire', RESMI_FF.map((k, i) => ({ kode: k, nama: k, harga: 1000 + i })));
+    if (ff2.eceran.length !== 118 || ff2.paket.length !== 4) throw new Error('122 kode resmi FF => 118 eceran + 4 paket, dapat ' + ff2.eceran.length + '+' + ff2.paket.length);
     console.log('OK');
   `],
   { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },

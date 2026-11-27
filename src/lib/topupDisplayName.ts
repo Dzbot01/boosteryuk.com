@@ -1,17 +1,20 @@
 /**
- * Nama produk top up yang manusiawi.
+ * Nama produk top up yang manusiawi + penyaring kode resmi.
  *
- * Endpoint penyedia `GET /produk/code` hanya mengirim kode + harga (tanpa nama),
- * sehingga field `nama` dari proxy jatuh balik ke kode ("FF5", "MLA85", …).
- * Modul ini menyusun nama tampil mengikuti konvensi pricelist RESMI penyedia
- * (https://tokovoucher.me/pricelist, diambil 27 Nov 2026):
- *   MFF5   -> "Free Fire 5 Diamonds"        => token angka  = "<n> Diamond"
- *   MFFM   -> "Free Fire Mingguan Membership" => token M    = "Membership Mingguan"
- *   MFFB   -> "Free Fire Bulanan Membership"  => token B    = "Membership Bulanan"
- *   MFFLUP -> "Free Fire Level Up Pass"       => token LUP  = "Level Up Pass"
- *   MFFBP  -> "BP Card"                       => token BP   = "BP Card"
- * Kode yang tidak cocok pola tetap ditampilkan dalam bentuk humanis
- * (huruf & angka dipisah) — tidak pernah mengarang nama produk.
+ * Latar: endpoint penyedia `GET /produk/code` mengirim SEMUA kanal wholesale
+ * (MFF, PFF, ZFF, KPPFF, IDFF, VFFGLOBAL, FFPH, FFMY, GMXFF, …) tanpa nama,
+ * padahal web resmi penyedia (https://tokovoucher.me/pricelist, diverifikasi
+ * 27 Nov 2026) hanya menjual satu keluarga kode per game — untuk Free Fire
+ * seluruh 122 produk berprefiks `MFF` (daftar kode dikonfirmasi pemilik).
+ * Maka:
+ *  - hanya kode kanal RESMI per game yang ditampilkan (FF: `MFF…`);
+ *  - nama disusun mengikuti konvensi pricelist resmi penyedia:
+ *      MFF5 -> "5 Diamond", MFFM -> "Membership Mingguan",
+ *      MFFB -> "Membership Bulanan", MFFLUP -> "Level Up Pass",
+ *      MFFBP -> "Booyah Pass";
+ *  - produk pass/membership (token non-angka) dipisah jadi kelompok `paket`,
+ *    denominasi angka jadi kelompok `eceran`;
+ *  - kode di luar pola resmi TIDAK ditampilkan sama sekali (bukan ditebak).
  */
 
 export type TopupItemBernama = {
@@ -19,6 +22,13 @@ export type TopupItemBernama = {
   nama: string;
   harga: number;
   butuhServer?: boolean;
+};
+
+export type KatalogRapih = {
+  /** Denominasi eceran (mis. "85 Diamond"). */
+  eceran: TopupItemBernama[];
+  /** Pass & membership (mis. "Booyah Pass", "Membership Mingguan"). */
+  paket: TopupItemBernama[];
 };
 
 /** Satuan denominasi angka per slug game (mengikuti tagline resmi masing-masing game). */
@@ -44,31 +54,29 @@ const UNIT_PER_SLUG: Record<string, string> = {
 type Aturan = {
   /** Akar kode produk game ini (setelah kode kanal). */
   root: string;
-  /** Kode kanal yang menempel DI DEPAN akar (mis. P/M/Z pada Free Fire). */
+  /** Kode kanal resmi yang menempel DI DEPAN akar (FF: hanya M per web penyedia). */
   kanalDepan?: string[];
-  /** true: SEMUA huruf di depan akar dianggap kode kanal (penyedia menambah kanal baru tanpa pola tetap). */
-  kanalDepanBebas?: boolean;
-  /** Prefiks yang BUKAN kanal melainkan keluarga produk tersendiri (mis. bundel GMX). */
-  blokirDepan?: string[];
-  /** Kode kanal yang menempel SETELAH akar (mis. A/B/C/D/BB pada Mobile Legends). */
+  /** Kode kanal resmi yang menempel SETELAH akar (ML: BB/A/B/C/D kanal denominasi). */
   kanalBelakang?: string[];
-  /** Tag server/wilayah yang muncul setelah akar (mis. RU). */
-  tag?: string[];
 };
 
+/**
+ * Kanal RESMI per game. Free Fire dikunci ke `M` sesuai daftar 122 kode di web
+ * penyedia (MFF5…MFF7290 + MFFM/MFFB/MFFLUP/MFFBP). Mobile Legends menunggu
+ * daftar resmi yang sama; sementara kanal denominasi polos (BB/A/B/C/D) dipakai
+ * dan digabung ke harga termurah, kanal aneh (RU, GMX, LMLM, …) dibuang.
+ */
 const ATURAN_PER_SLUG: Record<string, Aturan> = {
-  // Kanal FF terus bertambah (M, P, Z, KPP, …) => semua huruf di depan "FF" = kanal,
-  // kecuali bundel GMX yang produknya bukan denominasi diamond.
-  'free-fire': { root: 'FF', kanalDepanBebas: true, blokirDepan: ['GMX'] },
-  'mobile-legends': { root: 'ML', kanalBelakang: ['BB', 'A', 'B', 'C', 'D', ''], tag: ['RU'] },
+  'free-fire': { root: 'FF', kanalDepan: ['M'] },
+  'mobile-legends': { root: 'ML', kanalDepan: [''], kanalBelakang: ['BB', 'A', 'B', 'C', 'D', ''] },
 };
 
-/** Token non-angka sesuai penamaan resmi pricelist penyedia. */
+/** Token non-angka sesuai penamaan resmi pricelist penyedia (semua = kelompok paket). */
 const TOKEN_KHUSUS: Record<string, string> = {
   M: 'Membership Mingguan',
   B: 'Membership Bulanan',
   LUP: 'Level Up Pass',
-  BP: 'BP Card',
+  BP: 'Booyah Pass',
   WDP: 'Weekly Diamond Pass',
   TP: 'Twilight Pass',
 };
@@ -79,79 +87,79 @@ export function humanisasiKode(kode: string): string {
   return h || kode;
 }
 
-function namaDariToken(token: string, unit: string): string | null {
-  if (!token) return null;
-  const m = /^([A-Z]*)(\d+)$/.exec(token);
-  if (m) {
-    const huruf = m[1];
-    const angka = m[2];
-    if (!huruf) return `${Number(angka)} ${unit}`;
-    const khusus = TOKEN_KHUSUS[huruf];
-    if (khusus) return `${khusus} ${angka}`;
+/**
+ * Urai kode resmi satu game jadi {nama, jenis}. Mengembalikan null bila kode
+ * bukan kode resmi/pola dikenal — artinya TIDAK boleh ditampilkan.
+ */
+function parseKodeResmi(slug: string, k: string): { nama: string; jenis: 'eceran' | 'paket' } | null {
+  const a = ATURAN_PER_SLUG[slug];
+  if (!a) return null;
+  for (const kd of a.kanalDepan ?? ['']) {
+    if (kd && !k.startsWith(kd)) continue;
+    const sisaDepan = k.slice(kd.length);
+    if (!sisaDepan.startsWith(a.root)) continue;
+    let rest = sisaDepan.slice(a.root.length);
+    for (const kb of a.kanalBelakang ?? ['']) {
+      if (rest.startsWith(kb)) {
+        rest = rest.slice(kb.length);
+        break;
+      }
+    }
+    const m = /^([A-Z]*)(\d+)$/.exec(rest);
+    if (m) {
+      if (!m[1]) return { nama: `${Number(m[2])} ${UNIT_PER_SLUG[slug] || 'Diamond'}`, jenis: 'eceran' };
+      const kh = TOKEN_KHUSUS[m[1]];
+      if (kh) return { nama: `${kh} ${m[2]}`, jenis: 'paket' };
+      return null;
+    }
+    const kh = TOKEN_KHUSUS[rest];
+    if (kh) return { nama: kh, jenis: 'paket' };
     return null;
   }
-  return TOKEN_KHUSUS[token] || null;
+  return null;
 }
 
-/**
- * Nama tampil satu produk: pakai nama asli bila penyedia mengirimnya; selain itu
- * susun dari kode mengikuti konvensi pricelist resmi; terakhir fallback humanis.
- */
+/** Nama tampil satu produk (pakai nama asli penyedia bila dikirim; sonst pola resmi). */
 export function namaTampilanTopup(slug: string, kode: string, namaPenyedia?: string): string {
   const k = (kode || '').toUpperCase().trim();
   const n = (namaPenyedia || '').trim();
   if (n && n.toUpperCase() !== k) return n;
-  const aturan = ATURAN_PER_SLUG[slug];
-  if (aturan) {
-    const prefixes: string[] = [];
-    if (aturan.kanalDepanBebas) {
-      const idx = k.indexOf(aturan.root);
-      if (idx >= 0) {
-        const pre = k.slice(0, idx);
-        if (!(aturan.blokirDepan ?? []).includes(pre)) prefixes.push(pre);
-      }
-    } else {
-      prefixes.push(...(aturan.kanalDepan ?? ['']));
-    }
-    for (const kd of prefixes) {
-      if (kd && !k.startsWith(kd)) continue;
-      const sisaDepan = k.slice(kd.length);
-      if (!sisaDepan.startsWith(aturan.root)) continue;
-      let rest = sisaDepan.slice(aturan.root.length);
-      let tag = '';
-      for (const t of aturan.tag ?? []) {
-        if (rest.startsWith(t)) {
-          tag = t;
-          rest = rest.slice(t.length);
-          break;
-        }
-      }
-      for (const kb of aturan.kanalBelakang ?? ['']) {
-        if (rest.startsWith(kb)) {
-          rest = rest.slice(kb.length);
-          break;
-        }
-      }
-      const nama = namaDariToken(rest, UNIT_PER_SLUG[slug] || 'Diamond');
-      if (nama) return tag ? `${nama} (${tag})` : nama;
-    }
-  }
-  return humanisasiKode(k);
+  const p = parseKodeResmi(slug, k);
+  return p ? p.nama : humanisasiKode(k);
 }
 
 /**
- * Rapikan katalog untuk UI: buang produk tes penyedia (kode "CEK…", harga receh),
- * ganti nama kode jadi nama manusiawi, gabungkan produk kembar lintas kanal
- * (FF70 vs PFF70 vs MFF70 = produk sama) dengan menyimpan harga termurah,
- * lalu urutkan menaik menurut harga supaya denominasi terbaca rapi.
+ * Rapikan katalog untuk UI:
+ *  - buang produk tes penyedia (kode "CEK…");
+ *  - game ber-aturan: hanya kode RESMI yang lolos; kode aneh dibuang;
+ *  - pisah kelompok `paket` (pass/membership) dan `eceran` (denominasi);
+ *  - produk kembar lintas kanal resmi digabung ke harga termurah;
+ *  - masing-masing kelompok urut menaik menurut harga.
+ * Game tanpa aturan (belum ada daftar resmi) tampil apa adanya sebagai eceran.
  */
-export function rapihkanKatalog(slug: string, items: TopupItemBernama[]): TopupItemBernama[] {
-  const peta = new Map<string, TopupItemBernama>();
+export function rapihkanKatalog(slug: string, items: TopupItemBernama[]): KatalogRapih {
+  const eceran = new Map<string, TopupItemBernama>();
+  const paket = new Map<string, TopupItemBernama>();
+  const berAturan = !!ATURAN_PER_SLUG[slug];
   for (const it of items) {
-    if (/^CEK/.test((it.kode || '').toUpperCase())) continue;
-    const nama = namaTampilanTopup(slug, it.kode, it.nama);
-    const ada = peta.get(nama);
-    if (!ada || it.harga < ada.harga) peta.set(nama, { ...it, nama });
+    const k = (it.kode || '').toUpperCase().trim();
+    if (!k || /^CEK/.test(k)) continue;
+    const n = (it.nama || '').trim();
+    let nama: string;
+    let jenis: 'eceran' | 'paket';
+    if (berAturan) {
+      const p = parseKodeResmi(slug, k);
+      if (!p) continue;
+      jenis = p.jenis;
+      nama = n && n.toUpperCase() !== k ? n : p.nama;
+    } else {
+      jenis = 'eceran';
+      nama = n && n.toUpperCase() !== k ? n : humanisasiKode(k);
+    }
+    const target = jenis === 'paket' ? paket : eceran;
+    const ada = target.get(nama);
+    if (!ada || it.harga < ada.harga) target.set(nama, { ...it, nama });
   }
-  return [...peta.values()].sort((a, b) => a.harga - b.harga);
+  const urut = (m: Map<string, TopupItemBernama>) => [...m.values()].sort((a, b) => a.harga - b.harga);
+  return { eceran: urut(eceran), paket: urut(paket) };
 }

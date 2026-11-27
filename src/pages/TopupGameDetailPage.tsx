@@ -29,14 +29,16 @@ export default function TopupGameDetailPage() {
   const [cekBusy, setCekBusy] = useState(false);
 
   /** Produk tampil: katalog ASLI dari server bila ada, selain itu snapshot repo. */
-  const produkList = useMemo(() => {
+  const katalog = useMemo(() => {
     const sumber = live?.items?.length
       ? live.items.map((i) => ({ kode: i.kode, nama: i.nama, harga: i.harga, butuhServer: !!i.butuh_server }))
       : game?.produk || [];
-    // Nama kode penyedia ("FF5", "MLA85") jadi nama manusiawi ("5 Diamond", …),
-    // produk kembar lintas kanal digabung ke harga termurah, urut menaik.
+    // Hanya kode resmi penyedia yang lolos; nama kode ("MFF5", "MLA85") jadi nama
+    // manusiawi; pass/membership dipisah ke `paket`, denominasi ke `eceran`;
+    // produk kembar lintas kanal resmi digabung ke harga termurah, urut menaik.
     return rapihkanKatalog(slug, sumber);
   }, [live, game, slug]);
+  const produkList = useMemo(() => [...katalog.eceran, ...katalog.paket], [katalog]);
 
   const produk = useMemo(() => produkList.find((p) => p.kode === kode) || null, [produkList, kode]);
 
@@ -155,8 +157,37 @@ export default function TopupGameDetailPage() {
               </button>
             </div>
           )}
+          {katalog.paket.length > 0 && (
+            <>
+              <p className="mt-3 text-[12px] font-bold uppercase tracking-wide text-slate-500">Paket &amp; Membership</p>
+              <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+                {katalog.paket.map((p) => {
+                  const on = p.kode === kode;
+                  return (
+                    <button
+                      key={p.kode}
+                      type="button"
+                      onClick={() => { setKode(p.kode); setResult(null); }}
+                      className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition ${
+                        on ? 'border-[#14143c] bg-[#14143c]/5 ring-2 ring-[#14143c]/25' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-[12px] font-bold text-slate-800">{p.nama}</span>
+                        <span className="block truncate text-[10px] text-slate-500">
+                          kode <code className="rounded bg-slate-100 px-1">{p.kode}</code>
+                        </span>
+                      </span>
+                      <span className="whitespace-nowrap font-mono text-[12px] font-bold text-[#14143c]">{rupiah(hargaJual(p.harga))}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-4 text-[12px] font-bold uppercase tracking-wide text-slate-500">Eceran</p>
+            </>
+          )}
           <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-            {produkList.map((p) => {
+            {katalog.eceran.map((p) => {
               const on = p.kode === kode;
               return (
                 <button
