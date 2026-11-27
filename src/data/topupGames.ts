@@ -1,38 +1,45 @@
 /**
- * Data dummy marketplace "TopUp All Game".
+ * Katalog TopUp All Game.
  *
- * Semua daftar di file ini sengaja berbentuk array JSON sederhana supaya mudah diganti
- * dengan data asli (mis. dari pricelist penyedia) tanpa menyentuh komponen UI.
- * `kode` produk mengikuti format kode_produk API transaksi penyedia (lihat
- * php-api/tokovoucher.php) — nilai di bawah contoh, ganti dengan kode asli penyedia.
+ * ATURAN DATA (jangan pakai dummy lagi):
+ *  - `produk` hanya boleh berisi kode produk ASLI dari pricelist penyedia
+ *    (https://tokovoucher.me/pricelist). Snapshot Free Fire di bawah diverifikasi
+ *    langsung dari halaman itu pada 27 Nov 2026 (kolom harga "Basic").
+ *  - Game yang produknya belum diisi di sini TIDAK memakai kode karangan: halaman
+ *    detail akan menarik katalog live lewat proxy server (`action=pricelist` di
+ *    php-api/tokovoucher.php, yang membaca pricelist penyedia + file override
+ *    php-api/tokovoucher_pricelist.php). Bila keduanya kosong, halaman menampilkan
+ *    state "katalog belum tersedia" — pesanan tidak bisa dikirim dengan kode salah.
+ *  - Harga snapshot = harga penyedia saat diambil. Bila ingin menambah margin,
+ *    setel TOPUP_MARKUP_PCT (persen) — semua tampilan harga lewat hargaJual().
  */
 
-export interface TopupProduct {
-  /** kode_produk tujuan di API penyedia. */
+export type TopupProduk = {
+  /** Kode produk asli penyedia (dipakai sebagai kode_produk saat transaksi). */
   kode: string;
   nama: string;
+  /** Harga modal dari penyedia (Rupiah). */
   harga: number;
-  /** true bila produk ini wajib mengisi Server ID. */
+  /** true bila produk membutuhkan Server ID selain Player ID. */
   butuhServer?: boolean;
-}
+};
 
-export interface GameCard {
+export type GameCard = {
   slug: string;
   nama: string;
   tagline: string;
-  /** Warna dasar thumbnail (hue HSL) — gradasi navy tetap dipertahankan di overlay. */
+  /** Warna dasar thumbnail (hue HSL) — mengikuti spesifikasi UI. */
   hue: number;
-  produk: TopupProduct[];
-}
+  produk: TopupProduk[];
+};
 
-export interface OtherItem {
-  slug: string;
-  nama: string;
-  sub: string;
-  hue: number;
-}
+/** Margin penjualan top up dalam persen (0 = jual sama dengan harga penyedia). */
+export const TOPUP_MARKUP_PCT = 0;
 
-/** Tab kategori (urutan tampil sama dengan desain). */
+/** Harga jual ke user: harga penyedia + TOPUP_MARKUP_PCT, dibulatkan ke ratusan ke atas. */
+export const hargaJual = (hargaModal: number) =>
+  Math.ceil((hargaModal * (1 + TOPUP_MARKUP_PCT / 100)) / 100) * 100;
+
 export const TOPUP_CATEGORIES = [
   'Topup',
   'Voucher',
@@ -44,83 +51,63 @@ export const TOPUP_CATEGORIES = [
   'Telpon & SMS',
   'Inject Voucher',
 ] as const;
+
 export type TopupCategoryId = (typeof TOPUP_CATEGORIES)[number];
 
-/** 16 kartu game (dummy) — baris 1 & 2 sesuai desain. */
-export const TOPUP_GAMES: GameCard[] = [
-  { slug: 'free-fire', nama: 'Free Fire', tagline: 'Diamond & membership', hue: 268, produk: [
-    { kode: 'FF86', nama: '86 Diamond', harga: 12500 },
-    { kode: 'FF172', nama: '172 Diamond', harga: 24500 },
-    { kode: 'FFWM', nama: 'Weekly Membership', harga: 29000 },
-    { kode: 'FFMM', nama: 'Monthly Membership', harga: 87000, butuhServer: false },
-  ] },
-  { slug: 'mobile-legends', nama: 'Mobile Legends', tagline: 'Diamond MLBB murah', hue: 210, produk: [
-    { kode: 'ML86', nama: '86 Diamond', harga: 20500, butuhServer: true },
-    { kode: 'ML172', nama: '172 Diamond', harga: 40500, butuhServer: true },
-    { kode: 'MLWS', nama: 'Weekly Diamond Pass', harga: 28500, butuhServer: true },
-  ] },
-  { slug: 'hago', nama: 'Hago', tagline: 'Hago diamond & coins', hue: 48, produk: [
-    { kode: 'HG66', nama: '66 Diamond', harga: 9500 },
-    { kode: 'HG330', nama: '330 Diamond', harga: 46000 },
-  ] },
-  { slug: 'pubg-mobile', nama: 'PUBG Mobile', tagline: 'UC resmi & cepat', hue: 24, produk: [
-    { kode: 'PUBG60', nama: '60 UC', harga: 14500 },
-    { kode: 'PUBG325', nama: '325 UC', harga: 72000 },
-    { kode: 'PUBGRC', nama: 'Royale Pass Classic', harga: 145000 },
-  ] },
-  { slug: 'honor-of-kings', nama: 'Honor of Kings', tagline: 'Token & skin', hue: 330, produk: [
-    { kode: 'HOK80', nama: '80 Token', harga: 15500 },
-    { kode: 'HOK400', nama: '400 Token', harga: 74000 },
-  ] },
-  { slug: 'genshin-impact', nama: 'Genshin Impact', tagline: 'Genesis Crystal', hue: 190, produk: [
-    { kode: 'GI60', nama: '60 Genesis Crystal', harga: 16000, butuhServer: true },
-    { kode: 'GI300', nama: '300 Genesis Crystal', harga: 74500, butuhServer: true },
-    { kode: 'GIBP', nama: 'Blessing of the Welkin Moon', harga: 74500, butuhServer: true },
-  ] },
-  { slug: 'garena-undawn', nama: 'Garena Undawn', tagline: 'Undawn coin', hue: 150, produk: [
-    { kode: 'UD80', nama: '80 Coin', harga: 15000 },
-    { kode: 'UD400', nama: '400 Coin', harga: 71000 },
-  ] },
-  { slug: 'point-blank', nama: 'Point Blank', tagline: 'PB Cash', hue: 8, produk: [
-    { kode: 'PB8900', nama: '8.900 Cash', harga: 9500 },
-    { kode: 'PB44500', nama: '44.500 Cash', harga: 46000 },
-  ] },
-  { slug: 'call-of-duty-mobile', nama: 'Call of Duty Mobile', tagline: 'CP resmi', hue: 20, produk: [
-    { kode: 'COD80', nama: '80 CP', harga: 15500 },
-    { kode: 'COD400', nama: '400 CP', harga: 72500 },
-  ] },
-  { slug: 'blood-strike', nama: 'Blood Strike', tagline: 'Gold & voucher', hue: 350, produk: [
-    { kode: 'BS100', nama: '100 Gold', harga: 14500 },
-    { kode: 'BS500', nama: '500 Gold', harga: 69000 },
-  ] },
-  { slug: 'honkai-star-rail', nama: 'Honkai Star Rail', tagline: 'Oneiric Shard', hue: 250, produk: [
-    { kode: 'HSR60', nama: '60 Oneiric Shard', harga: 16000, butuhServer: true },
-    { kode: 'HSR300', nama: '300 Oneiric Shard', harga: 74500, butuhServer: true },
-  ] },
-  { slug: 'metal-slug-awakening', nama: 'Metal Slug : Awakening', tagline: 'Diamond & pass', hue: 36, produk: [
-    { kode: 'MS80', nama: '80 Diamond', harga: 15000 },
-    { kode: 'MS400', nama: '400 Diamond', harga: 70000 },
-  ] },
-  { slug: 'magic-chess-go-go', nama: 'Magic Chess GO GO', tagline: 'Diamond MCGG', hue: 285, produk: [
-    { kode: 'MC86', nama: '86 Diamond', harga: 19500, butuhServer: true },
-    { kode: 'MC172', nama: '172 Diamond', harga: 38500, butuhServer: true },
-  ] },
-  { slug: 'farlight-84', nama: 'Farlight 84', tagline: 'Diamond FL84', hue: 44, produk: [
-    { kode: 'FL80', nama: '80 Diamond', harga: 14500 },
-    { kode: 'FL400', nama: '400 Diamond', harga: 68000 },
-  ] },
-  { slug: 'moonlight-blade-m', nama: 'Moonlight Blade M', tagline: 'Voucher & gold', hue: 200, produk: [
-    { kode: 'MB80', nama: '80 Voucher', harga: 15500 },
-    { kode: 'MB400', nama: '400 Voucher', harga: 72000 },
-  ] },
-  { slug: 'zenless-zone-zero', nama: 'Zenless Zone Zero', tagline: 'Monochrome & pass', hue: 160, produk: [
-    { kode: 'ZZZ60', nama: '60 Monochrome', harga: 16000, butuhServer: true },
-    { kode: 'ZZZ300', nama: '300 Monochrome', harga: 74500, butuhServer: true },
-  ] },
+/**
+ * Snapshot pricelist Free Fire (kode + nama + harga Basic) dari
+ * https://tokovoucher.me/pricelist — diambil 27 Nov 2026. Denominasi populer saja;
+ * tambah/kurangi baris di sini bila perlu (kode HARUS sesuai pricelist).
+ */
+const FREE_FIRE: TopupProduk[] = [
+  { kode: 'MFF5', nama: 'Free Fire 5 Diamonds', harga: 756 },
+  { kode: 'MFF10', nama: 'Free Fire 10 Diamonds', harga: 1508 },
+  { kode: 'MFF15', nama: 'Free Fire 15 Diamonds', harga: 2263 },
+  { kode: 'MFF20', nama: 'Free Fire 20 Diamonds', harga: 3017 },
+  { kode: 'MFF25', nama: 'Free Fire 25 Diamonds', harga: 3771 },
+  { kode: 'MFF30', nama: 'Free Fire 30 Diamonds', harga: 4525 },
+  { kode: 'MFF50', nama: 'Free Fire 50 Diamonds', harga: 6034 },
+  { kode: 'MFF70', nama: 'Free Fire 70 Diamonds', harga: 8189 },
+  { kode: 'MFF100', nama: 'Free Fire 100 Diamonds', harga: 12066 },
+  { kode: 'MFFLUP', nama: 'Free Fire Level Up Pass', harga: 14303 },
+  { kode: 'MFF140', nama: 'Free Fire 140 Diamonds', harga: 16523 },
+  { kode: 'MFF200', nama: 'Free Fire 200 Diamonds', harga: 24133 },
+  { kode: 'MFFM', nama: 'Free Fire Mingguan Membership', harga: 25138 },
+  { kode: 'MFF300', nama: 'Free Fire 300 Diamonds', harga: 36199 },
+  { kode: 'MFFBP', nama: 'Free Fire BP Card', harga: 37708 },
+  { kode: 'MFF400', nama: 'Free Fire 400 Diamonds', harga: 47121 },
+  { kode: 'MFF500', nama: 'Free Fire 500 Diamonds', harga: 58330 },
+  { kode: 'MFF700', nama: 'Free Fire 700 Diamonds', harga: 82463 },
+  { kode: 'MFFB', nama: 'Free Fire Bulanan Membership', harga: 75416 },
+  { kode: 'MFF1000', nama: 'Free Fire 1000 Diamonds', harga: 116141 },
+  { kode: 'MFF1440', nama: 'Free Fire 1440 Diamonds', harga: 165914 },
+  { kode: 'MFF2020', nama: 'Free Fire 2020 Diamonds', harga: 235297 },
 ];
 
-/** Isi grid untuk kategori selain Topup (dummy, boleh diganti data asli). */
-export const TOPUP_OTHER: Record<Exclude<TopupCategoryId, 'Topup'>, OtherItem[]> = {
+export const TOPUP_GAMES: GameCard[] = [
+  { slug: 'free-fire', nama: 'Free Fire', tagline: 'Diamond & membership', hue: 268, produk: FREE_FIRE },
+  // Game di bawah menunggu katalog asli: isi lewat file override server
+  // php-api/tokovoucher_pricelist.php (format ada di contoh file-nya) atau tambahkan
+  // baris snapshot di sini setelah kode dicek di pricelist penyedia.
+  { slug: 'mobile-legends', nama: 'Mobile Legends', tagline: 'Diamond MLBB', hue: 210, produk: [] },
+  { slug: 'hago', nama: 'Hago', tagline: 'Hago diamond & coins', hue: 48, produk: [] },
+  { slug: 'pubg-mobile', nama: 'PUBG Mobile', tagline: 'UC resmi & cepat', hue: 24, produk: [] },
+  { slug: 'honor-of-kings', nama: 'Honor of Kings', tagline: 'Token & skin', hue: 330, produk: [] },
+  { slug: 'genshin-impact', nama: 'Genshin Impact', tagline: 'Genesis Crystal', hue: 190, produk: [] },
+  { slug: 'garena-undawn', nama: 'Garena Undawn', tagline: 'Undawn coin', hue: 150, produk: [] },
+  { slug: 'point-blank', nama: 'Point Blank', tagline: 'PB Cash', hue: 8, produk: [] },
+  { slug: 'call-of-duty-mobile', nama: 'Call of Duty Mobile', tagline: 'CP resmi', hue: 20, produk: [] },
+  { slug: 'blood-strike', nama: 'Blood Strike', tagline: 'Gold & voucher', hue: 350, produk: [] },
+  { slug: 'honkai-star-rail', nama: 'Honkai Star Rail', tagline: 'Oneiric Shard', hue: 250, produk: [] },
+  { slug: 'metal-slug-awakening', nama: 'Metal Slug : Awakening', tagline: 'Diamond & pass', hue: 36, produk: [] },
+  { slug: 'magic-chess-go-go', nama: 'Magic Chess GO GO', tagline: 'Diamond MCGG', hue: 285, produk: [] },
+  { slug: 'farlight-84', nama: 'Farlight 84', tagline: 'Diamond FL84', hue: 44, produk: [] },
+  { slug: 'moonlight-blade-m', nama: 'Moonlight Blade M', tagline: 'Voucher & gold', hue: 200, produk: [] },
+  { slug: 'zenless-zone-zero', nama: 'Zenless Zone Zero', tagline: 'Monochrome & pass', hue: 160, produk: [] },
+];
+
+/** Kartu kategori selain Topup (grid kecil di tab lain). */
+export const TOPUP_OTHER: Record<string, { slug: string; nama: string; sub: string; hue: number }[]> = {
   Voucher: [
     { slug: 'voucher-gameplay', nama: 'Voucher Gameplay', sub: 'Voucher game semua publisher', hue: 210 },
     { slug: 'voucher-mlbb', nama: 'Voucher Mobile Legends', sub: 'Diamond pass & skin', hue: 230 },
@@ -167,23 +154,18 @@ export const TOPUP_OTHER: Record<Exclude<TopupCategoryId, 'Topup'>, OtherItem[]>
   ],
 };
 
-/** Slug aman untuk URL: huruf kecil, spasi/tanda -> strip. */
-export function slugify(s: string): string {
-  return s
+export const slugify = (s: string) =>
+  s
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-}
 
-/** Filter realtime berdasarkan nama (case-insensitive, spasi diabaikan). */
-export function filterByName<T extends { nama: string }>(list: T[], q: string): T[] {
-  const key = q.toLowerCase().replace(/\s+/g, ' ').trim();
-  if (!key) return list;
-  return list.filter((it) => it.nama.toLowerCase().includes(key));
-}
+export const filterByName = <T extends { nama: string }>(items: T[], q: string) => {
+  const term = q.toLowerCase().replace(/\s+/g, ' ').trim();
+  return term ? items.filter((it) => it.nama.toLowerCase().includes(term)) : items;
+};
 
-/** Format rupiah tanpa desimal. */
-export const rupiah = (n: number) =>
+export const rupiah = (n?: number | null) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
