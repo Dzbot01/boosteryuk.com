@@ -154,13 +154,13 @@ const HIDDEN_PROFILE_ITEM = 'profil';
 export { baseMenu, authMenu };
 
 export const ADMIN_MENU = [
+  // Admin juga mendapat dua menu layanan di paling atas, berdampingan seperti di menu user:
+  // Order Nomor (OTP) lalu TopUp All Game.
+  { id: 'nokos' as const, icon: Smartphone, label: 'Order Nomor', desc: 'Nomor OTP WhatsApp, Telegram, dll', path: '/otp-service' },
+  { id: 'topup' as const, icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital', path: '/topup' },
   { id: 'cek-status' as const, icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan', path: '/cek-status' },
   { id: 'event' as const, icon: Gift, label: 'Event', desc: 'Game & event yang berlangsung', path: '/event' },
   { id: 'events' as const, icon: Gift, label: 'Kelola Event', desc: 'Jadwal & status event', path: '/admin/events' },
-  // "TopUp All Game" juga tampil untuk ADMIN: saat login sebagai admin, daftar menu user
-  // (Navigasi) disembunyikan seluruhnya sehingga hanya Admin Menu yang dirender — tanpa entri
-  // ini admin tidak pernah melihat/membuka halaman top up dari side menu.
-  { id: 'topup' as const, icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital', path: '/topup' },
   { id: 'orders' as const, icon: ClipboardList, label: 'Data Pesanan', desc: 'Pesanan semua user', path: '/admin/orders' },
   { id: 'users' as const, icon: Users, label: 'Data User', desc: 'Saldo & data user', path: '/admin/users' },
   { id: 'deposits' as const, icon: Wallet, label: 'Data Deposit', desc: 'Deposit terbaru', path: '/admin/deposit' },
@@ -179,8 +179,11 @@ export function getUserMenuItems(signedIn: boolean, isAdmin: boolean, child: boo
   // Menu "Order Nomor" (OTP) tampil di ROOT DOMAIN maupun child panel, setelah "Buat Pesanan" —
   // UI halamannya sama (OrderOtpPage); pendapatan OTP root dicatat di My Profit admin.
   const base = [baseMenu[0], baseMenu[1], baseMenu[2], { id: 'nokos' as PageId, icon: Smartphone, label: 'Order Nomor', desc: 'Nomor OTP WhatsApp, Telegram, dll' }, ...baseMenu.slice(3)];
+  // Urutan atas: Dashboard, Overview, Buat Pesanan, lalu PASANGAN layanan cepat
+  // "Order Nomor" (OTP) + "TopUp All Game" — baru kemudian grup deposit dll, supaya
+  // dua menu transaksi harian itu selalu berada di bagian atas side menu.
   const combined = signedIn
-   ? [base[0], base[1], base[2],...authMenu,...base.slice(3)]
+   ? [base[0], base[1], base[2], base[3], base[4],...authMenu,...base.slice(5)]
     : base;
 
   // Dua menu riwayat harus BERDEKATAN: "Riwayat Pesanan" digeser tepat setelah "Riwayat Deposit"

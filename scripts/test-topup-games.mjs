@@ -61,13 +61,13 @@ assert.match(page, /max-w-\[1900px\]/, 'container maks ±1900px');
 /* ---------- 3. Data dummy & helper (fungsional) ---------- */
 const dir = mkdtempSync(path.join(tmpdir(), 'topup-games-'));
 const { outputFiles } = await build({
-  stdin: { contents: `export {TOPUP_GAMES, TOPUP_CATEGORIES, slugify, filterByName} from './src/data/topupGames';`, resolveDir: process.cwd(), sourcefile: 'entry.tsx' },
+  stdin: { contents: `export {TOPUP_GAMES, TOPUP_CATEGORIES, slugify, filterByName, hargaJual, TOPUP_MARKUP_PCT} from './src/data/topupGames';`, resolveDir: process.cwd(), sourcefile: 'entry.tsx' },
   bundle: true, platform: 'node', format: 'cjs', write: false, jsx: 'automatic',
   loader: { '.css': 'empty', '.png': 'dataurl', '.gif': 'dataurl' },
   define: { 'process.env.NODE_ENV': '"development"', 'import.meta.env': '{}' },
 });
 const file = path.join(dir, 'bundle.cjs'); writeFileSync(file, outputFiles[0].text);
-const { TOPUP_GAMES, TOPUP_CATEGORIES, slugify, filterByName } = require(file);
+const { TOPUP_GAMES, TOPUP_CATEGORIES, slugify, filterByName, hargaJual, TOPUP_MARKUP_PCT } = require(file);
 
 assert.equal(TOPUP_CATEGORIES.length, 9, 'sembilan tab kategori');
 assert.equal(TOPUP_GAMES.length, 16, '16 kartu game dummy');
@@ -76,13 +76,28 @@ for (const n of ['Free Fire', 'Mobile Legends', 'Hago', 'PUBG Mobile', 'Honor of
   assert.ok(nama.includes(n), `game "${n}" ada`);
 }
 assert.ok(TOPUP_GAMES.every((g) => g.slug === slugify(g.nama) || g.slug.length > 2), 'slug terisi untuk semua game');
-assert.ok(TOPUP_GAMES.every((g) => Array.isArray(g.produk) && g.produk.length > 0 && g.produk.every((p) => p.kode && p.harga > 0)), 'tiap game punya produk dengan kode & harga');
+// DATA ASLI, bukan dummy: snapshot Free Fire diverifikasi dari pricelist penyedia
+// (https://tokovoucher.me/pricelist, 27 Nov 2026) — kode berprefiks MFF & harga kolom Basic.
+const ff = TOPUP_GAMES.find((g) => g.slug === 'free-fire');
+assert.ok(ff.produk.length >= 20, `Free Fire punya katalog asli lengkap (${ff.produk.length} produk)`);
+assert.ok(ff.produk.every((p) => /^MFF[A-Z0-9]+$/.test(p.kode)), 'semua kode Free Fire sesuai pola pricelist penyedia (MFF…)');
+for (const [kode, harga] of [['MFF5', 756], ['MFF100', 12066], ['MFFM', 25138], ['MFFBP', 37708]]) {
+  const row = ff.produk.find((p) => p.kode === kode);
+  assert.ok(row, `kode asli ${kode} ada`);
+  assert.equal(row.harga, harga, `harga ${kode} = harga pricelist penyedia`);
+}
+// Game lain boleh belum punya snapshot — tapi TIDAK boleh memakai kode karangan:
+// halaman detail menarik katalog asli dari server (override/pricelist), sonst state jujur.
+assert.ok(TOPUP_GAMES.every((g) => Array.isArray(g.produk) && g.produk.every((p) => p.kode && p.harga > 0)), 'bila produk diisi, kode & harganya wajib valid');
 assert.equal(slugify('Metal Slug : Awakening'), 'metal-slug-awakening', 'slugify membuang titik dua & spasi');
 assert.equal(slugify('Zenless Zone Zero'), 'zenless-zone-zero', 'slugify huruf kecil semua');
 assert.equal(filterByName(TOPUP_GAMES, '').length, 16, 'pencarian kosong = semua game');
 assert.equal(filterByName(TOPUP_GAMES, 'mobile').length, 3, 'filter "mobile" => PUBG Mobile, Call of Duty Mobile, Mobile Legends');
 assert.equal(filterByName(TOPUP_GAMES, 'GENSHIN').length, 1, 'filter case-insensitive');
 assert.equal(filterByName(TOPUP_GAMES, 'zzz').length, 0, 'filter tanpa hasil => state kosong');
+assert.equal(TOPUP_MARKUP_PCT, 0, 'margin default 0 (jual = harga penyedia; setel di satu tempat bila mau margin)');
+assert.equal(hargaJual(756), 800, 'harga jual dibulatkan ke ratusan ke atas (pola pembulatan ala OTP)');
+assert.equal(hargaJual(12066), 12100, 'pembulatan ratusan konsisten');
 
 /* ---------- 4. Halaman detail + layanan + keamanan integrasi ---------- */
 const detail = read('src/pages/TopupGameDetailPage.tsx');
@@ -92,12 +107,25 @@ assert.match(detail, /produk\.butuhServer/, 'Server ID hanya tampil bila produk 
 assert.match(detail, /tvTransaksi\(\{ player_id: playerId\.trim\(\), server_id: serverId\.trim\(\), kode_produk: produk\.kode \}\)/, 'pesanan dikirim lewat layanan proxy');
 assert.match(detail, /Silakan login dulu untuk memesan top up\./, 'pesan wajib login sebelum memesan');
 assert.match(detail, /tokovoucher_config\.php/, 'notice bila integrasi belum dikonfigurasi di server');
+assert.match(detail, /tvPricelist\(game\.nama\)/, 'halaman detail menarik katalog ASLI dari server saat dibuka');
+assert.match(detail, /Katalog produk game ini belum tersedia di server/, 'game tanpa katalog menampilkan state jujur (bukan kode karangan)');
+assert.match(detail, /rupiah\(hargaJual\(p\.harga\)\)/, 'harga tampilan lewat hargaJual (margin + pembulatan terpusat)');
 const svc = read('src/services/tokovoucherApi.ts');
+assert.match(svc, /export const tvPricelist = \(game\?: string\) =>/, 'layanan punya tvPricelist (katalog asli dari server)');
+assert.match(svc, /action=pricelist/, 'tvPricelist memanggil action=pricelist');
 assert.match(svc, /const API = `\$\{MAIN_API\}\/tokovoucher\.php`;/, 'frontend memanggil proxy PHP, bukan API penyedia langsung');
 assert.ok(!/secret\s*:/.test(svc), 'payload frontend tidak pernah memuat field secret');
 assert.ok(!/md5\(/i.test(svc) && !/signature\s*=/.test(svc), 'signature tidak dihitung di browser');
 
 const php = read('php-api/tokovoucher.php');
+assert.match(php, /if \(\$action === 'pricelist'\)/, 'proxy punya action=pricelist (katalog asli)');
+assert.match(php, /function tv_parse_pricelist_html\(\$html\)/, 'proxy bisa membaca tabel pricelist penyedia');
+assert.match(php, /function tv_pricelist_override\(\)/, 'proxy mendukung override katalog manual di server');
+assert.match(php, /tokovoucher_pricelist_cache\.json/, 'pricelist live di-cache di server (6 jam)');
+assert.match(php, /filter_var\(\$st, FILTER_VALIDATE_BOOLEAN\)/, 'status sukses penyedia dibaca toleran (true/success/dll)');
+assert.ok(!php.includes('$okProvider ? 200 : 502'), 'penolakan bisnis TIDAK lagi membalas 502 (UI dapat pesan penyedia)');
+assert.match(php, /CURL_ERROR=/, 'gagal koneksi dicatat terpisah di log server');
+assert.ok(existsSync('php-api/tokovoucher_pricelist.example.php'), 'contoh file override katalog tersedia');
 assert.match(php, /\$sig = md5\(\$c\['user_code'\] \. ':' \. \$c\['secret'\] \. ':' \. \$ref\);/, 'signature = MD5(USER_CODE:SECRET:REF_ID) dihitung di server');
 assert.match(php, /is_file\(__DIR__ \. '\/tokovoucher_config\.php'\)/, 'secret dibaca dari file config server (tidak di-commit)');
 assert.match(php, /cp_user_id\(\$conn, \(string\)\(\$in\['token'\] \?\? ''\)\)/, 'transaksi wajib token login valid');
@@ -151,7 +179,8 @@ assert.ok(ids(childIn).includes('topup'), 'menu TopUp All Game tampil di child p
 // Posisi: di baseMenu topup tepat setelah "Buat Pesanan" (layanan). Untuk user login, "Buat Pesanan"
 // & "Order Nomor" berada di depan grup deposit sehingga topup mengikuti "Order Nomor"; untuk
 // pengunjung (belum login) layanan/nokos tersembunyi sehingga topup langsung setelah Dashboard.
-assert.equal(ids(userIn).indexOf('topup'), ids(userIn).indexOf('nokos') + 1, 'user login: tepat setelah "Order Nomor" (grup Buat Pesanan)');
+assert.equal(ids(userIn).indexOf('nokos'), ids(userIn).indexOf('layanan') + 1, 'user login: "Order Nomor" (OTP) di atas, tepat setelah Buat Pesanan');
+assert.equal(ids(userIn).indexOf('topup'), ids(userIn).indexOf('nokos') + 1, 'user login: TopUp All Game berdampingan dengan Order Nomor');
 assert.equal(ids(guest).indexOf('topup'), ids(guest).indexOf('home') + 1, 'pengunjung: item pertama setelah Dashboard');
 assert.equal(ids(childIn).indexOf('topup'), ids(childIn).indexOf('nokos') + 1, 'child panel: urutan sama dengan root domain');
 const topupGuest = guest.find((i) => i.id === 'topup');
@@ -160,6 +189,9 @@ assert.equal(topupGuest.desc, 'Top up game & produk digital');
 const adminRoot = getAdminMenuItems(false);
 const adminChild = getAdminMenuItems(true);
 assert.ok(ids(adminRoot).includes('topup'), 'ADMIN juga melihat menu TopUp All Game di side menu');
+assert.equal(ids(adminRoot)[0], 'nokos', 'admin: menu paling atas = Order Nomor (OTP)');
+assert.equal(ids(adminRoot)[1], 'topup', 'admin: urutan kedua = TopUp All Game (berdampingan dengan OTP)');
+assert.equal(adminRoot[0].path, '/otp-service', 'menu OTP admin membuka /otp-service');
 assert.ok(ids(adminChild).includes('topup'), 'pemilik child panel (admin ke-2) juga melihatnya');
 const topupAdmin = adminRoot.find((i) => i.id === 'topup');
 assert.equal(topupAdmin.path, '/topup', 'menu admin membuka /topup');

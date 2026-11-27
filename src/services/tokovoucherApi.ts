@@ -64,3 +64,25 @@ export const tvStatus = () => get<TvStatus>('action=status');
  */
 export const tvTransaksi = (body: { player_id: string; server_id?: string; kode_produk: string }) =>
   post<TvTransaksi>('transaksi', body);
+
+export interface TvPricelistItem {
+  kode: string;
+  nama: string;
+  harga: number;
+  butuh_server?: boolean;
+}
+
+export interface TvPricelist {
+  /** Asal data: provider (pricelist live), override (file server), snapshot (bundel), kosong. */
+  source: 'provider' | 'override' | 'snapshot' | 'kosong';
+  updated_at?: string;
+  game?: string;
+  items: TvPricelistItem[];
+}
+
+/**
+ * Katalog produk ASLI untuk satu game dari proxy server (pricelist penyedia /
+ * file override server). Dipakai halaman detail supaya tidak ada kode karangan.
+ */
+export const tvPricelist = (game?: string) =>
+  get<TvPricelist>('action=pricelist' + (game ? `&game=${encodeURIComponent(game)}` : ''));

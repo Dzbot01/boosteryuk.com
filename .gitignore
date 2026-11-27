@@ -25,3 +25,5 @@ php-api/naizop_*cache.json
 # Integrasi TokoVoucher (TopUp All Game): rahasia server + log transaksi
 php-api/tokovoucher_config.php
 php-api/tokovoucher_log.txt
+php-api/tokovoucher_pricelist.php
+php-api/tokovoucher_pricelist_cache.json

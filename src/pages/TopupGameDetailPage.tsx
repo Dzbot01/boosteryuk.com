@@ -3,8 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Gamepad2, LoaderCircle, Server, ShieldAlert, UserRound } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
-import { tvStatus, tvTransaksi } from '../services/tokovoucherApi';
-import { TOPUP_GAMES, rupiah } from '../data/topupGames';
+import { tvPricelist, tvStatus, tvTransaksi } from '../services/tokovoucherApi';
+import type { TvPricelistItem } from '../services/tokovoucherApi';
+import { TOPUP_GAMES, hargaJual, rupiah } from '../data/topupGames';
 
 /**
  * Halaman detail top up satu game: pilih produk, isi Player ID (+ Server ID bila produk
@@ -22,8 +23,16 @@ export default function TopupGameDetailPage() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string; refId?: string } | null>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
+  const [live, setLive] = useState<{ source: string; items: TvPricelistItem[]; updated_at?: string } | null>(null);
+  const [katBusy, setKatBusy] = useState(false);
 
-  const produk = useMemo(() => game?.produk.find((p) => p.kode === kode) || null, [game, kode]);
+  /** Produk tampil: katalog ASLI dari server bila ada, selain itu snapshot repo. */
+  const produkList = useMemo(() => {
+    if (live?.items?.length) return live.items.map((i) => ({ kode: i.kode, nama: i.nama, harga: i.harga, butuhServer: !!i.butuh_server }));
+    return game?.produk || [];
+  }, [live, game]);
+
+  const produk = useMemo(() => produkList.find((p) => p.kode === kode) || null, [produkList, kode]);
 
   useEffect(() => {
     let alive = true;
@@ -31,11 +40,27 @@ export default function TopupGameDetailPage() {
     return () => { alive = false; };
   }, []);
 
-  // Pilih produk pertama sebagai default begitu game ditemukan.
+  /** Tarik katalog asli (pricelist penyedia / override server) untuk game ini. */
+  const loadKatalog = () => {
+    if (!game) return;
+    setKatBusy(true);
+    tvPricelist(game.nama).then((r) => {
+      setKatBusy(false);
+      setLive(r.ok ? { source: r.source, items: r.items || [], updated_at: r.updated_at } : { source: 'kosong', items: [] });
+    });
+  };
+
+  // Pilih produk pertama sebagai default begitu katalog siap.
   useEffect(() => {
-    setKode(game?.produk[0]?.kode || '');
+    setKode(produkList[0]?.kode || '');
     setResult(null);
     setServerId('');
+  }, [produkList]);
+
+  useEffect(() => {
+    setLive(null);
+    loadKatalog();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game]);
 
   if (!game) {
@@ -105,8 +130,30 @@ export default function TopupGameDetailPage() {
         {/* ============ PILIH PRODUK ============ */}
         <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm md:p-5">
           <h2 className="font-display text-[15px] font-extrabold text-slate-900">1 · Pilih produk</h2>
+          {live?.source === 'provider' && live.updated_at && (
+            <p className="mt-1 text-[11px] font-bold text-emerald-700">Katalog live dari pricelist penyedia · diperbarui {live.updated_at}</p>
+          )}
+          {live?.source === 'override' && (
+            <p className="mt-1 text-[11px] text-slate-500">Katalog dari file override server (pricelist manual).</p>
+          )}
+          {katBusy && <p className="mt-2 text-[12px] text-slate-500">Memuat katalog asli dari server…</p>}
+          {produkList.length === 0 && !katBusy && (
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-[12.5px] leading-relaxed text-slate-600">
+              Katalog produk game ini belum tersedia di server — kami tidak menampilkan kode karangan supaya pesanan
+              tidak gagal. Admin dapat menambahkan kode produk asli lewat{' '}
+              <code className="rounded bg-white px-1">php-api/tokovoucher_pricelist.php</code> (format ada di file contoh),
+              atau pricelist penyedia dibaca otomatis bila katalog game ini tersedia.
+              <button
+                type="button"
+                onClick={loadKatalog}
+                className="mt-2.5 block rounded-full border border-slate-300 bg-white px-4 py-1.5 text-[11.5px] font-bold text-slate-700 transition hover:border-slate-400"
+              >
+                Muat ulang katalog
+              </button>
+            </div>
+          )}
           <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-            {game.produk.map((p) => {
+            {produkList.map((p) => {
               const on = p.kode === kode;
               return (
                 <button
@@ -124,7 +171,7 @@ export default function TopupGameDetailPage() {
                       {p.butuhServer ? ' · perlu Server ID' : ''}
                     </span>
                   </span>
-                  <span className="whitespace-nowrap font-mono text-[13px] font-bold text-[#14143c]">{rupiah(p.harga)}</span>
+                  <span className="whitespace-nowrap font-mono text-[13px] font-bold text-[#14143c]">{rupiah(hargaJual(p.harga))}</span>
                 </button>
               );
             })}
@@ -177,7 +224,7 @@ export default function TopupGameDetailPage() {
             )}
             <div className="flex justify-between border-t border-slate-100 pt-2 text-[14px]">
               <dt className="font-bold text-slate-800">Total</dt>
-              <dd className="font-mono font-extrabold text-[#14143c]">{produk ? rupiah(produk.harga) : '—'}</dd>
+              <dd className="font-mono font-extrabold text-[#14143c]">{produk ? rupiah(hargaJual(produk.harga)) : '—'}</dd>
             </div>
           </dl>
 
