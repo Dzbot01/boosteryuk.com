@@ -5,7 +5,7 @@ import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
 import { tvCekStatus, tvPricelist, tvStatus, tvTransaksi } from '../services/tokovoucherApi';
 import type { TvPricelistItem } from '../services/tokovoucherApi';
-import { TOPUP_GAMES, hargaJual, rupiah } from '../data/topupGames';
+import { TOPUP_GAMES, hargaJual, rupiah, type TopupProduk } from '../data/topupGames';
 import { rapihkanKatalog } from '../lib/topupDisplayName';
 
 /**
@@ -15,7 +15,19 @@ import { rapihkanKatalog } from '../lib/topupDisplayName';
  */
 export default function TopupGameDetailPage() {
   const { slug = '' } = useParams();
-  const game = useMemo(() => TOPUP_GAMES.find((g) => g.slug === slug) || null, [slug]);
+  const game = useMemo(() => {
+    const found = TOPUP_GAMES.find((g) => g.slug === slug);
+    if (found) return found;
+    if (!slug) return null;
+    // Game dari katalog live penyedia yang belum ada di konfigurasi repo:
+    // sintesis kartu dari slug supaya halaman detail & penarikan katalog tetap jalan.
+    const nama = slug
+      .split('-')
+      .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+      .join(' ');
+    const hue = [...slug].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
+    return { slug, nama, tagline: 'Top up resmi · server ID', hue, produk: [] as TopupProduk[] };
+  }, [slug]);
   const { user } = useAuth();
 
   const [kode, setKode] = useState('');

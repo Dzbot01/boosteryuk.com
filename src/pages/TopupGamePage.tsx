@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Gamepad2, Search, SearchX } from 'lucide-react';
+import { Gamepad2, Search, SearchX } from 'lucide-react';
 import Seo from '../components/Seo';
-import {
-  TOPUP_CATEGORIES, TOPUP_GAMES, TOPUP_OTHER, filterByName,
-  type TopupCategoryId,
-} from '../data/topupGames';
+import { TOPUP_GAMES, filterByName } from '../data/topupGames';
+import { tvKatalog, type TvKatalogGroup } from '../services/tokovoucherApi';
 
 /**
  * Marketplace "TopUp All Game": tab kategori + pencarian realtime + grid kartu game.
@@ -60,90 +58,69 @@ function SkeletonCard() {
 }
 
 export default function TopupGamePage() {
-  const [category, setCategory] = useState<TopupCategoryId>('Topup');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const tabRowRef = useRef<HTMLDivElement | null>(null);
+  const [groups, setGroups] = useState<TvKatalogGroup[]>([]);
 
-  // Skeleton singkat setiap ganti kategori / pertama buka.
+  /** Grid kartu game LIVE dari API katalog penyedia (kategori Topup, server ID Indonesia). */
   useEffect(() => {
+    let alive = true;
     setLoading(true);
-    const t = window.setTimeout(() => setLoading(false), 420);
-    return () => window.clearTimeout(t);
-  }, [category]);
+    tvKatalog().then((r) => {
+      if (!alive) return;
+      setGroups(r.ok && Array.isArray(r.groups) && r.groups.length ? r.groups : []);
+      setLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /** Warna thumbnail: ikut konfigurasi kartu bila game dikenal, selain itu hash slug. */
+  const hueOf = (slug: string) =>
+    TOPUP_GAMES.find((g) => g.slug === slug)?.hue ??
+    [...slug].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
 
   const items = useMemo<CardItem[]>(() => {
-    if (category === 'Topup') {
-      return TOPUP_GAMES.map((g) => ({ slug: g.slug, nama: g.nama, sub: g.tagline, hue: g.hue, game: true }));
+    if (groups.length) {
+      return groups.map((g) => ({
+        slug: g.slug,
+        nama: g.game,
+        sub: `${g.jumlah} produk · server ID (Indonesia)`,
+        hue: hueOf(g.slug),
+        game: true,
+      }));
     }
-    return TOPUP_OTHER[category].map((o) => ({ slug: o.slug, nama: o.nama, sub: o.sub, hue: o.hue }));
-  }, [category]);
+    // Fallback bila katalog live belum tersedia (server belum dikonfigurasi).
+    return TOPUP_GAMES.map((g) => ({ slug: g.slug, nama: g.nama, sub: g.tagline, hue: g.hue, game: true }));
+  }, [groups]);
 
   const shown = useMemo(() => filterByName(items, query), [items, query]);
-
-  /** Geser baris tab ke kanan (tombol panah). */
-  const scrollTabs = () => tabRowRef.current?.scrollBy({ left: 260, behavior: 'smooth' });
 
   return (
     <div
       className="min-h-screen px-4 pb-24 pt-6 md:px-6 xl:px-10"
       style={{ backgroundColor: '#e5e5e7', backgroundImage: PATTERN_URL }}
     >
-      <Seo title="TopUp All Game" description="Marketplace top up game & produk digital: voucher, pulsa, token listrik, paket data, dan lainnya." />
+      <Seo title="TopUp All Game" description="Marketplace top up game: katalog live dari penyedia resmi, hanya server ID (Indonesia), proses otomatis." />
       <div className="mx-auto max-w-[1900px]">
         <header className="mb-5">
           <h1 className="font-display text-[22px] font-extrabold tracking-tight text-[#14143c] sm:text-[26px]">TopUp All Game</h1>
           <p className="mt-1 text-[13px] text-slate-600">
-            Top up game favorit & produk digital — proses otomatis, harga bersahabat.
+            Top up game favorit — katalog live penyedia, hanya server ID (Indonesia), proses otomatis.
           </p>
         </header>
 
-        {/* ============ BARIS TAB KATEGORI + PENCARIAN ============ */}
-        <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-          <div className="relative flex-1">
-            <div
-              ref={tabRowRef}
-              className="flex items-center gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {TOPUP_CATEGORIES.map((c) => {
-                const active = c === category;
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCategory(c)}
-                    className={`h-[46px] shrink-0 whitespace-nowrap rounded-full px-6 text-[13.5px] shadow-sm transition-colors duration-200 md:h-[54px] md:text-[14.5px] ${
-                      active ? 'bg-[#14143c] font-bold text-white' : 'bg-white font-medium text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                );
-              })}
-            </div>
-            {/* fade + tombol panah: penanda masih ada tab lain di kanan */}
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#e5e5e7] to-transparent" />
-            <button
-              type="button"
-              onClick={scrollTabs}
-              aria-label="Geser daftar kategori ke kanan"
-              className="absolute right-0 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm transition hover:bg-slate-100"
-            >
-              <ChevronRight className="h-4 w-4" strokeWidth={2.4} />
-            </button>
-          </div>
-
-          {/* Pencarian: di kanan baris tab (desktop), baris sendiri (mobile) */}
-          <label className="relative block w-full lg:max-w-md">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2.2} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari game di semua kategori..."
-              className="h-[46px] w-full rounded-full border border-slate-200 bg-white pl-11 pr-5 text-[13.5px] text-slate-800 shadow-sm outline-none transition focus:border-[#14143c]/40 focus:ring-2 focus:ring-[#14143c]/15 md:h-[54px] md:text-[14px]"
-            />
-          </label>
-        </div>
+        {/* ============ PENCARIAN ============ */}
+        <label className="relative block w-full lg:max-w-md">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2.2} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari game…"
+            className="h-[46px] w-full rounded-full border border-slate-200 bg-white pl-11 pr-5 text-[13.5px] text-slate-800 shadow-sm outline-none transition focus:border-[#14143c]/40 focus:ring-2 focus:ring-[#14143c]/15 md:h-[54px] md:text-[14px]"
+          />
+        </label>
 
         {/* ============ GRID KARTU ============ */}
         <div className="mt-6 grid grid-cols-3 items-stretch gap-4 md:grid-cols-4 md:gap-5 lg:grid-cols-6 xl:gap-6 2xl:grid-cols-8">
@@ -176,7 +153,7 @@ export default function TopupGamePage() {
             <SearchX className="mx-auto h-10 w-10 text-slate-300" strokeWidth={1.6} />
             <p className="mt-3 font-display text-[16px] font-extrabold text-slate-800">Game tidak ditemukan</p>
             <p className="mt-1.5 text-[13px] text-slate-500">
-              Coba kata kunci lain, atau pilih kategori <b>{category}</b> tanpa pencarian.
+              Coba kata kunci lain.
             </p>
             <button
               type="button"
