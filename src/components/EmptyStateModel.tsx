@@ -4,7 +4,8 @@ import type { AnimationMixer, Clock, Group, PerspectiveCamera, WebGLRenderer } f
 
 /**
  * Panggung 3D — dipakai sebagai empty state riwayat (Riwayat Deposit, Riwayat Pesanan,
- * Riwayat Nomor) maupun sebagai panggung model (scene Order OTP).
+ * Riwayat Nomor), panggung model scene (Order OTP), dan model "merangkul" pojok card
+ * slider (halaman Buat Pesanan / Layanan).
  *
  * Model GLB diambil dari Supabase Storage folder public "video":
  *   https://zcxtbtleeeaeqeryiwea.supabase.co/storage/v1/object/public/video/boy.glb
@@ -12,13 +13,62 @@ import type { AnimationMixer, Clock, Group, PerspectiveCamera, WebGLRenderer } f
  * agar beratnya tidak ikut ke chunk halaman. Bila WebGL/model gagal dimuat, tampil ikon
  * cadangan + teks yang sama sehingga halaman tidak pernah blank.
  *
- * Panggung ini PASIF (tanpa kontrol kamera/POV): model diputar oleh animasi bawaan GLB dan
- * ayunan halus panggung. Kamera selalu di-fit otomatis (`fitCamera`) memakai bounding box
- * model × `fitMargin`, sehingga model yang sedang beranimasi tidak pernah terpotong frame
- * (vertikal maupun horizontal, termasuk saat wadah sempit/tinggi di HP atau saat di-resize).
+ * Panggung ini PASIF (tanpa kontrol kamera/POV): model digerakkan animasi bawaan GLB
+ * (+ ayunan halus panggung bila `motion`). GLB dimuat SEKALI per `modelUrl`; perubahan
+ * tinggi/zoom/ukuran hanya memanggil `layout()` sehingga tidak ada re-fetch saat elemen
+ * di-resize (penting untuk tinggi yang diukur dari elemen lain, mis. card slider).
+ * Kamera selalu di-fit otomatis lewat `computeStageFit` sehingga model yang sedang
+ * beranimasi tidak terpotong frame.
  */
 export const EMPTY_STATE_MODEL_URL =
   'https://zcxtbtleeeaeqeryiwea.supabase.co/storage/v1/object/public/video/boy.glb';
+
+/** Sumbu acuan skala model: 'max' = dimensi terpanjang, 'height' = tinggi model. */
+export type FitBy = 'max' | 'height';
+/** Sumbu yang dijaga muat di frame: 'both' = vertikal + horizontal, 'vertical' = tinggi saja. */
+export type FitAxes = 'both' | 'vertical';
+
+/**
+ * Hitung skala model + jarak kamera agar model (beserta ruang gerak animasinya) muat di frame.
+ * Fungsi murni — diekspor supaya bisa diuji tanpa WebGL.
+ *
+ * `dist` = max(jarak yang diminta `zoom`, jarak minimum agar tinggi model × fitMargin muat
+ * secara vertikal, dan — bila `fitAxes` 'both' — agar lebar efektif model × fitMargin muat
+ * secara horizontal). Lebar efektif memakai hypot(x, z) karena panggung mengayun model
+ * mengelilingi sumbu Y (proyeksi terlebar terjadi di antara keduanya).
+ */
+export function computeStageFit(opts: {
+  sizeX: number;
+  sizeY: number;
+  sizeZ: number;
+  aspect: number;
+  fovDeg?: number;
+  targetSize?: number;
+  fitMargin?: number;
+  zoom?: number;
+  fitBy?: FitBy;
+  fitAxes?: FitAxes;
+}): { dist: number; scale: number; modelH: number; visibleH: number } {
+  const fov = opts.fovDeg ?? 35;
+  const target = Math.max(opts.targetSize ?? 2.2, 0.05);
+  const margin = Math.max(opts.fitMargin ?? 1.3, 1);
+  const zoom = Math.max(opts.zoom ?? 1, 0.2);
+  const aspect = opts.aspect > 0.01 ? opts.aspect : 1;
+  const refDim =
+    opts.fitBy === 'height'
+      ? opts.sizeY || 1
+      : Math.max(opts.sizeY || 1, opts.sizeX || 1, opts.sizeZ || 1, 0.0001);
+  const scale = target / refDim;
+  const visH = 2 * Math.tan(((fov * Math.PI) / 180) / 2); // tinggi frame pada jarak 1
+  const modelH = opts.sizeY * scale;
+  const needV = modelH * margin;
+  const needH = Math.hypot(opts.sizeX * scale, opts.sizeZ * scale) * margin;
+  const minDistV = needV / visH;
+  const minDistH = opts.fitAxes === 'vertical' ? 0 : needH / (visH * aspect);
+  const want = (modelH * 2.15) / zoom;
+  const dist = Math.max(want, minDistV, minDistH);
+  return { dist, scale, modelH, visibleH: visH * dist };
+}
 
 type Props = {
   /** Teks utama, mis. "Belum ada riwayat deposit" (opsional: panggung 3D saja). */
@@ -42,6 +92,12 @@ type Props = {
   targetSize?: number;
   /** Ruang gerak animasi: 1.4 = kamera dijauhkan sampai model + 40% ruang bebas terlihat utuh. */
   fitMargin?: number;
+  /** Acuan skala model: 'max' (default) atau 'height' (tinggi model = targetSize). */
+  fitBy?: FitBy;
+  /** Sumbu yang dijaga muat: 'both' (default) atau 'vertical' (tinggi saja, boleh melebar). */
+  fitAxes?: FitAxes;
+  /** Ayunan + napas otomatis panggung. Default true. */
+  motion?: boolean;
   /** Kelas lebar panggung; default 'max-w-[280px]' (pakai 'max-w-none w-full' untuk layar penuh). */
   stageClassName?: string;
 };
@@ -58,6 +114,9 @@ export default function EmptyStateModel({
   zoom = 1,
   targetSize = 2.2,
   fitMargin = 1.3,
+  fitBy = 'max',
+  fitAxes = 'both',
+  motion = true,
   stageClassName = 'max-w-[280px]',
 }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -65,6 +124,9 @@ export default function EmptyStateModel({
   const [state, setState] = useState<'idle' | 'ready' | 'failed'>('idle');
   /** Tinggi panggung efektif: `mobileHeight` di layar sempit, selain itu `height`. */
   const [stageH, setStageH] = useState(height);
+  /** Konfigurasi tata letak terbaru — dibaca `layout()` agar resize tidak memuat ulang GLB. */
+  const cfgRef = useRef({ stageH: height, zoom, targetSize, fitMargin, fitBy, fitAxes, motion });
+  const layoutRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const calc = () => {
@@ -76,6 +138,13 @@ export default function EmptyStateModel({
     return () => window.removeEventListener('resize', calc);
   }, [height, mobileHeight]);
 
+  // Tata letak ulang (tanpa memuat ulang model) saat tinggi/zoom/ukuran/fit berubah.
+  useEffect(() => {
+    cfgRef.current = { stageH, zoom, targetSize, fitMargin, fitBy, fitAxes, motion };
+    layoutRef.current?.();
+  }, [stageH, zoom, targetSize, fitMargin, fitBy, fitAxes, motion]);
+
+  // Muat GLB SEKALI per modelUrl; sesudahnya semua perubahan ukuran lewat layout().
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -96,6 +165,7 @@ export default function EmptyStateModel({
       observers = [];
       try { renderer?.dispose(); } catch { /* sudah dilepas */ }
       renderer = null;
+      layoutRef.current = null;
       host.innerHTML = '';
     };
 
@@ -106,15 +176,13 @@ export default function EmptyStateModel({
         if (disposed || !host.isConnected) return;
 
         const scene = new THREE.Scene();
-        const cam = new THREE.PerspectiveCamera(35, Math.max(host.clientWidth || 260, 120) / stageH, 0.1, 200);
+        const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 200);
         camera = cam;
         const webgl = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer = webgl;
         webgl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        webgl.setSize(Math.max(host.clientWidth || 260, 120), stageH);
         webgl.domElement.setAttribute('aria-hidden', 'true');
         webgl.domElement.style.width = '100%';
-        webgl.domElement.style.height = `${stageH}px`;
         webgl.domElement.style.display = 'block';
         host.appendChild(webgl.domElement);
 
@@ -130,39 +198,36 @@ export default function EmptyStateModel({
         const gltf = await new GLTFLoader().loadAsync(modelUrl || EMPTY_STATE_MODEL_URL);
         if (disposed || !host.isConnected) return;
 
-        // Pusatkan model ke origin lalu skalakan agar pas di panggung.
+        // Pusatkan model ke origin; skala + framing dihitung ulang setiap layout().
         const model = gltf.scene;
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
-        const target = Math.max(targetSize, 0.05);
-        const scale = target / Math.max(size.y || 1, size.x || 1, size.z || 1, 0.0001);
-        model.scale.setScalar(scale);
-        model.position.set(-center.x * scale, -center.y * scale + 0.02, -center.z * scale);
         const group = new THREE.Group();
         group.add(model);
         scene.add(group);
         pivot = group;
 
-        /**
-         * Fit kamera: jarak = max(jarak yang diminta `zoom`, jarak minimum agar model +
-         * ruang gerak animasi (`fitMargin`) muat di frame secara VERTIKAL dan HORIZONTAL).
-         * Dipanggil ulang tiap resize (aspect berubah) sehingga model tidak pernah terpotong.
-         */
-        const fitCamera = () => {
+        /** Terapkan ukuran panggung + skala model + jarak kamera terbaru (tanpa re-fetch GLB). */
+        const layout = () => {
+          if (disposed || !renderer || !camera) return;
+          const c = cfgRef.current;
           const w = Math.max(host.clientWidth || 260, 120);
-          cam.aspect = w / stageH;
-          cam.updateProjectionMatrix();
-          const visH = 2 * Math.tan((cam.fov * Math.PI) / 180 / 2); // tinggi frame pada jarak 1
-          const need = target * Math.max(fitMargin, 1);
-          const minDistV = need / visH;
-          const minDistH = cam.aspect > 0.01 ? need / (visH * cam.aspect) : minDistV;
-          const want = (target * 2.15) / Math.max(zoom, 0.2);
-          const dist = Math.max(want, minDistV, minDistH);
-          cam.position.set(0, dist * 0.06, dist);
-          cam.lookAt(0, 0, 0);
+          const h = Math.max(c.stageH || 120, 60);
+          const fit = computeStageFit({
+            sizeX: size.x, sizeY: size.y, sizeZ: size.z, aspect: w / h, fovDeg: camera.fov,
+            targetSize: c.targetSize, fitMargin: c.fitMargin, zoom: c.zoom, fitBy: c.fitBy, fitAxes: c.fitAxes,
+          });
+          model.scale.setScalar(fit.scale);
+          model.position.set(-center.x * fit.scale, -center.y * fit.scale + 0.02, -center.z * fit.scale);
+          renderer.setSize(w, h);
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          camera.position.set(0, fit.dist * 0.06, fit.dist);
+          camera.lookAt(0, 0, 0);
         };
-        fitCamera();
+        layoutRef.current = layout;
+        layout();
 
         // Animasi bawaan GLB (idle/wave) diputar berulang bila ada.
         if (gltf.animations?.length) {
@@ -171,14 +236,8 @@ export default function EmptyStateModel({
           mixer.clipAction(gltf.animations[0]).setLoop(THREE.LoopRepeat, Infinity).play();
         }
 
-        const resize = () => {
-          const w = host.clientWidth;
-          if (!renderer || !camera || !w) return;
-          renderer.setSize(w, stageH);
-          fitCamera();
-        };
         if (typeof ResizeObserver === 'function') {
-          const ro = new ResizeObserver(resize);
+          const ro = new ResizeObserver(layout);
           ro.observe(host);
           observers.push(ro);
         }
@@ -186,7 +245,7 @@ export default function EmptyStateModel({
 
         // Hormati prefers-reduced-motion: render satu frame saja tanpa animasi.
         if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true) {
-          resize();
+          layout();
           renderer.render(scene, cam);
           return;
         }
@@ -206,7 +265,7 @@ export default function EmptyStateModel({
           const delta = clock ? clock.getDelta() : 1 / 60;
           t += delta;
           mixer?.update(delta);
-          if (pivot) {
+          if (pivot && cfgRef.current.motion) {
             pivot.rotation.y = Math.sin(t * 0.35) * 0.55;
             pivot.position.y = Math.sin(t * 1.1) * 0.045;
           }
@@ -220,7 +279,7 @@ export default function EmptyStateModel({
     })();
 
     return () => { disposed = true; stop(); };
-  }, [stageH, modelUrl, zoom, targetSize, fitMargin]);
+  }, [modelUrl]);
 
   return (
     <div

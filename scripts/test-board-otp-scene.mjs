@@ -33,20 +33,22 @@ assert.ok(!/interactive/.test(esm), 'prop interactive dihapus dari EmptyStateMod
 assert.ok(!/data-orbit-reset|Reset kamera/.test(esm), 'tombol Reset kamera dihapus');
 assert.ok(!/touchAction|cursor = 'grab'/.test(esm), 'canvas tidak lagi menangkap drag pointer');
 assert.match(esm, /className=\{`pointer-events-none w-full \$\{stageClassName\}`\}/, 'panggung pasif: pointer-events-none (tidak menahan scroll/drag)');
-assert.match(esm, /if \(pivot\) \{\s*\n\s*pivot\.rotation\.y = Math\.sin\(t \* 0\.35\) \* 0\.55;/, 'ayunan animasi panggung aktif kembali');
 /* Kamera di-fit otomatis agar model beranimasi tidak terpotong frame. */
 assert.match(esm, /fitMargin\?: number;/, 'prop fitMargin (ruang gerak animasi) tersedia');
-assert.match(esm, /const fitCamera = \(\) => \{/, 'fitCamera menghitung jarak kamera dari ukuran frame');
-assert.match(esm, /const visH = 2 \* Math\.tan\(\(cam\.fov \* Math\.PI\) \/ 180 \/ 2\);/, 'tinggi frame dihitung dari FOV kamera');
-assert.match(esm, /const minDistV = need \/ visH;\s*\n\s*const minDistH = cam\.aspect > 0\.01 \? need \/ \(visH \* cam\.aspect\) : minDistV;/, 'fit vertikal DAN horizontal (wadah sempit/tinggi di HP ikut dijaga)');
+assert.match(esm, /export function computeStageFit\(opts: \{/, 'rumus fit kamera diekspor sebagai fungsi murni (bisa diuji tanpa WebGL)');
+assert.match(esm, /const visH = 2 \* Math\.tan\(\(\(fov \* Math\.PI\) \/ 180\) \/ 2\);/, 'tinggi frame dihitung dari FOV kamera');
+assert.match(esm, /const minDistV = needV \/ visH;\s*\n\s*const minDistH = opts\.fitAxes === 'vertical' \? 0 : needH \/ \(visH \* aspect\);/, 'fit vertikal DAN horizontal (wadah sempit/tinggi di HP ikut dijaga)');
 assert.match(esm, /const dist = Math\.max\(want, minDistV, minDistH\);/, 'kamera dijauhkan bila model akan terpotong, sedekat `zoom` bila masih muat');
-assert.match(esm, /const need = target \* Math\.max\(fitMargin, 1\);/, 'ruang gerak animasi dihitung dari fitMargin');
-assert.match(esm, /fitCamera\(\);\s*\n\s*\};\s*\n\s*if \(typeof ResizeObserver/, 'fitCamera dipanggil ulang setiap resize (aspect berubah)');
+assert.match(esm, /const needV = modelH \* margin;/, 'ruang gerak animasi dihitung dari fitMargin');
+assert.match(esm, /const layout = \(\) => \{/, 'layout() menerapkan ulang ukuran panggung + kamera');
+assert.match(esm, /const ro = new ResizeObserver\(layout\);/, 'layout dipanggil ulang setiap resize (aspect berubah) tanpa memuat ulang GLB');
+assert.match(esm, /\}, \[modelUrl\]\);/, 'GLB dimuat sekali per modelUrl (resize/re-fetch tidak terjadi)');
+assert.match(esm, /layoutRef\.current\?\.\(\);\s*\n\s*\}, \[stageH, zoom, targetSize, fitMargin, fitBy, fitAxes, motion\]\);/, 'perubahan tinggi/zoom hanya menata ulang, tidak re-fetch model');
 /* Tinggi panggung responsif: lebih tinggi, dan punya tinggi khusus layar sempit. */
 assert.match(esm, /mobileHeight\?: number;/, 'prop mobileHeight tersedia');
 assert.match(esm, /setStageH\(mobileHeight && w < 640 \? mobileHeight : height\);/, 'tinggi panggung menyesuaikan lebar layar (< 640px)');
 assert.match(esm, /style=\{\{ height: stageH, opacity: state === 'ready' \? 1 : 0\.001 \}\}/, 'tinggi host mengikuti tinggi panggung efektif');
-assert.match(esm, /\}, \[stageH, modelUrl, zoom, targetSize, fitMargin\]\);/, 'effect memuat ulang bila tinggi/model/ukuran berubah');
+assert.match(esm, /if \(pivot && cfgRef\.current\.motion\) \{\s*\n\s*pivot\.rotation\.y = Math\.sin\(t \* 0\.35\) \* 0\.55;/, 'ayunan animasi panggung aktif (bisa dimatikan lewat prop motion)');
 
 const otp = read('src/pages/OrderOtpPage.tsx');
 assert.match(otp, /const OTP_SCENE_MODEL_URL = 'https:\/\/zcxtbtleeeaeqeryiwea\.supabase\.co\/storage\/v1\/object\/public\/video\/scene\.glb';/, 'URL scene.glb dari Supabase Storage public');
