@@ -136,13 +136,27 @@ assert.match(php, /tv_api_get\('\/v1\/transaksi', \[/, 'transaksi memanggil GET 
 for (const param of ['ref_id', 'produk', 'tujuan', 'server_id', 'member_code', 'secret']) {
   assert.ok(php.includes(`'${param}'      =>`) || php.includes(`'${param}' =>`) || php.includes(`'${param}'      => $`) || new RegExp(`'${param}'\\s*=>`).test(php), `parameter query ${param} dikirim ke penyedia`);
 }
-assert.match(php, /tv_api_get\('\/v1\/transaksi\/status'/, 'cek status memakai GET /v1/transaksi/status');
-assert.match(php, /tv_api_get\('\/member'/, 'info member memakai GET /member');
-assert.match(php, /tv_api_get\('\/produk\/code'/, 'katalog live memakai GET /produk/code');
+assert.match(php, /tv_api_get_authed\('\/v1\/transaksi\/status'/, 'cek status memakai GET /v1/transaksi/status (helper ber-signature)');
+assert.match(php, /tv_api_get_authed\('\/member'/, 'info member memakai GET /member (helper ber-signature)');
+assert.match(php, /tv_api_get_authed\('\/produk\/code'/, 'katalog live memakai GET /produk/code (helper ber-signature)');
 assert.match(php, /function tv_walk_products\(\$node, \$game, array &\$out\)/, 'respons /produk/code dibaca tahan-bentuk (list datar, map ber-kunci kode, grup per game, bungkus status/data)');
 assert.match(php, /fallback: nama produk menyebut game/, 'filter per game punya fallback cocokkan nama produk (bila JSON tanpa field kategori)');
 assert.match(php, /PARSE_KOSONG/, 'bila katalog tetap tak terbaca, raw response dicatat di log server (secret disamarkan)');
-assert.ok(!php.includes('md5('), 'sistem baru TIDAK memakai signature MD5 (secret langsung di query, server-side)');
+/* Endpoint katalog (/produk/code, /member, status) menuntut `signature` menurut log produksi
+   ("signature not valid"); proxy harus mencoba rumus otomatis & mengingat yang berhasil,
+   sementara /v1/transaksi tetap tanpa signature (terbukti bekerja di produksi). */
+assert.match(php, /function tv_sig_candidates\(\$c\)/, 'proxy punya kandidat rumus signature');
+assert.match(php, /function tv_api_get_authed\(\$path, array \$extra = \[\]\)/, 'proxy mencoba signature otomatis bila endpoint menolaknya');
+assert.match(php, /tv_sig_cache_write\(\$i\)/, 'rumus signature yang berhasil disimpan ke cache');
+assert.match(php, /tv_api_get_authed\('\/produk\/code'\)/, '/produk/code dipanggil lewat helper ber-signature');
+assert.match(php, /tv_api_get_authed\('\/member'\)/, '/member dipanggil lewat helper ber-signature');
+assert.match(php, /tv_api_get_authed\('\/v1\/transaksi\/status', \['ref_id' => \$ref\]\)/, 'cek status dipanggil lewat helper ber-signature');
+const txCall = php.split("tv_api_get('/v1/transaksi', [")[1].split(']);')[0];
+assert.ok(!txCall.includes('signature'), 'transaksi TETAP tanpa signature (persis docs & terbukti bekerja)');
+const totalMd5 = (php.match(/md5\(/g) || []).length;
+const candBody = php.split('function tv_sig_candidates')[1].split('\n}')[0];
+const candMd5 = (candBody.match(/md5\(/g) || []).length;
+assert.ok(totalMd5 > 0 && totalMd5 === candMd5, 'md5 HANYA dipakai di kandidat signature endpoint ber-signature — transaksi tetap tanpa signature');
 assert.match(php, /function tv_sanitize\(\$j\)/, 'field rahasia dibuang dari balasan penyedia sebelum ke browser');
 assert.match(php, /\$ref = 'INV-' \. date\('ymdHis'\) \. random_int\(10, 99\);/, 'ref_id unik dibuat server (pola INV-…)');
 assert.match(svc, /export const tvCekStatus = \(ref_id: string\)/, 'frontend punya tvCekStatus (GET /v1/transaksi/status via proxy)');
