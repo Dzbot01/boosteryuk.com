@@ -70,6 +70,38 @@ export function computeStageFit(opts: {
   return { dist, scale, modelH, visibleH: visH * dist };
 }
 
+/**
+ * Hitung posisi model di dalam frame (satuan dunia three.js).
+ * - `align` (-1..1): 0 = di tengah frame, x 1 = menempel tepi kanan, y 1 = menempel tepi bawah.
+ *   Aman: model tidak pernah keluar frame selama |align| <= 1.
+ * - `offset` (fraksi ukuran panggung dalam px): geser halus tambahan untuk fine-tuning
+ *   (x fraksi lebar panggung, y fraksi tinggi panggung; y positif = ke bawah). Boleh
+ *   mendorong model keluar frame bila memang disengaja.
+ * Fungsi murni — diekspor supaya bisa diuji tanpa WebGL.
+ */
+export function computeStagePlacement(opts: {
+  visibleH: number;
+  modelH: number;
+  modelW: number;
+  stageW: number;
+  stageH: number;
+  align?: [number, number];
+  offset?: [number, number];
+}): { x: number; y: number } {
+  const visibleW = opts.stageH > 0 ? opts.visibleH * (opts.stageW / opts.stageH) : opts.visibleH;
+  const slackV = Math.max(opts.visibleH - opts.modelH, 0);
+  const slackH = Math.max(visibleW - opts.modelW, 0);
+  const ax = opts.align?.[0] ?? 0;
+  const ay = opts.align?.[1] ?? 0;
+  const ox = opts.offset?.[0] ?? 0;
+  const oy = opts.offset?.[1] ?? 0;
+  const worldPerPx = opts.stageH > 0 ? opts.visibleH / opts.stageH : 0;
+  return {
+    x: ax * (slackH / 2) + ox * opts.stageW * worldPerPx,
+    y: -ay * (slackV / 2) - oy * opts.stageH * worldPerPx,
+  };
+}
+
 type Props = {
   /** Teks utama, mis. "Belum ada riwayat deposit" (opsional: panggung 3D saja). */
   text?: string;
@@ -98,6 +130,12 @@ type Props = {
   fitAxes?: FitAxes;
   /** Ayunan + napas otomatis panggung. Default true. */
   motion?: boolean;
+  /** Rotasi pose model dalam DERAJAT: [x/pitch, y/yaw, z/roll] — untuk mengarahkan badan/tangan model. */
+  rotation?: [number, number, number];
+  /** Posisi model di dalam frame, -1..1: [x, y] (y 1 = menempel tepi bawah frame). */
+  align?: [number, number];
+  /** Geser halus tambahan dalam fraksi ukuran panggung: [x, y] (y positif = ke bawah). */
+  offset?: [number, number];
   /** Kelas lebar panggung; default 'max-w-[280px]' (pakai 'max-w-none w-full' untuk layar penuh). */
   stageClassName?: string;
 };
@@ -117,6 +155,9 @@ export default function EmptyStateModel({
   fitBy = 'max',
   fitAxes = 'both',
   motion = true,
+  rotation = [0, 0, 0],
+  align = [0, 0],
+  offset = [0, 0],
   stageClassName = 'max-w-[280px]',
 }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -125,8 +166,12 @@ export default function EmptyStateModel({
   /** Tinggi panggung efektif: `mobileHeight` di layar sempit, selain itu `height`. */
   const [stageH, setStageH] = useState(height);
   /** Konfigurasi tata letak terbaru — dibaca `layout()` agar resize tidak memuat ulang GLB. */
-  const cfgRef = useRef({ stageH: height, zoom, targetSize, fitMargin, fitBy, fitAxes, motion });
+  const cfgRef = useRef({ stageH: height, zoom, targetSize, fitMargin, fitBy, fitAxes, motion, rotation, align, offset });
   const layoutRef = useRef<(() => void) | null>(null);
+  // Array prop di-serialize supaya identitas baru tiap render tidak memicu tata letak berulang.
+  const rotKey = rotation.join(',');
+  const alignKey = align.join(',');
+  const offsetKey = offset.join(',');
 
   useEffect(() => {
     const calc = () => {
@@ -140,9 +185,10 @@ export default function EmptyStateModel({
 
   // Tata letak ulang (tanpa memuat ulang model) saat tinggi/zoom/ukuran/fit berubah.
   useEffect(() => {
-    cfgRef.current = { stageH, zoom, targetSize, fitMargin, fitBy, fitAxes, motion };
+    cfgRef.current = { stageH, zoom, targetSize, fitMargin, fitBy, fitAxes, motion, rotation, align, offset };
     layoutRef.current?.();
-  }, [stageH, zoom, targetSize, fitMargin, fitBy, fitAxes, motion]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageH, zoom, targetSize, fitMargin, fitBy, fitAxes, motion, rotKey, alignKey, offsetKey]);
 
   // Muat GLB SEKALI per modelUrl; sesudahnya semua perubahan ukuran lewat layout().
   useEffect(() => {
@@ -208,6 +254,9 @@ export default function EmptyStateModel({
         scene.add(group);
         pivot = group;
 
+        /** Pose + penempatan terakhir; dipakai render loop agar ayunan tidak menimpa pose. */
+        const pose = { yaw: 0, y: 0 };
+
         /** Terapkan ukuran panggung + skala model + jarak kamera terbaru (tanpa re-fetch GLB). */
         const layout = () => {
           if (disposed || !renderer || !camera) return;
@@ -225,6 +274,16 @@ export default function EmptyStateModel({
           camera.updateProjectionMatrix();
           camera.position.set(0, fit.dist * 0.06, fit.dist);
           camera.lookAt(0, 0, 0);
+          // Pose model (derajat -> radian) + penempatan di dalam frame (align/offset).
+          const [rx, ry, rz] = c.rotation;
+          group.rotation.set((rx * Math.PI) / 180, (ry * Math.PI) / 180, (rz * Math.PI) / 180);
+          const pos = computeStagePlacement({
+            visibleH: fit.visibleH, modelH: fit.modelH, modelW: size.x * fit.scale,
+            stageW: w, stageH: h, align: c.align, offset: c.offset,
+          });
+          group.position.set(pos.x, pos.y, 0);
+          pose.yaw = group.rotation.y;
+          pose.y = pos.y;
         };
         layoutRef.current = layout;
         layout();
@@ -266,8 +325,8 @@ export default function EmptyStateModel({
           t += delta;
           mixer?.update(delta);
           if (pivot && cfgRef.current.motion) {
-            pivot.rotation.y = Math.sin(t * 0.35) * 0.55;
-            pivot.position.y = Math.sin(t * 1.1) * 0.045;
+            pivot.rotation.y = pose.yaw + Math.sin(t * 0.35) * 0.55;
+            pivot.position.y = pose.y + Math.sin(t * 1.1) * 0.045;
           }
           renderer.render(scene, camera);
         };
