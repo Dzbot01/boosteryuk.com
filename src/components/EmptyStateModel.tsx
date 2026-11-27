@@ -1,22 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { Inbox, RotateCcw } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 import type { AnimationMixer, Clock, Group, PerspectiveCamera, WebGLRenderer } from 'three';
-import type { OrbitControls as OrbitControlsType } from 'three/addons/controls/OrbitControls.js';
 
 /**
  * Panggung 3D — dipakai sebagai empty state riwayat (Riwayat Deposit, Riwayat Pesanan,
- * Riwayat Nomor) maupun sebagai panggung model interaktif (scene Order OTP).
+ * Riwayat Nomor) maupun sebagai panggung model (scene Order OTP).
  *
  * Model GLB diambil dari Supabase Storage folder public "video":
  *   https://zcxtbtleeeaeqeryiwea.supabase.co/storage/v1/object/public/video/boy.glb
- * three.js + GLTFLoader (+ OrbitControls bila `interactive`) di-import DINAMIS (type-only
- * import di atas tidak menambah bundle) agar beratnya tidak ikut ke chunk halaman. Bila
- * WebGL/model gagal dimuat, tampil ikon cadangan + teks yang sama sehingga halaman tidak
- * pernah blank.
+ * three.js + GLTFLoader di-import DINAMIS (type-only import di atas tidak menambah bundle)
+ * agar beratnya tidak ikut ke chunk halaman. Bila WebGL/model gagal dimuat, tampil ikon
+ * cadangan + teks yang sama sehingga halaman tidak pernah blank.
  *
- * Mode `interactive`: kamera (POV) bisa digeser/diputar dengan drag atau satu jari,
- * di-zoom dengan scroll/pinch, dan di-pan dengan drag dua jari / klik kanan; ayunan otomatis
- * panggung dimatikan agar POV sepenuhnya milik pengguna, dan tersedia tombol Reset kamera.
+ * Panggung ini PASIF (tanpa kontrol kamera/POV): model diputar oleh animasi bawaan GLB dan
+ * ayunan halus panggung. Kamera selalu di-fit otomatis (`fitCamera`) memakai bounding box
+ * model × `fitMargin`, sehingga model yang sedang beranimasi tidak pernah terpotong frame
+ * (vertikal maupun horizontal, termasuk saat wadah sempit/tinggi di HP atau saat di-resize).
  */
 export const EMPTY_STATE_MODEL_URL =
   'https://zcxtbtleeeaeqeryiwea.supabase.co/storage/v1/object/public/video/boy.glb';
@@ -28,23 +27,23 @@ type Props = {
   modelUrl?: string;
   /** Penjelasan tambahan di bawah teks utama (opsional). */
   sub?: string;
-  /** Tinggi panggung 3D dalam px. */
+  /** Tinggi panggung 3D dalam px (desktop / lebar >= 640px). */
   height?: number;
+  /** Tinggi panggung dalam px di layar sempit (< 640px); default sama dengan `height`. */
+  mobileHeight?: number;
   /** Ikon cadangan bila 3D tidak bisa dirender. */
   fallbackIcon?: typeof Inbox;
   className?: string;
   /** Label aksesibilitas wadah. */
   ariaLabel?: string;
-  /** Kamera bisa digeser/diputar + zoom (OrbitControls). Default: tidak (panggung pasif). */
-  interactive?: boolean;
-  /** Zoom awal — makin besar makin dekat kameranya, model tampak lebih besar. Default 1. */
+  /** Seberapa dekat kamera boleh mendekat (1 = jarak bawaan; >1 lebih dekat/besar). Default 1. */
   zoom?: number;
   /** Ukuran model dalam satuan dunia sebelum diframe kamera. Default 2.2. */
   targetSize?: number;
+  /** Ruang gerak animasi: 1.4 = kamera dijauhkan sampai model + 40% ruang bebas terlihat utuh. */
+  fitMargin?: number;
   /** Kelas lebar panggung; default 'max-w-[280px]' (pakai 'max-w-none w-full' untuk layar penuh). */
   stageClassName?: string;
-  /** Tampilkan petunjuk kontrol + tombol Reset kamera. Default: ikut `interactive`. */
-  showControls?: boolean;
 };
 
 export default function EmptyStateModel({
@@ -52,21 +51,30 @@ export default function EmptyStateModel({
   modelUrl,
   sub,
   height = 220,
+  mobileHeight,
   fallbackIcon: Icon = Inbox,
   className = '',
   ariaLabel,
-  interactive = false,
   zoom = 1,
   targetSize = 2.2,
+  fitMargin = 1.3,
   stageClassName = 'max-w-[280px]',
-  showControls,
 }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  /** Diisi setelah OrbitControls siap: dipakai tombol "Reset kamera". */
-  const resetCamRef = useRef<(() => void) | null>(null);
   /** 'idle' → 'ready' (WebGL jalan) | 'failed' (pakai ikon cadangan). */
   const [state, setState] = useState<'idle' | 'ready' | 'failed'>('idle');
-  const hint = showControls ?? interactive;
+  /** Tinggi panggung efektif: `mobileHeight` di layar sempit, selain itu `height`. */
+  const [stageH, setStageH] = useState(height);
+
+  useEffect(() => {
+    const calc = () => {
+      const w = typeof window === 'undefined' ? 1024 : window.innerWidth || 1024;
+      setStageH(mobileHeight && w < 640 ? mobileHeight : height);
+    };
+    calc();
+    window.addEventListener('resize', calc);
+    return () => window.removeEventListener('resize', calc);
+  }, [height, mobileHeight]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -79,7 +87,6 @@ export default function EmptyStateModel({
     let clock: Clock | null = null;
     let pivot: Group | null = null;
     let camera: PerspectiveCamera | null = null;
-    let controls: OrbitControlsType | null = null;
     let observers: { disconnect: () => void }[] = [];
 
     const stop = () => {
@@ -87,9 +94,6 @@ export default function EmptyStateModel({
       raf = 0;
       observers.forEach((o) => { try { o.disconnect(); } catch { /* sudah dilepas */ } });
       observers = [];
-      try { controls?.dispose(); } catch { /* sudah dilepas */ }
-      controls = null;
-      resetCamRef.current = null;
       try { renderer?.dispose(); } catch { /* sudah dilepas */ }
       renderer = null;
       host.innerHTML = '';
@@ -102,15 +106,15 @@ export default function EmptyStateModel({
         if (disposed || !host.isConnected) return;
 
         const scene = new THREE.Scene();
-        const cam = new THREE.PerspectiveCamera(35, Math.max(host.clientWidth || 260, 120) / height, 0.1, 200);
+        const cam = new THREE.PerspectiveCamera(35, Math.max(host.clientWidth || 260, 120) / stageH, 0.1, 200);
         camera = cam;
         const webgl = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer = webgl;
         webgl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        webgl.setSize(Math.max(host.clientWidth || 260, 120), height);
+        webgl.setSize(Math.max(host.clientWidth || 260, 120), stageH);
         webgl.domElement.setAttribute('aria-hidden', 'true');
         webgl.domElement.style.width = '100%';
-        webgl.domElement.style.height = `${height}px`;
+        webgl.domElement.style.height = `${stageH}px`;
         webgl.domElement.style.display = 'block';
         host.appendChild(webgl.domElement);
 
@@ -140,10 +144,25 @@ export default function EmptyStateModel({
         scene.add(group);
         pivot = group;
 
-        // Jarak kamera = frame bawaan dibagi `zoom`: zoom > 1 ⇒ model tampak lebih besar.
-        const dist = (target * 2.15) / Math.max(zoom, 0.2);
-        cam.position.set(0, dist * 0.06, dist);
-        cam.lookAt(0, 0, 0);
+        /**
+         * Fit kamera: jarak = max(jarak yang diminta `zoom`, jarak minimum agar model +
+         * ruang gerak animasi (`fitMargin`) muat di frame secara VERTIKAL dan HORIZONTAL).
+         * Dipanggil ulang tiap resize (aspect berubah) sehingga model tidak pernah terpotong.
+         */
+        const fitCamera = () => {
+          const w = Math.max(host.clientWidth || 260, 120);
+          cam.aspect = w / stageH;
+          cam.updateProjectionMatrix();
+          const visH = 2 * Math.tan((cam.fov * Math.PI) / 180 / 2); // tinggi frame pada jarak 1
+          const need = target * Math.max(fitMargin, 1);
+          const minDistV = need / visH;
+          const minDistH = cam.aspect > 0.01 ? need / (visH * cam.aspect) : minDistV;
+          const want = (target * 2.15) / Math.max(zoom, 0.2);
+          const dist = Math.max(want, minDistV, minDistH);
+          cam.position.set(0, dist * 0.06, dist);
+          cam.lookAt(0, 0, 0);
+        };
+        fitCamera();
 
         // Animasi bawaan GLB (idle/wave) diputar berulang bila ada.
         if (gltf.animations?.length) {
@@ -152,40 +171,11 @@ export default function EmptyStateModel({
           mixer.clipAction(gltf.animations[0]).setLoop(THREE.LoopRepeat, Infinity).play();
         }
 
-        // Kamera interaktif: drag = putar POV, scroll/pinch = zoom, dua jari/klik kanan = pan.
-        if (interactive) {
-          const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
-          if (disposed || !host.isConnected) return;
-          const oc = new OrbitControls(cam, webgl.domElement);
-          controls = oc;
-          oc.enableDamping = true;
-          oc.dampingFactor = 0.08;
-          oc.rotateSpeed = 0.85;
-          oc.zoomSpeed = 0.9;
-          oc.panSpeed = 0.7;
-          oc.screenSpacePanning = true;
-          oc.minDistance = dist * 0.3;
-          oc.maxDistance = dist * 3;
-          oc.target.set(0, 0, 0);
-          oc.saveState();
-          oc.update();
-          // Canvas menerima pointer (bukan lagi dekorasi) dan drag tidak menggulir halaman.
-          webgl.domElement.style.touchAction = 'none';
-          webgl.domElement.style.cursor = 'grab';
-          const grab = (e: PointerEvent) => { webgl.domElement.style.cursor = e.type === 'pointerdown' ? 'grabbing' : 'grab'; };
-          webgl.domElement.addEventListener('pointerdown', grab);
-          webgl.domElement.addEventListener('pointerup', grab);
-          webgl.domElement.addEventListener('pointercancel', grab);
-          resetCamRef.current = () => { try { oc.reset(); } catch { /* controls sudah dilepas */ } };
-        }
-
         const resize = () => {
           const w = host.clientWidth;
           if (!renderer || !camera || !w) return;
-          renderer.setSize(w, height);
-          camera.aspect = w / height;
-          camera.updateProjectionMatrix();
-          controls?.update();
+          renderer.setSize(w, stageH);
+          fitCamera();
         };
         if (typeof ResizeObserver === 'function') {
           const ro = new ResizeObserver(resize);
@@ -194,19 +184,14 @@ export default function EmptyStateModel({
         }
         setState('ready');
 
-        // Hormati prefers-reduced-motion: tanpa animasi otomatis, tapi kamera tetap bisa digeser.
+        // Hormati prefers-reduced-motion: render satu frame saja tanpa animasi.
         if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true) {
           resize();
           renderer.render(scene, cam);
-          if (controls) {
-            const c = controls;
-            const r = renderer;
-            c.addEventListener('change', () => { if (!disposed) r.render(scene, cam); });
-          }
           return;
         }
 
-        // Render loop: ayunan + napas halus (mode pasif); dijeda saat di luar viewport/tab tersembunyi.
+        // Render loop: ayunan + napas halus; dijeda saat di luar viewport atau tab tersembunyi.
         let visible = true;
         if (typeof IntersectionObserver === 'function') {
           const io = new IntersectionObserver((entries) => { visible = entries[entries.length - 1]?.isIntersecting !== false; });
@@ -221,12 +206,10 @@ export default function EmptyStateModel({
           const delta = clock ? clock.getDelta() : 1 / 60;
           t += delta;
           mixer?.update(delta);
-          // Mode interaktif: POV milik pengguna, ayunan otomatis dimatikan.
-          if (pivot && !interactive) {
+          if (pivot) {
             pivot.rotation.y = Math.sin(t * 0.35) * 0.55;
             pivot.position.y = Math.sin(t * 1.1) * 0.045;
           }
-          controls?.update();
           renderer.render(scene, camera);
         };
         tick();
@@ -237,7 +220,7 @@ export default function EmptyStateModel({
     })();
 
     return () => { disposed = true; stop(); };
-  }, [height, modelUrl, interactive, zoom, targetSize]);
+  }, [stageH, modelUrl, zoom, targetSize, fitMargin]);
 
   return (
     <div
@@ -248,8 +231,8 @@ export default function EmptyStateModel({
       {state !== 'failed' && (
         <div
           ref={hostRef}
-          className={`w-full ${interactive ? 'pointer-events-auto' : 'pointer-events-none'} ${stageClassName}`}
-          style={{ height, opacity: state === 'ready' ? 1 : 0.001 }}
+          className={`pointer-events-none w-full ${stageClassName}`}
+          style={{ height: stageH, opacity: state === 'ready' ? 1 : 0.001 }}
           aria-hidden="true"
         />
       )}
@@ -260,25 +243,6 @@ export default function EmptyStateModel({
       )}
       {text && <p className="mt-3 font-display text-[15px] font-extrabold text-slate-900 dark:text-white">{text}</p>}
       {sub && <p className="mt-1.5 max-w-[320px] text-[12.5px] leading-relaxed text-slate-500 dark:text-slate-400">{sub}</p>}
-      {hint && state !== 'failed' && (
-        <div className="mt-2 flex w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
-          <span>
-            {interactive
-              ? 'Geser untuk memutar kamera · scroll/pinch untuk zoom · dua jari untuk menggeser posisi'
-              : 'Model 3D beranimasi'}
-          </span>
-          {interactive && (
-            <button
-              type="button"
-              data-orbit-reset=""
-              onClick={() => resetCamRef.current?.()}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2 py-0.5 text-[10.5px] font-bold text-slate-600 transition hover:border-cyan-300 hover:text-cyan-700 dark:border-slate-700 dark:text-slate-300"
-            >
-              <RotateCcw className="h-3 w-3" strokeWidth={2.2} /> Reset kamera
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

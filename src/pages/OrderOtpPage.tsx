@@ -602,18 +602,21 @@ export default function OrderOtpPage() {
         </section>
       </Reveal>
 
-      {/* Panggung 3D scene.glb di bawah Riwayat Nomor — TANPA card (tanpa border/background),
-          model lebih besar (tinggi 360px, zoom 1.7, lebar penuh) dan kamera POV-nya bisa
-          digeser/diputar + di-zoom; jarak longgar sebelum Footer dijaga lewat mb-12. */}
+      {/* Panggung 3D scene.glb di bawah Riwayat Nomor — TANPA card dan TANPA kontrol kamera
+          (POV pasif, model beranimasi sendiri). Panggung dibuat LEBIH TINGGI (560px desktop /
+          460px di layar sempit) + fitMargin 1.45 sehingga kamera otomatis menjauh sampai model
+          yang sedang beranimasi terlihat utuh — tidak terpotong frame maupun tertutup card
+          Riwayat Nomor di atasnya / Footer di bawahnya (mt-10 mb-16). */}
       <Reveal>
-        <section className="mt-6 mb-12" aria-label="Scene 3D animasi">
+        <section className="relative mt-10 mb-16" aria-label="Scene 3D animasi">
           <EmptyStateModel
             modelUrl={OTP_SCENE_MODEL_URL}
-            height={360}
-            interactive
-            zoom={1.7}
+            height={560}
+            mobileHeight={460}
+            fitMargin={1.45}
+            zoom={1.35}
             stageClassName="max-w-none w-full"
-            ariaLabel="Model 3D scene beranimasi — geser untuk memutar kamera"
+            ariaLabel="Model 3D scene beranimasi"
             className="!p-0"
           />
         </section>
