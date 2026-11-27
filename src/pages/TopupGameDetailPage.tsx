@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Gamepad2, LoaderCircle, Server, ShieldAlert, UserRound } from 'lucide-react';
 import Seo from '../components/Seo';
@@ -27,16 +27,27 @@ export default function TopupGameDetailPage() {
   const [live, setLive] = useState<{ source: string; items: TvPricelistItem[]; updated_at?: string } | null>(null);
   const [katBusy, setKatBusy] = useState(false);
   const [cekBusy, setCekBusy] = useState(false);
+  /** Target scroll otomatis setelah user memilih produk. */
+  const konfirmasiRef = useRef<HTMLElement | null>(null);
+
+  /** Pilih produk lalu gulir layar otomatis ke langkah konfirmasi pesanan. */
+  const pilihProduk = (k: string) => {
+    setKode(k);
+    setResult(null);
+    requestAnimationFrame(() => konfirmasiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
 
   /** Produk tampil: katalog ASLI dari server bila ada, selain itu snapshot repo. */
-  const produkList = useMemo(() => {
+  const katalog = useMemo(() => {
     const sumber = live?.items?.length
       ? live.items.map((i) => ({ kode: i.kode, nama: i.nama, harga: i.harga, butuhServer: !!i.butuh_server }))
       : game?.produk || [];
-    // Nama kode penyedia ("FF5", "MLA85") jadi nama manusiawi ("5 Diamond", …),
-    // produk kembar lintas kanal digabung ke harga termurah, urut menaik.
+    // Hanya kode resmi penyedia yang lolos; nama kode ("MFF5", "MLA85") jadi nama
+    // manusiawi; pass/membership dipisah ke `paket`, denominasi ke `eceran`;
+    // produk kembar lintas kanal resmi digabung ke harga termurah, urut menaik.
     return rapihkanKatalog(slug, sumber);
   }, [live, game, slug]);
+  const produkList = useMemo(() => [...katalog.eceran, ...katalog.paket], [katalog]);
 
   const produk = useMemo(() => produkList.find((p) => p.kode === kode) || null, [produkList, kode]);
 
@@ -133,57 +144,9 @@ export default function TopupGameDetailPage() {
           </div>
         )}
 
-        {/* ============ PILIH PRODUK ============ */}
-        <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm md:p-5">
-          <h2 className="font-display text-[15px] font-extrabold text-slate-900">1 · Pilih produk</h2>
-          {live?.source === 'override' && (
-            <p className="mt-1 text-[11px] text-slate-500">Katalog dari file override server (pricelist manual).</p>
-          )}
-          {katBusy && <p className="mt-2 text-[12px] text-slate-500">Memuat katalog asli dari server…</p>}
-          {produkList.length === 0 && !katBusy && (
-            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-[12.5px] leading-relaxed text-slate-600">
-              Katalog produk game ini belum tersedia di server — kami tidak menampilkan kode karangan supaya pesanan
-              tidak gagal. Admin dapat menambahkan kode produk asli lewat{' '}
-              <code className="rounded bg-white px-1">php-api/tokovoucher_pricelist.php</code> (format ada di file contoh),
-              atau pricelist penyedia dibaca otomatis bila katalog game ini tersedia.
-              <button
-                type="button"
-                onClick={loadKatalog}
-                className="mt-2.5 block rounded-full border border-slate-300 bg-white px-4 py-1.5 text-[11.5px] font-bold text-slate-700 transition hover:border-slate-400"
-              >
-                Muat ulang katalog
-              </button>
-            </div>
-          )}
-          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-            {produkList.map((p) => {
-              const on = p.kode === kode;
-              return (
-                <button
-                  key={p.kode}
-                  type="button"
-                  onClick={() => { setKode(p.kode); setResult(null); }}
-                  className={`flex items-center justify-between gap-2 rounded-xl border px-3.5 py-3 text-left transition ${
-                    on ? 'border-[#14143c] bg-[#14143c]/5 ring-2 ring-[#14143c]/25' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <span>
-                    <span className="block text-[13.5px] font-bold text-slate-800">{p.nama}</span>
-                    <span className="mt-0.5 block text-[11px] text-slate-500">
-                      kode <code className="rounded bg-slate-100 px-1">{p.kode}</code>
-                      {p.butuhServer ? ' · perlu Server ID' : ''}
-                    </span>
-                  </span>
-                  <span className="whitespace-nowrap font-mono text-[13px] font-bold text-[#14143c]">{rupiah(hargaJual(p.harga))}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
         {/* ============ DATA AKUN TUJUAN ============ */}
-        <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm md:p-5">
-          <h2 className="font-display text-[15px] font-extrabold text-slate-900">2 · Data akun tujuan</h2>
+        <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm md:p-5">
+          <h2 className="font-display text-[15px] font-extrabold text-slate-900">1 · Data akun tujuan</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-slate-600">
@@ -215,8 +178,84 @@ export default function TopupGameDetailPage() {
           </p>
         </section>
 
-        {/* ============ RINGKASAN + TOMBOL ============ */}
+        {/* ============ PILIH PRODUK ============ */}
         <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm md:p-5">
+          <h2 className="font-display text-[15px] font-extrabold text-slate-900">2 · Pilih produk</h2>
+          {live?.source === 'override' && (
+            <p className="mt-1 text-[11px] text-slate-500">Katalog dari file override server (pricelist manual).</p>
+          )}
+          {katBusy && <p className="mt-2 text-[12px] text-slate-500">Memuat katalog asli dari server…</p>}
+          {produkList.length === 0 && !katBusy && (
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-[12.5px] leading-relaxed text-slate-600">
+              Katalog produk game ini belum tersedia di server — kami tidak menampilkan kode karangan supaya pesanan
+              tidak gagal. Admin dapat menambahkan kode produk asli lewat{' '}
+              <code className="rounded bg-white px-1">php-api/tokovoucher_pricelist.php</code> (format ada di file contoh),
+              atau pricelist penyedia dibaca otomatis bila katalog game ini tersedia.
+              <button
+                type="button"
+                onClick={loadKatalog}
+                className="mt-2.5 block rounded-full border border-slate-300 bg-white px-4 py-1.5 text-[11.5px] font-bold text-slate-700 transition hover:border-slate-400"
+              >
+                Muat ulang katalog
+              </button>
+            </div>
+          )}
+          {katalog.paket.length > 0 && (
+            <>
+              <p className="mt-3 text-[12px] font-bold uppercase tracking-wide text-slate-500">Paket &amp; Membership</p>
+              <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+                {katalog.paket.map((p) => {
+                  const on = p.kode === kode;
+                  return (
+                    <button
+                      key={p.kode}
+                      type="button"
+                      onClick={() => pilihProduk(p.kode)}
+                      className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition ${
+                        on ? 'border-[#14143c] bg-[#14143c]/5 ring-2 ring-[#14143c]/25' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-[12px] font-bold text-slate-800">{p.nama}</span>
+                        <span className="block truncate text-[10px] text-slate-500">
+                          kode <code className="rounded bg-slate-100 px-1">{p.kode}</code>
+                        </span>
+                      </span>
+                      <span className="whitespace-nowrap font-mono text-[12px] font-bold text-[#14143c]">{rupiah(hargaJual(p.harga))}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+            {katalog.eceran.map((p) => {
+              const on = p.kode === kode;
+              return (
+                <button
+                  key={p.kode}
+                  type="button"
+                  onClick={() => pilihProduk(p.kode)}
+                  className={`flex items-center justify-between gap-2 rounded-xl border px-3.5 py-3 text-left transition ${
+                    on ? 'border-[#14143c] bg-[#14143c]/5 ring-2 ring-[#14143c]/25' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>
+                    <span className="block text-[13.5px] font-bold text-slate-800">{p.nama}</span>
+                    <span className="mt-0.5 block text-[11px] text-slate-500">
+                      kode <code className="rounded bg-slate-100 px-1">{p.kode}</code>
+                      {p.butuhServer ? ' · perlu Server ID' : ''}
+                    </span>
+                  </span>
+                  <span className="whitespace-nowrap font-mono text-[13px] font-bold text-[#14143c]">{rupiah(hargaJual(p.harga))}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ============ RINGKASAN + TOMBOL ============ */}
+        <section ref={konfirmasiRef} className="mt-4 scroll-mt-4 rounded-2xl bg-white p-4 shadow-sm md:p-5">
           <h2 className="font-display text-[15px] font-extrabold text-slate-900">3 · Konfirmasi pesanan</h2>
           <dl className="mt-3 space-y-1.5 text-[13px] text-slate-600">
             <div className="flex justify-between"><dt>Game</dt><dd className="font-bold text-slate-800">{game.nama}</dd></div>
