@@ -156,8 +156,23 @@ export function rapihkanKatalog(slug: string, items: TopupItemBernama[]): Katalo
       jenis = p.jenis;
       nama = n && n.toUpperCase() !== k ? n : p.nama;
     } else {
-      jenis = 'eceran';
-      nama = n && n.toUpperCase() !== k ? n : humanisasiKode(k);
+      // Game tanpa daftar resmi: pola sama seperti FF/ML — kode huruf+angka jadi
+      // "N <satuan game>" (UC/CP/Diamond/…), token khusus jadi nama paket;
+      // nama asli penyedia (bila dikirim) tetap dipakai.
+      const m = /^([A-Z]+)(\d+)$/.exec(k);
+      let khusus: string | null = null;
+      if (m) {
+        if (TOKEN_KHUSUS[m[1]]) khusus = TOKEN_KHUSUS[m[1]];
+        else for (const t of ['LUP', 'WDP', 'BP', 'TP']) if (m[1].endsWith(t)) { khusus = TOKEN_KHUSUS[t]; break; }
+      } else {
+        for (const t of ['LUP', 'WDP', 'BP', 'TP', 'M', 'B']) if (k.endsWith(t)) { khusus = TOKEN_KHUSUS[t]; break; }
+      }
+      jenis = khusus ? 'paket' : 'eceran';
+      if (n && n.toUpperCase() !== k) nama = n;
+      else if (khusus && m) nama = `${khusus} ${m[2]}`;
+      else if (khusus) nama = khusus;
+      else if (m) nama = `${Number(m[2])} ${UNIT_PER_SLUG[slug] || 'Diamond'}`;
+      else nama = humanisasiKode(k);
     }
     const target = jenis === 'paket' ? paket : eceran;
     const ada = target.get(nama);

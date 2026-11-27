@@ -36,16 +36,13 @@ assert.match(page, /data:image\/svg\+xml/, 'pola watermark gamepad (SVG inline, 
 for (const c of ['Topup', 'Voucher', 'Pulsa', 'Join Reseller', 'Token Listrik', 'Paket Data', 'Voucher Data', 'Telpon & SMS', 'Inject Voucher']) {
   assert.ok(read('src/data/topupGames.ts').includes(`'${c}'`), `kategori "${c}" ada di data`);
 }
-assert.match(page, /bg-\[#14143c\] font-bold text-white/, 'tab aktif navy gelap + teks putih bold');
-assert.match(page, /bg-white font-medium text-slate-700/, 'tab non-aktif putih');
-assert.match(page, /rounded-full px-6/, 'tab pill rounded-full padding horizontal ±24px');
-assert.match(page, /md:h-\[54px\]/, 'tinggi tab ±54px di desktop');
-assert.match(page, /overflow-x-auto/, 'baris tab bisa di-scroll horizontal');
-assert.match(page, /\[scrollbar-width:none\] \[&::-webkit-scrollbar\]:hidden/, 'scrollbar baris tab disembunyikan');
-assert.match(page, /bg-gradient-to-l from-\[#e5e5e7\]/, 'fade gradient di ujung kanan baris tab');
-assert.match(page, /aria-label="Geser daftar kategori ke kanan"/, 'tombol panah bulat untuk menggeser tab');
-assert.match(page, /scrollBy\(\{ left: 260, behavior: 'smooth' \}\)/, 'panah menggeser scroll tab ke kanan');
-assert.match(page, /placeholder="Cari game di semua kategori\.\.\."/, 'placeholder search sesuai spesifikasi');
+// Permintaan pemilik: tombol menu kategori (Voucher, Pulsa, dst) DIHAPUS dari /topup;
+// grid kartu game diambil LIVE dari API katalog penyedia, bukan hardcode.
+assert.ok(!page.includes('TOPUP_CATEGORIES'), 'tombol tab kategori (Voucher dkk) dihapus dari halaman /topup');
+assert.ok(!page.includes('TOPUP_OTHER'), 'daftar voucher/pulsa/reseller hardcode tidak lagi dirender');
+assert.ok(page.includes('tvKatalog'), 'grid kartu game diambil dari API katalog penyedia (action=katalog)');
+assert.ok(page.includes('server ID (Indonesia)'), 'sub kartu menyebut hanya server ID Indonesia');
+assert.match(page, /placeholder="Cari game…"/, 'placeholder search tetap ada');
 assert.match(page, /rounded-full border border-slate-200 bg-white pl-11/, 'search bar rounded-full putih ber-border + ikon kaca');
 assert.match(page, /grid grid-cols-3 items-stretch gap-4 md:grid-cols-4 md:gap-5 lg:grid-cols-6 xl:gap-6 2xl:grid-cols-8/, 'grid 3/4/6/8 kolom responsif + items-stretch');
 assert.match(page, /hover:-translate-y-1 hover:shadow-lg/, 'hover: kartu naik + shadow membesar');
@@ -55,7 +52,7 @@ assert.match(page, /bg-gradient-to-t from-\[#14143c\]/, 'overlay gradasi navy di
 assert.match(page, /text-\[13px\] leading-snug text-slate-800 md:text-\[18px\]/, 'nama game 13px mobile / 18px desktop, rata tengah');
 assert.match(page, /Game tidak ditemukan/, 'state kosong "Game tidak ditemukan"');
 assert.match(page, /animate-pulse/, 'skeleton loading kartu');
-assert.match(page, /window\.setTimeout\(\(\) => setLoading\(false\), 420\)/, 'skeleton hanya sebentar (~0,4 detik)');
+assert.match(page, /loading\s*\n\s*\? Array\.from/, 'skeleton tampil selama katalog live penyedia dimuat');
 assert.match(page, /to=\{`\/topup\/\$\{it\.slug\}`\}/, 'klik kartu membuka /topup/{slug}');
 assert.match(page, /max-w-\[1900px\]/, 'container maks ±1900px');
 
@@ -122,6 +119,9 @@ const php = read('php-api/tokovoucher.php');
 assert.ok(php.includes('function tv_label_wilayah_ok'), 'proxy PHP punya filter kategori wilayah (hanya ID Indonesia)');
 assert.ok(php.includes("strpos($l, 'promo')"), 'kategori Promo dibuang di sumbernya');
 assert.ok(/array_filter\(\$all, function \(\$p\) \{ return tv_label_wilayah_ok/.test(php), 'pricelist menerapkan filter wilayah ke seluruh daftar produk penyedia');
+assert.ok(php.includes("action === 'katalog'"), 'proxy menyediakan action=katalog untuk grid game live di /topup');
+assert.ok(php.includes('function tv_game_key_of_label'), 'label kategori penyedia dipetakan ke game kanonik');
+assert.ok(php.includes('function tv_game_display'), 'nama tampil game untuk kartu grid tersedia di proxy');
 assert.match(php, /if \(\$action === 'pricelist'\)/, 'proxy punya action=pricelist (katalog asli)');
 assert.match(php, /function tv_parse_pricelist_html\(\$html\)/, 'proxy bisa membaca tabel pricelist penyedia');
 assert.match(php, /function tv_pricelist_override\(\)/, 'proxy mendukung override katalog manual di server');
@@ -245,6 +245,7 @@ assert.ok(detail.includes('Paket &amp; Membership'), 'halaman detail punya seksi
 assert.ok(!detail.includes('>Eceran<'), 'judul seksi "Eceran" dihapus sesuai permintaan pemilik');
 assert.ok(detail.indexOf('1 · Data akun tujuan') < detail.indexOf('2 · Pilih produk'), 'input ID akun pindah ke atas, sebelum list produk');
 assert.ok(detail.includes('scrollIntoView'), 'klik produk menggulir otomatis ke langkah konfirmasi pesanan');
+assert.ok(detail.includes(".split('-')"), 'halaman detail mensintesis kartu game baru dari slug katalog live');
 assert.ok(!read('src/pages/TopupGamePage.tsx').includes('Halaman detail:'), 'teks bantuan route "/topup/{slug}" dihapus dari halaman daftar game');
 assert.ok(dname.includes('(RU|SG|MY|BR|PH|LATAM|GLOBAL)'), 'filter server luar (hanya server ID/Indonesia) lintas game');
 // Uji perilaku helper (type-stripping Node) terhadap kode asli dari /produk/code.
@@ -306,14 +307,22 @@ const perilaku = execFileSync(
     ]);
     if (ml.eceran.length !== 1 || ml.eceran[0].kode !== 'MLA85' || ml.eceran[0].nama !== '85 Diamond') throw new Error('eceran ML salah');
     if (ml.paket.length !== 1 || ml.paket[0].nama !== 'Weekly Diamond Pass 2') throw new Error('paket ML salah');
-    // Game tanpa aturan resmi: tampil apa adanya (humanis) sebagai eceran,
-    // tetapi kode server luar negeri tetap dibuang (hanya server ID/Indonesia).
+    // Game tanpa daftar resmi: kode huruf+angka jadi "N <satuan game>" (bukan nama kode),
+    // kanal kembar digabung ke termurah, kode server luar negeri tetap dibuang.
     const pb = rapihkanKatalog('pubg-mobile', [
       { kode: 'UC60', nama: '', harga: 1000 },
-      { kode: 'UCRU60', nama: '', harga: 900 },
-      { kode: 'UCSG60', nama: '', harga: 950 },
+      { kode: 'PUC60', nama: '', harga: 900 },
+      { kode: 'UCRU60', nama: '', harga: 800 },
+      { kode: 'UCSG60', nama: '', harga: 850 },
     ]);
-    if (pb.eceran.length !== 1 || pb.eceran[0].nama !== 'UC 60') throw new Error('game tanpa aturan: humanis + buang server luar: ' + JSON.stringify(pb.eceran));
+    if (pb.eceran.length !== 1 || pb.eceran[0].nama !== '60 UC' || pb.eceran[0].kode !== 'PUC60') throw new Error('game tanpa aturan: "60 UC" kanal termurah + buang server luar: ' + JSON.stringify(pb.eceran));
+    const hsr = rapihkanKatalog('honkai-star-rail', [
+      { kode: 'HSR120', nama: 'HSR120', harga: 100 },
+      { kode: 'PHSR120', nama: 'PHSR120', harga: 90 },
+      { kode: 'HSRM', nama: 'HSRM', harga: 25000 },
+    ]);
+    if (hsr.eceran.length !== 1 || hsr.eceran[0].nama !== '120 Oneiric Shard') throw new Error('HSR harus "120 Oneiric Shard": ' + JSON.stringify(hsr.eceran));
+    if (hsr.paket.length !== 1 || hsr.paket[0].nama !== 'Membership Mingguan') throw new Error('token khusus game lain masuk paket: ' + JSON.stringify(hsr.paket));
     // Daftar 122 kode RESMI Free Fire dari web penyedia (dikonfirmasi pemilik 27 Nov 2026):
     // semuanya harus lolos tampil, tepat 118 eceran + 4 paket.
     const RESMI_FF = ('MFF5 MFF10 MFF12 MFF15 MFF20 MFF25 MFF30 MFF50 MFF40 MFF55 MFF60 MFF70 MFF75 MFF80 MFF90 MFF100 MFF95 MFFLUP ' +

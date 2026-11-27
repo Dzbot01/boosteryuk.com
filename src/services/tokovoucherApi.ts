@@ -87,6 +87,28 @@ export interface TvPricelist {
 export const tvPricelist = (game?: string) =>
   get<TvPricelist>('action=pricelist' + (game ? `&game=${encodeURIComponent(game)}` : ''));
 
+export interface TvKatalogGroup {
+  /** Nama tampil game (kategori Topup, server ID Indonesia). */
+  game: string;
+  slug: string;
+  jumlah: number;
+  termurah: number;
+  labels: string[];
+}
+
+export interface TvKatalog {
+  ok: boolean;
+  source: 'provider' | 'kosong';
+  groups: TvKatalogGroup[];
+  updated_at?: string;
+}
+
+/**
+ * Daftar game top up LIVE dari penyedia (kategori Topup + ID Indonesia saja):
+ * dipakai grid kartu /topup supaya tidak hardcode dan game baru penyedia ikut muncul.
+ */
+export const tvKatalog = () => get<TvKatalog>('action=katalog');
+
 export interface TvCekStatus {
   ref_id: string;
   /** Balasan mentah penyedia (sudah dibersihkan) berisi status transaksi. */

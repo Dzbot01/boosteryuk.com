@@ -268,10 +268,9 @@ function tv_provider_products() {
     return $items;
 }
 
-/** Alias nama game: label penyedia sering berbeda dari nama kartu di UI ("MLBB" vs "Mobile Legends"). */
-function tv_game_aliases($game) {
-    $norm = preg_replace('/[^a-z0-9]+/', '', strtolower((string)$game));
-    $map = [
+/** Tabel alias nama game (dipakai tv_game_aliases & pencocokan label kategori). */
+function tv_game_alias_map() {
+    return [
         'freefire'         => ['freefire', 'ff'],
         'mobilelegends'    => ['mobilelegends', 'mlbb', 'bangbang', 'ml'],
         'hago'             => ['hago'],
@@ -289,7 +288,43 @@ function tv_game_aliases($game) {
         'moonlightbladem'  => ['moonlightbladem', 'moonlightblade', 'moonlight'],
         'zenlesszonezero'  => ['zenlesszonezero', 'zenless', 'zzz'],
     ];
+}
+
+/** Alias nama game: label penyedia sering berbeda dari nama kartu di UI ("MLBB" vs "Mobile Legends"). */
+function tv_game_aliases($game) {
+    $norm = preg_replace('/[^a-z0-9]+/', '', strtolower((string)$game));
+    $map = tv_game_alias_map();
     return $map[$norm] ?? [$norm];
+}
+
+/** Kunci game kanonik dari label kategori penyedia ("Free Fire ID (Indonesia)" => freefire). */
+function tv_game_key_of_label($label) {
+    $norm = preg_replace('/[^a-z0-9]+/', '', strtolower((string)$label));
+    if ($norm === '') return '';
+    foreach (tv_game_alias_map() as $key => $aliases) {
+        // Alias pendek ("ff", "ml", "uc", …) dilewati agar kategori non-game
+        // (mis. "Voucher Gameplay" mengandung "uc") tidak salah tercekok.
+        foreach ($aliases as $a) if ($a !== '' && strlen($a) >= 3 && strpos($norm, $a) !== false) return $key;
+    }
+    return '';
+}
+
+/** Nama tampil game untuk kartu grid (mengikuti penamaan kartu UI yang sudah ada). */
+function tv_game_display($key) {
+    $map = [
+        'freefire' => 'Free Fire', 'mobilelegends' => 'Mobile Legends', 'hago' => 'Hago',
+        'pubgmobile' => 'PUBG Mobile', 'honorofkings' => 'Honor of Kings', 'genshinimpact' => 'Genshin Impact',
+        'garenaundawn' => 'Garena Undawn', 'pointblank' => 'Point Blank', 'callofdutymobile' => 'Call of Duty Mobile',
+        'bloodstrike' => 'Blood Strike', 'honkaistarrail' => 'Honkai Star Rail', 'metalslugawakening' => 'Metal Slug : Awakening',
+        'magicchessgogo' => 'Magic Chess GO GO', 'farlight84' => 'Farlight 84', 'moonlightbladem' => 'Moonlight Blade M',
+        'zenlesszonezero' => 'Zenless Zone Zero',
+    ];
+    return $map[$key] ?? ucfirst((string)$key);
+}
+
+/** Slug URL dari nama game ("Farlight 84" => farlight-84). */
+function tv_slugify($t) {
+    return trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string)$t)), '-');
 }
 
 /**
@@ -423,6 +458,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             if (is_array($a['json'])) $out['member'] = tv_sanitize($a['json']);
         }
         tv_out($out);
+    }
+
+    if ($action === 'katalog') {
+        // Grup game untuk grid "TopUp All Game": hanya kategori Topup game yang
+        // dikenali aliasnya DAN lolos filter wilayah (ID Indonesia, tanpa Promo).
+        $all = tv_provider_products();
+        if (is_array($all)) $all = array_values(array_filter($all, function ($p) { return tv_label_wilayah_ok($p['game'] ?? ''); }));
+        $groups = [];
+        foreach ((is_array($all) ? $all : []) as $p) {
+            $key = tv_game_key_of_label($p['game'] ?? '');
+            if ($key === '') continue;
+            if (!isset($groups[$key])) {
+                $disp = tv_game_display($key);
+                $groups[$key] = ['game' => $disp, 'slug' => tv_slugify($disp), 'jumlah' => 0, 'termurah' => 0, 'labels' => []];
+            }
+            $groups[$key]['jumlah']++;
+            if ($groups[$key]['termurah'] === 0 || $p['harga'] < $groups[$key]['termurah']) $groups[$key]['termurah'] = $p['harga'];
+            if ($p['game'] !== '' && !in_array($p['game'], $groups[$key]['labels'], true)) $groups[$key]['labels'][] = $p['game'];
+        }
+        $out = array_values($groups);
+        usort($out, function ($a, $b) { return strcmp($a['game'], $b['game']); });
+        tv_out(['ok' => true, 'source' => (is_array($all) && $all) ? 'provider' : 'kosong', 'groups' => $out, 'updated_at' => date('Y-m-d H:i')]);
     }
 
     if ($action === 'pricelist') {
