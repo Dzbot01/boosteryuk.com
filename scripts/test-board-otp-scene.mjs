@@ -43,12 +43,12 @@ assert.match(esm, /const needV = modelH \* margin;/, 'ruang gerak animasi dihitu
 assert.match(esm, /const layout = \(\) => \{/, 'layout() menerapkan ulang ukuran panggung + kamera');
 assert.match(esm, /const ro = new ResizeObserver\(layout\);/, 'layout dipanggil ulang setiap resize (aspect berubah) tanpa memuat ulang GLB');
 assert.match(esm, /\}, \[modelUrl\]\);/, 'GLB dimuat sekali per modelUrl (resize/re-fetch tidak terjadi)');
-assert.match(esm, /layoutRef\.current\?\.\(\);\s*\n\s*\}, \[stageH, zoom, targetSize, fitMargin, fitBy, fitAxes, motion\]\);/, 'perubahan tinggi/zoom hanya menata ulang, tidak re-fetch model');
+assert.match(esm, /layoutRef\.current\?\.\(\);[\s\S]{0,140}\}, \[stageH, zoom, targetSize, fitMargin, fitBy, fitAxes, motion, rotKey, alignKey, offsetKey\]\);/, 'perubahan tinggi/zoom/pose hanya menata ulang, tidak re-fetch model');
 /* Tinggi panggung responsif: lebih tinggi, dan punya tinggi khusus layar sempit. */
 assert.match(esm, /mobileHeight\?: number;/, 'prop mobileHeight tersedia');
 assert.match(esm, /setStageH\(mobileHeight && w < 640 \? mobileHeight : height\);/, 'tinggi panggung menyesuaikan lebar layar (< 640px)');
 assert.match(esm, /style=\{\{ height: stageH, opacity: state === 'ready' \? 1 : 0\.001 \}\}/, 'tinggi host mengikuti tinggi panggung efektif');
-assert.match(esm, /if \(pivot && cfgRef\.current\.motion\) \{\s*\n\s*pivot\.rotation\.y = Math\.sin\(t \* 0\.35\) \* 0\.55;/, 'ayunan animasi panggung aktif (bisa dimatikan lewat prop motion)');
+assert.match(esm, /if \(pivot && cfgRef\.current\.motion\) \{\s*\n\s*pivot\.rotation\.y = pose\.yaw \+ Math\.sin\(t \* 0\.35\) \* 0\.55;/, 'ayunan animasi panggung aktif (bisa dimatikan lewat prop motion) dan tidak menimpa pose');
 
 const otp = read('src/pages/OrderOtpPage.tsx');
 assert.match(otp, /const OTP_SCENE_MODEL_URL = 'https:\/\/zcxtbtleeeaeqeryiwea\.supabase\.co\/storage\/v1\/object\/public\/video\/scene\.glb';/, 'URL scene.glb dari Supabase Storage public');

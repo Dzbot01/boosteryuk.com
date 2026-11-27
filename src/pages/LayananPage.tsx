@@ -5,47 +5,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Reveal from '../components/Reveal';
 import BuatPesananCard from '../components/BuatPesananCard';
-import EmptyStateModel from '../components/EmptyStateModel';
+import SliderHugModel from '../components/SliderHugModel';
 import { useSlides } from '../lib/useSlides';
 
 const SLIDE_INTERVAL = 4500;
-/**
- * Model 3D yang "merangkul" pojok kiri atas card image slider (Supabase Storage public).
- * Nama file aslinya mengandung spasi sehingga di-encode sebagai %20.
- */
-const SLIDER_HUG_MODEL_URL =
-  'https://zcxtbtleeeaeqeryiwea.supabase.co/storage/v1/object/public/video/scene%20(1).glb';
 
 export default function LayananPage() {
   const SLIDES = useSlides();
 
   const [index, setIndex] = useState(0);
   const paused = useRef(false);
-  /** Card slider diukur supaya tinggi panggung model 3D sama persis dengan tingginya. */
-  const sliderRef = useRef<HTMLDivElement | null>(null);
-  const [sliderH, setSliderH] = useState(0);
 
   const next = useCallback(() => {
     setIndex((i) => (i + 1) % SLIDES.length);
-  }, []);
-
-  // Ukur tinggi card slider (desktop & mobile, mengikuti aspect ratio-nya) — tinggi ini
-  // dipakai sebagai tinggi panggung model 3D sehingga keduanya selalu sama.
-  useEffect(() => {
-    const el = sliderRef.current;
-    if (!el) return;
-    const measure = () => {
-      const h = Math.round(el.getBoundingClientRect().height);
-      setSliderH((prev) => (Math.abs(prev - h) > 1 ? h : prev));
-    };
-    measure();
-    if (typeof ResizeObserver !== 'function') {
-      window.addEventListener('resize', measure);
-      return () => window.removeEventListener('resize', measure);
-    }
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
   }, []);
 
   // Auto-advance the slider, pausing while the pointer is over it.
@@ -79,7 +51,6 @@ export default function LayananPage() {
             sudut card dan tampak merangkulnya, bukan terpotong oleh card. */}
         <div className="relative mx-auto w-full max-w-2xl">
         <div
-          ref={sliderRef}
           className="relative aspect-[16/9] w-full overflow-hidden rounded-[22px] border border-slate-200 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.5)] dark:border-slate-700/60 sm:aspect-[21/8] lg:!aspect-[21/7]"
           onMouseEnter={() => (paused.current = true)}
           onMouseLeave={() => (paused.current = false)}
@@ -123,32 +94,10 @@ export default function LayananPage() {
           </div>
         </div>
 
-        {/* Model 3D di POJOK KIRI ATAS card slider, seolah merangkul card:
-            - tinggi panggung = tinggi card slider (diukur lewat ResizeObserver),
-            - transparan & tanpa card sendiri, sedikit menumpuk sudut card (-8% / -6%),
-            - pointer-events-none sehingga klik/scroll/dots slider tetap jalan,
-            - fitBy 'height' + zoom 1.4 => tinggi model ~= tinggi card, fitAxes 'both'
-              menjaga model tetap utuh (tidak terpotong) di dalam panggungnya,
-            - motion dimatikan supaya pose model stabil di sudut card. */}
-        {sliderH > 0 && (
-          <div
-            className="pointer-events-none absolute left-0 top-0 z-20 -translate-x-[8%] -translate-y-[6%] select-none"
-            style={{ height: sliderH, width: sliderH }}
-            aria-hidden="true"
-          >
-            <EmptyStateModel
-              modelUrl={SLIDER_HUG_MODEL_URL}
-              height={sliderH}
-              fitBy="height"
-              fitAxes="both"
-              fitMargin={1.05}
-              zoom={1.4}
-              motion={false}
-              stageClassName="max-w-none w-full"
-              className="!p-0"
-            />
-          </div>
-        )}
+        {/* Model 3D karakter "merangkul" pojok kiri atas card slider: kecil, sebagian besar
+            badannya di luar card sehingga isi slider tetap terlihat penuh. Semua nilai
+            posisi/pose bisa disetel di SLIDER_HUG (src/components/SliderHugModel.tsx). */}
+        <SliderHugModel />
         </div>
       </Reveal>
 
