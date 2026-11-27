@@ -28,6 +28,7 @@ import {
   Smartphone,
   BookOpen,
   ClipboardList,
+  Gamepad2,
   Users,
   Crown,
   Star,
@@ -75,7 +76,8 @@ export type PageId =
   | 'deposit'
   | 'overview'
   | 'sewa-agen'
-  | 'plus';
+  | 'plus'
+  | 'topup';
 
 export const ROUTE_PATH: Record<PageId, string> = {
   home: '/',
@@ -88,6 +90,7 @@ export const ROUTE_PATH: Record<PageId, string> = {
   payment: '/payment',
   struk: '/struk',
   layanan: '/layanan',
+  topup: '/topup',
   ordervps: '/nexspace',
   overview: '/overview',
   'sewa-agen': '/sewa-agen-ai',
@@ -123,6 +126,7 @@ const baseMenu: {
   { id: 'home', icon: Home, label: 'Dashboard', desc: 'Beranda utama' },
   { id: 'overview', icon: LayoutGrid, label: 'Overview', desc: 'Ringkasan akun & statistik' },
   { id: 'layanan', icon: ShoppingCart, label: 'Buat Pesanan', desc: 'Katalog & order layanan' },
+  { id: 'topup', icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital' },
   { id: 'ordervps', icon: Server, label: 'NexSpace', desc: 'Server Linux Started & Pro' },
   { id: 'sewa-agen', icon: Bot, label: 'Sewa Agen AI', desc: 'Agen AI WhatsApp, Telegram, dll' },
   { id: 'riwayat', icon: History, label: 'Riwayat Pesanan', desc: 'Tabel riwayat pesanan' },

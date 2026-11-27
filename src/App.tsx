@@ -61,6 +61,8 @@ const AdminBroadcastPage = lazy(() => import('./pages/admin/AdminBroadcastPage')
 const AdminDatabasePage = lazy(() => import('./pages/admin/AdminDatabasePage'));
 const ReviewSubmitPage = lazy(() => import('./pages/ReviewSubmitPage'));
 const ReviewBoardPage = lazy(() => import('./pages/ReviewBoardPage'));
+const TopupGamePage = lazy(() => import('./pages/TopupGamePage'));
+const TopupGameDetailPage = lazy(() => import('./pages/TopupGameDetailPage'));
 
 export default function App() {
   return (
@@ -89,6 +91,8 @@ export default function App() {
           <Route path="privacy" element={<PrivacyPage />} />
           <Route path="struk" element={<StrukPage />} />
           <Route path="layanan" element={<LayananPage />} />
+          <Route path="topup" element={<TopupGamePage />} />
+          <Route path="topup/:slug" element={<TopupGameDetailPage />} />
           <Route path="playground" element={IS_CHILD_PANEL ? <Navigate to="/" replace /> : <PlaygroundPage />} />
           <Route path="sewa-agen-ai" element={<SewaAgenAiPage />} />
           <Route path="overview" element={<ProtectedRoute><OverviewPage /></ProtectedRoute>} />

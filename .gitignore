@@ -21,3 +21,7 @@ php-api/.env
 # Server 2 credentials and short-lived server-side caches
 php-api/naizop_config.php
 php-api/naizop_*cache.json
+
+# Integrasi TokoVoucher (TopUp All Game): rahasia server + log transaksi
+php-api/tokovoucher_config.php
+php-api/tokovoucher_log.txt

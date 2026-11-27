@@ -5,7 +5,7 @@
 //
 // NODE_PATH=/tmp/server3-tests/node_modules node scripts/test-board-otp-scene.mjs
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { readFileSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
@@ -51,7 +51,10 @@ assert.match(esm, /style=\{\{ height: stageH, opacity: state === 'ready' \? 1 : 
 assert.match(esm, /if \(pivot && cfgRef\.current\.motion\) \{\s*\n\s*pivot\.rotation\.y = Math\.sin\(t \* 0\.35\) \* 0\.55;/, 'ayunan animasi panggung aktif (bisa dimatikan lewat prop motion)');
 
 const otp = read('src/pages/OrderOtpPage.tsx');
-assert.match(otp, /const OTP_SCENE_MODEL_URL = 'https:\/\/zcxtbtleeeaeqeryiwea\.supabase\.co\/storage\/v1\/object\/public\/video\/scene\.glb';/, 'URL scene.glb dari Supabase Storage public');
+/* Scene Order OTP memakai aset GLB LOKAL repo, bukan URL Supabase. */
+assert.match(otp, /const OTP_SCENE_MODEL_URL = '\/models\/scene\.glb\?v=1';/, 'scene.glb dimuat dari aset lokal /models/scene.glb');
+assert.ok(!/supabase\.co/.test(otp), 'OrderOtpPage tidak lagi memuat apa pun dari Supabase Storage');
+assert.ok(existsSync('public/models/scene.glb'), 'public/models/scene.glb ada di repo (ikut tersalin ke dist/)');
 assert.match(otp, /modelUrl=\{OTP_SCENE_MODEL_URL\}/, 'panggung 3D memakai scene.glb');
 const sceneBlock = otp.slice(otp.indexOf('aria-label="Scene 3D animasi"') - 260, otp.indexOf('aria-label="Scene 3D animasi"') + 520);
 /* Tanpa card: section scene tidak boleh punya border/background/rounded/padding card. */
@@ -95,5 +98,22 @@ assert.equal(uniq.length, 2, 'satu layanan hanya satu penilaian (duplikat case/s
 assert.deepEqual(uniq.map((r) => r.username), ['andini_r', 'sinta_n'], 'penilaian pertama per layanan dipertahankan');
 assert.equal(dedupeByService([]).length, 0, 'daftar kosong aman');
 
-console.log('PASS Papan Penilaian (username tersensor 3 huruf + 1 layanan 1 penilaian) & Order OTP (scene.glb 3D tanpa card, tanpa geser POV kamera, panggung lebih tinggi 560/460px + kamera auto-fit fitMargin 1.45 agar animasi tidak terpotong, berjarak sebelum Footer).');
+/* ---------- 3. Aset GLB lokal: biner valid, self-contained, dan punya animasi ---------- */
+const glbPath = 'public/models/scene.glb';
+const glb = readFileSync(glbPath);
+assert.equal(glb.toString('ascii', 0, 4), 'glTF', 'magic bytes GLB valid');
+assert.equal(glb.readUInt32LE(4), 2, 'GLB versi 2 (glTF 2.0)');
+assert.equal(glb.readUInt32LE(8), glb.length, 'panjang yang dideklarasikan header = ukuran file sebenarnya');
+const jsonLen = glb.readUInt32LE(12);
+assert.equal(glb.toString('ascii', 16, 20), 'JSON', 'chunk pertama GLB = JSON');
+const gltf = JSON.parse(glb.toString('utf8', 20, 20 + jsonLen));
+assert.ok((gltf.scenes || []).length >= 1 && (gltf.nodes || []).length >= 1 && (gltf.meshes || []).length >= 1, 'GLB punya scene, node, dan mesh');
+const clips = (gltf.animations || []).filter((a) => (a.channels || []).length > 0);
+assert.ok(clips.length >= 1, `GLB punya clip animasi ber-channel (model bergerak sendiri): ${clips.length} clip`);
+assert.ok(!(gltf.buffers || []).some((b) => b.uri), 'buffer menyatu di dalam GLB (tanpa .bin eksternal)');
+assert.ok(!(gltf.images || []).some((i) => i.uri), 'tekstur menyatu di dalam GLB (tanpa file gambar eksternal)');
+assert.ok(!(gltf.extensionsRequired || []).length, `tanpa extension wajib yang butuh decoder tambahan (${(gltf.extensionsRequired || []).join(',') || '-'})`);
+assert.ok(glb.length > 1_000_000, `ukuran aset GLB wajar (${(glb.length / 1e6).toFixed(1)} MB)`);
+
+console.log(`PASS Papan Penilaian (username tersensor 3 huruf + 1 layanan 1 penilaian) & Order OTP (scene 3D dari aset LOKAL public/models/scene.glb ${(glb.length / 1e6).toFixed(1)} MB, ${clips.length} clip animasi, tanpa card, tanpa geser POV kamera, panggung 560/460px + kamera auto-fit fitMargin 1.45, berjarak sebelum Footer).`);
 process.exit(0);
