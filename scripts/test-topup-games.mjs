@@ -140,7 +140,7 @@ assert.match(php, /tv_api_get_authed\('\/v1\/transaksi\/status'/, 'cek status me
 assert.match(php, /tv_api_get_authed\('\/member'/, 'info member memakai GET /member (helper ber-signature)');
 assert.match(php, /tv_api_get_authed\('\/produk\/code'/, 'katalog live memakai GET /produk/code (helper ber-signature)');
 assert.match(php, /function tv_walk_products\(\$node, \$game, array &\$out\)/, 'respons /produk/code dibaca tahan-bentuk (list datar, map ber-kunci kode, grup per game, bungkus status/data)');
-assert.match(php, /fallback: nama produk menyebut game/, 'filter per game punya fallback cocokkan nama produk (bila JSON tanpa field kategori)');
+assert.match(php, /\(b\) nama produk menyebut game/, 'filter per game punya fallback cocokkan nama produk (bila JSON tanpa field kategori)');
 assert.match(php, /PARSE_KOSONG/, 'bila katalog tetap tak terbaca, raw response dicatat di log server (secret disamarkan)');
 /* Endpoint katalog (/produk/code, /member, status) menuntut `signature` menurut log produksi
    ("signature not valid"); proxy harus mencoba rumus otomatis & mengingat yang berhasil,
@@ -151,6 +151,9 @@ assert.match(php, /tv_sig_cache_write\(\$i\)/, 'rumus signature yang berhasil di
 assert.match(php, /tv_api_get_authed\('\/produk\/code'\)/, '/produk/code dipanggil lewat helper ber-signature');
 assert.match(php, /tv_api_get_authed\('\/member'\)/, '/member dipanggil lewat helper ber-signature');
 assert.match(php, /tv_api_get_authed\('\/v1\/transaksi\/status', \['ref_id' => \$ref\]\)/, 'cek status dipanggil lewat helper ber-signature');
+assert.match(php, /function tv_game_aliases\(\$game\)/, 'pencocokan game punya tabel alias (MLBB=Mobile Legends dll)');
+assert.match(php, /function tv_code_prefix_game\(\$kode\)/, 'pencocokan terakhir lewat prefiks kode produk (MFF/ML/AMLBB…)');
+assert.match(php, /TIDAK cocok \| label penyedia:/, 'bila tetap tidak cocok, label asli penyedia dicatat ke log (dasar pemetaan berikutnya)');
 const txCall = php.split("tv_api_get('/v1/transaksi', [")[1].split(']);')[0];
 assert.ok(!txCall.includes('signature'), 'transaksi TETAP tanpa signature (persis docs & terbukti bekerja)');
 const totalMd5 = (php.match(/md5\(/g) || []).length;
