@@ -120,6 +120,9 @@ assert.ok(php.includes('function tv_label_wilayah_ok'), 'proxy PHP punya filter 
 assert.ok(php.includes("strpos($l, 'promo')"), 'kategori Promo dibuang di sumbernya');
 assert.ok(/array_filter\(\$all, function \(\$p\) \{ return tv_label_wilayah_ok/.test(php), 'pricelist menerapkan filter wilayah ke seluruh daftar produk penyedia');
 assert.ok(php.includes("action === 'katalog'"), 'proxy menyediakan action=katalog untuk grid game live di /topup');
+assert.ok(php.includes('function tv_kode_katalog_ok'), 'filter kode: produk tes, server luar, dan voucher game dibuang');
+assert.ok(php.includes('labels_dilihat'), 'katalog melaporkan label mentah penyedia untuk diagnostik');
+assert.ok(/tv_code_prefix_game\(\$p\['kode'\]\)/.test(php), 'katalog fallback pengelompokan lewat prefiks kode (respons datar)');
 assert.ok(php.includes('function tv_game_key_of_label'), 'label kategori penyedia dipetakan ke game kanonik');
 assert.ok(php.includes('function tv_game_display'), 'nama tampil game untuk kartu grid tersedia di proxy');
 assert.match(php, /if \(\$action === 'pricelist'\)/, 'proxy punya action=pricelist (katalog asli)');
@@ -307,22 +310,30 @@ const perilaku = execFileSync(
     ]);
     if (ml.eceran.length !== 1 || ml.eceran[0].kode !== 'MLA85' || ml.eceran[0].nama !== '85 Diamond') throw new Error('eceran ML salah');
     if (ml.paket.length !== 1 || ml.paket[0].nama !== 'Weekly Diamond Pass 2') throw new Error('paket ML salah');
-    // Game tanpa daftar resmi: kode huruf+angka jadi "N <satuan game>" (bukan nama kode),
-    // kanal kembar digabung ke termurah, kode server luar negeri tetap dibuang.
+    // Kode kanal nyata bersufiks saluran: "_S2"/"KP" dilebur jadi satu nama produk,
+    // server luar tetap dibuang, voucher/tes difilter di PHP (diuji terpisah).
     const pb = rapihkanKatalog('pubg-mobile', [
-      { kode: 'UC60', nama: '', harga: 1000 },
-      { kode: 'PUC60', nama: '', harga: 900 },
-      { kode: 'UCRU60', nama: '', harga: 800 },
-      { kode: 'UCSG60', nama: '', harga: 850 },
+      { kode: 'PUBGM120_S2', nama: 'PUBGM120_S2', harga: 33312 },
+      { kode: 'PUBGMKP120', nama: 'PUBGMKP120', harga: 32713 },
+      { kode: 'PUBGM60_S2', nama: 'PUBGM60_S2', harga: 16797 },
+      { kode: 'PUBGMRU60', nama: 'PUBGMRU60', harga: 15000 },
     ]);
-    if (pb.eceran.length !== 1 || pb.eceran[0].nama !== '60 UC' || pb.eceran[0].kode !== 'PUC60') throw new Error('game tanpa aturan: "60 UC" kanal termurah + buang server luar: ' + JSON.stringify(pb.eceran));
+    if (pb.eceran.length !== 2) throw new Error('PUBG harus 2 eceran (S2+KP lebur, RU dibuang): ' + JSON.stringify(pb.eceran));
+    if (pb.eceran[0].nama !== '60 UC' || pb.eceran[1].nama !== '120 UC' || pb.eceran[1].kode !== 'PUBGMKP120') throw new Error('nama/kanal termurah PUBG salah: ' + JSON.stringify(pb.eceran));
     const hsr = rapihkanKatalog('honkai-star-rail', [
-      { kode: 'HSR120', nama: 'HSR120', harga: 100 },
-      { kode: 'PHSR120', nama: 'PHSR120', harga: 90 },
-      { kode: 'HSRM', nama: 'HSRM', harga: 25000 },
+      { kode: 'HSR60', nama: 'HSR60', harga: 10508 },
+      { kode: 'HSRES2', nama: 'HSRES2', harga: 103743 },
+      { kode: 'HSRAP', nama: 'HSRAP', harga: 2163789 },
     ]);
-    if (hsr.eceran.length !== 1 || hsr.eceran[0].nama !== '120 Oneiric Shard') throw new Error('HSR harus "120 Oneiric Shard": ' + JSON.stringify(hsr.eceran));
-    if (hsr.paket.length !== 1 || hsr.paket[0].nama !== 'Membership Mingguan') throw new Error('token khusus game lain masuk paket: ' + JSON.stringify(hsr.paket));
+    if (hsr.eceran.length !== 2 || hsr.eceran[0].nama !== '60 Oneiric Shard') throw new Error('HSR eceran salah: ' + JSON.stringify(hsr.eceran));
+    if (hsr.paket.length !== 1 || hsr.paket[0].nama !== 'Express Supply 2') throw new Error('HSRES2 = Express Supply 2 (paket): ' + JSON.stringify(hsr.paket));
+    const zzz = rapihkanKatalog('zenless-zone-zero', [
+      { kode: 'ZZZ60', nama: 'ZZZ60', harga: 19195 },
+      { kode: 'ZZZ60M', nama: 'ZZZ60M', harga: 12753 },
+      { kode: 'ZZZM', nama: 'ZZZM', harga: 95973 },
+    ]);
+    if (zzz.eceran.length !== 1 || zzz.eceran[0].nama !== '60 Monochrome' || zzz.eceran[0].kode !== 'ZZZ60M') throw new Error('ZZZ60M kanal lebur ke termurah: ' + JSON.stringify(zzz.eceran));
+    if (zzz.paket.length !== 1 || zzz.paket[0].nama !== 'Membership Mingguan') throw new Error('ZZZM = Membership Mingguan: ' + JSON.stringify(zzz.paket));
     // Daftar 122 kode RESMI Free Fire dari web penyedia (dikonfirmasi pemilik 27 Nov 2026):
     // semuanya harus lolos tampil, tepat 118 eceran + 4 paket.
     const RESMI_FF = ('MFF5 MFF10 MFF12 MFF15 MFF20 MFF25 MFF30 MFF50 MFF40 MFF55 MFF60 MFF70 MFF75 MFF80 MFF90 MFF100 MFF95 MFFLUP ' +

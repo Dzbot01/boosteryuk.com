@@ -328,6 +328,20 @@ function tv_slugify($t) {
 }
 
 /**
+ * Kode layak katalog/topup game: buang produk tes ("…CEK…"), kode server luar
+ * (RU/SG/MY/BR/PH/LATAM/GLOBAL), dan kategori voucher game ("V"+prefiks game,
+ * mis. VPUBGGCOIN500) — respons penyedia datar tanpa label kategori sehingga
+ * penyaringan harus lewat kode.
+ */
+function tv_kode_katalog_ok($kode) {
+    $k = strtoupper((string)$kode);
+    if ($k === '' || strpos($k, 'CEK') !== false) return false;
+    if (preg_match('/(RU|SG|MY|BR|PH|LATAM|GLOBAL)([0-9]|$)/', $k)) return false;
+    if (strpos($k, 'V') === 0 && tv_code_prefix_game(substr($k, 1)) !== '') return false;
+    return true;
+}
+
+/**
  * Hanya kategori ID (Indonesia): label kategori penyedia berbentuk
  * "Free Fire ID (Indonesia)", "Free Fire ID (Promo)", "Mobile Legends RU (Rusia)", dst.
  * Kategori Promo dan server luar (SG/MY/BR/Latam/Global/RU) dibuang di sumbernya
@@ -464,10 +478,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Grup game untuk grid "TopUp All Game": hanya kategori Topup game yang
         // dikenali aliasnya DAN lolos filter wilayah (ID Indonesia, tanpa Promo).
         $all = tv_provider_products();
-        if (is_array($all)) $all = array_values(array_filter($all, function ($p) { return tv_label_wilayah_ok($p['game'] ?? ''); }));
+        if (is_array($all)) $all = array_values(array_filter($all, function ($p) { return tv_label_wilayah_ok($p['game'] ?? '') && tv_kode_katalog_ok($p['kode']); }));
         $groups = [];
+        $labelsDilihat = [];
         foreach ((is_array($all) ? $all : []) as $p) {
+            if ($p['game'] !== '' && count($labelsDilihat) < 25 && !in_array($p['game'], $labelsDilihat, true)) $labelsDilihat[] = $p['game'];
+            // Respons penyedia datar (tanpa label kategori): kelompokkan lewat prefiks kode.
             $key = tv_game_key_of_label($p['game'] ?? '');
+            if ($key === '') {
+                $pg = tv_code_prefix_game($p['kode']);
+                if ($pg !== '') $key = tv_game_key_of_label($pg);
+            }
             if ($key === '') continue;
             if (!isset($groups[$key])) {
                 $disp = tv_game_display($key);
@@ -479,7 +500,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
         $out = array_values($groups);
         usort($out, function ($a, $b) { return strcmp($a['game'], $b['game']); });
-        tv_out(['ok' => true, 'source' => (is_array($all) && $all) ? 'provider' : 'kosong', 'groups' => $out, 'updated_at' => date('Y-m-d H:i')]);
+        tv_out(['ok' => true, 'source' => (is_array($all) && $all) ? 'provider' : 'kosong', 'groups' => $out, 'labels_dilihat' => $labelsDilihat, 'updated_at' => date('Y-m-d H:i')]);
     }
 
     if ($action === 'pricelist') {
@@ -498,8 +519,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
         // (2) Daftar produk live dari endpoint penyedia /produk/code.
         $all = tv_provider_products();
-        // Buang kategori Promo & server luar di sumbernya: hanya ID (Indonesia).
-        if (is_array($all)) $all = array_values(array_filter($all, function ($p) { return tv_label_wilayah_ok($p['game'] ?? ''); }));
+        // Buang kategori Promo & server luar di sumbernya: hanya ID (Indonesia);
+        // buang juga produk tes & kategori voucher game (respons penyedia datar).
+        if (is_array($all)) $all = array_values(array_filter($all, function ($p) { return tv_label_wilayah_ok($p['game'] ?? '') && tv_kode_katalog_ok($p['kode']); }));
         if (is_array($all) && $all) {
             if ($game === '') {
                 tv_out(['ok' => true, 'source' => 'provider', 'game' => '', 'items' => $all, 'updated_at' => date('Y-m-d H:i')]);
@@ -510,7 +532,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $hitAlias = function ($text) use ($norm, $aliases) {
                 $t = $norm($text);
                 if ($t === '') return false;
-                foreach ($aliases as $a) if ($a !== '' && strpos($t, $a) !== false) return true;
+                // Alias <3 karakter ("uc", "ml", "ff") dilewati: mudah salah celok
+                // (mis. "DIUC12" paket data dianggap UC PUBG).
+                foreach ($aliases as $a) if ($a !== '' && strlen($a) >= 3 && strpos($t, $a) !== false) return true;
                 return false;
             };
             $rows = [];
