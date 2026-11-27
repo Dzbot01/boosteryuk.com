@@ -16,8 +16,10 @@ export const EMPTY_STATE_MODEL_URL =
   'https://zcxtbtleeeaeqeryiwea.supabase.co/storage/v1/object/public/video/boy.glb';
 
 type Props = {
-  /** Teks utama, mis. "Belum ada riwayat deposit". */
-  text: string;
+  /** Teks utama, mis. "Belum ada riwayat deposit" (opsional: panggung 3D saja). */
+  text?: string;
+  /** URL GLB custom; default model empty-state (boy.glb). */
+  modelUrl?: string;
   /** Penjelasan tambahan di bawah teks utama (opsional). */
   sub?: string;
   /** Tinggi panggung 3D dalam px. */
@@ -31,6 +33,7 @@ type Props = {
 
 export default function EmptyStateModel({
   text,
+  modelUrl,
   sub,
   height = 220,
   fallbackIcon: Icon = Inbox,
@@ -92,7 +95,7 @@ export default function EmptyStateModel({
         rim.position.set(-2.4, 1.4, -2);
         scene.add(rim);
 
-        const gltf = await new GLTFLoader().loadAsync(EMPTY_STATE_MODEL_URL);
+        const gltf = await new GLTFLoader().loadAsync(modelUrl || EMPTY_STATE_MODEL_URL);
         if (disposed || !host.isConnected) return;
 
         // Pusatkan model ke origin lalu skalakan agar pas di panggung.
@@ -168,7 +171,7 @@ export default function EmptyStateModel({
     })();
 
     return () => { disposed = true; stop(); };
-  }, [height]);
+  }, [height, modelUrl]);
 
   return (
     <div
@@ -189,7 +192,7 @@ export default function EmptyStateModel({
           <Icon className="h-8 w-8" strokeWidth={1.6} />
         </span>
       )}
-      <p className="mt-3 font-display text-[15px] font-extrabold text-slate-900 dark:text-white">{text}</p>
+      {text && <p className="mt-3 font-display text-[15px] font-extrabold text-slate-900 dark:text-white">{text}</p>}
       {sub && <p className="mt-1.5 max-w-[320px] text-[12.5px] leading-relaxed text-slate-500 dark:text-slate-400">{sub}</p>}
     </div>
   );

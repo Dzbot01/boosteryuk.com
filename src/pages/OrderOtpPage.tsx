@@ -26,6 +26,9 @@ const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${St
 const POPULER = ['whatsapp', 'telegram', 'instagram', 'tiktok', 'shopee', 'google', 'facebook'];
 /** Domain panel yang sedang dibuka: <nama>.boosteryuk.com di child panel, boosteryuk.com di web utama. */
 const PANEL_HOST = CHILD_PANEL_SUB ? `${CHILD_PANEL_SUB}.boosteryuk.com` : 'boosteryuk.com';
+/** Model 3D + animasi panggung scene di bawah card Riwayat Nomor (Supabase Storage public). */
+const OTP_SCENE_MODEL_URL = 'https://zcxtbtleeeaeqeryiwea.supabase.co/storage/v1/object/public/video/scene.glb';
+
 /** Jumlah baris maksimum tabel riwayat nomor (pembelian sukses maupun batal). */
 const RIWAYAT_MAX = 10;
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
@@ -596,6 +599,23 @@ export default function OrderOtpPage() {
               </table>
             </div>
           )}
+        </section>
+      </Reveal>
+
+      {/* Panggung 3D scene.glb (+animasi bawaan GLB) di bawah card Riwayat Nomor:
+          ukuran sedang (tinggi 240px) dan diberi jarak longgar sebelum Footer. */}
+      <Reveal>
+        <section
+          className="mt-6 mb-10 rounded-[18px] border p-3 sm:p-4"
+          style={{ borderColor: COLOR.border, background: COLOR.surface }}
+          aria-label="Scene 3D animasi"
+        >
+          <EmptyStateModel
+            modelUrl={OTP_SCENE_MODEL_URL}
+            height={240}
+            ariaLabel="Model 3D scene beranimasi"
+            className="!px-0 !py-2"
+          />
         </section>
       </Reveal>
     </div>
