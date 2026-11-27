@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Reveal from '../components/Reveal';
 import BuatPesananCard from '../components/BuatPesananCard';
-import SliderHugModel from '../components/SliderHugModel';
 import { useSlides } from '../lib/useSlides';
 
 const SLIDE_INTERVAL = 4500;
@@ -47,11 +46,8 @@ export default function LayananPage() {
 
       {/* ================= SLIDER (atas, ukuran lebih kecil) ================= */}
       <Reveal delay={40}>
-        {/* Wrapper polos (TANPA overflow-hidden) supaya model 3D bisa sedikit menumpuk
-            sudut card dan tampak merangkulnya, bukan terpotong oleh card. */}
-        <div className="relative mx-auto w-full max-w-2xl">
         <div
-          className="relative aspect-[16/9] w-full overflow-hidden rounded-[22px] border border-slate-200 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.5)] dark:border-slate-700/60 sm:aspect-[21/8] lg:!aspect-[21/7]"
+          className="relative mx-auto aspect-[16/9] w-full max-w-2xl overflow-hidden rounded-[22px] border border-slate-200 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.5)] dark:border-slate-700/60 sm:aspect-[21/8] lg:!aspect-[21/7]"
           onMouseEnter={() => (paused.current = true)}
           onMouseLeave={() => (paused.current = false)}
         >
@@ -92,12 +88,6 @@ export default function LayananPage() {
               />
             ))}
           </div>
-        </div>
-
-        {/* Model 3D karakter "merangkul" pojok kiri atas card slider: kecil, sebagian besar
-            badannya di luar card sehingga isi slider tetap terlihat penuh. Semua nilai
-            posisi/pose bisa disetel di SLIDER_HUG (src/components/SliderHugModel.tsx). */}
-        <SliderHugModel />
         </div>
       </Reveal>
 

@@ -5,7 +5,6 @@ import { Check, X, LoaderCircle, CheckCircle2, AlertCircle, Smartphone, Bot } fr
 import Seo from '../components/Seo';
 import Reveal from '../components/Reveal';
 import AiAssistantCard from '../components/AiAssistantCard';
-import SliderHugModel from '../components/SliderHugModel';
 import { socialIconUrl } from '../constants';
 import { useSlides } from '../lib/useSlides';
 import { markupFactor } from '../lib/tenant';
@@ -253,11 +252,8 @@ export default function SewaAgenAiPage() {
 
       {/* Slider (sama seperti halaman Buat Pesanan) */}
       <Reveal delay={40}>
-        {/* Wrapper polos (overflow visible secara default) supaya model 3D bisa bertengger
-            di sudut card tanpa terpotong; hanya card slider yang memotong isinya. */}
-        <div className="relative mx-auto w-full max-w-2xl">
         <div
-          className="relative aspect-[16/9] w-full overflow-hidden rounded-[22px] border border-slate-200 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.5)] dark:border-slate-700/60 sm:aspect-[21/8] lg:!aspect-[21/7]"
+          className="relative mx-auto aspect-[16/9] w-full max-w-2xl overflow-hidden rounded-[22px] border border-slate-200 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.5)] dark:border-slate-700/60 sm:aspect-[21/8] lg:!aspect-[21/7]"
           onMouseEnter={() => (paused.current = true)}
           onMouseLeave={() => (paused.current = false)}
         >
@@ -273,11 +269,6 @@ export default function SewaAgenAiPage() {
               <button key={s.url} onClick={() => setIndex(i)} aria-label={`Slide ${i + 1}`} className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? 'w-6 bg-white dark:bg-slate-900' : 'w-1.5 bg-white/50 hover:bg-white/80 dark:bg-slate-900/50'}`} />
             ))}
           </div>
-        </div>
-
-        {/* Model 3D karakter "merangkul" pojok kiri atas card slider (sama seperti halaman
-            Buat Pesanan): pointer-events-none sehingga slider/dots tetap berfungsi. */}
-        <SliderHugModel />
         </div>
       </Reveal>
 
