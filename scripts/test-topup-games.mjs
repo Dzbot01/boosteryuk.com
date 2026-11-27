@@ -126,13 +126,24 @@ assert.match(php, /filter_var\(\$st, FILTER_VALIDATE_BOOLEAN\)/, 'status sukses 
 assert.ok(!php.includes('$okProvider ? 200 : 502'), 'penolakan bisnis TIDAK lagi membalas 502 (UI dapat pesan penyedia)');
 assert.match(php, /CURL_ERROR=/, 'gagal koneksi dicatat terpisah di log server');
 assert.ok(existsSync('php-api/tokovoucher_pricelist.example.php'), 'contoh file override katalog tersedia');
-assert.match(php, /\$sig = md5\(\$c\['user_code'\] \. ':' \. \$c\['secret'\] \. ':' \. \$ref\);/, 'signature = MD5(USER_CODE:SECRET:REF_ID) dihitung di server');
+/* Sistem API penyedia yang BERLAKU: api.tokovoucher.net (member code, transaksi GET). */
+assert.match(php, /'base_url'    => 'https:\/\/api\.tokovoucher\.net',/, 'base URL penyedia = https://api.tokovoucher.net');
+assert.match(php, /'member_code' => 'M250727KGST5158OE',/, 'member code default sesuai akun member');
+assert.match(php, /getenv\('TV_SECRET'\)/, 'secret bisa dari env TV_SECRET');
 assert.match(php, /is_file\(__DIR__ \. '\/tokovoucher_config\.php'\)/, 'secret dibaca dari file config server (tidak di-commit)');
 assert.match(php, /cp_user_id\(\$conn, \(string\)\(\$in\['token'\] \?\? ''\)\)/, 'transaksi wajib token login valid');
-assert.match(php, /curl_init\(rtrim\(\$c\['base_url'\], '\/'\) \. '\/transaksi'\)/, 'memanggil endpoint transaksi penyedia');
-assert.match(php, /'base_url'  => 'https:\/\/api\.tokovoucher\.me\/v1',/, 'base URL penyedia sesuai dokumentasi');
-assert.match(php, /unset\(\$j\['signature'\], \$j\['secret'\], \$j\['api_key'\], \$j\['user_code'\]\);/, 'field sensitif dibuang sebelum dibalas ke browser');
-assert.match(php, /\$ref = 'BY' \. date\('ymdHis'\) \. random_int\(1000, 9999\);/, 'ref_id unik dibuat server');
+assert.match(php, /tv_api_get\('\/v1\/transaksi', \[/, 'transaksi memanggil GET /v1/transaksi');
+for (const param of ['ref_id', 'produk', 'tujuan', 'server_id', 'member_code', 'secret']) {
+  assert.ok(php.includes(`'${param}'      =>`) || php.includes(`'${param}' =>`) || php.includes(`'${param}'      => $`) || new RegExp(`'${param}'\\s*=>`).test(php), `parameter query ${param} dikirim ke penyedia`);
+}
+assert.match(php, /tv_api_get\('\/v1\/transaksi\/status'/, 'cek status memakai GET /v1/transaksi/status');
+assert.match(php, /tv_api_get\('\/member'/, 'info member memakai GET /member');
+assert.match(php, /tv_api_get\('\/produk\/code'/, 'katalog live memakai GET /produk/code');
+assert.ok(!php.includes('md5('), 'sistem baru TIDAK memakai signature MD5 (secret langsung di query, server-side)');
+assert.match(php, /function tv_sanitize\(\$j\)/, 'field rahasia dibuang dari balasan penyedia sebelum ke browser');
+assert.match(php, /\$ref = 'INV-' \. date\('ymdHis'\) \. random_int\(10, 99\);/, 'ref_id unik dibuat server (pola INV-…)');
+assert.match(svc, /export const tvCekStatus = \(ref_id: string\)/, 'frontend punya tvCekStatus (GET /v1/transaksi/status via proxy)');
+assert.match(detail, /Cek status pesanan/, 'halaman detail punya tombol cek status pesanan per ref_id');
 assert.ok(existsSync('php-api/tokovoucher_config.example.php'), 'contoh config tersedia untuk server');
 const gi = read('.gitignore');
 assert.match(gi, /php-api\/tokovoucher_config\.php/, 'config rahasia di-gitignore');
