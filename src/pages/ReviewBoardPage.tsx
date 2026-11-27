@@ -10,6 +10,23 @@ import { reviewsApi, type ReviewItem } from '../services/reviewsApi';
  * Nama layanan sudah dicatat server saat penilaian dibuat → halaman ini TIDAK memanggil
  * API provider berulang kali (logika sama dengan layanan Google Maps Review di dashboard).
  */
+/** Sensor username: hanya 3 huruf depan yang tampil, sisanya bintang (*). */
+export function maskUsername(u: string) {
+  const s = u || '';
+  return s.slice(0, 3) + '*'.repeat(Math.max(0, s.length - 3));
+}
+
+/** Satu layanan = satu penilaian di papan: duplikat nama layanan dibuang (pertama dipertahankan). */
+export function dedupeByService(rows: ReviewItem[]) {
+  const seen = new Set<string>();
+  return rows.filter((r) => {
+    const k = (r.service_name || '').trim().toLowerCase();
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
 export default function ReviewBoardPage() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<ReviewItem[] | null>(null);
@@ -19,7 +36,7 @@ export default function ReviewBoardPage() {
     setErr('');
     const r = await reviewsApi.list();
     if (!r.ok) { setErr(r.message || 'Gagal memuat papan penilaian.'); setRows([]); return; }
-    setRows(r.reviews || []);
+    setRows(dedupeByService(r.reviews || []));
   }, []);
   useEffect(() => { void load(); }, [load]);
 
@@ -58,7 +75,7 @@ export default function ReviewBoardPage() {
               <tbody>
                 {rows.map((r, i) => (
                   <tr key={`${r.username}-${r.created_at}-${i}`} className="align-top">
-                    <td className="border-b border-slate-50 px-3 py-2.5 text-[13px] font-bold text-slate-800 dark:border-slate-800 dark:text-slate-100">{r.username}</td>
+                    <td className="border-b border-slate-50 px-3 py-2.5 text-[13px] font-bold text-slate-800 dark:border-slate-800 dark:text-slate-100">{maskUsername(r.username)}</td>
                     <td className="border-b border-slate-50 px-3 py-2.5 dark:border-slate-800">
                       <span className="flex items-center gap-0.5" aria-label={`${r.stars} bintang`}>
                         {[1, 2, 3, 4, 5].map((n) => (
