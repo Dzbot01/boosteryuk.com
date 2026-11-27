@@ -26,8 +26,13 @@ const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${St
 const POPULER = ['whatsapp', 'telegram', 'instagram', 'tiktok', 'shopee', 'google', 'facebook'];
 /** Domain panel yang sedang dibuka: <nama>.boosteryuk.com di child panel, boosteryuk.com di web utama. */
 const PANEL_HOST = CHILD_PANEL_SUB ? `${CHILD_PANEL_SUB}.boosteryuk.com` : 'boosteryuk.com';
-/** Model 3D + animasi panggung scene di bawah card Riwayat Nomor (Supabase Storage public). */
-const OTP_SCENE_MODEL_URL = 'https://zcxtbtleeeaeqeryiwea.supabase.co/storage/v1/object/public/video/scene.glb';
+/**
+ * Model 3D + animasi panggung scene di bawah card Riwayat Nomor.
+ * Aset LOKAL repo: public/models/scene.glb (disalin apa adanya ke dist/models/scene.glb oleh
+ * Vite) - tidak lagi memuat dari URL Supabase Storage. `?v=` untuk cache-busting bila file
+ * model diganti dengan nama yang sama.
+ */
+const OTP_SCENE_MODEL_URL = '/models/scene.glb?v=1';
 
 /** Jumlah baris maksimum tabel riwayat nomor (pembelian sukses maupun batal). */
 const RIWAYAT_MAX = 10;
