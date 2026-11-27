@@ -157,6 +157,10 @@ export const ADMIN_MENU = [
   { id: 'cek-status' as const, icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan', path: '/cek-status' },
   { id: 'event' as const, icon: Gift, label: 'Event', desc: 'Game & event yang berlangsung', path: '/event' },
   { id: 'events' as const, icon: Gift, label: 'Kelola Event', desc: 'Jadwal & status event', path: '/admin/events' },
+  // "TopUp All Game" juga tampil untuk ADMIN: saat login sebagai admin, daftar menu user
+  // (Navigasi) disembunyikan seluruhnya sehingga hanya Admin Menu yang dirender — tanpa entri
+  // ini admin tidak pernah melihat/membuka halaman top up dari side menu.
+  { id: 'topup' as const, icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital', path: '/topup' },
   { id: 'orders' as const, icon: ClipboardList, label: 'Data Pesanan', desc: 'Pesanan semua user', path: '/admin/orders' },
   { id: 'users' as const, icon: Users, label: 'Data User', desc: 'Saldo & data user', path: '/admin/users' },
   { id: 'deposits' as const, icon: Wallet, label: 'Data Deposit', desc: 'Deposit terbaru', path: '/admin/deposit' },

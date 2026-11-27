@@ -111,5 +111,60 @@ assert.match(gi, /php-api\/tokovoucher_config\.php/, 'config rahasia di-gitignor
 assert.match(gi, /php-api\/tokovoucher_log\.txt/, 'log transaksi di-gitignore');
 assert.ok(!read('php-api/tokovoucher_config.example.php').includes("'secret'    => 'U"), 'contoh config tidak menyertakan secret asli');
 
-console.log('PASS TopUp All Game: menu + route /topup & /topup/:slug, UI marketplace sesuai spesifikasi (latar #E5E5E7 berpola, tab pill navy, search realtime, grid 3/4/6/8, skeleton, state kosong), 16 game dummy + helper teruji, halaman detail dengan Player/Server ID, dan transaksi lewat proxy server (signature MD5 user_code:secret:ref_id dihitung di server, secret tidak pernah ke browser).');
+/* ---------- 5. Menu benar-benar ter-render untuk SEMUA peran (bundle SideMenu) ---------- */
+// Admin: daftar "Navigasi" (menu user) disembunyikan seluruhnya, jadi entri topup juga harus
+// ada di ADMIN_MENU — kalau tidak, admin tidak pernah melihat menu TopUp All Game.
+assert.match(menu, /\{ id: 'topup' as const, icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital', path: '\/topup' \},/, 'ADMIN_MENU juga punya TopUp All Game (path /topup)');
+const { JSDOM } = require('jsdom');
+const dom = new JSDOM('<div id="root"></div>', { url: 'https://boosteryuk.com' });
+globalThis.window = dom.window; globalThis.document = dom.window.document; globalThis.localStorage = dom.window.localStorage;
+const { outputFiles: menuFiles } = await build({
+  stdin: { contents: `export { getUserMenuItems, getAdminMenuItems } from './src/components/SideMenu';`, resolveDir: process.cwd() },
+  bundle: true, platform: 'node', format: 'cjs', write: false, jsx: 'automatic',
+  loader: { '.css': 'empty', '.png': 'dataurl', '.gif': 'dataurl', '.mp3': 'dataurl', '.webp': 'dataurl' },
+  define: { 'process.env.NODE_ENV': '"development"', __MUSIC_URL__: '""', 'import.meta.env': '{}' },
+  plugins: [{ name: 'mocks', setup(b) {
+    b.onResolve({ filter: /context\/AuthContext$/ }, () => ({ path: 'auth', namespace: 'mock' }));
+    b.onResolve({ filter: /components\/Seo$/ }, () => ({ path: 'seo', namespace: 'mock' }));
+    b.onResolve({ filter: /context\/MusicContext$/ }, () => ({ path: 'music', namespace: 'mock' }));
+    b.onResolve({ filter: /components\/UserAvatar$/ }, () => ({ path: 'avatar', namespace: 'mock' }));
+    b.onResolve({ filter: /components\/AdminDataDot$/ }, () => ({ path: 'dot', namespace: 'mock' }));
+    b.onResolve({ filter: /context\/AdminNotificationsContext$/ }, () => ({ path: 'notif', namespace: 'mock' }));
+    b.onLoad({ filter: /.*/, namespace: 'mock' }, (a) => ({ contents:
+      a.path === 'seo' ? 'export default function Seo(){return null;}'
+      : a.path === 'music' ? 'const music={play:()=>{},toggle:()=>{},playing:false,blocked:false};export const useMusic=()=>music;'
+      : a.path === 'avatar' ? 'export default function UserAvatar(){return null;}'
+      : a.path === 'dot' ? 'export default function AdminDataDot(){return null;}'
+      : a.path === 'notif' ? 'export const useAdminNotifications=()=>({items:[],unread:0,refresh:()=>{},markRead:()=>{}});'
+      : 'export const useAuth=()=>({user:null,isAdmin:false});', resolveDir: process.cwd() }));
+  } }],
+});
+const menuFile = path.join(dir, 'menu.cjs'); writeFileSync(menuFile, menuFiles[0].text);
+const { getUserMenuItems, getAdminMenuItems } = require(menuFile);
+const ids = (arr) => arr.map((i) => i.id);
+const guest = getUserMenuItems(false, false, false);      // belum login, root domain
+const userIn = getUserMenuItems(true, false, false);      // user login, root domain
+const childIn = getUserMenuItems(true, false, true);      // user login, child panel
+assert.ok(ids(guest).includes('topup'), 'menu TopUp All Game tampil untuk pengunjung (belum login)');
+assert.ok(ids(userIn).includes('topup'), 'menu TopUp All Game tampil untuk user login');
+assert.ok(ids(childIn).includes('topup'), 'menu TopUp All Game tampil di child panel');
+// Posisi: di baseMenu topup tepat setelah "Buat Pesanan" (layanan). Untuk user login, "Buat Pesanan"
+// & "Order Nomor" berada di depan grup deposit sehingga topup mengikuti "Order Nomor"; untuk
+// pengunjung (belum login) layanan/nokos tersembunyi sehingga topup langsung setelah Dashboard.
+assert.equal(ids(userIn).indexOf('topup'), ids(userIn).indexOf('nokos') + 1, 'user login: tepat setelah "Order Nomor" (grup Buat Pesanan)');
+assert.equal(ids(guest).indexOf('topup'), ids(guest).indexOf('home') + 1, 'pengunjung: item pertama setelah Dashboard');
+assert.equal(ids(childIn).indexOf('topup'), ids(childIn).indexOf('nokos') + 1, 'child panel: urutan sama dengan root domain');
+const topupGuest = guest.find((i) => i.id === 'topup');
+assert.equal(topupGuest.label, 'TopUp All Game', 'label menu sesuai permintaan');
+assert.equal(topupGuest.desc, 'Top up game & produk digital');
+const adminRoot = getAdminMenuItems(false);
+const adminChild = getAdminMenuItems(true);
+assert.ok(ids(adminRoot).includes('topup'), 'ADMIN juga melihat menu TopUp All Game di side menu');
+assert.ok(ids(adminChild).includes('topup'), 'pemilik child panel (admin ke-2) juga melihatnya');
+const topupAdmin = adminRoot.find((i) => i.id === 'topup');
+assert.equal(topupAdmin.path, '/topup', 'menu admin membuka /topup');
+assert.equal(topupAdmin.label, 'TopUp All Game');
+assert.ok(!ids(getUserMenuItems(true, true, false)).length, 'admin memang tidak merender daftar menu user (karena itu entri ADMIN_MENU wajib ada)');
+
+console.log('PASS TopUp All Game: menu tampil untuk pengunjung/user/child panel DAN admin (ADMIN_MENU) + route /topup & /topup/:slug, UI marketplace sesuai spesifikasi (latar #E5E5E7 berpola, tab pill navy, search realtime, grid 3/4/6/8, skeleton, state kosong), 16 game dummy + helper teruji, halaman detail dengan Player/Server ID, dan transaksi lewat proxy server (signature MD5 user_code:secret:ref_id dihitung di server, secret tidak pernah ke browser).');
 process.exit(0);
