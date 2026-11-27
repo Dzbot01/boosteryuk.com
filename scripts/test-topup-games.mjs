@@ -119,6 +119,9 @@ assert.ok(!/secret\s*:/.test(svc), 'payload frontend tidak pernah memuat field s
 assert.ok(!/md5\(/i.test(svc) && !/signature\s*=/.test(svc), 'signature tidak dihitung di browser');
 
 const php = read('php-api/tokovoucher.php');
+assert.ok(php.includes('function tv_label_wilayah_ok'), 'proxy PHP punya filter kategori wilayah (hanya ID Indonesia)');
+assert.ok(php.includes("strpos($l, 'promo')"), 'kategori Promo dibuang di sumbernya');
+assert.ok(/array_filter\(\$all, function \(\$p\) \{ return tv_label_wilayah_ok/.test(php), 'pricelist menerapkan filter wilayah ke seluruh daftar produk penyedia');
 assert.match(php, /if \(\$action === 'pricelist'\)/, 'proxy punya action=pricelist (katalog asli)');
 assert.match(php, /function tv_parse_pricelist_html\(\$html\)/, 'proxy bisa membaca tabel pricelist penyedia');
 assert.match(php, /function tv_pricelist_override\(\)/, 'proxy mendukung override katalog manual di server');

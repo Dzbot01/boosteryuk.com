@@ -292,6 +292,21 @@ function tv_game_aliases($game) {
     return $map[$norm] ?? [$norm];
 }
 
+/**
+ * Hanya kategori ID (Indonesia): label kategori penyedia berbentuk
+ * "Free Fire ID (Indonesia)", "Free Fire ID (Promo)", "Mobile Legends RU (Rusia)", dst.
+ * Kategori Promo dan server luar (SG/MY/BR/Latam/Global/RU) dibuang di sumbernya
+ * supaya SEMUA game hanya menjual produk server Indonesia tanpa Promo.
+ * Label kosong = diterima (penguncian kode di frontend tetap berlaku).
+ */
+function tv_label_wilayah_ok($label) {
+    $l = strtolower((string)$label);
+    if ($l === '') return true;
+    if (strpos($l, 'promo') !== false) return false;
+    if (preg_match('/singapur|malaysia|brazil|brasil|latam|global|rusia|russia|\(sg\)|\(my\)|\(br\)|\(ru\)/', $l)) return false;
+    return true;
+}
+
 /** Tebakan game dari prefiks kode produk (MFF…=Free Fire, ML…/AMLBB…=Mobile Legends, dst). */
 function tv_code_prefix_game($kode) {
     $k = strtoupper((string)$kode);
@@ -426,6 +441,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
         // (2) Daftar produk live dari endpoint penyedia /produk/code.
         $all = tv_provider_products();
+        // Buang kategori Promo & server luar di sumbernya: hanya ID (Indonesia).
+        if (is_array($all)) $all = array_values(array_filter($all, function ($p) { return tv_label_wilayah_ok($p['game'] ?? ''); }));
         if (is_array($all) && $all) {
             if ($game === '') {
                 tv_out(['ok' => true, 'source' => 'provider', 'game' => '', 'items' => $all, 'updated_at' => date('Y-m-d H:i')]);
