@@ -110,17 +110,19 @@ function tv_pricelist_override() {
     return is_array($d) ? $d : [];
 }
 
-/** Normalisasi satu baris produk dari JSON penyedia (nama field bisa bervariasi). */
-function tv_norm_product($r) {
+/** Normalisasi satu baris produk dari JSON penyedia (nama field & bentuk bisa bervariasi). */
+function tv_norm_product($r, $keyHint = '') {
     if (!is_array($r)) return null;
     $pick = function (array $keys) use ($r) {
         foreach ($keys as $k) if (isset($r[$k]) && $r[$k] !== '') return $r[$k];
         return null;
     };
-    $kode = $pick(['kode', 'code', 'produk', 'product_code', 'sku', 'id_produk']);
-    $nama = $pick(['nama', 'name', 'produk_name', 'product', 'product_name', 'title', 'keterangan']);
-    $harga = $pick(['harga', 'price', 'harga_modal', 'cost', 'harga_member']);
-    $game = $pick(['game', 'kategori', 'category', 'game_name', 'type', 'jenis']);
+    $kode = $pick(['kode', 'code', 'produk', 'product_code', 'sku', 'id_produk', 'product_id']);
+    // Bentuk map {"ML86": {...}}: kode produk = kunci mapnya.
+    if ($kode === null && $keyHint !== '' && preg_match('/^[A-Za-z0-9]{2,15}$/', $keyHint) && !preg_match('/\s/', $keyHint)) $kode = $keyHint;
+    $nama = $pick(['nama', 'name', 'produk_name', 'product', 'product_name', 'title', 'keterangan', 'desc', 'description']);
+    $harga = $pick(['harga', 'price', 'harga_modal', 'cost', 'harga_member', 'harga_member_code', 'modal']);
+    $game = $pick(['game', 'kategori', 'category', 'game_name', 'type', 'jenis', 'kategori_game']);
     if ($kode === null || $harga === null) return null;
     $h = (int)preg_replace('/[^0-9]/', '', (string)$harga);
     if ($h <= 0) return null;
@@ -130,6 +132,43 @@ function tv_norm_product($r) {
         'harga' => $h,
         'game' => $game !== null ? trim((string)$game) : '',
     ];
+}
+
+/**
+ * Telusuri JSON penyedia sedalam apa pun dan kumpulkan SEMUA produk — tahan terhadap
+ * variasi bentuk: list datar, map ber-kunci kode, grup per game {"Mobile Legends": […]},
+ * maupun bungkus {status, data}. Kunci map yang berisi spasi dianggap nama game/kategori
+ * dan diwariskan sebagai konteks produk di dalamnya.
+ */
+function tv_walk_products($node, $game, array &$out) {
+    if (!is_array($node)) return;
+    $hasHarga = false;
+    foreach (['harga', 'price', 'harga_modal', 'cost', 'harga_member', 'modal'] as $f) if (isset($node[$f])) { $hasHarga = true; break; }
+    if ($hasHarga) {
+        // Node ini sendiri produk (mis. respons satu objek)?
+        $p = tv_norm_product($node, '');
+        if ($p) {
+            if ($p['game'] === '') $p['game'] = $game;
+            if (!isset($out[$p['kode']])) $out[$p['kode']] = $p;
+            return;
+        }
+    }
+    foreach ($node as $k => $v) {
+        if (!is_array($v)) continue;
+        $g = $game;
+        if (is_string($k) && preg_match('/\s|[a-z]{2,}/', $k) && !preg_match('/^(data|list|items|results|produk|products)$/i', $k)) {
+            // Kunci ber-spasi / ber-kata ("Mobile Legends", "Free Fire ID") = konteks game.
+            if (preg_match('/\s/', $k) || preg_match('/^(free|mobile|pubg|genshin|honkai|zenless|hago|point|call|blood|farlight|moonlight|magic|garena|honor)/i', $k)) $g = $k;
+        }
+        // Map ber-kunci kode produk: {"ML86": {nama, harga}}
+        $p = tv_norm_product($v, is_string($k) ? $k : '');
+        if ($p && !is_array(reset($v))) {
+            if ($p['game'] === '') $p['game'] = $g;
+            if (!isset($out[$p['kode']])) $out[$p['kode']] = $p;
+            continue;
+        }
+        tv_walk_products($v, $g, $out);
+    }
 }
 
 /** Ambil daftar produk dari endpoint penyedia /produk/code (cache file 6 jam). */
@@ -143,22 +182,24 @@ function tv_provider_products() {
     }
     $c = tv_cfg();
     if ($c['member_code'] === '' || $c['secret'] === '') return null;
-    $r = tv_api_get('/produk/code', ['member_code' => $c['member_code'], 'secret' => $c['secret']], 15);
-    $j = $r['body'] !== null ? json_decode($r['body'], true) : null;
-    if (!is_array($j)) return null;
-    $list = null;
-    foreach (['data', 'list', 'produk', 'products', 'results', 'items'] as $key) {
-        if (isset($j[$key]) && is_array($j[$key])) { $list = $j[$key]; break; }
-    }
-    if ($list === null && array_is_list($j)) $list = $j;
-    if ($list === null) return null;
     $items = [];
-    foreach ($list as $row) {
-        $p = tv_norm_product($row);
-        if ($p && !isset($items[$p['kode']])) $items[$p['kode']] = $p;
+    $rawLog = '';
+    foreach ([
+        ['member_code' => $c['member_code'], 'secret' => $c['secret']],
+        ['member_code' => $c['member_code'], 'secret' => $c['secret'], 'code' => ''],
+    ] as $q) {
+        $r = tv_api_get('/produk/code', $q, 15);
+        $j = $r['body'] !== null ? json_decode((string)$r['body'], true) : null;
+        if (!is_array($j)) { $rawLog = 'http=' . $r['code'] . ' raw=' . substr((string)$r['body'], 0, 200); continue; }
+        $found = [];
+        tv_walk_products($j, '', $found);
+        if ($found) { $items = array_values($found); break; }
+        $rawLog = 'http=' . $r['code'] . ' PARSE_KOSONG raw=' . substr((string)$r['body'], 0, 200);
     }
-    $items = array_values($items);
-    if (!$items) return null;
+    if (!$items) {
+        if ($rawLog !== '') tv_log('pricelist /produk/code ' . str_replace($c['secret'], '***', $rawLog));
+        return null;
+    }
     $cache['__all__'] = ['ts' => $now, 'items' => $items];
     @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
     return $items;
@@ -275,16 +316,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // (2) Daftar produk live dari endpoint penyedia /produk/code.
         $all = tv_provider_products();
         if (is_array($all) && $all) {
-            $hasCat = false;
-            foreach ($all as $p) if ($p['game'] !== '') { $hasCat = true; break; }
             if ($game === '') {
                 tv_out(['ok' => true, 'source' => 'provider', 'game' => '', 'items' => $all, 'updated_at' => date('Y-m-d H:i')]);
             }
-            if ($hasCat) {
-                $rows = [];
-                foreach ($all as $p) if (strcasecmp($p['game'], $game) === 0) $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga']];
-                if ($rows) tv_out(['ok' => true, 'source' => 'provider', 'game' => $game, 'items' => $rows, 'updated_at' => date('Y-m-d H:i')]);
+            $norm = function ($t) { return preg_replace('/[^a-z0-9]+/', '', strtolower((string)$t)); };
+            $gN = $norm($game);
+            $rows = [];
+            // (a) cocokkan field game/kategori dari penyedia;
+            foreach ($all as $p) if ($p['game'] !== '' && ($norm($p['game']) === $gN || strpos($norm($p['game']), $gN) === 0 || strpos($gN, $norm($p['game'])) === 0)) {
+                $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga']];
             }
+            // (b) fallback: nama produk menyebut game tsb ("MOBILE LEGENDS 86 Diamond", dst).
+            if (!$rows) foreach ($all as $p) if (strpos($norm($p['nama']), $gN) !== false) {
+                $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga']];
+            }
+            if ($rows) tv_out(['ok' => true, 'source' => 'provider', 'game' => $game, 'items' => $rows, 'updated_at' => date('Y-m-d H:i')]);
         }
         // (3) Fallback: scraping pricelist publik per game.
         $sc = $game !== '' ? tv_fetch_pricelist_scrape($game) : null;
