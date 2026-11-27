@@ -244,6 +244,8 @@ const perilaku = execFileSync(
     import { namaTampilanTopup, rapihkanKatalog } from './src/lib/topupDisplayName.ts';
     const kasus = [
       ['free-fire', 'FF5', 'FF5', '5 Diamond'],
+      ['free-fire', 'KPPFF5', 'KPPFF5', '5 Diamond'],
+      ['free-fire', 'KPPFF12', 'KPPFF12', '12 Diamond'],
       ['free-fire', 'PFF100', 'PFF100', '100 Diamond'],
       ['free-fire', 'MFF2020', 'MFF2020', '2020 Diamond'],
       ['free-fire', 'FFM', 'FFM', 'Membership Mingguan'],
@@ -270,9 +272,11 @@ const perilaku = execFileSync(
       { kode: 'MFF70', nama: 'MFF70', harga: 7950 },
       { kode: 'CEKFF', nama: 'CEKFF', harga: 5 },
       { kode: 'FF5', nama: 'FF5', harga: 814 },
+      { kode: 'KPPFF5', nama: 'KPPFF5', harga: 800 },
     ]);
     if (rapih.length !== 2) throw new Error('dedupe+filter CEK gagal: ' + rapih.length);
     if (rapih[0].nama !== '5 Diamond' || rapih[1].nama !== '70 Diamond') throw new Error('urutan/nama dedupe salah');
+    if (rapih[0].kode !== 'KPPFF5' || rapih[0].harga !== 800) throw new Error('kanal termurah KPPFF5 harus menang untuk 5 Diamond');
     if (rapih[1].kode !== 'MFF70' || rapih[1].harga !== 7950) throw new Error('dedupe harus menyimpan kanal termurah');
     console.log('OK');
   `],
