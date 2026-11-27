@@ -144,6 +144,9 @@ export function rapihkanKatalog(slug: string, items: TopupItemBernama[]): Katalo
   for (const it of items) {
     const k = (it.kode || '').toUpperCase().trim();
     if (!k || /^CEK/.test(k)) continue;
+    // Server luar negeri (Rusia, Singapura, Malaysia, Brazil, Filipina, Latam,
+    // Global) tidak dijual di sini — hanya server ID (Indonesia), lintas game.
+    if (/(RU|SG|MY|BR|PH|LATAM|GLOBAL)(\d|$)/.test(k)) continue;
     const n = (it.nama || '').trim();
     let nama: string;
     let jenis: 'eceran' | 'paket';

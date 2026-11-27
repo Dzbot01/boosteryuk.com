@@ -239,7 +239,11 @@ assert.ok(dname.includes("'free-fire': { root: 'FF', kanalDepan: ['M'] }"), 'Fre
 assert.ok(!detail.includes('Katalog live dari pricelist penyedia'), 'teks log "Katalog live … diperbarui" dihapus dari halaman detail');
 assert.ok(detail.includes('rapihkanKatalog('), 'halaman detail merapikan katalog lewat rapihkanKatalog');
 assert.ok(detail.includes('Paket &amp; Membership'), 'halaman detail punya seksi Paket & Membership di atas list eceran');
-assert.ok(detail.includes('>Eceran<'), 'halaman detail punya judul seksi Eceran');
+assert.ok(!detail.includes('>Eceran<'), 'judul seksi "Eceran" dihapus sesuai permintaan pemilik');
+assert.ok(detail.indexOf('1 · Data akun tujuan') < detail.indexOf('2 · Pilih produk'), 'input ID akun pindah ke atas, sebelum list produk');
+assert.ok(detail.includes('scrollIntoView'), 'klik produk menggulir otomatis ke langkah konfirmasi pesanan');
+assert.ok(!read('src/pages/TopupGamePage.tsx').includes('Halaman detail:'), 'teks bantuan route "/topup/{slug}" dihapus dari halaman daftar game');
+assert.ok(dname.includes('(RU|SG|MY|BR|PH|LATAM|GLOBAL)'), 'filter server luar (hanya server ID/Indonesia) lintas game');
 // Uji perilaku helper (type-stripping Node) terhadap kode asli dari /produk/code.
 const perilaku = execFileSync(
   process.execPath,
@@ -299,9 +303,14 @@ const perilaku = execFileSync(
     ]);
     if (ml.eceran.length !== 1 || ml.eceran[0].kode !== 'MLA85' || ml.eceran[0].nama !== '85 Diamond') throw new Error('eceran ML salah');
     if (ml.paket.length !== 1 || ml.paket[0].nama !== 'Weekly Diamond Pass 2') throw new Error('paket ML salah');
-    // Game tanpa aturan resmi: tampil apa adanya (humanis) sebagai eceran.
-    const pb = rapihkanKatalog('pubg-mobile', [{ kode: 'UC60', nama: '', harga: 1000 }]);
-    if (pb.eceran.length !== 1 || pb.eceran[0].nama !== 'UC 60') throw new Error('game tanpa aturan harus humanis: ' + pb.eceran[0]?.nama);
+    // Game tanpa aturan resmi: tampil apa adanya (humanis) sebagai eceran,
+    // tetapi kode server luar negeri tetap dibuang (hanya server ID/Indonesia).
+    const pb = rapihkanKatalog('pubg-mobile', [
+      { kode: 'UC60', nama: '', harga: 1000 },
+      { kode: 'UCRU60', nama: '', harga: 900 },
+      { kode: 'UCSG60', nama: '', harga: 950 },
+    ]);
+    if (pb.eceran.length !== 1 || pb.eceran[0].nama !== 'UC 60') throw new Error('game tanpa aturan: humanis + buang server luar: ' + JSON.stringify(pb.eceran));
     // Daftar 122 kode RESMI Free Fire dari web penyedia (dikonfirmasi pemilik 27 Nov 2026):
     // semuanya harus lolos tampil, tepat 118 eceran + 4 paket.
     const RESMI_FF = ('MFF5 MFF10 MFF12 MFF15 MFF20 MFF25 MFF30 MFF50 MFF40 MFF55 MFF60 MFF70 MFF75 MFF80 MFF90 MFF100 MFF95 MFFLUP ' +

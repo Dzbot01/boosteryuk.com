@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, Gamepad2, Search, SearchX } from 'lucide-react';
 import Seo from '../components/Seo';
 import {
-  TOPUP_CATEGORIES, TOPUP_GAMES, TOPUP_OTHER, filterByName, slugify,
+  TOPUP_CATEGORIES, TOPUP_GAMES, TOPUP_OTHER, filterByName,
   type TopupCategoryId,
 } from '../data/topupGames';
 
@@ -188,12 +188,6 @@ export default function TopupGamePage() {
           </div>
         )}
 
-        <p className="mt-8 text-center text-[11.5px] text-slate-500">
-          Halaman detail: <code className="rounded bg-white/70 px-1.5 py-0.5">/topup/&#123;slug&#125;</code> — mis.{' '}
-          <Link className="font-bold text-[#14143c] underline" to={`/topup/${TOPUP_GAMES[0].slug}`}>
-            /topup/{slugify(TOPUP_GAMES[0].nama)}
-          </Link>
-        </p>
       </div>
     </div>
   );
