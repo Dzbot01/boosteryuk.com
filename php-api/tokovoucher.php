@@ -268,6 +268,55 @@ function tv_provider_products() {
     return $items;
 }
 
+/** Alias nama game: label penyedia sering berbeda dari nama kartu di UI ("MLBB" vs "Mobile Legends"). */
+function tv_game_aliases($game) {
+    $norm = preg_replace('/[^a-z0-9]+/', '', strtolower((string)$game));
+    $map = [
+        'freefire'         => ['freefire', 'ff'],
+        'mobilelegends'    => ['mobilelegends', 'mlbb', 'bangbang', 'ml'],
+        'hago'             => ['hago'],
+        'pubgmobile'       => ['pubgmobile', 'pubg', 'uc'],
+        'honorofkings'     => ['honorofkings', 'hok'],
+        'genshinimpact'    => ['genshinimpact', 'genshin'],
+        'garenaundawn'     => ['garenaundawn', 'undawn'],
+        'pointblank'       => ['pointblank', 'pb'],
+        'callofdutymobile' => ['callofdutymobile', 'codm', 'cod'],
+        'bloodstrike'      => ['bloodstrike', 'bs'],
+        'honkaistarrail'   => ['honkaistarrail', 'honkai', 'hsr'],
+        'metalslugawakening' => ['metalslugawakening', 'metalslug', 'msa'],
+        'magicchessgogo'   => ['magicchessgogo', 'magicchess', 'mcgg'],
+        'farlight84'       => ['farlight84', 'farlight', 'fl84'],
+        'moonlightbladem'  => ['moonlightbladem', 'moonlightblade', 'moonlight'],
+        'zenlesszonezero'  => ['zenlesszonezero', 'zenless', 'zzz'],
+    ];
+    return $map[$norm] ?? [$norm];
+}
+
+/** Tebakan game dari prefiks kode produk (MFF…=Free Fire, ML…/AMLBB…=Mobile Legends, dst). */
+function tv_code_prefix_game($kode) {
+    $k = strtoupper((string)$kode);
+    $prefs = [
+        'MFF' => 'free fire', 'FF' => 'free fire',
+        'MML' => 'mobile legends', 'AMLBB' => 'mobile legends', 'MLBB' => 'mobile legends', 'ML' => 'mobile legends',
+        'MHG' => 'hago', 'HAGO' => 'hago',
+        'MPUBG' => 'pubg mobile', 'PUBG' => 'pubg mobile', 'UC' => 'pubg mobile',
+        'MHOK' => 'honor of kings', 'HOK' => 'honor of kings',
+        'GENSHIN' => 'genshin impact', 'GI' => 'genshin impact',
+        'UNDAWN' => 'garena undawn', 'UD' => 'garena undawn',
+        'MPB' => 'point blank', 'PB' => 'point blank',
+        'MCOD' => 'call of duty mobile', 'COD' => 'call of duty mobile',
+        'MBS' => 'blood strike', 'BS' => 'blood strike',
+        'HSR' => 'honkai star rail',
+        'MSA' => 'metal slug : awakening', 'MS' => 'metal slug : awakening',
+        'MCGG' => 'magic chess go go', 'MC' => 'magic chess go go',
+        'FL84' => 'farlight 84', 'FL' => 'farlight 84',
+        'MOON' => 'moonlight blade m', 'MB' => 'moonlight blade m',
+        'ZZZ' => 'zenless zone zero',
+    ];
+    foreach ($prefs as $pref => $g) if (strpos($k, $pref) === 0) return $g;
+    return '';
+}
+
 /** Baris produk dari tabel pricelist render server (fallback scraping halaman publik). */
 function tv_parse_pricelist_html($html) {
     $re = '/<td[^>]*>\s*([A-Za-z]{1,4}[A-Za-z0-9]{1,16})\s*<br[^>]*>\s*([^<|]+?)\s*<\/td>\s*<td[^>]*>\s*Rp\s*([0-9][0-9.,]*)/i';
@@ -383,14 +432,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
             $norm = function ($t) { return preg_replace('/[^a-z0-9]+/', '', strtolower((string)$t)); };
             $gN = $norm($game);
+            $aliases = tv_game_aliases($game);
+            $hitAlias = function ($text) use ($norm, $aliases) {
+                $t = $norm($text);
+                if ($t === '') return false;
+                foreach ($aliases as $a) if ($a !== '' && strpos($t, $a) !== false) return true;
+                return false;
+            };
             $rows = [];
-            // (a) cocokkan field game/kategori dari penyedia;
-            foreach ($all as $p) if ($p['game'] !== '' && ($norm($p['game']) === $gN || strpos($norm($p['game']), $gN) === 0 || strpos($gN, $norm($p['game'])) === 0)) {
+            // (a) field game/kategori penyedia (cocok langsung maupun lewat alias);
+            foreach ($all as $p) if ($p['game'] !== '' && ($norm($p['game']) === $gN || strpos($norm($p['game']), $gN) === 0 || strpos($gN, $norm($p['game'])) === 0 || $hitAlias($p['game']))) {
                 $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga']];
             }
-            // (b) fallback: nama produk menyebut game tsb ("MOBILE LEGENDS 86 Diamond", dst).
-            if (!$rows) foreach ($all as $p) if (strpos($norm($p['nama']), $gN) !== false) {
+            // (b) nama produk menyebut game tsb ("MOBILE LEGENDS 86 Diamond", "MLBB 86", dst);
+            if (!$rows) foreach ($all as $p) if ($hitAlias($p['nama'])) {
                 $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga']];
+            }
+            // (c) prefiks kode produk (MFF…=Free Fire, ML…/AMLBB…=Mobile Legends, dst).
+            if (!$rows) foreach ($all as $p) {
+                $g = tv_code_prefix_game($p['kode']);
+                if ($g !== '' && in_array($gN, array_map($norm, tv_game_aliases($g)), true)) {
+                    $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga']];
+                }
+            }
+            // (d) tetap kosong padahal daftar produk ada: catat label asli penyedia supaya
+            //     pemetaan bisa dilengkapi tanpa menebak-nebak lagi.
+            if (!$rows) {
+                $games = [];
+                foreach ($all as $p) if ($p['game'] !== '') $games[$p['game']] = true;
+                $sampel = [];
+                foreach (array_slice($all, 0, 8) as $p) $sampel[] = $p['kode'] . '=' . $p['nama'];
+                tv_log('pricelist game="' . $game . '" TIDAK cocok | label penyedia: ' . implode(' | ', array_keys($games)) . ' | contoh: ' . implode(', ', $sampel));
             }
             if ($rows) tv_out(['ok' => true, 'source' => 'provider', 'game' => $game, 'items' => $rows, 'updated_at' => date('Y-m-d H:i')]);
         }
