@@ -9,6 +9,7 @@
 // NODE_PATH=/tmp/server3-tests/node_modules node scripts/test-topup-games.mjs
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
@@ -228,6 +229,56 @@ const topupAdmin = adminRoot.find((i) => i.id === 'topup');
 assert.equal(topupAdmin.path, '/topup', 'menu admin membuka /topup');
 assert.equal(topupAdmin.label, 'TopUp All Game');
 assert.ok(!ids(getUserMenuItems(true, true, false)).length, 'admin memang tidak merender daftar menu user (karena itu entri ADMIN_MENU wajib ada)');
+
+// ---------- Nama produk manusiawi (kode penyedia -> nama baca) ----------
+assert.ok(existsSync('src/lib/topupDisplayName.ts'), 'helper nama tampilan top up ada');
+const dname = read('src/lib/topupDisplayName.ts');
+for (const t of ['Membership Mingguan', 'Membership Bulanan', 'Level Up Pass', 'BP Card', 'Weekly Diamond Pass', 'Twilight Pass'])
+  assert.ok(dname.includes(t), `token khusus "${t}" mengikuti pricelist resmi penyedia`);
+assert.ok(!detail.includes('Katalog live dari pricelist penyedia'), 'teks log "Katalog live … diperbarui" dihapus dari halaman detail');
+assert.ok(detail.includes('rapihkanKatalog('), 'halaman detail merapikan katalog lewat rapihkanKatalog');
+// Uji perilaku helper (type-stripping Node) terhadap kode asli dari /produk/code.
+const perilaku = execFileSync(
+  process.execPath,
+  ['--experimental-strip-types', '--input-type=module', '-e', `
+    import { namaTampilanTopup, rapihkanKatalog } from './src/lib/topupDisplayName.ts';
+    const kasus = [
+      ['free-fire', 'FF5', 'FF5', '5 Diamond'],
+      ['free-fire', 'PFF100', 'PFF100', '100 Diamond'],
+      ['free-fire', 'MFF2020', 'MFF2020', '2020 Diamond'],
+      ['free-fire', 'FFM', 'FFM', 'Membership Mingguan'],
+      ['free-fire', 'FFB', 'FFB', 'Membership Bulanan'],
+      ['free-fire', 'FFLUP', 'FFLUP', 'Level Up Pass'],
+      ['free-fire', 'FFBP', 'FFBP', 'BP Card'],
+      ['free-fire', 'GMXFF1', 'GMXFF1', 'GMXFF 1'],
+      ['free-fire', 'FF5', 'Free Fire 5 Diamonds', 'Free Fire 5 Diamonds'],
+      ['mobile-legends', 'MLA85', 'MLA85', '85 Diamond'],
+      ['mobile-legends', 'MLBB875', 'MLBB875', '875 Diamond'],
+      ['mobile-legends', 'MLC17', 'MLC17', '17 Diamond'],
+      ['mobile-legends', 'MLRU55', 'MLRU55', '55 Diamond (RU)'],
+      ['mobile-legends', 'MLWDP2', 'MLWDP2', 'Weekly Diamond Pass 2'],
+      ['mobile-legends', 'MLATP', 'MLATP', 'Twilight Pass'],
+      ['mobile-legends', 'LMLM', 'LMLM', 'LMLM'],
+    ];
+    for (const [slug, kode, nama, ingin] of kasus) {
+      const dapat = namaTampilanTopup(slug, kode, nama);
+      if (dapat !== ingin) throw new Error(slug + ' ' + kode + ' => ' + dapat + ' (ingin ' + ingin + ')');
+    }
+    const rapih = rapihkanKatalog('free-fire', [
+      { kode: 'FF70', nama: 'FF70', harga: 8886 },
+      { kode: 'PFF70', nama: 'PFF70', harga: 8719 },
+      { kode: 'MFF70', nama: 'MFF70', harga: 7950 },
+      { kode: 'CEKFF', nama: 'CEKFF', harga: 5 },
+      { kode: 'FF5', nama: 'FF5', harga: 814 },
+    ]);
+    if (rapih.length !== 2) throw new Error('dedupe+filter CEK gagal: ' + rapih.length);
+    if (rapih[0].nama !== '5 Diamond' || rapih[1].nama !== '70 Diamond') throw new Error('urutan/nama dedupe salah');
+    if (rapih[1].kode !== 'MFF70' || rapih[1].harga !== 7950) throw new Error('dedupe harus menyimpan kanal termurah');
+    console.log('OK');
+  `],
+  { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },
+).trim();
+assert.equal(perilaku, 'OK', 'perilaku nama tampilan & rapihkanKatalog sesuai konvensi pricelist resmi');
 
 console.log('PASS TopUp All Game: menu tampil untuk pengunjung/user/child panel DAN admin (ADMIN_MENU) + route /topup & /topup/:slug, UI marketplace sesuai spesifikasi (latar #E5E5E7 berpola, tab pill navy, search realtime, grid 3/4/6/8, skeleton, state kosong), 16 game dummy + helper teruji, halaman detail dengan Player/Server ID, dan transaksi lewat proxy server (signature MD5 user_code:secret:ref_id dihitung di server, secret tidak pernah ke browser).');
 process.exit(0);

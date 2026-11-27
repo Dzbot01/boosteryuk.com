@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { tvCekStatus, tvPricelist, tvStatus, tvTransaksi } from '../services/tokovoucherApi';
 import type { TvPricelistItem } from '../services/tokovoucherApi';
 import { TOPUP_GAMES, hargaJual, rupiah } from '../data/topupGames';
+import { rapihkanKatalog } from '../lib/topupDisplayName';
 
 /**
  * Halaman detail top up satu game: pilih produk, isi Player ID (+ Server ID bila produk
@@ -29,9 +30,13 @@ export default function TopupGameDetailPage() {
 
   /** Produk tampil: katalog ASLI dari server bila ada, selain itu snapshot repo. */
   const produkList = useMemo(() => {
-    if (live?.items?.length) return live.items.map((i) => ({ kode: i.kode, nama: i.nama, harga: i.harga, butuhServer: !!i.butuh_server }));
-    return game?.produk || [];
-  }, [live, game]);
+    const sumber = live?.items?.length
+      ? live.items.map((i) => ({ kode: i.kode, nama: i.nama, harga: i.harga, butuhServer: !!i.butuh_server }))
+      : game?.produk || [];
+    // Nama kode penyedia ("FF5", "MLA85") jadi nama manusiawi ("5 Diamond", …),
+    // produk kembar lintas kanal digabung ke harga termurah, urut menaik.
+    return rapihkanKatalog(slug, sumber);
+  }, [live, game, slug]);
 
   const produk = useMemo(() => produkList.find((p) => p.kode === kode) || null, [produkList, kode]);
 
@@ -131,9 +136,6 @@ export default function TopupGameDetailPage() {
         {/* ============ PILIH PRODUK ============ */}
         <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm md:p-5">
           <h2 className="font-display text-[15px] font-extrabold text-slate-900">1 · Pilih produk</h2>
-          {live?.source === 'provider' && live.updated_at && (
-            <p className="mt-1 text-[11px] font-bold text-emerald-700">Katalog live dari pricelist penyedia · diperbarui {live.updated_at}</p>
-          )}
           {live?.source === 'override' && (
             <p className="mt-1 text-[11px] text-slate-500">Katalog dari file override server (pricelist manual).</p>
           )}
