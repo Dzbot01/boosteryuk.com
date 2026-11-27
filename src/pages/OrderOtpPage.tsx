@@ -602,19 +602,19 @@ export default function OrderOtpPage() {
         </section>
       </Reveal>
 
-      {/* Panggung 3D scene.glb (+animasi bawaan GLB) di bawah card Riwayat Nomor:
-          ukuran sedang (tinggi 240px) dan diberi jarak longgar sebelum Footer. */}
+      {/* Panggung 3D scene.glb di bawah Riwayat Nomor — TANPA card (tanpa border/background),
+          model lebih besar (tinggi 360px, zoom 1.7, lebar penuh) dan kamera POV-nya bisa
+          digeser/diputar + di-zoom; jarak longgar sebelum Footer dijaga lewat mb-12. */}
       <Reveal>
-        <section
-          className="mt-6 mb-10 rounded-[18px] border p-3 sm:p-4"
-          style={{ borderColor: COLOR.border, background: COLOR.surface }}
-          aria-label="Scene 3D animasi"
-        >
+        <section className="mt-6 mb-12" aria-label="Scene 3D animasi">
           <EmptyStateModel
             modelUrl={OTP_SCENE_MODEL_URL}
-            height={240}
-            ariaLabel="Model 3D scene beranimasi"
-            className="!px-0 !py-2"
+            height={360}
+            interactive
+            zoom={1.7}
+            stageClassName="max-w-none w-full"
+            ariaLabel="Model 3D scene beranimasi — geser untuk memutar kamera"
+            className="!p-0"
           />
         </section>
       </Reveal>
