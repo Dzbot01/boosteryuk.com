@@ -139,6 +139,9 @@ for (const param of ['ref_id', 'produk', 'tujuan', 'server_id', 'member_code', '
 assert.match(php, /tv_api_get\('\/v1\/transaksi\/status'/, 'cek status memakai GET /v1/transaksi/status');
 assert.match(php, /tv_api_get\('\/member'/, 'info member memakai GET /member');
 assert.match(php, /tv_api_get\('\/produk\/code'/, 'katalog live memakai GET /produk/code');
+assert.match(php, /function tv_walk_products\(\$node, \$game, array &\$out\)/, 'respons /produk/code dibaca tahan-bentuk (list datar, map ber-kunci kode, grup per game, bungkus status/data)');
+assert.match(php, /fallback: nama produk menyebut game/, 'filter per game punya fallback cocokkan nama produk (bila JSON tanpa field kategori)');
+assert.match(php, /PARSE_KOSONG/, 'bila katalog tetap tak terbaca, raw response dicatat di log server (secret disamarkan)');
 assert.ok(!php.includes('md5('), 'sistem baru TIDAK memakai signature MD5 (secret langsung di query, server-side)');
 assert.match(php, /function tv_sanitize\(\$j\)/, 'field rahasia dibuang dari balasan penyedia sebelum ke browser');
 assert.match(php, /\$ref = 'INV-' \. date\('ymdHis'\) \. random_int\(10, 99\);/, 'ref_id unik dibuat server (pola INV-…)');
