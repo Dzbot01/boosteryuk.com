@@ -79,6 +79,7 @@ const TOKEN_KHUSUS: Record<string, string> = {
   BP: 'Booyah Pass',
   WDP: 'Weekly Diamond Pass',
   TP: 'Twilight Pass',
+  ES: 'Express Supply',
 };
 
 /** Huruf & angka dipisah spasi: "GMXFF1" -> "GMXFF 1". Tanpa mengarang kata. */
@@ -159,19 +160,26 @@ export function rapihkanKatalog(slug: string, items: TopupItemBernama[]): Katalo
       // Game tanpa daftar resmi: pola sama seperti FF/ML — kode huruf+angka jadi
       // "N <satuan game>" (UC/CP/Diamond/…), token khusus jadi nama paket;
       // nama asli penyedia (bila dikirim) tetap dipakai.
-      const m = /^([A-Z]+)(\d+)$/.exec(k);
+      // Kode kanal nyata punya sufiks saluran ("PUBGM120_S2", "PUBGMKP120", "ZZZ60M"):
+      // sufiks saluran yang berarti "produk sama, kanal lain" dilebur tanpa tag.
+      const m = /^([A-Z]+)(\d+)(_[A-Z0-9]+|[A-Z]+)?$/.exec(k);
       let khusus: string | null = null;
+      let tag = '';
       if (m) {
         if (TOKEN_KHUSUS[m[1]]) khusus = TOKEN_KHUSUS[m[1]];
-        else for (const t of ['LUP', 'WDP', 'BP', 'TP']) if (m[1].endsWith(t)) { khusus = TOKEN_KHUSUS[t]; break; }
+        else for (const t of ['LUP', 'WDP', 'BP', 'TP', 'ES']) if (m[1].endsWith(t)) { khusus = TOKEN_KHUSUS[t]; break; }
+        let suf = m[3] || '';
+        if (/^_S\d+$/.test(suf)) suf = '';
+        else if (suf === 'M' || suf === 'KP' || suf === 'KPEP' || suf === 'KPEPP') suf = '';
+        if (suf) tag = suf.replace(/^_/, '');
       } else {
-        for (const t of ['LUP', 'WDP', 'BP', 'TP', 'M', 'B']) if (k.endsWith(t)) { khusus = TOKEN_KHUSUS[t]; break; }
+        for (const t of ['LUP', 'WDP', 'BP', 'TP', 'ES', 'M', 'B']) if (k.endsWith(t)) { khusus = TOKEN_KHUSUS[t]; break; }
       }
       jenis = khusus ? 'paket' : 'eceran';
       if (n && n.toUpperCase() !== k) nama = n;
       else if (khusus && m) nama = `${khusus} ${m[2]}`;
       else if (khusus) nama = khusus;
-      else if (m) nama = `${Number(m[2])} ${UNIT_PER_SLUG[slug] || 'Diamond'}`;
+      else if (m) nama = `${Number(m[2])} ${UNIT_PER_SLUG[slug] || 'Diamond'}${tag ? ` (${tag})` : ''}`;
       else nama = humanisasiKode(k);
     }
     const target = jenis === 'paket' ? paket : eceran;
