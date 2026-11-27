@@ -30,9 +30,11 @@ const PANEL_HOST = CHILD_PANEL_SUB ? `${CHILD_PANEL_SUB}.boosteryuk.com` : 'boos
  * Model 3D + animasi panggung scene di bawah card Riwayat Nomor.
  * Aset LOKAL repo: public/models/scene.glb (disalin apa adanya ke dist/models/scene.glb oleh
  * Vite) - tidak lagi memuat dari URL Supabase Storage. `?v=` untuk cache-busting bila file
- * model diganti dengan nama yang sama.
+ * model diganti dengan nama yang sama (v2 = versi tekstur yang dioptimasi: dua PNG 4096x4096
+ * di-recompress menjadi JPEG 2048x2048 lewat scripts/optimize-scene-glb.py, 40,5 MB -> 5,7 MiB,
+ * supaya lolos batas 25 MiB per file statis Cloudflare dan deploy otomatis tidak gagal).
  */
-const OTP_SCENE_MODEL_URL = '/models/scene.glb?v=1';
+const OTP_SCENE_MODEL_URL = '/models/scene.glb?v=2';
 
 /** Jumlah baris maksimum tabel riwayat nomor (pembelian sukses maupun batal). */
 const RIWAYAT_MAX = 10;

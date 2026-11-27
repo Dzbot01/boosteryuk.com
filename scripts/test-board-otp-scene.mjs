@@ -52,7 +52,7 @@ assert.match(esm, /if \(pivot && cfgRef\.current\.motion\) \{\s*\n\s*pivot\.rota
 
 const otp = read('src/pages/OrderOtpPage.tsx');
 /* Scene Order OTP memakai aset GLB LOKAL repo, bukan URL Supabase. */
-assert.match(otp, /const OTP_SCENE_MODEL_URL = '\/models\/scene\.glb\?v=1';/, 'scene.glb dimuat dari aset lokal /models/scene.glb');
+assert.match(otp, /const OTP_SCENE_MODEL_URL = '\/models\/scene\.glb\?v=2';/, 'scene.glb dimuat dari aset lokal /models/scene.glb (cache-bust v2 setelah optimasi tekstur)');
 assert.ok(!/supabase\.co/.test(otp), 'OrderOtpPage tidak lagi memuat apa pun dari Supabase Storage');
 assert.ok(existsSync('public/models/scene.glb'), 'public/models/scene.glb ada di repo (ikut tersalin ke dist/)');
 assert.match(otp, /modelUrl=\{OTP_SCENE_MODEL_URL\}/, 'panggung 3D memakai scene.glb');
