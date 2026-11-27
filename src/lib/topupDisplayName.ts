@@ -46,6 +46,10 @@ type Aturan = {
   root: string;
   /** Kode kanal yang menempel DI DEPAN akar (mis. P/M/Z pada Free Fire). */
   kanalDepan?: string[];
+  /** true: SEMUA huruf di depan akar dianggap kode kanal (penyedia menambah kanal baru tanpa pola tetap). */
+  kanalDepanBebas?: boolean;
+  /** Prefiks yang BUKAN kanal melainkan keluarga produk tersendiri (mis. bundel GMX). */
+  blokirDepan?: string[];
   /** Kode kanal yang menempel SETELAH akar (mis. A/B/C/D/BB pada Mobile Legends). */
   kanalBelakang?: string[];
   /** Tag server/wilayah yang muncul setelah akar (mis. RU). */
@@ -53,7 +57,9 @@ type Aturan = {
 };
 
 const ATURAN_PER_SLUG: Record<string, Aturan> = {
-  'free-fire': { root: 'FF', kanalDepan: ['P', 'M', 'Z', ''] },
+  // Kanal FF terus bertambah (M, P, Z, KPP, …) => semua huruf di depan "FF" = kanal,
+  // kecuali bundel GMX yang produknya bukan denominasi diamond.
+  'free-fire': { root: 'FF', kanalDepanBebas: true, blokirDepan: ['GMX'] },
   'mobile-legends': { root: 'ML', kanalBelakang: ['BB', 'A', 'B', 'C', 'D', ''], tag: ['RU'] },
 };
 
@@ -97,7 +103,17 @@ export function namaTampilanTopup(slug: string, kode: string, namaPenyedia?: str
   if (n && n.toUpperCase() !== k) return n;
   const aturan = ATURAN_PER_SLUG[slug];
   if (aturan) {
-    for (const kd of aturan.kanalDepan ?? ['']) {
+    const prefixes: string[] = [];
+    if (aturan.kanalDepanBebas) {
+      const idx = k.indexOf(aturan.root);
+      if (idx >= 0) {
+        const pre = k.slice(0, idx);
+        if (!(aturan.blokirDepan ?? []).includes(pre)) prefixes.push(pre);
+      }
+    } else {
+      prefixes.push(...(aturan.kanalDepan ?? ['']));
+    }
+    for (const kd of prefixes) {
       if (kd && !k.startsWith(kd)) continue;
       const sisaDepan = k.slice(kd.length);
       if (!sisaDepan.startsWith(aturan.root)) continue;
