@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Gamepad2, LoaderCircle, Server, ShieldAlert, UserRound } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
-import { tvCekStatus, tvPricelist, tvStatus, tvTransaksi } from '../services/tokovoucherApi';
+import { tvCekAkun, tvCekStatus, tvPricelist, tvStatus, tvTransaksi } from '../services/tokovoucherApi';
 import type { TvPricelistItem } from '../services/tokovoucherApi';
 import { TOPUP_GAMES, hargaJual, rupiah, type TopupProduk } from '../data/topupGames';
 import { rapihkanKatalog } from '../lib/topupDisplayName';
@@ -69,6 +69,31 @@ export default function TopupGameDetailPage() {
    * penyedia ber-label kosong = tidak dipakai; slug ML jadi pengaman bila data belum lengkap.
    */
   const butuhServer = !!produk?.butuhServer || slug === 'mobile-legends';
+
+  /**
+   * Cek akun target otomatis (Free Fire & Mobile Legends) lewat apigames.id:
+   * skeleton saat memuat; gagal/tidak ditemukan/kredensial kosong = skip senyap.
+   */
+  const [cekAkun, setCekAkun] = useState<{ loading: boolean; username: string } | null>(null);
+  const slugCekAkun = slug === 'free-fire' || slug === 'mobile-legends' ? slug : '';
+  useEffect(() => {
+    if (!slugCekAkun) {
+      setCekAkun(null);
+      return;
+    }
+    const id = playerId.trim();
+    if (id.length < 5) {
+      setCekAkun(null);
+      return;
+    }
+    setCekAkun({ loading: true, username: '' });
+    const t = window.setTimeout(() => {
+      tvCekAkun(slugCekAkun, id).then((r) => {
+        setCekAkun(r.ok && r.valid && r.username ? { loading: false, username: r.username } : null);
+      });
+    }, 650);
+    return () => window.clearTimeout(t);
+  }, [playerId, slugCekAkun]);
 
   useEffect(() => {
     let alive = true;
@@ -177,6 +202,18 @@ export default function TopupGameDetailPage() {
                 placeholder="contoh: 123456789"
                 className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-[13.5px] outline-none transition focus:border-[#14143c]/40 focus:bg-white focus:ring-2 focus:ring-[#14143c]/15"
               />
+              {cekAkun?.loading && (
+                <span className="mt-1.5 flex items-center gap-1.5" aria-label="Memeriksa akun tujuan…">
+                  <span className="h-3 w-28 animate-pulse rounded-full bg-slate-200" />
+                  <span className="h-3 w-16 animate-pulse rounded-full bg-slate-100" />
+                </span>
+              )}
+              {cekAkun && !cekAkun.loading && cekAkun.username !== '' && (
+                <span className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+                  <span className="truncate">Akun terbaca: {cekAkun.username}</span>
+                </span>
+              )}
             </label>
             {butuhServer && (
               <label className="block">

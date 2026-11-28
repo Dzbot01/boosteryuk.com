@@ -47,10 +47,15 @@ function tv_cfg() {
         'secret'      => '',
         'base_url'    => 'https://api.tokovoucher.net',
         'timeout'     => 20,
+        // Kredensial cek akun apigames.id (merchant_id + secret_key): kosong = fitur dilewati senyap.
+        'ag_merchant' => '',
+        'ag_secret'   => '',
     ];
     if (getenv('TV_MEMBER_CODE')) $c['member_code'] = (string)getenv('TV_MEMBER_CODE');
     if (getenv('TV_SECRET')) $c['secret'] = (string)getenv('TV_SECRET');
     if (getenv('TOKOVOUCHER_SECRET')) $c['secret'] = (string)getenv('TOKOVOUCHER_SECRET');
+    if (getenv('APIGAMES_MERCHANT_ID')) $c['ag_merchant'] = (string)getenv('APIGAMES_MERCHANT_ID');
+    if (getenv('APIGAMES_SECRET_KEY')) $c['ag_secret'] = (string)getenv('APIGAMES_SECRET_KEY');
     return $c;
 }
 
@@ -453,6 +458,8 @@ function tv_label_wilayah_ok($label) {
     if ($l === '') return true;
     if (strpos($l, 'promo') !== false) return false;
     if (preg_match('/singapur|malaysia|brazil|brasil|latam|global|rusia|russia|\(sg\)|\(my\)|\(br\)|\(ru\)/', $l)) return false;
+    // Token region polos di akhir/terpisah spasi: "Free Fire SG", "ML MY", "Genshin KR", …
+    if (preg_match('/\b(sg|my|br|th|vn|ph|tr|ru|kr|tw|bd|eur|mxn|cad|aud)\b/i', $l)) return false;
     return true;
 }
 
@@ -574,6 +581,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         tv_out($out);
     }
 
+    if ($action === 'cek_akun') {
+        // Cek akun target (apigames.id) untuk Free Fire & Mobile Legends:
+        // signature = md5 merchant_id + secret_key. Gagal/apapun alasannya =
+        // ok:false supaya UI melewatinya secara senyap (tanpa pesan error).
+        $gameSlug = strtolower(trim((string)($_GET['game'] ?? '')));
+        $userId = trim((string)($_GET['user_id'] ?? ''));
+        $codes = [
+            'free-fire' => 'freefire', 'freefire' => 'freefire',
+            'mobile-legends' => 'mobilelegend', 'mobilelegends' => 'mobilelegend',
+        ];
+        $gc = $codes[$gameSlug] ?? '';
+        $c = tv_cfg();
+        if ($gc === '' || $userId === '' || $c['ag_merchant'] === '' || $c['ag_secret'] === '') {
+            tv_out(['ok' => false, 'valid' => false, 'username' => '']);
+        }
+        $sig = md5($c['ag_merchant'] . $c['ag_secret']);
+        $url = 'https://v1.apigames.id/merchant/' . rawurlencode($c['ag_merchant']) . '/cek-username/' . $gc
+            . '?user_id=' . rawurlencode($userId) . '&signature=' . $sig;
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 12,
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        ]);
+        $body = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $j = is_string($body) ? json_decode($body, true) : null;
+        if (!is_array($j) || (int)($j['status'] ?? 0) !== 1 || !is_array($j['data'] ?? null)) {
+            tv_log('cek_akun ' . $gc . ' http=' . $code . ' -> gagal, silent skip');
+            tv_out(['ok' => false, 'valid' => false, 'username' => '']);
+        }
+        $valid = !empty($j['data']['is_valid']);
+        if (!$valid) tv_out(['ok' => false, 'valid' => false, 'username' => '']);
+        tv_out(['ok' => true, 'valid' => true, 'username' => (string)($j['data']['username'] ?? '')]);
+    }
+
     if ($action === 'katalog') {
         // Grup game untuk grid "TopUp All Game": hanya kategori Topup game yang
         // dikenali aliasnya DAN lolos filter wilayah (ID Indonesia, tanpa Promo).
@@ -589,9 +634,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $pg = tv_code_prefix_game($p['kode']);
                 if ($pg !== '') $key = tv_game_key_of_label($pg);
             }
+            $custom = false;
+            if ($key === '' && $p['game'] !== '') {
+                // Operator di luar tabel alias (Delta Force, Eggy Party, …) tetap
+                // tampil di grid dengan namanya sendiri; operator non-game
+                // (pulsa/wifi/operator luar) dibuang.
+                if (preg_match('/\b(ais|truemove|nt|pulsa|paket data|token|listrik|wifi|internet|voucher|sim|data)\b/i', $p['game'])) continue;
+                $key = 'label:' . preg_replace('/[^a-z0-9]+/', '', strtolower($p['game']));
+                $custom = true;
+            }
             if ($key === '') continue;
             if (!isset($groups[$key])) {
-                $disp = tv_game_display($key);
+                $disp = $custom ? (string)$p['game'] : tv_game_display($key);
                 $groups[$key] = ['game' => $disp, 'slug' => tv_slugify($disp), 'jumlah' => 0, 'termurah' => 0, 'labels' => [], 'logo' => ''];
             }
             $groups[$key]['jumlah']++;

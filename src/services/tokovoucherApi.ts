@@ -111,6 +111,20 @@ export interface TvKatalog {
  */
 export const tvKatalog = () => get<TvKatalog>('action=katalog');
 
+export interface TvCekAkun {
+  ok: boolean;
+  valid: boolean;
+  /** Nama akun di game bila ditemukan (mis. "¥Vino_TZY™"). */
+  username: string;
+}
+
+/**
+ * Cek akun target lewat apigames.id (Free Fire & Mobile Legends).
+ * Gagal / tidak ditemukan / kredensial belum diisi => ok:false — UI melewatinya senyap.
+ */
+export const tvCekAkun = (game: string, userId: string) =>
+  get<TvCekAkun>('action=cek_akun&game=' + encodeURIComponent(game) + '&user_id=' + encodeURIComponent(userId));
+
 export interface TvCekStatus {
   ref_id: string;
   /** Balasan mentah penyedia (sudah dibersihkan) berisi status transaksi. */

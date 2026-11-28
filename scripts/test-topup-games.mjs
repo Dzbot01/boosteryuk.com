@@ -132,6 +132,14 @@ assert.ok(php.includes('function tv_items_from_full'), 'normalisasi kategori/ope
 assert.ok(php.includes("stripos($cat, 'topup')"), 'hanya kategori Topup yang diambil dari katalog full');
 assert.ok(/butuh_server' => !empty\(\$p\['butuh_server'\]\)/.test(php), 'butuh_server produk (format_form server_id) diteruskan ke pricelist');
 assert.ok(php.includes("!== 'server_id'") && php.includes('$butuhServer = false;'), 'Server ID hanya bila entri server_id format_form benar-benar dipakai (label/data terisi) — Free Fire tidak');
+assert.ok(php.includes('cek-username') && php.includes("md5($c['ag_merchant'] . $c['ag_secret'])"), 'action=cek_akun memanggil apigames.id dengan signature md5(merchant+secret)');
+assert.ok(php.includes("'ag_merchant' => ''"), 'kredensial apigames dibaca dari config/env (kosong = skip senyap)');
+assert.ok(php.includes("\\b(sg|my|br|th|vn|ph|tr|ru|kr|tw|bd"), 'filter wilayah diperkuat: token region polos (Free Fire SG, ML MY, Genshin KR) dibuang');
+assert.ok(php.includes("'label:' ."), 'operator di luar tabel alias tetap jadi grup katalog dengan namanya sendiri');
+const svcApi = read('src/services/tokovoucherApi.ts');
+assert.ok(svcApi.includes('action=cek_akun'), 'service frontend tvCekAkun tersedia');
+assert.ok(detail.includes('tvCekAkun(') && detail.includes('animate-pulse'), 'cek akun otomatis dengan skeleton saat memuat');
+assert.ok(detail.includes('Akun terbaca:'), 'nama akun tampil bila ditemukan; gagal = skip senyap (tanpa pesan error)');
 assert.ok(detail.includes("slug === 'mobile-legends'") && detail.includes('const butuhServer ='), 'halaman detail: flag gabungan butuhServer + pengaman slug Mobile Legends');
 assert.ok(!detail.includes('{produk?.butuhServer &&'), 'tampilan kolom Server ID tidak lagi membaca flag mentah produk');
 assert.ok(php.includes('function tv_game_key_of_label'), 'label kategori penyedia dipetakan ke game kanonik');
@@ -177,7 +185,8 @@ assert.ok(!txCall.includes('signature'), 'transaksi TETAP tanpa signature (persi
 const totalMd5 = (php.match(/md5\(/g) || []).length;
 const candBody = php.split('function tv_sig_candidates')[1].split('\n}')[0];
 const candMd5 = (candBody.match(/md5\(/g) || []).length;
-assert.ok(totalMd5 > 0 && totalMd5 === candMd5, 'md5 HANYA dipakai di kandidat signature endpoint ber-signature — transaksi tetap tanpa signature');
+const agMd5 = (php.match(/md5\(\$c\['ag_merchant'\] \. \$c\['ag_secret'\]\)/g) || []).length;
+assert.ok(totalMd5 > 0 && totalMd5 === candMd5 + agMd5, 'md5 HANYA untuk kandidat signature + signature cek akun apigames — transaksi tetap tanpa signature');
 assert.match(php, /function tv_sanitize\(\$j\)/, 'field rahasia dibuang dari balasan penyedia sebelum ke browser');
 assert.match(php, /\$ref = 'INV-' \. date\('ymdHis'\) \. random_int\(10, 99\);/, 'ref_id unik dibuat server (pola INV-…)');
 assert.match(svc, /export const tvCekStatus = \(ref_id: string\)/, 'frontend punya tvCekStatus (GET /v1/transaksi/status via proxy)');
