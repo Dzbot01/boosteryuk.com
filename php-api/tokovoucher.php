@@ -107,12 +107,12 @@ function tv_is_sig_error($j) {
  * bila dibalas "signature not valid" coba kandidat rumus satu per satu dan
  * INGAT rumus yang berhasil (cache) supaya permintaan berikutnya langsung tepat.
  */
-function tv_api_get_authed($path, array $extra = []) {
+function tv_api_get_authed($path, array $extra = [], $timeout = 15) {
     $c = tv_cfg();
     if ($c['member_code'] === '' || $c['secret'] === '') return ['res' => null, 'json' => null];
     $base = array_merge(['member_code' => $c['member_code'], 'secret' => $c['secret']], $extra);
     $try = function (array $q) use ($path) {
-        $r = tv_api_get($path, $q, 15);
+        $r = tv_api_get($path, $q, $timeout);
         $j = $r['body'] !== null ? json_decode((string)$r['body'], true) : null;
         return [$r, $j];
     };
@@ -250,19 +250,23 @@ function tv_provider_full() {
     $cache = is_file($cacheFile) ? json_decode((string)file_get_contents($cacheFile), true) : null;
     if (!is_array($cache)) $cache = [];
     $now = time();
-    if (isset($cache['__full__']['data'], $cache['__full__']['ts']) && ($now - (int)$cache['__full__']['ts']) < 21600) {
-        return $cache['__full__']['data'];
+    if (isset($cache['__full_v2__']['data'], $cache['__full_v2__']['ts']) && ($now - (int)$cache['__full_v2__']['ts']) < 21600) {
+        return $cache['__full_v2__']['data'];
     }
     $c = tv_cfg();
-    if ($c['member_code'] === '' || $c['secret'] === '') return null;
-    $a = tv_api_get_authed('/member/produk/full');
+    if ($c['member_code'] === '' || $c['secret'] === '') {
+        $GLOBALS['tv_full_error'] = 'config kosong';
+        return null;
+    }
+    $a = tv_api_get_authed('/member/produk/full', [], 45); // katalog besar: timeout lebih panjang
     $j = $a['json'];
     $d = is_array($j) ? ($j['data'] ?? null) : null;
     if (!is_array($d) || !is_array($d['produk'] ?? null) || !$d['produk']) {
-        tv_log('katalog /member/produk/full http=' . ($a['res'] !== null ? $a['res']['code'] : 0) . ' -> kosong/invalid, fallback /produk/code');
+        $GLOBALS['tv_full_error'] = 'http=' . ($a['res'] !== null ? $a['res']['code'] : 0) . ' ' . substr((string)($a['res'] !== null ? ($a['res']['body'] ?? '') : ''), 0, 120);
+        tv_log('katalog /member/produk/full ' . $GLOBALS['tv_full_error'] . ' -> fallback /produk/code');
         return null;
     }
-    $cache['__full__'] = ['ts' => $now, 'data' => $d];
+    $cache['__full_v2__'] = ['ts' => $now, 'data' => $d];
     @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
     return $d;
 }
@@ -314,8 +318,9 @@ function tv_provider_products() {
     $cache = is_file($cacheFile) ? json_decode((string)file_get_contents($cacheFile), true) : null;
     if (!is_array($cache)) $cache = [];
     $now = time();
-    if (isset($cache['__all__']['items'], $cache['__all__']['ts']) && ($now - (int)$cache['__all__']['ts']) < 21600) {
-        return $cache['__all__']['items'];
+    if (isset($cache['__all_v2__']['items'], $cache['__all_v2__']['ts']) && ($now - (int)$cache['__all_v2__']['ts']) < 21600) {
+        $GLOBALS['tv_sumber_katalog'] = (string)($cache['__all_v2__']['sumber'] ?? 'cache');
+        return $cache['__all_v2__']['items'];
     }
     $c = tv_cfg();
     if ($c['member_code'] === '' || $c['secret'] === '') return null;
@@ -324,7 +329,8 @@ function tv_provider_products() {
     if (is_array($full)) {
         $itemsFull = tv_items_from_full($full);
         if ($itemsFull) {
-            $cache['__all__'] = ['ts' => $now, 'items' => $itemsFull];
+            $GLOBALS['tv_sumber_katalog'] = 'full';
+            $cache['__all_v2__'] = ['ts' => $now, 'items' => $itemsFull, 'sumber' => 'full'];
             @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
             return $itemsFull;
         }
@@ -343,7 +349,8 @@ function tv_provider_products() {
         tv_log('pricelist /produk/code ' . str_replace($c['secret'], '***', $rawLog));
         return null;
     }
-    $cache['__all__'] = ['ts' => $now, 'items' => $items];
+    $GLOBALS['tv_sumber_katalog'] = 'produk/code';
+    $cache['__all_v2__'] = ['ts' => $now, 'items' => $items, 'sumber' => 'produk/code'];
     @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
     return $items;
 }
@@ -582,7 +589,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
         $out = array_values($groups);
         usort($out, function ($a, $b) { return strcmp($a['game'], $b['game']); });
-        tv_out(['ok' => true, 'source' => (is_array($all) && $all) ? 'provider' : 'kosong', 'groups' => $out, 'labels_dilihat' => $labelsDilihat, 'updated_at' => date('Y-m-d H:i')]);
+        tv_out([
+            'ok' => true,
+            'source' => (is_array($all) && $all) ? 'provider' : 'kosong',
+            'sumber_katalog' => (string)($GLOBALS['tv_sumber_katalog'] ?? ''),
+            'full_error' => (string)($GLOBALS['tv_full_error'] ?? ''),
+            'groups' => $out,
+            'labels_dilihat' => $labelsDilihat,
+            'updated_at' => date('Y-m-d H:i'),
+        ]);
     }
 
     if ($action === 'pricelist') {

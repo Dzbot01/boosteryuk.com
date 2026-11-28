@@ -125,6 +125,8 @@ assert.ok(php.includes('function tv_kode_katalog_ok'), 'filter kode: produk tes,
 assert.ok(php.includes('labels_dilihat'), 'katalog melaporkan label mentah penyedia untuk diagnostik');
 assert.ok(/tv_code_prefix_game\(\$p\['kode'\]\)/.test(php), 'katalog fallback pengelompokan lewat prefiks kode (respons datar)');
 assert.ok(php.includes('/member/produk/full'), 'sumber katalog utama: endpoint resmi /member/produk/full');
+assert.ok(php.includes('__all_v2__') && php.includes('__full_v2__'), 'kunci cache diversi ulang: cache lama skema datar tidak menutupi endpoint full');
+assert.ok(php.includes('sumber_katalog') && php.includes('tv_full_error'), 'katalog melaporkan sumber data & alasan gagal endpoint full untuk diagnostik');
 assert.ok(php.includes('function tv_provider_full'), 'fetcher + cache katalog full tersedia');
 assert.ok(php.includes('function tv_items_from_full'), 'normalisasi kategori/operator/jenis/produk (nama asli, status, format_form)');
 assert.ok(php.includes("stripos($cat, 'topup')"), 'hanya kategori Topup yang diambil dari katalog full');
@@ -159,7 +161,7 @@ assert.match(php, /PARSE_KOSONG/, 'bila katalog tetap tak terbaca, raw response 
    ("signature not valid"); proxy harus mencoba rumus otomatis & mengingat yang berhasil,
    sementara /v1/transaksi tetap tanpa signature (terbukti bekerja di produksi). */
 assert.match(php, /function tv_sig_candidates\(\$c\)/, 'proxy punya kandidat rumus signature');
-assert.match(php, /function tv_api_get_authed\(\$path, array \$extra = \[\]\)/, 'proxy mencoba signature otomatis bila endpoint menolaknya');
+assert.match(php, /function tv_api_get_authed\(\$path, array \$extra = \[\], \$timeout = 15\)/, 'proxy mencoba signature otomatis bila endpoint menolaknya (timeout bisa diperpanjang untuk katalog besar)');
 assert.match(php, /tv_sig_cache_write\(\$i\)/, 'rumus signature yang berhasil disimpan ke cache');
 assert.match(php, /tv_api_get_authed\('\/produk\/code'\)/, '/produk/code dipanggil lewat helper ber-signature');
 assert.match(php, /tv_api_get_authed\('\/member'\)/, '/member dipanggil lewat helper ber-signature');
