@@ -301,16 +301,19 @@ assert.ok(detail.includes('rapihkanKatalog('), 'halaman detail merapikan katalog
 assert.ok(detail.includes('const daftarJenis =') && detail.includes('role="tablist"'), 'halaman detail punya chip wilayah/server (tablist) dari jenis pricelist');
 assert.ok(detail.includes('setJenisAktif(j)') && detail.includes('aria-selected={jenisAktif === j}'), 'chip wilayah bisa dipilih & ditandai aktif');
 assert.ok(detail.includes('sumber = jenisAktif ? semua.filter((i) => i.jenis === jenisAktif) : semua'), 'pricelist menyesuaikan chip wilayah yang dipilih');
-assert.ok(detail.includes('semuaWilayah: !wilayahAktifOk'), 'chip wilayah luar memakai aturan kode longgar; chip ID tetap daftar resmi');
+assert.ok(/semuaWilayah: !!jenisAktif,\s*wilayah: jenisAktif\.replace/.test(detail), 'satu chip wilayah aktif = daftar di-scope ke chip itu (kode non-resmi ikut, wilayah lain dibuang)');
 assert.ok(dname.includes('semuaWilayah?: boolean'), 'rapihkanKatalog punya opsi semuaWilayah');
-assert.ok(dname.includes('if (!semuaWilayah && /(RU|SG|MY|BR|PH|LATAM|GLOBAL)'), 'kode server luar hanya dibuang pada daftar Indonesia (default)');
+assert.ok(dname.includes('const wKode = wilayahKode(k);') && dname.includes('if (wKode !== wilayahChipAktif) continue;'), 'kode ber-token wilayah hanya lolos pada chip wilayah yang sama');
+assert.ok(dname.includes("const TOKEN_WILAYAH = ['SG', 'MY', 'BR', 'PH', 'TH', 'VN', 'TR', 'RU', 'KR', 'TW', 'BD', 'GLOBAL', 'LATAM']"), 'daftar token wilayah mencakup semua varian chip (SG/MY/BR/PH/TH/VN/TR/RU/KR/TW/BD/Global/Latam)');
+assert.ok(dname.includes('wilayah?: string'), 'rapihkanKatalog menerima nama chip wilayah aktif');
 assert.ok(detail.includes('Paket &amp; Membership'), 'halaman detail punya seksi Paket & Membership di atas list eceran');
 assert.ok(!detail.includes('>Eceran<'), 'judul seksi "Eceran" dihapus sesuai permintaan pemilik');
 assert.ok(detail.indexOf('1 · Data akun tujuan') < detail.indexOf('2 · Pilih produk'), 'input ID akun pindah ke atas, sebelum list produk');
 assert.ok(detail.includes('scrollIntoView'), 'klik produk menggulir otomatis ke langkah konfirmasi pesanan');
 assert.ok(detail.includes(".split('-')"), 'halaman detail mensintesis kartu game baru dari slug katalog live');
 assert.ok(!read('src/pages/TopupGamePage.tsx').includes('Halaman detail:'), 'teks bantuan route "/topup/{slug}" dihapus dari halaman daftar game');
-assert.ok(dname.includes('(RU|SG|MY|BR|PH|LATAM|GLOBAL)'), 'filter server luar (hanya server ID/Indonesia) lintas game');
+assert.ok(dname.includes("const m = /(GLOBAL|LATAM|SG|MY|BR|PH|TH|VN|TR|RU|KR|TW|BD)(?=\\d|$|_|[A-Z])/.exec(kode);"), 'token wilayah terdeteksi di kode lintas game (SG/MY/BR/PH/TH/VN/TR/RU/KR/TW/BD/Global/Latam)');
+assert.ok(dname.includes('} else if (!semuaWilayah) continue;'), 'tanpa chip wilayah, kode server luar tetap dibuang (hanya server ID/Indonesia)');
 // Uji perilaku helper (type-stripping Node) terhadap kode asli dari /produk/code.
 const perilaku = execFileSync(
   process.execPath,
@@ -406,16 +409,34 @@ const perilaku = execFileSync(
     if (RESMI_FF.length !== 122) throw new Error('daftar resmi FF harus 122 kode: ' + RESMI_FF.length);
     const ff2 = rapihkanKatalog('free-fire', RESMI_FF.map((k, i) => ({ kode: k, nama: k, harga: 1000 + i })));
     if (ff2.eceran.length !== 118 || ff2.paket.length !== 4) throw new Error('122 kode resmi FF => 118 eceran + 4 paket, dapat ' + ff2.eceran.length + '+' + ff2.paket.length);
-    // Chip wilayah luar: kode ber-token wilayah TIDAK dibuang & dinamai generik;
-    // daftar Indonesia (default) tetap membuang kode server luar.
-    const sg = rapihkanKatalog('free-fire', [
-      { kode: 'FFSG100', nama: 'FFSG100', harga: 18400 },
-      { kode: 'FFSG200', nama: 'FFSG200', harga: 36000 },
-    ], { semuaWilayah: true });
-    if (sg.eceran.length !== 2) throw new Error('chip wilayah SG harus menampilkan 2 produk, dapat ' + sg.eceran.length);
-    if (!sg.eceran[0].nama.includes('100')) throw new Error('nama generik chip SG salah: ' + sg.eceran[0].nama);
-    const sgBawaan = rapihkanKatalog('free-fire', [{ kode: 'FFSG100', nama: 'FFSG100', harga: 18400 }]);
-    if (sgBawaan.eceran.length !== 0) throw new Error('daftar Indonesia (default) tetap membuang kode server luar');
+    // Chip wilayah: kode nyata dari pricelist live (FF_SG_25, FFBDS25, FFTH33,
+    // FFMYLT, ZFF70, MFFLPR6) tampil di chip-nya masing-masing dengan nama asli
+    // penyedia; chip lain tidak ikut; tanpa chip aturan ketat lama tetap berlaku.
+    const chip = (jenis, items) => rapihkanKatalog('free-fire', items.map(([kode, nama, harga]) => ({ kode, nama, harga, jenis })), { semuaWilayah: true, wilayah: jenis });
+    const sg = chip('Free Fire SG', [['FF_SG_25', '25 Diamonds (SG)', 4414], ['FF_SG_100', '100 Diamonds (SG)', 19102], ['FFBDS25', '25 Diamonds', 3794]]);
+    if (sg.eceran.length !== 2 || sg.eceran[0].kode !== 'FF_SG_25') throw new Error('chip SG harus 2 produk SG saja, dapat ' + sg.eceran.map((i) => i.kode).join(','));
+    const th = chip('Free Fire TH', [['FFTH33', '33 Diamond', 5253], ['FFTH172', '172 Diamond', 26302]]);
+    if (th.eceran.length !== 2 || th.eceran[0].nama !== '33 Diamond') throw new Error('chip TH salah: ' + JSON.stringify(th.eceran));
+    const my = chip('Free Fire MY', [['FFMYLT', 'Weekly Lite', 5912]]);
+    if (my.eceran.length !== 1 || my.eceran[0].nama !== 'Weekly Lite') throw new Error('chip MY salah: ' + JSON.stringify(my.eceran));
+    const promo = chip('Free Fire ID Promo', [['ZFF70', 'Freefire Jalur Promo 70 Diamond', 8010], ['MFFLPR6', '(PROMO) - Level 6', 5093]]);
+    if (promo.eceran.length !== 2) throw new Error('chip Promo harus menampilkan jalur promo, dapat ' + promo.eceran.length);
+    // Chip ID: kode kanal non-resmi (FF5/FF10) TIDAK dibuang lagi karena daftar
+    // sudah ter-scope per chip; pass/membership resmi tetap masuk kelompok paket.
+    const fast = chip('Free Fire  ID Fast', [['FF5', '5 Diamond Free Fire', 814], ['FF10', '10 Diamond Free Fire', 1628], ['FFMD20', '20 MD', 20000]]);
+    if (fast.eceran.length !== 3) throw new Error('chip ID Fast harus menampilkan kanal FF, dapat ' + fast.eceran.length);
+    const murah = chip('Free Fire  ID Murah', [['MFF5', 'Free Fire 5 Diamonds', 734], ['MFFLUP', 'Level Up Pass - Level 30', 13886], ['MFFM', 'Free Fire Mingguan Membership', 24406]]);
+    if (murah.eceran.length !== 1 || murah.paket.length !== 2) throw new Error('chip ID Murah: 1 eceran + 2 paket, dapat ' + murah.eceran.length + '+' + murah.paket.length);
+    const tanpa = rapihkanKatalog('free-fire', [
+      { kode: 'MFF5', nama: 'Free Fire 5 Diamonds', harga: 734 },
+      { kode: 'FF5', nama: '5 Diamond Free Fire', harga: 814 },
+      { kode: 'FF_SG_25', nama: '25 Diamonds (SG)', harga: 4414 },
+      { kode: 'FFTH33', nama: '33 Diamond', harga: 5253 },
+    ]);
+    if (tanpa.eceran.length !== 1 || tanpa.eceran[0].kode !== 'MFF5') throw new Error('tanpa chip (snapshot/sumber datar) tetap ketat: ' + tanpa.eceran.map((i) => i.kode).join(','));
+    // FFM/FFMD20 bukan token wilayah (MY) — tidak boleh tersaring chip wilayah.
+    const bukanWilayah = chip('Free Fire  ID Fast', [['FFM', 'Member Mingguan Free Fire', 27132], ['FFMD20', 'MD 20', 20000]]);
+    if (bukanWilayah.eceran.length + bukanWilayah.paket.length !== 2) throw new Error('FFM/FFMD20 salah dianggap kode wilayah');
     console.log('OK');
   `],
   { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },

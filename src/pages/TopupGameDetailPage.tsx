@@ -86,11 +86,6 @@ export default function TopupGameDetailPage() {
       (live?.items || []).find((i) => i.jenis && i.wilayah_ok !== false)?.jenis || daftarJenis[0] || '';
     setJenisAktif(bawaan);
   }, [live, daftarJenis, jenisAktif]);
-  /** Wilayah chip aktif masih Indonesia atau bukan (menentukan aturan kode resmi). */
-  const wilayahAktifOk = useMemo(() => {
-    const it = (live?.items || []).find((i) => i.jenis === jenisAktif);
-    return it ? it.wilayah_ok !== false : true;
-  }, [live, jenisAktif]);
 
   /** Produk tampil: katalog ASLI dari server bila ada, selain itu snapshot repo. */
   const katalog = useMemo(() => {
@@ -101,9 +96,16 @@ export default function TopupGameDetailPage() {
     // Hanya kode resmi penyedia yang lolos; nama kode ("MFF5", "MLA85") jadi nama
     // manusiawi; pass/membership dipisah ke `paket`, denominasi ke `eceran`;
     // produk kembar lintas kanal resmi digabung ke harga termurah, urut menaik.
-    // Chip wilayah luar memakai pola generik (kode ber-token wilayah tidak dibuang).
-    return rapihkanKatalog(slug, sumber, { semuaWilayah: !wilayahAktifOk });
-  }, [live, game, slug, jenisAktif, wilayahAktifOk]);
+    // Selama satu chip wilayah aktif, seluruh item chip itu milik varian yang sama
+    // (mis. "Free Fire ID Fast" = kanal FF…, "Free Fire SG" = FFSG…) sehingga kode di
+    // luar daftar resmi M tidak dibuang dan token wilayah tidak disaring: tidak ada
+    // lagi kartu kembar lintas kanal karena daftarnya sudah ter-scope per chip.
+    // Tanpa chip (snapshot repo / sumber datar) aturan lama tetap berlaku ketat.
+    return rapihkanKatalog(slug, sumber, {
+      semuaWilayah: !!jenisAktif,
+      wilayah: jenisAktif.replace(/\s+/g, ' ').trim(),
+    });
+  }, [live, game, slug, jenisAktif]);
   const produkList = useMemo(() => [...katalog.eceran, ...katalog.paket], [katalog]);
 
   const produk = useMemo(() => produkList.find((p) => p.kode === kode) || null, [produkList, kode]);
@@ -336,11 +338,11 @@ export default function TopupGameDetailPage() {
                   onClick={() => setJenisAktif(j)}
                   className={`rounded-xl px-3.5 py-2 text-[12.5px] font-bold transition active:scale-[0.97] ${
                     jenisAktif === j
-                      ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white'
-                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                      ? 'border border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white'
+                      : 'border border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
-                  {j}
+                  {j.replace(/\s+/g, ' ').trim()}
                 </button>
               ))}
             </div>

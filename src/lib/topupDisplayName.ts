@@ -138,28 +138,51 @@ export function namaTampilanTopup(slug: string, kode: string, namaPenyedia?: str
  *  - masing-masing kelompok urut menaik menurut harga.
  * Game tanpa aturan (belum ada daftar resmi) tampil apa adanya sebagai eceran.
  */
+/** Token wilayah/server yang pernah muncul di kode produk penyedia. */
+const TOKEN_WILAYAH = ['SG', 'MY', 'BR', 'PH', 'TH', 'VN', 'TR', 'RU', 'KR', 'TW', 'BD', 'GLOBAL', 'LATAM'];
+/** "Free Fire  ID Fast" -> "FREEFIREIDFAST"; chip tanpa kata wilayah -> ''. */
+function wilayahChip(label: string): string {
+  const t = (label || '').toUpperCase().replace(/[^A-Z0-9]+/g, '');
+  return TOKEN_WILAYAH.find((w) => t.includes(w)) || '';
+}
+/** Token wilayah yang melekat di kode: "FFSG100"->SG, "VFFGLOBAL100"->GLOBAL, "MFF5"->''. */
+function wilayahKode(kode: string): string {
+  // Token wilayah harus diikuti angka/ujung/batas (_ atau huruf), jadi "FFM", "FFMD20",
+  // "FFB…" tidak dianggap wilayah; "FF_SG_100" dan "FFBDS25" ya.
+  const m = /(GLOBAL|LATAM|SG|MY|BR|PH|TH|VN|TR|RU|KR|TW|BD)(?=\d|$|_|[A-Z])/.exec(kode);
+  return m ? m[1] : '';
+}
+
 export type OpsiRapihkan = {
   /**
-   * true = daftar ini sudah discopE ke satu chip wilayah (mis. "Free Fire SG"),
-   * jadi kode ber-token wilayah TIDAK dibuang dan kode di luar daftar resmi game
-   * ber-aturan tetap ditampilkan lewat pola generik. false (default) = hanya varian
-   * Indonesia: kode server luar & kode di luar daftar resmi dibuang.
+   * true = daftar ini sudah di-scope ke satu chip wilayah (mis. "Free Fire SG"),
+   * jadi kode di luar daftar resmi game ber-aturan tetap ditampilkan lewat pola
+   * generik. false (default) = aturan ketat: hanya kode resmi, server luar dibuang.
    */
   semuaWilayah?: boolean;
+  /** Nama chip/varian aktif ("Free Fire  ID Fast", "Free Fire SG", …). */
+  wilayah?: string;
 };
 
 export function rapihkanKatalog(slug: string, items: TopupItemBernama[], opsi?: OpsiRapihkan): KatalogRapih {
   const semuaWilayah = !!opsi?.semuaWilayah;
+  const wilayahChipAktif = wilayahChip(opsi?.wilayah || '');
   const eceran = new Map<string, TopupItemBernama>();
   const paket = new Map<string, TopupItemBernama>();
   const berAturan = !!ATURAN_PER_SLUG[slug];
   for (const it of items) {
     const k = (it.kode || '').toUpperCase().trim();
     if (!k || /^CEK/.test(k)) continue;
-    // Server luar negeri (Rusia, Singapura, Malaysia, Brazil, Filipina, Latam,
-    // Global) tidak dicampur ke daftar Indonesia; mereka tampil lewat chip wilayah
-    // tersendiri di halaman detail (semuaWilayah=true saat chip non-ID dipilih).
-    if (!semuaWilayah && /(RU|SG|MY|BR|PH|LATAM|GLOBAL)(\d|$)/.test(k)) continue;
+    // Kode ber-token wilayah (Rusia, Singapura, Malaysia, Brazil, Filipina, Latam,
+    // Global, …) tidak dicampur ke daftar Indonesia: tiap wilayah punya chip-nya
+    // sendiri di halaman detail. Di dalam chip, hanya kode wilayah chip itu yang
+    // lolos sehingga "Free Fire SG" tidak ikut menampilkan produk MY/Global.
+    const wKode = wilayahKode(k);
+    if (wKode) {
+      if (wilayahChipAktif) {
+        if (wKode !== wilayahChipAktif) continue;
+      } else if (!semuaWilayah) continue;
+    }
     const n = (it.nama || '').trim();
     let nama: string;
     let jenis: 'eceran' | 'paket';
