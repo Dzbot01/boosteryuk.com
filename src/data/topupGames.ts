@@ -108,6 +108,9 @@ export const TOPUP_GAMES: GameCard[] = [
   { slug: 'farlight-84', nama: 'Farlight 84', tagline: 'Diamond FL84', hue: 44, produk: [] },
   { slug: 'moonlight-blade-m', nama: 'Moonlight Blade M', tagline: 'Voucher & gold', hue: 200, produk: [] },
   { slug: 'zenless-zone-zero', nama: 'Zenless Zone Zero', tagline: 'Monochrome & pass', hue: 160, produk: [] },
+  // Kanal "Voucher Game" penyedia (label operator: "Voucher Roblox") — kode produknya
+  // ditarik live dari server, jadi `produk` tetap kosong (tidak ada kode karangan).
+  { slug: 'roblox', nama: 'Roblox', tagline: 'Robux & voucher resmi', hue: 8, produk: [] },
 ];
 
 /** Kartu kategori selain Topup (grid kecil di tab lain). */

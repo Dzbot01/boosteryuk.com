@@ -65,6 +65,14 @@ export default function TopupGameDetailPage() {
     saldo?: number | null;
     /** Jenis pesanan yang dikenali server dari katalog: topup (game) atau ppob. */
     jenis?: string;
+    /**
+     * true = pesanan PENDING (aturan API penyedia: HTTP error & network timeout diset
+     * PENDING). Bukan error: saldo tetap, pesanan tampil di Riwayat Pesanan, dan status
+     * final menunggu callback penyedia / pemeriksaan berkala tiap 10 menit.
+     */
+    pending?: boolean;
+    /** Alasan PENDING dari server (mis. "HTTP 500 dari penyedia"). */
+    alasan?: string;
   } | null>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [live, setLive] = useState<{ source: string; items: TvPricelistItem[]; updated_at?: string } | null>(null);
@@ -72,6 +80,44 @@ export default function TopupGameDetailPage() {
   const [cekBusy, setCekBusy] = useState(false);
   /** Target scroll otomatis setelah user memilih produk. */
   const konfirmasiRef = useRef<HTMLElement | null>(null);
+
+  /* Pesanan PENDING diperiksa ulang otomatis selama kartunya tampil: cek pertama 30 detik
+   * setelah order, lalu tiap 60 detik (maks. 5 kali). Server juga memeriksa berkala tiap
+   * 10 menit (php-api/tokovoucher.php?action=pending_sync) dan menerima callback penyedia,
+   * jadi ini hanya mempercepat tampilan status final di halaman ini. */
+  useEffect(() => {
+    if (!result?.pending || !result.refId) return;
+    let n = 0;
+    let timer: number | undefined;
+    const ref = result.refId;
+    const cek = () => {
+      n += 1;
+      tvCekStatus(ref).then((r) => {
+        const st = String(r.status || '').toLowerCase();
+        if (st === 'sukses' || st === 'success' || st === 'berhasil' || st === 'gagal' || st === 'failed') {
+          setResult({
+            ok: st !== 'gagal' && st !== 'failed',
+            status: st,
+            pending: false,
+            message:
+              st === 'gagal' || st === 'failed'
+                ? `Penyedia menegaskan transaksi GAGAL — pesanan dibatalkan dan saldo dikembalikan.${r.message ? ` (${r.message})` : ''}`
+                : `Penyedia mengonfirmasi transaksi SUKSES.${r.sn ? ` SN: ${r.sn}` : ''}`,
+            refId: ref,
+            trxId: r.trx_id,
+            sn: r.sn,
+            sumber: r.sumber,
+          });
+          return;
+        }
+        if (n < 5) timer = window.setTimeout(cek, 60000);
+      });
+    };
+    timer = window.setTimeout(cek, 30000);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [result?.pending, result?.refId]);
 
   /** Pilih produk lalu gulir layar otomatis ke langkah konfirmasi pesanan. */
   const pilihProduk = (k: string) => {
@@ -257,20 +303,32 @@ export default function TopupGameDetailPage() {
       kode_produk: produk.kode,
     });
     setBusy(false);
+    const stt = String(r.status || '').toLowerCase();
+    // PENDING: (a) server menandainya (HTTP error / timeout / saldo atau gangguan di sisi
+    // penyedia), atau (b) browser tidak mendapat balasan JSON dari server kita sendiri —
+    // nasib pesanan tidak pasti, jadi TIDAK boleh ditampilkan sebagai error/gagal.
+    const pending = !!r.pending || ['pending', 'processing', 'diproses'].includes(stt) || (!!r.transport && !r.ok);
     setResult({
-      ok: !!r.ok,
-      status: r.status,
-      // Pesanan sekarang diproses server: saldo dipotong + tercatat di Riwayat Pesanan,
-      // dan pesanan yang ditolak/gagal dibatalkan otomatis dengan saldo dikembalikan.
-      message:
-        r.message ||
-        (r.ok
-          ? 'Transaksi dikirim ke penyedia. Saldo dipotong dan pesanan tercatat di Riwayat Pesanan.'
-          : 'Transaksi tidak diproses. Bila saldo sempat terpotong, jumlahnya dikembalikan otomatis.'),
+      ok: pending ? true : !!r.ok,
+      status: pending ? 'pending' : r.status,
+      pending,
+      alasan: r.alasan_pending,
+      // Pesanan diproses server: saldo dipotong + tercatat di Riwayat Pesanan. Pesanan
+      // yang DITOLAK PASTI oleh penyedia dibatalkan otomatis dengan saldo dikembalikan;
+      // yang belum pasti tetap PENDING (tidak dibatalkan, tidak di-refund).
+      message: pending
+        ? r.transport
+          ? 'Balasan server tidak diterima (jaringan bermasalah). Bila pesanan sudah tercatat, statusnya PENDING di Riwayat Pesanan dan dipastikan otomatis setiap 10 menit — tidak ada saldo yang hilang tanpa jejak.'
+          : r.message ||
+            'Pesanan diteruskan ke penyedia dan berstatus PENDING. Saldo tidak dikembalikan karena transaksi belum pasti gagal — status final menunggu konfirmasi penyedia (diperiksa otomatis tiap 10 menit) dan tampil di Riwayat Pesanan.'
+        : r.message ||
+          (r.ok
+            ? 'Transaksi dikirim ke penyedia. Saldo dipotong dan pesanan tercatat di Riwayat Pesanan.'
+            : 'Transaksi tidak diproses. Bila saldo sempat terpotong, jumlahnya dikembalikan otomatis.'),
       refId: r.ref_id,
       trxId: r.trx_id,
       sn: r.sn,
-      raw: r.raw,
+      raw: pending ? undefined : r.raw,
       metode: r.metode,
       harga: typeof r.harga === 'number' ? r.harga : undefined,
       saldo: typeof r.saldo === 'number' ? r.saldo : typeof r.sisa_saldo === 'number' ? r.sisa_saldo : null,
@@ -494,7 +552,8 @@ export default function TopupGameDetailPage() {
           </dl>
 
           {result && (() => {
-            const pending = ['pending', 'processing', 'diproses'].includes((result.status || '').toLowerCase());
+            const pending =
+              !!result.pending || ['pending', 'processing', 'diproses'].includes((result.status || '').toLowerCase());
             const nada = pending
               ? 'border-amber-200 bg-amber-50 text-amber-800'
               : result.ok
@@ -509,11 +568,18 @@ export default function TopupGameDetailPage() {
                 ) : (
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
                 )}
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0 flex-1" data-status={pending ? 'pending' : result.ok ? 'sukses' : 'gagal'}>
                   {result.message}
                   {result.status ? (
                     <span className="ml-1.5 inline-block rounded-full bg-white/70 px-2 py-0.5 align-middle text-[10px] font-extrabold uppercase tracking-wide">
                       {result.status}
+                    </span>
+                  ) : null}
+                  {pending ? (
+                    <span className="mt-1 block text-[11.5px] leading-relaxed" data-pending-info>
+                      {result.alasan ? `Penyebab: ${result.alasan}. ` : ''}
+                      Pesanan tidak dibatalkan dan saldo tidak dikembalikan — status final menunggu
+                      konfirmasi penyedia (callback) atau pemeriksaan berkala setiap 10 menit.
                     </span>
                   ) : null}
                   {result.refId ? (
@@ -546,7 +612,7 @@ export default function TopupGameDetailPage() {
                   <Link to="/riwayat-pesanan" className="mt-1.5 inline-block text-[11.5px] font-extrabold underline decoration-current/40 underline-offset-2">
                     Lihat di Riwayat Pesanan
                   </Link>
-                  {!result.ok && result.raw ? (
+                  {!result.ok && !pending && result.raw ? (
                     <code className="mt-1.5 block break-all rounded bg-white/70 px-2 py-1 font-mono text-[10.5px] leading-relaxed">
                       Respons asli penyedia: {result.raw}
                     </code>

@@ -589,6 +589,19 @@
         "Halaman ini berisi produk top up Zenless Zone Zero yang diambil langsung dari katalog penyedia resmi: Monochrome. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
         "Transaksi Zenless Zone Zero diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
       ]
+    },
+    {
+      "slug": "roblox",
+      "nama": "Roblox",
+      "tagline": "Robux & voucher resmi",
+      "updated": "2026-11-28",
+      "title": "Top Up Roblox Murah & Otomatis — Robux dan Voucher Resmi",
+      "description": "Top up Roblox di Boosteryuk: Robux dan voucher resmi dari katalog penyedia, proses otomatis 24 jam. Masukkan ID akun Roblox, pilih nominal, bayar dari saldo — status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Roblox",
+      "intro": [
+        "Halaman ini berisi produk top up Roblox yang diambil langsung dari katalog penyedia resmi (kanal Voucher Game): Robux dan voucher Roblox. Pilih produk, masukkan ID atau username akun Roblox, lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Roblox diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Riwayat Pesanan; pesanan yang ditolak pasti oleh penyedia dibatalkan otomatis dan saldonya dikembalikan, sedangkan balasan penyedia yang belum pasti (HTTP error, timeout, atau gangguan di sisi penyedia) disimpan sebagai PENDING dan dipastikan lewat callback atau pemeriksaan berkala setiap 10 menit."
+      ]
     }
   ]
 }

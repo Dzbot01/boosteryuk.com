@@ -20,7 +20,8 @@
  *  - SECRET KEY TIDAK pernah dikirim ke browser: disimpan di php-api/tokovoucher_config.php
  *    (tidak di-commit; lihat tokovoucher_config.example.php) atau env TV_SECRET.
  *    Secret hanya dipakai server-side sebagai parameter query ke penyedia (sesuai contoh docs).
- *  - Aksi `transaksi` & `cek_status` pesanan wajib token login website yang valid.
+ *  - Aksi `transaksi`, `cek_status`, dan `pending_sync` wajib token login website yang
+ *    valid (pending_sync juga menerima secret server untuk cron).
  *  - Balasan penyedia dibersihkan dari field rahasia sebelum diteruskan ke browser.
  *
  * Endpoint proxy ini:
@@ -28,9 +29,19 @@
  *  GET  ?action=pricelist&game=Nama    → {ok, source: override|provider|scrape|kosong, items[]}
  *  GET  ?action=cek_akun&game=&user_id= → {ok, valid, username, reason, message, raw}
  *  GET  ?action=cek_status&ref_id=...  → {ok, sumber: webhook|provider, status, trx_id, sn, message}
+ *  GET  ?action=pending_sync&token=... → cek berkala pesanan PENDING user (maks 1x / 10 menit)
+ *  GET  ?action=pending_sync&secret=...→ mode cron: cek pesanan PENDING semua user
  *  POST/GET ?action=webhook            → simpan status akhir transaksi dari penyedia (200)
  *  POST {token, action:"transaksi", player_id, server_id?, kode_produk}
  *       → {ok, ref_id, status: pending|sukses|gagal, trx_id, sn, message, provider}
+ *
+ * Aturan status transaksi (dokumentasi resmi penyedia):
+ *  - SEMUA HTTP error (4xx/5xx) dari /v1/transaksi HARUS diset sebagai transaksi PENDING;
+ *  - NETWORK TIMEOUT / gagal jaringan HARUS diset sebagai transaksi PENDING;
+ *  - status final menunggu CALLBACK penyedia, atau dicek berkala tiap 10 menit
+ *    (?action=pending_sync — dipanggil otomatis setelah riwayat_pesanan.php membalas);
+ *  - pesanan PENDING TIDAK dibatalkan dan saldonya TIDAK dikembalikan; refund hanya
+ *    terjadi bila penyedia menegaskan status gagal (lewat callback / cek berkala).
  */
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -365,6 +376,185 @@ function tv_judul_pesanan($jenis, $item) {
  * Potong saldo user + tulis riwayat_pesanan dalam satu transaksi DB.
  * Gagal (saldo kurang / DB error) = pesanan tidak dibuat dan saldo utuh.
  */
+/** Jeda minimum pemeriksaan berkala transaksi PENDING (detik) — aturan penyedia: 10 menit. */
+if (!defined('TV_PENDING_SYNC_INTERVAL')) define('TV_PENDING_SYNC_INTERVAL', 600);
+
+/**
+ * Alasan sebuah balasan penyedia HARUS diperlakukan sebagai PENDING, bukan gagal.
+ * Mengikuti aturan API TokoVoucher:
+ *   - SEMUA HTTP error (4xx/5xx)          -> transaksi PENDING;
+ *   - NETWORK TIMEOUT / gagal jaringan    -> transaksi PENDING;
+ *   - balasan non-JSON / format tak dikenal -> PENDING (nasib transaksi belum pasti);
+ *   - status menunggu (pending/processing/unknown) -> PENDING;
+ *   - penolakan yang belum pasti (saldo/limit/gangguan sistem di sisi penyedia)
+ *     -> PENDING, karena transaksi bisa saja tetap diproses penyedia.
+ * Status final menunggu callback penyedia ATAU pemeriksaan berkala `action=pending_sync`
+ * (tiap 10 menit). Penolakan PASTI (status "gagal"/"error" dengan alasan jelas:
+ * produk tidak ada, IP tidak diizinkan, signature salah, tujuan salah) tetap
+ * dibatalkan + saldo dikembalikan. String kosong = bukan PENDING.
+ */
+function tv_alasan_pending($st, $pesan, $httpCode = 0, $curlErr = '') {
+    $st = strtolower(trim((string)$st));
+    $p = strtolower(trim((string)$pesan));
+    $e = trim((string)$curlErr);
+    if ($e !== '') return 'jaringan penyedia bermasalah (' . $e . ')';
+    $hc = (int)$httpCode;
+    if ($hc === 0) return 'penyedia tidak membalas sampai batas waktu (timeout)';
+    if ($hc >= 400) return 'HTTP ' . $hc . ' dari penyedia';
+    if (in_array($st, ['pending', 'processing', 'diproses', 'unknown', ''], true)) {
+        return 'status menunggu dari penyedia' . ($p !== '' ? ': ' . trim((string)$pesan) : '');
+    }
+    foreach (['saldo', 'balance', 'limit', 'maint', 'gangguan', 'sibuk', 'busy', 'unavailable',
+              'tidak tersedia', 'system', 'sistem', 'timeout', 'time out', 'coba lagi', 'try again',
+              'try later', 'sedang diproses', 'stok'] as $kw) {
+        if ($kw !== '' && strpos($p, $kw) !== false) return 'penyedia belum memastikan transaksi: ' . trim((string)$pesan);
+    }
+    return '';
+}
+
+/** Riwayat pesanan: 'proses' -> 'pending' + catatan alasan. Saldo TIDAK dikembalikan. */
+function tv_tandai_pending_pesanan($conn, $uid, $ref, $alasan = '') {
+    if (!($conn instanceof mysqli) || $ref === '') return false;
+    $ket = trim((string)$alasan) !== '' ? mb_substr(trim((string)$alasan), 0, 250) : 'menunggu konfirmasi penyedia';
+    try {
+        $st = cp_q($conn, "UPDATE riwayat_pesanan SET status='pending', catatan=? WHERE order_id=? AND user_id=? AND status IN ('proses','pending')",
+            'ssi', $ket, (string)$ref, (int)$uid);
+        $ubah = $st->affected_rows;
+        $st->close();
+        return $ubah > 0;
+    } catch (Throwable $e) {
+        // Kolom catatan belum ada di instalasi lama: cukup statusnya.
+        try {
+            cp_q($conn, "UPDATE riwayat_pesanan SET status='pending' WHERE order_id=? AND user_id=? AND status IN ('proses','pending')",
+                'si', (string)$ref, (int)$uid)->close();
+            return true;
+        } catch (Throwable $e2) {
+            tv_log('pending ' . $ref . ' DB: ' . $e2->getMessage());
+            return false;
+        }
+    }
+}
+
+/**
+ * Satu jalur untuk SEMUA hasil transaksi yang belum pasti: pesanan disimpan sebagai
+ * PENDING (saldo tetap terpotong, riwayat 'pending' + catatan alasan), lalu status
+ * final menunggu callback penyedia atau `action=pending_sync` tiap 10 menit.
+ * TIDAK ada refund dan TIDAK ada error ke pengguna di jalur ini.
+ */
+function tv_pesanan_pending($conn, $ref, array $ctx, $alasan, $norm = null) {
+    $n = is_array($norm) ? $norm : ['status' => 'pending', 'message' => '', 'error_msg' => '', 'sn' => '',
+        'trx_id' => '', 'ref_id' => (string)$ref, 'produk' => '', 'price' => 0, 'sisa_saldo' => 0];
+    tv_trx_store_write($ref, $n + [
+        'sumber'         => 'transaksi',
+        'status'         => 'pending',
+        'alasan_pending' => (string)$alasan,
+        'user_id'        => (int)($ctx['user_id'] ?? 0),
+        'produk_kode'    => (string)($ctx['produk'] ?? ''),
+        'tujuan'         => (string)($ctx['tujuan'] ?? ''),
+        'server_id'      => (string)($ctx['server'] ?? ''),
+    ]);
+    // Hanya pesanan yang saldonya benar-benar dipotong yang ditandai di riwayat.
+    if (!empty($ctx['saldo_dipotong']) && (int)($ctx['user_id'] ?? 0) > 0) {
+        tv_tandai_pending_pesanan($conn, (int)$ctx['user_id'], $ref, $alasan);
+    }
+    tv_log('PENDING ' . $ref . ' (user=' . (int)($ctx['user_id'] ?? 0) . ', produk=' . (string)($ctx['produk'] ?? '')
+        . ', http=' . (int)($ctx['http'] ?? 0) . ', saldo_dipotong=' . (float)($ctx['saldo_dipotong'] ?? 0) . '): ' . $alasan);
+    return [
+        'ok'             => true,
+        'status'         => 'pending',
+        'pending'        => true,
+        'ref_id'         => (string)$ref,
+        'jenis'          => (string)($ctx['jenis'] ?? 'topup'),
+        'produk_nama'    => (string)($ctx['judul'] ?? ''),
+        'layanan'        => (string)($ctx['layanan'] ?? ''),
+        'harga'          => (float)($ctx['harga_jual'] ?? 0),
+        'harga_modal'    => (float)($ctx['harga_modal'] ?? 0),
+        'markup_pct'     => (float)($ctx['markup_pct'] ?? 0),
+        'saldo'          => $ctx['saldo'] ?? null,
+        'saldo_dipotong' => (float)($ctx['saldo_dipotong'] ?? 0),
+        'message'        => 'Pesanan berstatus PENDING (' . $alasan . '). Pesanan tidak dibatalkan dan saldo tidak dikembalikan: status final menunggu konfirmasi penyedia (callback) atau pemeriksaan berkala setiap 10 menit. Pantau ref ' . $ref . ' di Riwayat Pesanan.',
+        'alasan_pending' => (string)$alasan,
+        'trx_id'         => (string)($n['trx_id'] ?? ''),
+        'sn'             => (string)($n['sn'] ?? ''),
+        'error_msg'      => (string)($n['error_msg'] ?? ''),
+        'metode'         => (string)($ctx['metode'] ?? ''),
+        'provider'       => is_array($norm) ? tv_sanitize($norm) : null,
+    ];
+}
+
+/** File state pemeriksaan berkala pesanan PENDING (per user, 10 menit). */
+function tv_pending_state_file() {
+    return __DIR__ . '/tokovoucher_pending_sync.json';
+}
+
+/**
+ * Tarik status final transaksi PENDING/proses milik satu user (maks. $maks ref).
+ * Dipakai `action=pending_sync`, hook di riwayat_pesanan.php, dan cron.
+ * Dijalankan paling sering sekali per TV_PENDING_SYNC_INTERVAL (10 menit) per user.
+ */
+function tv_pending_sync($conn, $uid, $maks = 3, $paksa = false) {
+    $uid = (int)$uid;
+    if (!($conn instanceof mysqli) || $uid <= 0) return ['ok' => false, 'diperiksa' => 0, 'message' => 'Konteks user tidak tersedia.'];
+    $f = tv_pending_state_file();
+    $state = is_file($f) ? json_decode((string)file_get_contents($f), true) : null;
+    if (!is_array($state)) $state = [];
+    $now = time();
+    $last = (int)($state['user:' . $uid] ?? 0);
+    if (!$paksa && ($now - $last) < TV_PENDING_SYNC_INTERVAL) {
+        $tunggu = TV_PENDING_SYNC_INTERVAL - ($now - $last);
+        return ['ok' => true, 'diperiksa' => 0, 'menunggu' => $tunggu, 'interval_detik' => TV_PENDING_SYNC_INTERVAL,
+                'message' => 'Pemeriksaan berkala berikutnya dalam ' . max(1, (int)ceil($tunggu / 60)) . ' menit.'];
+    }
+    $rows = [];
+    try {
+        $st = cp_q($conn, "SELECT order_id FROM riwayat_pesanan WHERE user_id=? AND status IN ('pending','proses') ORDER BY id DESC LIMIT 12", 'i', $uid);
+        $res = $st->get_result();
+        while ($r = $res->fetch_assoc()) $rows[] = (string)($r['order_id'] ?? '');
+        $st->close();
+    } catch (Throwable $e) {
+        tv_log('pending_sync user=' . $uid . ' query: ' . $e->getMessage());
+        return ['ok' => false, 'diperiksa' => 0, 'message' => 'Riwayat pesanan tidak dapat dibaca.'];
+    }
+    // Jeda dicatat lebih dulu walau tidak ada pesanan: pemeriksaan tetap 10 menit sekali.
+    $state['user:' . $uid] = $now;
+    $state['terakhir'] = date('Y-m-d H:i:s');
+    if (count($state) > 400) $state = array_slice($state, -400, null, true);
+    @file_put_contents($f, json_encode($state, JSON_UNESCAPED_UNICODE));
+    $refs = array_values(array_filter($rows, function ($r) {
+        // Hanya pesanan penyedia (TVG-/PPOB-); deposit & pesanan SMM punya jalur sendiri.
+        return preg_match('/^(TVG-|PPOB-)/i', trim((string)$r)) === 1;
+    }));
+    if (!$refs) return ['ok' => true, 'diperiksa' => 0, 'interval_detik' => TV_PENDING_SYNC_INTERVAL, 'message' => 'Tidak ada pesanan menunggu.'];
+    $diperiksa = 0; $selesai = 0; $hasil = [];
+    foreach ($refs as $ref) {
+        if ($diperiksa >= (int)$maks) break;
+        $diperiksa++;
+        $a = tv_api_trx('/v1/transaksi/status', ['ref_id' => $ref], 8);
+        $norm = tv_trx_normalize($a['json']);
+        $stt = is_array($norm) ? (string)$norm['status'] : '';
+        $pesanCek = is_array($norm) ? ($norm['error_msg'] !== '' ? $norm['error_msg'] : $norm['message']) : '';
+        $alasan = tv_alasan_pending($stt, $pesanCek, (int)($a['res']['code'] ?? 0), (string)($a['res']['error'] ?? ''));
+        if ($alasan !== '') {
+            // Masih belum pasti: TETAP pending, simpan alasan terbaru untuk UI/log.
+            tv_tandai_pending_pesanan($conn, $uid, $ref, $alasan);
+            if (is_array($norm)) tv_trx_store_write($ref, $norm + ['sumber' => 'pending_sync', 'status' => 'pending', 'alasan_pending' => $alasan, 'user_id' => $uid]);
+            $hasil[] = ['ref_id' => $ref, 'status' => 'pending', 'alasan' => $alasan];
+            continue;
+        }
+        if (tv_sync_pesanan($conn, $ref, $stt)) {
+            $selesai++;
+            if (is_array($norm)) tv_trx_store_write($ref, $norm + ['sumber' => 'pending_sync', 'user_id' => $uid]);
+            $hasil[] = ['ref_id' => $ref, 'status' => $stt, 'sn' => is_array($norm) ? (string)$norm['sn'] : ''];
+        } else {
+            $hasil[] = ['ref_id' => $ref, 'status' => $stt !== '' ? $stt : 'tidak berubah'];
+        }
+    }
+    tv_log('pending_sync user=' . $uid . ' diperiksa=' . $diperiksa . ' final=' . $selesai);
+    return ['ok' => true, 'diperiksa' => $diperiksa, 'selesai' => $selesai, 'hasil' => $hasil,
+            'interval_detik' => TV_PENDING_SYNC_INTERVAL,
+            'message' => $selesai . ' dari ' . $diperiksa . ' pesanan mendapat status final.'];
+}
+
 function tv_buat_pesanan($conn, $uid, $ref, $jenis, $judul, $tujuan, $hargaJual, $hargaModal, $tenant) {
     if (!($conn instanceof mysqli)) {
         return ['ok' => false, 'code' => 503, 'message' => 'Koneksi database tidak tersedia di server — pesanan tidak diproses dan saldo tidak dipotong.'];
@@ -591,7 +781,13 @@ function tv_items_from_full($d) {
         if (!$op || (int)($op['status'] ?? 1) !== 1) continue;
         if ($jn && (int)($jn['status'] ?? 1) !== 1) continue;
         $cat = $cats[(int)($p['kategori_id'] ?? -1)] ?? '';
-        if ($cat !== '' && stripos($cat, 'topup') === false) continue;
+        // Penyedia punya DUA kanal kategori game: "Topup Game" (diamond/UC per operator
+        // game) dan "Voucher Game" (voucher lintas publisher: Roblox, UniPin, Google
+        // Play, ...). Sebelumnya hanya kategori ber-substring "topup" yang lolos, jadi
+        // SEMUA produk Voucher Roblox terbuang di sini dan kartu Roblox tidak pernah
+        // muncul di halaman top up game (pricelist membalas source:"kosong").
+        // Kategori non-game (Pulsa, PLN, E-Money, Hiburan, ...) tetap disaring.
+        if ($cat !== '' && stripos($cat, 'topup') === false && stripos($cat, 'voucher game') === false) continue;
         $jenisNama = $jn ? (string)($jn['nama'] ?? '') : '';
         // Wilayah luar/Promo TIDAK dibuang lagi: semuanya ikut sebagai pilihan chip
         // wilayah di halaman detail (pricelist menyesuaikan pilihan). Hanya kode
@@ -729,10 +925,10 @@ function tv_provider_layanan() {
     $cache = is_file($cacheFile) ? json_decode((string)file_get_contents($cacheFile), true) : null;
     if (!is_array($cache)) $cache = [];
     $now = time();
-    if (isset($cache['__layanan_v1__']['items'], $cache['__layanan_v1__']['ts']) && ($now - (int)$cache['__layanan_v1__']['ts']) < 21600) {
-        $GLOBALS['tv_sumber_layanan'] = (string)($cache['__layanan_v1__']['sumber'] ?? 'cache');
-        $GLOBALS['tv_layanan_diag'] = (array)($cache['__layanan_v1__']['diag'] ?? []);
-        return $cache['__layanan_v1__']['items'];
+    if (isset($cache['__layanan_v2__']['items'], $cache['__layanan_v2__']['ts']) && ($now - (int)$cache['__layanan_v2__']['ts']) < 21600) {
+        $GLOBALS['tv_sumber_layanan'] = (string)($cache['__layanan_v2__']['sumber'] ?? 'cache');
+        $GLOBALS['tv_layanan_diag'] = (array)($cache['__layanan_v2__']['diag'] ?? []);
+        return $cache['__layanan_v2__']['items'];
     }
     $full = tv_provider_full();
     if (!is_array($full)) {
@@ -748,7 +944,7 @@ function tv_provider_layanan() {
     ];
     $GLOBALS['tv_layanan_diag'] = $diag;
     $GLOBALS['tv_sumber_layanan'] = 'full';
-    $cache['__layanan_v1__'] = ['ts' => $now, 'items' => $items, 'sumber' => 'full', 'diag' => $diag];
+    $cache['__layanan_v2__'] = ['ts' => $now, 'items' => $items, 'sumber' => 'full', 'diag' => $diag];
     @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
     return $items;
 }
@@ -758,9 +954,9 @@ function tv_provider_products() {
     $cache = is_file($cacheFile) ? json_decode((string)file_get_contents($cacheFile), true) : null;
     if (!is_array($cache)) $cache = [];
     $now = time();
-    if (isset($cache['__all_v3__']['items'], $cache['__all_v3__']['ts']) && ($now - (int)$cache['__all_v3__']['ts']) < 21600) {
-        $GLOBALS['tv_sumber_katalog'] = (string)($cache['__all_v3__']['sumber'] ?? 'cache');
-        return $cache['__all_v3__']['items'];
+    if (isset($cache['__all_v4__']['items'], $cache['__all_v4__']['ts']) && ($now - (int)$cache['__all_v4__']['ts']) < 21600) {
+        $GLOBALS['tv_sumber_katalog'] = (string)($cache['__all_v4__']['sumber'] ?? 'cache');
+        return $cache['__all_v4__']['items'];
     }
     $c = tv_cfg();
     if ($c['member_code'] === '' || $c['secret'] === '') return null;
@@ -770,7 +966,7 @@ function tv_provider_products() {
         $itemsFull = tv_items_from_full($full);
         if ($itemsFull) {
             $GLOBALS['tv_sumber_katalog'] = 'full';
-            $cache['__all_v3__'] = ['ts' => $now, 'items' => $itemsFull, 'sumber' => 'full'];
+            $cache['__all_v4__'] = ['ts' => $now, 'items' => $itemsFull, 'sumber' => 'full'];
             @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
             return $itemsFull;
         }
@@ -790,7 +986,7 @@ function tv_provider_products() {
         return null;
     }
     $GLOBALS['tv_sumber_katalog'] = 'produk/code';
-    $cache['__all_v3__'] = ['ts' => $now, 'items' => $items, 'sumber' => 'produk/code'];
+    $cache['__all_v4__'] = ['ts' => $now, 'items' => $items, 'sumber' => 'produk/code'];
     @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
     return $items;
 }
@@ -814,6 +1010,9 @@ function tv_game_alias_map() {
         'farlight84'       => ['farlight84', 'farlight', 'fl84'],
         'moonlightbladem'  => ['moonlightbladem', 'moonlightblade', 'moonlight'],
         'zenlesszonezero'  => ['zenlesszonezero', 'zenless', 'zzz'],
+        // Kanal "Voucher Game": label penyedianya "Voucher Roblox" sehingga tanpa alias
+        // ini produknya tidak pernah dikelompokkan jadi kartu Roblox.
+        'roblox'           => ['roblox', 'rbx', 'robux'],
     ];
 }
 
@@ -844,7 +1043,7 @@ function tv_game_display($key) {
         'garenaundawn' => 'Garena Undawn', 'pointblank' => 'Point Blank', 'callofdutymobile' => 'Call of Duty Mobile',
         'bloodstrike' => 'Blood Strike', 'honkaistarrail' => 'Honkai Star Rail', 'metalslugawakening' => 'Metal Slug : Awakening',
         'magicchessgogo' => 'Magic Chess GO GO', 'farlight84' => 'Farlight 84', 'moonlightbladem' => 'Moonlight Blade M',
-        'zenlesszonezero' => 'Zenless Zone Zero',
+        'zenlesszonezero' => 'Zenless Zone Zero', 'roblox' => 'Roblox',
     ];
     return $map[$key] ?? ucfirst((string)$key);
 }
@@ -856,17 +1055,22 @@ function tv_slugify($t) {
 
 /**
  * Kode layak katalog/topup game: buang produk tes ("…CEK…"), kode server luar
- * (RU/SG/MY/BR/PH/LATAM/GLOBAL), dan kategori voucher game ("V"+prefiks game,
- * mis. VPUBGGCOIN500) — respons penyedia datar tanpa label kategori sehingga
- * penyaringan harus lewat kode.
+ * (RU/SG/MY/BR/PH/LATAM/GLOBAL), dan duplikat kanal voucher untuk game yang punya
+ * kanal Topup Game sendiri ("V"+prefiks game, mis. VPUBGGCOIN500) — respons
+ * penyedia datar tanpa label kategori sehingga penyaringan harus lewat kode.
+ * Game kanal voucher-only (Roblox) dikecualikan dari kedua aturan itu.
  */
 function tv_kode_katalog_ok($kode, $izinkanWilayah = false) {
     $k = strtoupper((string)$kode);
     if ($k === '' || strpos($k, 'CEK') !== false) return false;
+    // Game kanal voucher-only (Roblox) tidak punya padanan di kanal Topup Game:
+    // kode "V…"/bertoken wilayah adalah produknya sendiri, bukan duplikat.
+    $gKode = tv_code_prefix_game(strpos($k, 'V') === 0 ? substr($k, 1) : $k);
+    $voucherOnly = $gKode !== '' && !in_array($gKode, tv_game_kanal_topup(), true);
     // Token wilayah di kode (FFSG…, MLBR…) hanya sampah untuk daftar ID; untuk chip
     // wilayah (server luar) token itu justru penanda produknya — boleh lewat.
-    if (!$izinkanWilayah && preg_match('/(RU|SG|MY|BR|PH|LATAM|GLOBAL)([0-9]|$)/', $k)) return false;
-    if (strpos($k, 'V') === 0 && tv_code_prefix_game(substr($k, 1)) !== '') return false;
+    if (!$izinkanWilayah && !$voucherOnly && preg_match('/(RU|SG|MY|BR|PH|LATAM|GLOBAL)([0-9]|$)/', $k)) return false;
+    if (strpos($k, 'V') === 0 && $gKode !== '' && !$voucherOnly) return false;
     return true;
 }
 
@@ -888,9 +1092,18 @@ function tv_label_wilayah_ok($label) {
 }
 
 /** Tebakan game dari prefiks kode produk (MFF…=Free Fire, ML…/AMLBB…=Mobile Legends, dst). */
-function tv_code_prefix_game($kode) {
-    $k = strtoupper((string)$kode);
-    $prefs = [
+/**
+ * Prefiks kode produk per kanal. Kanal "voucher" = game yang HANYA dijual sebagai
+ * voucher (Roblox) sehingga kode berawalan V / bertoken wilayah tetap produk sah;
+ * kanal "topup" = game yang punya kanal Topup Game sendiri sehingga kode "V…"
+ * (VPUBGGCOIN500, VFF…) adalah duplikat grosir yang harus dibuang.
+ */
+function tv_code_prefix_prefiks() {
+    return [
+    'voucher' => [
+        'ROBLOX' => 'roblox', 'RBLX' => 'roblox', 'RBX' => 'roblox', 'RBUX' => 'roblox', 'ROBUX' => 'roblox',
+    ],
+    'topup' => [
         'MFF' => 'free fire', 'FF' => 'free fire',
         'MML' => 'mobile legends', 'AMLBB' => 'mobile legends', 'MLBB' => 'mobile legends', 'ML' => 'mobile legends',
         'MHG' => 'hago', 'HAGO' => 'hago',
@@ -907,8 +1120,20 @@ function tv_code_prefix_game($kode) {
         'FL84' => 'farlight 84', 'FL' => 'farlight 84',
         'MOON' => 'moonlight blade m', 'MB' => 'moonlight blade m',
         'ZZZ' => 'zenless zone zero',
+    ],
     ];
-    foreach ($prefs as $pref => $g) if (strpos($k, $pref) === 0) return $g;
+}
+
+/** Daftar game ber-kanal Topup Game (nilai unik prefiks kanal topup). */
+function tv_game_kanal_topup() {
+    return array_values(array_unique(tv_code_prefix_prefiks()['topup']));
+}
+
+function tv_code_prefix_game($kode) {
+    $k = strtoupper((string)$kode);
+    foreach (tv_code_prefix_prefiks() as $grup) {
+        foreach ((array)$grup as $pref => $g) if (strpos($k, $pref) === 0) return $g;
+    }
     return '';
 }
 
@@ -1294,6 +1519,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         tv_out(['ok' => true, 'source' => 'kosong', 'game' => $game, 'items' => []]);
     }
 
+    /* ============ CEK BERKALA PESANAN PENDING (tiap 10 menit) ============
+     * Aturan API TokoVoucher: HTTP error & network timeout diset PENDING, lalu
+     * status final menunggu callback penyedia ATAU dicek berkala tiap 10 menit.
+     *   GET ?action=pending_sync&token=<token login>  -> pesanan user itu saja
+     *   GET ?action=pending_sync&secret=<ag_secret>   -> semua user (untuk cron)
+     * Dijalankan paling sering sekali per 10 menit per user (state file
+     * tokovoucher_pending_sync.json), jadi aman dipanggil tiap halaman Riwayat dibuka.
+     * Contoh cron:  *\/10 * * * * curl -s "https://app.boosteryuk.com/api/tokovoucher.php?action=pending_sync&secret=AG_SECRET"
+     */
+    if ($action === 'pending_sync') {
+        $c = tv_cfg();
+        $maks = max(1, min(8, (int)($_GET['maks'] ?? 3)));
+        $paksa = trim((string)($_GET['paksa'] ?? $in['paksa'] ?? '')) === '1';
+        $uid = isset($conn) && $conn instanceof mysqli
+            ? cp_user_id($conn, trim((string)($_GET['token'] ?? $in['token'] ?? ''))) : null;
+        if ($uid) {
+            tv_out(tv_pending_sync($conn, (int)$uid, $maks, $paksa) + ['mode' => 'user', 'user_id' => (int)$uid]);
+        }
+        $kunci = trim((string)($_GET['secret'] ?? $in['secret'] ?? ''));
+        if ((string)$c['secret'] === '' || $kunci === '' || !hash_equals((string)$c['secret'], $kunci)) {
+            tv_out(['ok' => false, 'message' => 'Silakan login terlebih dahulu untuk memeriksa pesanan.'], 401);
+        }
+        // Mode cron (tanpa token): periksa pesanan menunggu milik semua user.
+        $uids = [];
+        try {
+            $st = cp_q($conn, "SELECT DISTINCT user_id FROM riwayat_pesanan
+                               WHERE status IN ('pending','proses') AND (order_id LIKE 'TVG-%' OR order_id LIKE 'PPOB-%') LIMIT 25");
+            $res = $st->get_result();
+            while ($r = $res->fetch_assoc()) $uids[] = (int)$r['user_id'];
+            $st->close();
+        } catch (Throwable $e) { tv_log('pending_sync cron query: ' . $e->getMessage()); }
+        $ringkas = [];
+        foreach ($uids as $u) {
+            $h = tv_pending_sync($conn, $u, $maks, $paksa);
+            if ((int)($h['diperiksa'] ?? 0) > 0) $ringkas['user:' . $u] = $h;
+        }
+        tv_out(['ok' => true, 'mode' => 'cron', 'user_diperiksa' => count($ringkas), 'user_menunggu' => count($uids),
+                'interval_detik' => TV_PENDING_SYNC_INTERVAL, 'hasil' => $ringkas,
+                'message' => $ringkas ? 'Pemeriksaan berkala pesanan PENDING selesai.' : 'Tidak ada pesanan menunggu yang jatuh tempo.']);
+    }
+
     if ($action === 'cek_status') {
         $ref = trim((string)($_GET['ref_id'] ?? ''));
         if ($ref === '') tv_out(['ok' => false, 'message' => 'ref_id wajib diisi.'], 400);
@@ -1318,12 +1584,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Kedua, docs: POST /v1/transaksi/status {ref_id, member_code, signature}.
         $a = tv_api_trx('/v1/transaksi/status', ['ref_id' => $ref]);
         $r = $a['res'];
+        // Pemeriksaan status yang gagal (timeout / HTTP error / non-JSON) TIDAK mengubah
+        // pesanan jadi gagal: status tetap PENDING sampai callback/cek berkala berhasil.
         if ($r === null || $r['body'] === null || $r['code'] === 0) {
-            tv_out(['ok' => false, 'message' => 'Tidak dapat menghubungi server penyedia (' . ($r !== null && $r['error'] !== '' ? $r['error'] : 'timeout') . ').', 'raw' => is_array($r) ? substr((string)$r['body'], 0, 300) : ''], 502);
+            $alasanCek = tv_alasan_pending('', '', 0, is_array($r) ? (string)($r['error'] ?? '') : 'tidak ada balasan');
+            tv_out(['ok' => true, 'ref_id' => $ref, 'sumber' => 'provider', 'status' => 'pending', 'pending' => true,
+                    'alasan_pending' => $alasanCek, 'message' => 'Status belum dapat dipastikan (' . $alasanCek . '). Pesanan tetap PENDING dan akan diperiksa ulang otomatis setiap 10 menit.',
+                    'raw' => is_array($r) ? substr((string)$r['body'], 0, 300) : '']);
         }
         $j = $a['json'];
         if (!is_array($j)) {
-            tv_out(['ok' => false, 'message' => 'Penyedia membalas format tak dikenal (HTTP ' . $r['code'] . ').', 'raw' => substr(preg_replace('/\s+/', ' ', (string)$r['body']), 0, 300)], 502);
+            $alasanCek = tv_alasan_pending('unknown', '', (int)$r['code'], '');
+            tv_out(['ok' => true, 'ref_id' => $ref, 'sumber' => 'provider', 'status' => 'pending', 'pending' => true,
+                    'alasan_pending' => $alasanCek, 'message' => 'Penyedia membalas format tak dikenal (HTTP ' . $r['code'] . '). Pesanan tetap PENDING dan akan diperiksa ulang otomatis setiap 10 menit.',
+                    'raw' => substr(preg_replace('/\s+/', ' ', (string)$r['body']), 0, 300)]);
         }
         $norm = tv_trx_normalize($j);
         if ($norm !== null && in_array($norm['status'], ['sukses', 'gagal'], true)) {
@@ -1386,10 +1660,31 @@ $ref = ($jenisOrder === 'ppob' ? 'PPOB-' : 'TVG-') . date('ymdHis') . random_int
 $judulPesanan = tv_judul_pesanan($jenisOrder, $itemProduk);
 $buat = tv_buat_pesanan($conn, $uid, $ref, $jenisOrder, $judulPesanan, $tujuan, $hargaJual, $hargaModal, $tenant);
 if (empty($buat['ok'])) {
+    $kodeBuat = (int)($buat['code'] ?? 500);
+    // Database pesanan tidak tersedia: TIDAK ada saldo dipotong, tetapi pesanan tetap
+    // dicatat PENDING (bukan error) supaya terlihat di Riwayat dan bisa diselesaikan.
+    if ($kodeBuat === 500) {
+        tv_out(tv_pesanan_pending($conn, $ref, [
+            'user_id' => $uid, 'jenis' => $jenisOrder, 'judul' => $judulPesanan, 'produk' => $produk,
+            'tujuan' => $tujuan, 'server' => $server, 'harga_jual' => $hargaJual, 'harga_modal' => $hargaModal,
+            'markup_pct' => $markupPct, 'saldo' => $buat['saldo'] ?? null, 'saldo_dipotong' => 0, 'http' => 0,
+            'layanan' => (string)($itemProduk['layanan'] ?? $itemProduk['game'] ?? ''),
+        ], 'database pesanan sedang tidak tersedia'), 200);
+    }
+    // 402 = saldo USER tidak cukup, 503 = katalog/koneksi belum siap: keduanya pasti,
+    // bukan transaksi menggantung -> tetap dibalas sebagai kesalahan yang jelas.
     tv_out(['ok' => false, 'ref_id' => $ref, 'status' => 'batal', 'jenis' => $jenisOrder, 'harga' => $hargaJual,
-            'saldo' => $buat['saldo'] ?? null, 'message' => (string)($buat['message'] ?? 'Pesanan tidak dapat dibuat.')], (int)($buat['code'] ?? 500));
+            'saldo' => $buat['saldo'] ?? null, 'message' => (string)($buat['message'] ?? 'Pesanan tidak dapat dibuat.')], $kodeBuat);
 }
 $saldoSetelah = $buat['saldo'] ?? null;
+// Konteks pesanan dipakai setiap jalur PENDING di bawah (aturan API penyedia:
+// HTTP error & network timeout = transaksi PENDING, bukan gagal).
+$ctxPesanan = [
+    'user_id' => $uid, 'jenis' => $jenisOrder, 'judul' => $judulPesanan, 'produk' => $produk,
+    'tujuan' => $tujuan, 'server' => $server, 'harga_jual' => $hargaJual, 'harga_modal' => $hargaModal,
+    'markup_pct' => $markupPct, 'saldo' => $saldoSetelah, 'saldo_dipotong' => $hargaJual,
+    'layanan' => (string)($itemProduk['layanan'] ?? $itemProduk['game'] ?? ''),
+];
 
 // Docs resmi: POST https://api.tokovoucher.net/v1/transaksi dengan body JSON
 //   {ref_id, produk, tujuan, server_id, member_code, signature}
@@ -1406,18 +1701,23 @@ $r = $a['res'];
 $j = $a['json'];
 
 if ($r['body'] === null || $r['code'] === 0) {
-    tv_log("user=$uid ref=$ref produk=$produk tujuan=$tujuan server=$server metode=" . $a['metode'] . ' CURL_ERROR=' . ($r['error'] !== '' ? $r['error'] : 'timeout'));
-    if (tv_batalkan_pesanan($conn, $ref, 'penyedia tidak dapat dihubungi') && $saldoSetelah !== null) $saldoSetelah += $hargaJual;
-    tv_out(['ok' => false, 'ref_id' => $ref, 'status' => 'error', 'metode' => $a['metode'], 'harga' => $hargaJual, 'saldo' => $saldoSetelah,
-            'message' => 'Tidak dapat menghubungi server penyedia (' . ($r['error'] !== '' ? $r['error'] : 'timeout') . '). Saldo dikembalikan. Coba lagi sebentar lagi.'], 502);
+    // NETWORK TIMEOUT / gagal jaringan: aturan API penyedia -> transaksi PENDING.
+    // Pesanan TIDAK dibatalkan dan saldo TIDAK dikembalikan (transaksi bisa saja
+    // sudah masuk di sisi penyedia); status final dari callback / pending_sync.
+    $alasanNet = tv_alasan_pending('', '', 0, (string)($r['error'] ?? ''));
+    tv_log("user=$uid ref=$ref produk=$produk tujuan=$tujuan server=$server metode=" . $a['metode']
+        . ' CURL_ERROR=' . ((string)($r['error'] ?? '') !== '' ? (string)$r['error'] : 'timeout') . ' -> PENDING');
+    tv_out(tv_pesanan_pending($conn, $ref, $ctxPesanan + ['metode' => $a['metode'], 'http' => 0], $alasanNet), 200);
 }
 
 $raw = substr(preg_replace('/\s+/', ' ', (string)$r['body']), 0, 400);
 if (!is_array($j)) {
-    tv_log("user=$uid ref=$ref produk=$produk http=" . $r['code'] . ' metode=' . $a['metode'] . ' NON_JSON raw=' . $raw);
-    if (tv_batalkan_pesanan($conn, $ref, 'balasan penyedia non-JSON') && $saldoSetelah !== null) $saldoSetelah += $hargaJual;
-    tv_out(['ok' => false, 'ref_id' => $ref, 'status' => 'error', 'metode' => $a['metode'], 'raw' => $raw, 'harga' => $hargaJual, 'saldo' => $saldoSetelah,
-        'message' => 'Penyedia membalas format tak dikenal (HTTP ' . $r['code'] . '). Respons asli: ' . $raw . ' — saldo dikembalikan; simpan ref ini untuk komplain: ' . $ref]);
+    // HTTP error ATAU balasan tak dikenal: keduanya PENDING (nasib transaksi belum
+    // pasti). Catatan respons asli disimpan di log + trx store untuk rekonsiliasi.
+    $alasanRaw = tv_alasan_pending('unknown', $raw, (int)$r['code'], '');
+    tv_log("user=$uid ref=$ref produk=$produk http=" . $r['code'] . ' metode=' . $a['metode'] . ' PENDING_NON_JSON raw=' . $raw);
+    tv_out(tv_pesanan_pending($conn, $ref, $ctxPesanan + ['metode' => $a['metode'], 'http' => (int)$r['code']],
+        $alasanRaw, ['status' => 'pending', 'message' => $raw, 'error_msg' => '', 'sn' => '', 'trx_id' => '', 'ref_id' => $ref, 'produk' => $produk, 'price' => $hargaModal, 'sisa_saldo' => 0]), 200);
 }
 
 // Balasan docs: status = pending | sukses | gagal, atau {status:0, error_msg:"Ip Not Allow" / "Signature Invalid"}.
@@ -1429,6 +1729,14 @@ if ($pesan === '' && $st === 'gagal' && $norm['sn'] !== '') $pesan = $norm['sn']
 
 tv_log("user=$uid ref=$ref produk=$produk tujuan=$tujuan server=$server metode=" . $a['metode'] . ' http=' . $r['code']
     . ' status=' . $st . ' trx=' . $norm['trx_id'] . ' msg=' . json_encode($pesan, JSON_UNESCAPED_UNICODE) . ' raw=' . $raw);
+
+// Balasan yang belum pasti (HTTP error, status menunggu, penolakan bercirikan
+// saldo/limit/gangguan sistem) -> PENDING: riwayat ditandai 'pending', saldo tetap,
+// status final menunggu callback penyedia atau pending_sync tiap 10 menit.
+$alasanPending = tv_alasan_pending($st, $pesan, (int)$r['code'], (string)($r['error'] ?? ''));
+if ($alasanPending !== '') {
+    tv_out(tv_pesanan_pending($conn, $ref, $ctxPesanan + ['metode' => $a['metode'], 'http' => (int)$r['code']], $alasanPending, $norm), 200);
+}
 
 // Status awal disimpan supaya cek_status/webhook bisa mencocokkan ref_id ini.
 if ($st !== 'error' && $st !== 'unknown') {

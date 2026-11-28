@@ -1,7 +1,7 @@
 // Halaman + menu "Topup Game": marketplace top up game & produk digital.
 //  • UI sesuai spesifikasi: latar #E5E5E7 + pola gamepad, tab pill (aktif navy #14143C),
 //    search rounded-full, grid 3/4/6/8 kolom, kartu hover terangkat, skeleton, state kosong;
-//  • data 16 game dummy dalam array terpisah (mudah diganti data asli);
+//  • data 17 game (16 kanal Topup Game + Roblox kanal Voucher Game) dalam array terpisah;
 //  • halaman detail /topup/:slug dengan form Player ID/Server ID + pilih produk;
 //  • integrasi penyedia lewat proxy SERVER php-api/tokovoucher.php — signature
 //    MD5(user_code:secret:ref_id) dihitung di server, secret tidak pernah ke browser.
@@ -74,9 +74,9 @@ const file = path.join(dir, 'bundle.cjs'); writeFileSync(file, outputFiles[0].te
 const { TOPUP_GAMES, TOPUP_CATEGORIES, slugify, filterByName, hargaJual, TOPUP_MARKUP_PCT } = require(file);
 
 assert.equal(TOPUP_CATEGORIES.length, 9, 'sembilan tab kategori');
-assert.equal(TOPUP_GAMES.length, 16, '16 kartu game dummy');
+assert.equal(TOPUP_GAMES.length, 17, '17 kartu game (16 kanal Topup Game + Roblox kanal Voucher Game)');
 const nama = TOPUP_GAMES.map((g) => g.nama);
-for (const n of ['Free Fire', 'Mobile Legends', 'Hago', 'PUBG Mobile', 'Honor of Kings', 'Genshin Impact', 'Garena Undawn', 'Point Blank', 'Call of Duty Mobile', 'Blood Strike', 'Honkai Star Rail', 'Metal Slug : Awakening', 'Magic Chess GO GO', 'Farlight 84', 'Moonlight Blade M', 'Zenless Zone Zero']) {
+for (const n of ['Free Fire', 'Mobile Legends', 'Hago', 'PUBG Mobile', 'Honor of Kings', 'Genshin Impact', 'Garena Undawn', 'Point Blank', 'Call of Duty Mobile', 'Blood Strike', 'Honkai Star Rail', 'Metal Slug : Awakening', 'Magic Chess GO GO', 'Farlight 84', 'Moonlight Blade M', 'Zenless Zone Zero', 'Roblox']) {
   assert.ok(nama.includes(n), `game "${n}" ada`);
 }
 assert.ok(TOPUP_GAMES.every((g) => g.slug === slugify(g.nama) || g.slug.length > 2), 'slug terisi untuk semua game');
@@ -95,7 +95,7 @@ for (const [kode, harga] of [['MFF5', 756], ['MFF100', 12066], ['MFFM', 25138], 
 assert.ok(TOPUP_GAMES.every((g) => Array.isArray(g.produk) && g.produk.every((p) => p.kode && p.harga > 0)), 'bila produk diisi, kode & harganya wajib valid');
 assert.equal(slugify('Metal Slug : Awakening'), 'metal-slug-awakening', 'slugify membuang titik dua & spasi');
 assert.equal(slugify('Zenless Zone Zero'), 'zenless-zone-zero', 'slugify huruf kecil semua');
-assert.equal(filterByName(TOPUP_GAMES, '').length, 16, 'pencarian kosong = semua game');
+assert.equal(filterByName(TOPUP_GAMES, '').length, 17, 'pencarian kosong = semua game');
 assert.equal(filterByName(TOPUP_GAMES, 'mobile').length, 3, 'filter "mobile" => PUBG Mobile, Call of Duty Mobile, Mobile Legends');
 assert.equal(filterByName(TOPUP_GAMES, 'GENSHIN').length, 1, 'filter case-insensitive');
 assert.equal(filterByName(TOPUP_GAMES, 'zzz').length, 0, 'filter tanpa hasil => state kosong');
@@ -138,7 +138,8 @@ assert.ok(php.includes('function tv_kode_katalog_ok'), 'filter kode: produk tes,
 assert.ok(php.includes('labels_dilihat'), 'katalog melaporkan label mentah penyedia untuk diagnostik');
 assert.ok(/tv_code_prefix_game\(\$p\['kode'\]\)/.test(php), 'katalog fallback pengelompokan lewat prefiks kode (respons datar)');
 assert.ok(php.includes('/member/produk/full'), 'sumber katalog utama: endpoint resmi /member/produk/full');
-assert.ok(php.includes('__all_v3__') && php.includes('__full_v2__'), 'kunci cache diversi ulang lagi (item kini membawa wilayah_ok + varian luar): cache lama tidak menutupi');
+assert.ok(php.includes('__all_v4__') && php.includes('__full_v2__'), 'kunci cache diversi ulang lagi (kanal Voucher Game/Roblox ikut katalog): cache lama tidak menutupi');
+assert.ok(!php.includes("__all_v3__"), 'kunci cache katalog lama (__all_v3__) tidak dipakai lagi');
 assert.ok(php.includes('sumber_katalog') && php.includes('tv_full_error'), 'katalog melaporkan sumber data & alasan gagal endpoint full untuk diagnostik');
 assert.ok(php.includes('function tv_provider_full'), 'fetcher + cache katalog full tersedia');
 assert.ok(php.includes('function tv_items_from_full'), 'normalisasi kategori/operator/jenis/produk (nama asli, status, format_form)');
@@ -478,5 +479,5 @@ const perilaku = execFileSync(
 ).trim();
 assert.equal(perilaku, 'OK', 'perilaku nama tampilan & rapihkanKatalog sesuai konvensi pricelist resmi');
 
-console.log('PASS Topup Game: menu tampil untuk pengunjung/user/child panel DAN admin (ADMIN_MENU) + route /topup & /topup/:slug, UI marketplace sesuai spesifikasi (latar #E5E5E7 berpola, tab pill navy, search realtime, grid 3/4/6/8, skeleton, state kosong), 16 game dummy + helper teruji, halaman detail dengan Player/Server ID, dan transaksi lewat proxy server (signature MD5 user_code:secret:ref_id dihitung di server, secret tidak pernah ke browser).');
+console.log('PASS Topup Game: menu tampil untuk pengunjung/user/child panel DAN admin (ADMIN_MENU) + route /topup & /topup/:slug, UI marketplace sesuai spesifikasi (latar #E5E5E7 berpola, tab pill navy, search realtime, grid 3/4/6/8, skeleton, state kosong), 17 game (termasuk Roblox dari kanal Voucher Game) + helper teruji, halaman detail dengan Player/Server ID, dan transaksi lewat proxy server (signature MD5 user_code:secret:ref_id dihitung di server, secret tidak pernah ke browser).');
 process.exit(0);
