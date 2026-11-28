@@ -44,6 +44,14 @@ export interface Tenant {
   /** Markup Order Nomor (OTP) % di atas harga OTP web utama. */
   markup_otp_pct?: number;
   markup_event_pct?: number;
+  /** Markup top up game (%) — berlaku bila access_topup_markup aktif. */
+  markup_topup_pct?: number;
+  /** Markup PPOB (%) — berlaku bila access_ppob_markup aktif. */
+  markup_ppob_pct?: number;
+  /** Akses markup top up game sudah dibeli pemilik panel (Rp35.000). */
+  access_topup_markup?: number | boolean;
+  /** Akses markup PPOB sudah dibeli pemilik panel (Rp35.000). */
+  access_ppob_markup?: number | boolean;
   config: TenantConfig;
 }
 

@@ -205,6 +205,10 @@ function cp_public($row, $hostname) {
         'markup_agent_pct' => (float)$row['markup_agent_pct'],
         'markup_otp_pct'   => (float)($row['markup_otp_pct'] ?? 0),
         'markup_event_pct' => (float)($cfg['merchantMarkupPct'] ?? 0),
+        'markup_topup_pct' => (float)($row['markup_topup_pct'] ?? 0),
+        'markup_ppob_pct'  => (float)($row['markup_ppob_pct'] ?? 0),
+        'access_topup_markup' => (int)($row['access_topup_markup'] ?? 0),
+        'access_ppob_markup'  => (int)($row['access_ppob_markup'] ?? 0),
         'config'           => (object)$cfg,
     ];
 }

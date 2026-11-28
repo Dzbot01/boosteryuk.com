@@ -28,7 +28,8 @@ export interface PanelTotals {
   profit: number;
 }
 export interface PanelSummary {
-  panel: { name: string; hostname: string; markup_smm_pct: number; markup_agent_pct: number; markup_otp_pct?: number; markup_event_pct?: number };
+  panel: { name: string; hostname: string; markup_smm_pct: number; markup_agent_pct: number; markup_otp_pct?: number; markup_event_pct?: number;
+    markup_topup_pct?: number; markup_ppob_pct?: number; access_topup_markup?: number; access_ppob_markup?: number };
   merchant?: PanelTotals;
   all: PanelTotals;
   month: PanelTotals;
@@ -68,8 +69,11 @@ export const panelApi = {
   merchantOrders: () => call<{orders?:PanelOrder[]}>('owner_orders',{limit:200,kind:'event'}),
   orders: (limit = 100) => call<{ orders?: PanelOrder[] }>('owner_orders', { limit }),
   users: () => call<{ users?: PanelUser[] }>('owner_users'),
-  setMarkup: (markup_smm_pct: number, markup_agent_pct: number, markup_otp_pct: number, markup_event_pct: number) =>
-    call<{ markup_smm_pct?: number; markup_agent_pct?: number; markup_otp_pct?: number; markup_event_pct?: number }>('owner_set_markup', { markup_smm_pct, markup_agent_pct, markup_otp_pct, markup_event_pct }),
+  setMarkup: (markup_smm_pct: number, markup_agent_pct: number, markup_otp_pct: number, markup_event_pct: number, markup_topup_pct?: number, markup_ppob_pct?: number) =>
+    call<{ markup_smm_pct?: number; markup_agent_pct?: number; markup_otp_pct?: number; markup_event_pct?: number; markup_topup_pct?: number; markup_ppob_pct?: number }>('owner_set_markup', { markup_smm_pct, markup_agent_pct, markup_otp_pct, markup_event_pct, ...(markup_topup_pct !== undefined ? { markup_topup_pct } : {}), ...(markup_ppob_pct !== undefined ? { markup_ppob_pct } : {}) }),
+  /** Beli akses markup Top Up Game / PPOB (Rp35.000 per akses, dipotong saldo pemilik). */
+  buyMarkupAccess: (kind: 'topup' | 'ppob') =>
+    call<{ access_topup_markup?: number; access_ppob_markup?: number; balance?: number }>('owner_buy_markup_access', { kind }),
 };
 
 const ownerCache = new Map<string, boolean>();

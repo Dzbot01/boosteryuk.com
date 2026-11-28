@@ -180,7 +180,7 @@ if (in_array($action, ['my_panel', 'my_save', 'my_upload', 'my_video_sign', 'my_
 }
 
 /* ---------- Aksi di child panel (user biasa & admin ke-2 / pemilik panel) ---------- */
-if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 'owner_users', 'owner_set_markup'], true)) {
+if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 'owner_users', 'owner_set_markup', 'owner_buy_markup_access'], true)) {
     $tenant = cp_resolve($conn);
     if (!$tenant) cp_out(['ok' => false, 'message' => 'Child panel tidak ditemukan untuk host ini.'], 404);
     $uid = cp_user_id($conn, $in['token'] ?? '');
@@ -222,7 +222,9 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
         $u = $st->get_result()->fetch_assoc();
         $st->close();
         cp_out(['ok' => true, 'panel' => ['name' => $tenant['name'], 'hostname' => $tenant['hostname'],
-            'markup_smm_pct' => $tenant['markup_smm_pct'], 'markup_agent_pct' => $tenant['markup_agent_pct'], 'markup_otp_pct' => $tenant['markup_otp_pct'], 'markup_event_pct'=>$tenant['markup_event_pct']],
+            'markup_smm_pct' => $tenant['markup_smm_pct'], 'markup_agent_pct' => $tenant['markup_agent_pct'], 'markup_otp_pct' => $tenant['markup_otp_pct'], 'markup_event_pct'=>$tenant['markup_event_pct'],
+            'markup_topup_pct' => $tenant['markup_topup_pct'] ?? 0, 'markup_ppob_pct' => $tenant['markup_ppob_pct'] ?? 0,
+            'access_topup_markup' => (int)($tenant['access_topup_markup'] ?? 0), 'access_ppob_markup' => (int)($tenant['access_ppob_markup'] ?? 0)],
             'merchant' => $q("AND o.kind='event'"),
             'all' => $q(''), 'month' => $q("AND o.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"), 'today' => $q("AND o.created_at >= CURDATE()"),
             'balance' => cp_wd_balance($conn, $pid),
@@ -263,13 +265,52 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
         $mAgent = max(0, min(CP_MAX_MARKUP, round((float)($in['markup_agent_pct'] ?? 0), 2)));
         $mOtp = max(0, min(CP_MAX_MARKUP, round((float)($in['markup_otp_pct'] ?? ($tenant['markup_otp_pct'] ?? 0)), 2)));
         $mEvent=max(0,min(CP_MAX_MARKUP,round((float)($in['markup_event_pct']??$tenant['markup_event_pct']??0),2)));
+        // Markup Top Up Game & PPOB: hanya boleh diatur bila aksesnya sudah dibeli (Rp35.000 masing-masing).
+        $mTopup = (float)($tenant['markup_topup_pct'] ?? 0);
+        $mPpob  = (float)($tenant['markup_ppob_pct'] ?? 0);
+        if (array_key_exists('markup_topup_pct', $in)) {
+            if ((int)($tenant['access_topup_markup'] ?? 0) !== 1) {
+                cp_out(['ok' => false, 'message' => 'Akses markup Top Up Game belum dibuka. Beli akses terlebih dahulu (Rp35.000).'], 403);
+            }
+            $mTopup = max(0, min(CP_MAX_MARKUP, round((float)$in['markup_topup_pct'], 2)));
+        }
+        if (array_key_exists('markup_ppob_pct', $in)) {
+            if ((int)($tenant['access_ppob_markup'] ?? 0) !== 1) {
+                cp_out(['ok' => false, 'message' => 'Akses markup PPOB belum dibuka. Beli akses terlebih dahulu (Rp35.000).'], 403);
+            }
+            $mPpob = max(0, min(CP_MAX_MARKUP, round((float)$in['markup_ppob_pct'], 2)));
+        }
         $conn->begin_transaction();
         $st=cp_q($conn,'SELECT config FROM child_panels WHERE id=? FOR UPDATE','i',$pid);
         $config=json_decode($st->get_result()->fetch_assoc()['config']??'{}',true) ?: [];$st->close();
         $config['merchantMarkupPct']=$mEvent;
-        cp_q($conn, "UPDATE child_panels SET markup_smm_pct=?, markup_agent_pct=?, markup_otp_pct=?, config=? WHERE id=?", 'dddsi', $mSmm,$mAgent,$mOtp,json_encode($config,JSON_UNESCAPED_UNICODE),$pid)->close();
+        cp_q($conn, "UPDATE child_panels SET markup_smm_pct=?, markup_agent_pct=?, markup_otp_pct=?, markup_topup_pct=?, markup_ppob_pct=?, config=? WHERE id=?", 'dddddsi', $mSmm,$mAgent,$mOtp,$mTopup,$mPpob,json_encode($config,JSON_UNESCAPED_UNICODE),$pid)->close();
         $conn->commit();
-        cp_out(['ok' => true, 'markup_smm_pct' => $mSmm, 'markup_agent_pct' => $mAgent, 'markup_otp_pct' => $mOtp, 'markup_event_pct'=>$mEvent]);
+        cp_out(['ok' => true, 'markup_smm_pct' => $mSmm, 'markup_agent_pct' => $mAgent, 'markup_otp_pct' => $mOtp, 'markup_event_pct'=>$mEvent, 'markup_topup_pct' => $mTopup, 'markup_ppob_pct' => $mPpob]);
+    }
+
+    if ($action === 'owner_buy_markup_access') {
+        // Buka akses markup Top Up Game / PPOB (Rp35.000 per akses, satu per satu),
+        // dipotong dari saldo pemilik panel di web utama.
+        $kind = (string)($in['kind'] ?? '');
+        if (!in_array($kind, ['topup', 'ppob'], true)) cp_out(['ok' => false, 'message' => 'Jenis akses tidak valid.'], 400);
+        $col = $kind === 'topup' ? 'access_topup_markup' : 'access_ppob_markup';
+        if ((int)($tenant[$col] ?? 0) === 1) cp_out(['ok' => false, 'message' => 'Akses markup ini sudah aktif.'], 400);
+        $harga = 35000;
+        $owner = (int)($tenant['owner_user_id'] ?? 0);
+        if ($owner <= 0) cp_out(['ok' => false, 'message' => 'Pemilik panel tidak ditemukan.'], 404);
+        $conn->begin_transaction();
+        $st = cp_q($conn, 'SELECT balance FROM users WHERE id=? FOR UPDATE', 'i', $owner);
+        $bal = (float)($st->get_result()->fetch_assoc()['balance'] ?? 0);
+        $st->close();
+        if ($bal < $harga) {
+            $conn->rollback();
+            cp_out(['ok' => false, 'message' => 'Saldo tidak cukup untuk membuka akses ini (Rp35.000). Isi saldo terlebih dahulu.'], 402);
+        }
+        cp_q($conn, 'UPDATE users SET balance=balance-? WHERE id=?', 'di', $harga, $owner)->close();
+        cp_q($conn, "UPDATE child_panels SET $col=1 WHERE id=?", 'i', $pid)->close();
+        $conn->commit();
+        cp_out(['ok' => true, $col => 1, 'balance' => $bal - $harga, 'message' => 'Akses markup ' . ($kind === 'topup' ? 'Top Up Game' : 'PPOB') . ' aktif.']);
     }
 }
 

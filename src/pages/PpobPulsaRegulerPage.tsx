@@ -4,6 +4,7 @@ import { Check, Info, LoaderCircle, Smartphone, Wallet } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { hargaMarkup, markupPpobPct } from '../lib/panelMarkup';
 import {
   PPOB_PULSA_REGULER,
   detectOperator,
@@ -31,7 +32,9 @@ function SkeletonProduk() {
  */
 export default function PpobPulsaRegulerPage() {
   const { user } = useAuth();
-  const { settings } = useSiteSettings();
+  const { settings, tenant } = useSiteSettings();
+  /** Markup PPOB child panel (0 bila akses belum dibeli / web utama). */
+  const pctPpob = markupPpobPct(tenant);
   const navigate = useNavigate();
   const namaApp = settings.brandName || 'Boosteryuk';
 
@@ -41,7 +44,10 @@ export default function PpobPulsaRegulerPage() {
   const [pesan, setPesan] = useState<{ nada: 'sukses' | 'info' | 'gagal'; teks: string } | null>(null);
 
   const operator = useMemo(() => detectOperator(nomor), [nomor]);
-  const produk = useMemo(() => (operator ? PPOB_PULSA_REGULER[operator.id] : []), [operator]);
+  const produk = useMemo(
+    () => (operator ? PPOB_PULSA_REGULER[operator.id].map((p) => ({ ...p, harga: Math.round(hargaMarkup(p.harga, pctPpob)) })) : []),
+    [operator, pctPpob],
+  );
 
   // Skeleton sebentar setiap operator berganti (meniru penarikan data dari API).
   useEffect(() => {

@@ -142,11 +142,10 @@ export default function ProfilPage() {
           <path d="M0,88 C260,126 520,46 780,74 C1040,102 1220,56 1440,90 L1440,120 L0,120 Z" fill="#A78BFA" opacity="0.4" />
         </svg>
 
-        <h1 className="relative font-display text-[17px] font-extrabold tracking-tight text-white">Akun Saya</h1>
-
-        <div className="relative mt-4 flex flex-col items-center">
+        {/* Modul "Akun Saya" + ikon avatar: satu kesatuan baris, diposisikan di tengah. */}
+        <div className="relative mx-auto mt-2 flex w-fit max-w-full items-center gap-3.5 text-left">
           {/* Avatar bulat ±64px, border putih tebal; tanpa foto → ikon user abu-abu di latar putih */}
-          <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white shadow-lg shadow-violet-900/20">
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white shadow-lg shadow-violet-900/20">
             {foto ? (
               <img src={foto} alt={`Foto profil ${user.name}`} className="h-full w-full object-cover" />
             ) : (
@@ -156,32 +155,36 @@ export default function ProfilPage() {
             )}
           </span>
 
-          {/* Nama + titik hijau indikator akun aktif */}
-          <p className="mt-2.5 flex items-center gap-1.5 text-[15px] font-extrabold text-white">
-            <span className="max-w-[220px] truncate">{user.name}</span>
-            <span className="h-2 w-2 shrink-0 rounded-full bg-[#22C55E] ring-2 ring-white/40" aria-label="Akun aktif" />
-          </p>
-          <p className="mt-0.5 text-[12px] font-medium text-white/85">{telepon || `@${user.username}`}</p>
+          <span className="min-w-0">
+            <h1 className="font-display text-[17px] font-extrabold tracking-tight text-white">Akun Saya</h1>
 
-          {user.plusActive && (
-            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-extrabold text-white ring-1 ring-white/30">
-              <Crown className="h-3.5 w-3.5" strokeWidth={2.3} />
-              {trial ? 'PLUS TRIAL' : 'VIP PLUS'}
-              {trial && until ? (
-                <span className="font-medium opacity-85">
-                  sampai {new Date(until).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB
-                </span>
-              ) : null}
-            </span>
-          )}
+            {/* Nama + titik hijau indikator akun aktif */}
+            <p className="mt-0.5 flex items-center gap-1.5 text-[15px] font-extrabold text-white">
+              <span className="max-w-[220px] truncate">{user.name}</span>
+              <span className="h-2 w-2 shrink-0 rounded-full bg-[#22C55E] ring-2 ring-white/40" aria-label="Akun aktif" />
+            </p>
+            <p className="mt-0.5 text-[12px] font-medium text-white/85">{telepon || `@${user.username}`}</p>
+
+            {user.plusActive && (
+              <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-extrabold text-white ring-1 ring-white/30">
+                <Crown className="h-3.5 w-3.5" strokeWidth={2.3} />
+                {trial ? 'PLUS TRIAL' : 'VIP PLUS'}
+                {trial && until ? (
+                  <span className="font-medium opacity-85">
+                    sampai {new Date(until).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB
+                  </span>
+                ) : null}
+              </span>
+            )}
+          </span>
         </div>
       </header>
 
       <div className="mx-auto w-full max-w-md px-4 md:max-w-3xl">
         {/* Desktop: semua card menyatu jadi SATU card besar; mobile tetap card terpisah. */}
-        <div className="md:rounded-3xl md:bg-white md:p-6 md:shadow-[0_18px_50px_-30px_rgba(76,29,149,0.45)] md:dark:bg-slate-900">
+        <div className="md:mt-8 md:rounded-3xl md:bg-white md:p-6 md:shadow-[0_18px_50px_-30px_rgba(76,29,149,0.45)] md:dark:bg-slate-900">
         {/* ============ CARD 1: RINGKASAN + SALDO (di bawah header, tidak tertutup) ============ */}
-        <section className="mt-4 rounded-2xl bg-white p-4 shadow-[0_10px_30px_-12px_rgba(76,29,149,0.35)] dark:bg-slate-900 md:mt-0 md:rounded-none md:bg-transparent md:p-0 md:shadow-none md:dark:bg-transparent">
+        <section className="mt-6 rounded-2xl bg-white p-4 shadow-[0_10px_30px_-12px_rgba(76,29,149,0.35)] dark:bg-slate-900 md:mt-0 md:rounded-none md:bg-transparent md:p-0 md:shadow-none md:dark:bg-transparent">
           <div className="grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800">
             <div className="flex items-center gap-2.5 pr-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#22C55E]">
