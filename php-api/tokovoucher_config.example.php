@@ -19,4 +19,11 @@ return [
     'secret'      => '', // ← ISI SECRET KEY MEMBER DI SINI (jangan di-commit)
     // 'base_url' => 'https://api.tokovoucher.net',
     // 'timeout'  => 20,
+
+    // Cek akun tujuan (apigames.id, Free Fire & Mobile Legends):
+    // signature = md5(merchant_id + secret_key). Lihat member.apigames.id > Pengaturan > Secret Key.
+    // Bila kosong, fitur cek akun dilewati senyap di UI.
+    // Bisa juga lewat env: APIGAMES_MERCHANT_ID & APIGAMES_SECRET_KEY.
+    'ag_merchant' => '',
+    'ag_secret'   => '',
 ];
