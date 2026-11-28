@@ -305,14 +305,9 @@ export default function TopupGameDetailPage() {
                 </span>
               )}
               {cekAkun && !cekAkun.loading && cekAkun.username === '' && cekAkun.error && (
-                <span className="mt-1.5 block rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-rose-700">
-                  <span className="font-bold">Cek akun apigames bermasalah — </span>
-                  {cekAkun.error.message}
-                  {cekAkun.error.raw ? (
-                    <code className="mt-1 block break-all rounded bg-white/70 px-1.5 py-1 font-mono text-[10px] text-rose-800">
-                      {cekAkun.error.raw}
-                    </code>
-                  ) : null}
+                /* Sesuai permintaan: tampilkan respons penyedia APA ADANYA tanpa teks tambahan. */
+                <span className="mt-1.5 block break-all rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 font-mono text-[10.5px] leading-relaxed text-rose-700">
+                  {cekAkun.error.raw || cekAkun.error.message}
                 </span>
               )}
             </label>

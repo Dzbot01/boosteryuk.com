@@ -144,7 +144,9 @@ assert.ok(!php.includes("(string)($fd['name'] ?? '') !== 'server_id'"), 'aturan 
 assert.ok(php.includes('cek-username') && php.includes("md5($c['ag_merchant'] . $c['ag_secret'])"), 'action=cek_akun memanggil apigames.id dengan signature md5(merchant+secret)');
 assert.ok(php.includes("$gagal('unconfigured'") && php.includes("$gagal('ditolak'") && php.includes("$gagal('koneksi'") && php.includes("$gagal('non_json'"), 'cek akun mengembalikan alasan gagal + cuplikan respons ASLI apigames');
 assert.ok(php.includes("$gagal('not_found'") && php.includes("$raw = is_string($body) ? substr(preg_replace"), 'Data Not Found ditandai not_found dan raw respons ikut dikirim');
-assert.ok(detail.includes("r.reason === 'not_found'") && detail.includes('Cek akun apigames bermasalah'), 'UI: not_found dilewati senyap, error teknis ditampilkan beserta respons asli');
+assert.ok(detail.includes("r.reason === 'not_found'") && detail.includes('cekAkun.error.raw || cekAkun.error.message') && !detail.includes('Cek akun apigames bermasalah'), 'UI: not_found senyap; error lain menampilkan HANYA respons penyedia tanpa teks tambahan');
+assert.ok(php.includes("trim((string)$c['ag_merchant']") && php.includes("trim((string)$c['ag_secret']"), 'kredensial apigames dinormalisasi (spasi/newline/kutipan dibuang) supaya signature tidak Unauthorized');
+assert.ok(php.includes("$gagal('ditolak', $raw !== '' ? $raw"), 'pesan penolakan apigames = respons penyedia apa adanya');
 assert.ok(php.includes("'ag_merchant' => ''"), 'kredensial apigames dibaca dari config/env (kosong = skip senyap)');
 assert.ok(php.includes("\\b(sg|my|br|th|vn|ph|tr|ru|kr|tw|bd"), 'filter wilayah diperkuat: token region polos (Free Fire SG, ML MY, Genshin KR) dibuang');
 assert.ok(php.includes("'label:' ."), 'operator di luar tabel alias tetap jadi grup katalog dengan namanya sendiri');
