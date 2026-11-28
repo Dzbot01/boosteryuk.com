@@ -98,17 +98,31 @@ assert.ok(data.PPOB_BANNERS.length >= 2 && data.PPOB_BANNERS.every((b) => b.sub.
 assert.ok(data.PPOB_BERITA.length >= 2 && data.PPOB_BERITA[0].kategori === 'INFO', 'section berita punya badge kategori INFO');
 
 /* ---------- 3. Halaman A: Beranda PPOB ---------- */
+const kepala = read('src/components/PpobHeader.tsx');
+const layout = read('src/components/Layout.tsx');
+assert.match(kepala, /sticky top-0 z-30/, 'header biru PPOB sticky di atas = header utama situs');
+assert.match(kepala, /linear-gradient\(135deg,#3B82F6 0%,#2563EB 100%\)/, 'header gradient biru #3B82F6 → #2563EB');
+assert.match(kepala, /rounded-b-\[32px\]/, 'sudut bawah header melengkung');
+assert.match(kepala, /text-\[#F5B73B\]/, 'nama user kuning/emas');
+assert.match(kepala, /sapaanPpob\(jam\.getHours\(\)\)/, 'sapaan dinamis sesuai jam');
+assert.match(kepala, /<Bell[\s\S]{0,400}bg-rose-500/, 'ikon lonceng dengan titik merah notifikasi');
+assert.match(kepala, /HamburgerToggle/, 'hamburger header lama pindah ke header biru');
+assert.match(kepala, /BottomNavbar placement="header"/, 'ikon pengaturan/FAQ/musik/profil header lama pindah ke header biru');
+assert.match(kepala, /to="\/playground"/, 'tombol Playground header lama pindah ke header biru');
+assert.match(kepala, /md:max-w-3xl lg:max-w-5xl/, 'kontainer header melebar di tablet/desktop (responsif)');
+assert.match(layout, /import PpobHeader from '\.\/PpobHeader';/, 'Layout memakai PpobHeader');
+assert.match(layout, /pathname === '\/ppob' \|\| pathname\.startsWith\('\/ppob\/'\)/, 'header biru hanya tampil di rute PPOB');
+assert.ok(layout.indexOf('<PpobHeader') < layout.indexOf('<Header '), 'di rute PPOB header glass situs diganti header biru');
 const beranda = read('src/pages/PpobPage.tsx');
 assert.ok(!beranda.includes('BottomNavbar'), 'TANPA bottom navigation bar');
 assert.ok(!/QrCode|QrScan/.test(beranda), 'TANPA tombol scan QR melayang');
 assert.match(beranda, /bg-\[#F4F6FB\] pb-\[100px\]/, 'latar #F4F6FB + padding bawah ±100px');
 assert.match(beranda, /mx-auto w-full max-w-md px-4/, 'mobile-first 360–414px');
-assert.match(beranda, /linear-gradient\(135deg,#3B82F6 0%,#2563EB 100%\)/, 'header gradient biru #3B82F6 → #2563EB');
-assert.match(beranda, /rounded-b-\[32px\]/, 'sudut bawah header melengkung');
-assert.match(beranda, /text-\[#F5B73B\]/, 'nama user kuning/emas');
-assert.match(beranda, /sapaanPpob\(jam\.getHours\(\)\)/, 'sapaan dinamis sesuai jam');
-assert.match(beranda, /<Bell[\s\S]{0,400}bg-rose-500/, 'ikon lonceng dengan titik merah notifikasi');
-assert.match(beranda, /-mt-10 rounded-\[20px\] bg-white p-4/, 'card saldo overlap ke header');
+assert.ok(!beranda.includes('<header'), 'halaman tidak lagi merender header sendiri (header utama dari Layout)');
+assert.match(beranda, /id="berita-ppob"/, 'section berita punya id untuk scroll tombol lonceng di header');
+assert.match(beranda, /relative -mt-10 rounded-\[20px\] bg-white p-4/, 'card saldo overlap ke header sticky');
+assert.match(beranda, /md:max-w-3xl lg:max-w-5xl/, 'kontainer halaman melebar di desktop');
+assert.match(beranda, /md:grid-cols-8/, 'Menu Service 4 kolom mobile → 8 kolom desktop');
 assert.match(beranda, /IDR ••••••••••/, 'saldo tersamar default');
 assert.match(beranda, /setLihatSaldo\(\(v\) => !v\)/, 'toggle mata berfungsi');
 assert.match(beranda, /divide-x divide-slate-100/, 'dua kolom dipisah garis vertikal tipis');
@@ -118,7 +132,7 @@ for (const aksi of ['Transfer', 'Top up', 'Exchange'])
 assert.match(beranda, /ppob-marquee/, 'banner info berjalan (marquee)');
 assert.match(beranda, /prefers-reduced-motion/, 'marquee menghormati prefers-reduced-motion');
 assert.match(beranda, /Menu Service/, 'chip label Menu Service');
-assert.match(beranda, /grid grid-cols-4 gap-x-2 gap-y-3\.5/, 'grid 4 kolom');
+assert.match(beranda, /grid grid-cols-4 gap-x-2 gap-y-3\.5 md:grid-cols-8/, 'grid 4 kolom mobile, 8 kolom desktop');
 assert.match(beranda, /h-11 w-11[\s\S]{0,80}rounded-2xl bg-\[#3B82F6\]/, 'kotak ikon rounded biru solid ±44px');
 assert.match(beranda, /truncate text-center text-\[10\.5px\]/, 'label 1 baris dipotong … bila panjang');
 assert.match(beranda, /snap-x snap-mandatory/, 'carousel banner bisa di-swipe');
@@ -133,10 +147,12 @@ const pulsa = read('src/pages/PpobPulsaRegulerPage.tsx');
 assert.ok(!pulsa.includes('BottomNavbar'), 'TANPA bottom navigation bar');
 assert.ok(!/QrCode|QrScan/.test(pulsa), 'TANPA tombol scan QR');
 assert.match(pulsa, /pb-\[120px\]/, 'padding bawah ±100px (ruang tombol sticky)');
-assert.match(pulsa, /setInterval\(\(\) => setJam\(new Date\(\)\), 1000\)/, 'jam real-time update tiap detik');
-assert.match(pulsa, /formatJamPpob\(jam\)/, 'format jam HH:mm:ss AM/PM');
-assert.match(pulsa, /to="\/ppob"[\s\S]{0,200}rounded-full bg-white/, 'tombol kembali bulat putih di kanan header');
-assert.match(pulsa, /-mt-9 rounded-t-\[28px\]/, 'card putih overlap dengan sudut atas sangat melengkung');
+assert.ok(!pulsa.includes('<header'), 'halaman pulsa tidak lagi merender header sendiri');
+assert.match(kepala, /setInterval\(\(\) => setJam\(new Date\(\)\), 1000\)/, 'jam real-time update tiap detik (di header)');
+assert.match(kepala, /formatJamPpob\(jam\)/, 'format jam HH:mm:ss AM/PM (di header)');
+assert.match(kepala, /to="\/ppob"[\s\S]{0,200}rounded-full bg-white/, 'tombol kembali bulat putih di header varian pulsa');
+assert.match(pulsa, /relative -mt-9 rounded-t-\[28px\]/, 'card putih overlap dengan sudut atas sangat melengkung');
+assert.match(pulsa, /md:grid-cols-3/, 'grid produk 2 kolom mobile → 3 kolom desktop');
 assert.match(pulsa, />Pulsa Reguler</, 'judul card "Pulsa Reguler"');
 assert.match(pulsa, /placeholder="08xx"/, 'input Nomor Tujuan placeholder 08xx');
 assert.match(pulsa, /inputMode="numeric"/, 'input angka');
@@ -214,6 +230,7 @@ for (const fn of ['changePassword', 'requestEmailOtp', 'verifyOtp', 'saveProfile
 /* ---------- 7. Render sungguhan (SSR) — halaman tidak crash & isinya benar ---------- */
 const { outputFiles: renderFiles } = await build({
   stdin: { contents: `
+    export { default as PpobHeader } from './src/components/PpobHeader';
     export { default as PpobPage } from './src/pages/PpobPage';
     export { default as PulsaPage } from './src/pages/PpobPulsaRegulerPage';
     export { default as ProfilPage, samarkanTengah } from './src/pages/ProfilPage';
@@ -230,7 +247,9 @@ const { outputFiles: renderFiles } = await build({
       [/context\/OrderHistoryContext$/, 'hist', `export const useOrderHistory=()=>({orders:[{key:'a',serviceName:'IG Followers',orderId:'1',quantity:100,price:25000,createdAt:Date.now(),status:'selesai'},{key:'b',serviceName:'TikTok Likes',orderId:'2',quantity:50,price:15000,createdAt:Date.now(),status:'batal'}],addOrder:()=>{}});`],
       [/context\/SiteSettingsContext$/, 'set', `export const useSiteSettings=()=>({settings:{brandName:'Boosteryuk'}});`],
       [/components\/Seo$/, 'seo', 'export default function Seo(){return null;}'],
-      [/components\/UserAvatar$/, 'ava', 'export default function UserAvatar({children}){return children;}'],
+      [/UserAvatar$/, 'ava', 'export default function UserAvatar({children}){return children;}'],
+      [/BottomNavbar$/, 'bnb', 'export default function BottomNavbar(){return null;}'],
+      [/HamburgerToggle$/, 'hbt', 'export default function HamburgerToggle(){return null;}'],
       [/components\/AvatarPicker$/, 'avp', 'export default function AvatarPicker(){return null;}'],
       [/components\/OwnedTitles$/, 'owt', 'export default function OwnedTitles(){return null;}'],
       [/components\/TikTokAnalytics$/, 'tka', 'export default function TikTokAnalytics(){return null;}'],
@@ -256,14 +275,25 @@ for (const t of ['Akun Saya', 'Pemasukan', 'Pengeluaran', '0822••••7543'
   assert.ok(htmlProfil.includes(t), `profil merender "${t}"`);
 assert.ok(!htmlProfil.includes('Rp 15.000'), 'pesanan batal tidak dihitung sebagai pengeluaran');
 
+const kepalaRender = (variant) =>
+  R.renderToStaticMarkup(h(R.MemoryRouter, { initialEntries: ['/ppob'] }, h(R.PpobHeader, { variant, onToggleMenu: () => {}, menuOpen: false })));
+const htmlKepala = kepalaRender('beranda');
+for (const t of ['Melvi Husin', 'PPOB', 'linear-gradient(135deg,#3B82F6 0%,#2563EB 100%)'])
+  assert.ok(htmlKepala.includes(t), `header biru merender "${t}"`);
+assert.match(htmlKepala, /Good (Morning|Afternoon|Evening|Night)/, 'sapaan dinamis sesuai jam di header');
+const htmlKepalaPulsa = kepalaRender('pulsa');
+assert.match(htmlKepalaPulsa, /\d{1,2}:\d{2}:\d{2} (AM|PM)/, 'jam real-time HH:mm:ss AM/PM di header pulsa');
+assert.ok(htmlKepalaPulsa.includes('Kembali ke beranda PPOB'), 'tombol kembali di header pulsa');
+assert.ok(!htmlKepalaPulsa.includes('Berita & pengumuman'), 'lonceng hanya di header beranda');
+
 const htmlPpob = render('/ppob', R.PpobPage);
 for (const t of ['Balance:', 'IDR ••••••••••', 'Point', '120', 'Transfer', 'Top up', 'Exchange', 'Menu Service', 'Pulsa Reguler', 'Pulsa Internasional', 'Selamat datang', 'BAYAR TAGIHANMU', 'HANYA DI Boosteryuk', 'News Updates', 'View All'])
   assert.ok(htmlPpob.includes(t), `beranda PPOB merender "${t}"`);
-assert.match(htmlPpob, /Good (Morning|Afternoon|Evening|Night)/, 'sapaan dinamis sesuai jam');
+assert.ok(!htmlPpob.includes('<header'), 'beranda PPOB tidak merender header sendiri (pakai header utama dari Layout)');
 
 const htmlPulsa = render('/ppob/pulsa-reguler', R.PulsaPage);
 for (const t of ['Pulsa Reguler', 'Nomor Tujuan', '08xx', 'Pilih Layanan', 'Masukkan nomor tujuan'])
   assert.ok(htmlPulsa.includes(t), `halaman pulsa merender "${t}"`);
 assert.ok(!htmlPulsa.includes('Beli Sekarang'), 'tombol Beli Sekarang belum muncul sebelum produk dipilih');
 
-console.log('PASS PPOB: menu + rute /ppob & /ppob/pulsa-reguler, data mock teruji (deteksi operator, produk, format Rupiah, jam, sapaan), Beranda PPOB (header biru, saldo+point, marquee, Menu Service 4×2, carousel, News Updates) dan Pulsa Reguler (jam real-time, deteksi operator, grid 2 kolom available/unavailable, skeleton, tombol Beli sticky) tanpa bottom navbar/scan QR; halaman profil dirombak mobile-first tanpa menghapus fitur lama.');
+console.log('PASS PPOB: menu + rute /ppob & /ppob/pulsa-reguler, data mock teruji (deteksi operator, produk, format Rupiah, jam, sapaan); header biru PPOB menjadi HEADER UTAMA situs di rute PPOB (ikon header lama pindah, sticky, responsif mobile+desktop), Beranda PPOB (saldo+point, marquee, Menu Service 4/8 kolom, carousel, News Updates) dan Pulsa Reguler (jam real-time di header, deteksi operator, grid 2/3 kolom available/unavailable, skeleton, tombol Beli sticky) tanpa bottom navbar/scan QR; halaman profil dirombak mobile-first tanpa menghapus fitur lama.');

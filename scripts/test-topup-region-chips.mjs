@@ -17,6 +17,7 @@ const detailSrc = fs.readFileSync('src/pages/TopupGameDetailPage.tsx', 'utf8');
 assert.match(detailSrc, /role="tablist"/, 'chip wilayah dirender sebagai tablist');
 assert.match(detailSrc, /daftarJenis\.map\(\(j\) =>/, 'chip diambil dari jenis pricelist live');
 assert.match(detailSrc, /semuaWilayah: !!jenisAktif,\s*wilayah: jenisAktif\.replace/, 'pricelist di-scope ke chip aktif (label rapi)');
+assert.match(detailSrc, /namaWilayahJenis\(j\)/, 'label chip memakai nama wilayah lengkap (tanpa singkatan)');
 
 // Pricelist live Free Fire (kode & nama asli penyedia, dipangkas).
 const ITEMS = [
@@ -104,9 +105,9 @@ try {
   // Chip tampil: semua varian (jenis) pricelist, ID dulu baru server luar/Promo.
   const labels = chips().map((c) => c.textContent.trim());
   assert.deepEqual(labels, [
-    'Free Fire ID Fast', 'Free Fire ID Murah', 'Free Fire ID Promo', 'Free Fire SG',
-    'Free Fire TH', 'Free Fire MY', 'Free Fire Membership',
-  ], 'satu chip per jenis (wilayah/varian), label rapi satu spasi');
+    'Free Fire Indonesia Fast', 'Free Fire Indonesia Murah', 'Free Fire Indonesia Promo', 'Free Fire Singapura',
+    'Free Fire Thailand', 'Free Fire Malaysia', 'Free Fire Membership',
+  ], 'satu chip per jenis; singkatan wilayah diperjelas (ID→Indonesia, SG→Singapore, TH→Thailand, MY→Malaysia)');
   const aktif = chips().find((c) => c.getAttribute('aria-selected') === 'true');
   assert.match(aktif.className, /bg-white/, 'chip terpilih = pill putih berbingkai + bayangan (sesuai desain)');
   assert.match(aktif.className, /shadow-sm/, 'chip terpilih berbayang');
@@ -121,21 +122,21 @@ try {
     assert.ok(c, 'chip ' + label + ' ada');
     await act(async () => c.click());
   };
-  await klik('Free Fire SG');
+  await klik('Free Fire Singapura');
   assert.deepEqual(produk(), ['FF_SG_25', 'FF_SG_100'], 'chip SG: hanya produk server SG, nama asli penyedia');
   assert.match(teks(), /25 Diamonds \(SG\)/, 'nama produk SG tampil apa adanya');
-  await klik('Free Fire TH');
+  await klik('Free Fire Thailand');
   assert.deepEqual(produk(), ['FFTH33'], 'chip TH: hanya produk server TH');
-  await klik('Free Fire MY');
+  await klik('Free Fire Malaysia');
   assert.deepEqual(produk(), ['FFMYLT'], 'chip MY: hanya produk server MY');
-  await klik('Free Fire ID Promo');
+  await klik('Free Fire Indonesia Promo');
   assert.deepEqual(produk(), ['ZFF70', 'MFFLPR10'], 'chip Promo: jalur promo tidak dibuang lagi (urut harga naik)');
-  await klik('Free Fire ID Murah');
+  await klik('Free Fire Indonesia Murah');
   assert.deepEqual(produk(), ['MFF5', 'MFF100'], 'chip ID Murah: kanal resmi M');
   await klik('Free Fire Membership');
   assert.match(teks(), /Paket & Membership/, 'pass/membership jadi kartu kecil di atas list');
   assert.deepEqual(produk(), ['FFBDSWM'], 'chip Membership: produk membership tampil');
-  await klik('Free Fire ID Fast');
+  await klik('Free Fire Indonesia Fast');
   assert.deepEqual(produk(), ['FF5', 'FF10'], 'kembali ke chip ID Fast: pricelist ikut lagi');
   assert.equal(dom.window.document.querySelectorAll('section').length > 2, true, 'satu halaman detail (satu produk/game) untuk semua wilayah');
 

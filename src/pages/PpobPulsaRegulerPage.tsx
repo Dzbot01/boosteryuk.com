@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, Info, LoaderCircle, Smartphone, User, Wallet } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Check, Info, LoaderCircle, Smartphone, Wallet } from 'lucide-react';
 import Seo from '../components/Seo';
-import UserAvatar from '../components/UserAvatar';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import {
   PPOB_PULSA_REGULER,
   detectOperator,
-  formatJamPpob,
   hargaPulsa,
   rupiahTitik,
   type PpobProduk,
@@ -17,7 +15,7 @@ import {
 /** Kerangka (skeleton) kartu produk saat daftar layanan dimuat. */
 function SkeletonProduk() {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <div key={i} className="h-[74px] animate-pulse rounded-2xl border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/60" />
       ))}
@@ -40,14 +38,7 @@ export default function PpobPulsaRegulerPage() {
   const [nomor, setNomor] = useState('');
   const [terpilih, setTerpilih] = useState<PpobProduk | null>(null);
   const [memuat, setMemuat] = useState(false);
-  const [jam, setJam] = useState(() => new Date());
   const [pesan, setPesan] = useState<{ nada: 'sukses' | 'info' | 'gagal'; teks: string } | null>(null);
-
-  // Jam real-time (update tiap detik).
-  useEffect(() => {
-    const t = window.setInterval(() => setJam(new Date()), 1000);
-    return () => window.clearInterval(t);
-  }, []);
 
   const operator = useMemo(() => detectOperator(nomor), [nomor]);
   const produk = useMemo(() => (operator ? PPOB_PULSA_REGULER[operator.id] : []), [operator]);
@@ -66,7 +57,6 @@ export default function PpobPulsaRegulerPage() {
   }, [operator?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saldo = Number(user?.balance) || 0;
-  const foto = user?.picture && /^https:\/\//i.test(user.picture) ? user.picture : '';
   const nomorBersih = nomor.replace(/\D/g, '');
 
   const beli = () => {
@@ -101,41 +91,10 @@ export default function PpobPulsaRegulerPage() {
     <div className="min-h-screen bg-[#F4F6FB] pb-[120px] dark:bg-slate-950">
       <Seo title="Pulsa Reguler" description={`Isi pulsa semua operator di ${namaApp} — Telkomsel, Indosat, XL, Tri, Smartfren. Deteksi operator otomatis, proses 24 jam.`} noindex />
 
-      {/* ============ HEADER BIRU PENDEK ============ */}
-      <header
-        className="relative overflow-hidden px-4 pb-14 pt-4"
-        style={{ background: 'linear-gradient(135deg,#3B82F6 0%,#2563EB 100%)' }}
-      >
-        <svg className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 text-white/10" viewBox="0 0 200 200" aria-hidden="true">
-          <circle cx="100" cy="100" r="92" fill="currentColor" />
-        </svg>
-        <div className="relative flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/70 bg-white">
-            {foto ? (
-              <img src={foto} alt={`Foto profil ${user?.name || ''}`} className="h-full w-full object-cover" />
-            ) : (
-              <UserAvatar user={user ?? null} fallbackClassName="bg-white">
-                <User className="h-5 w-5 text-slate-400" strokeWidth={2} />
-              </UserAvatar>
-            )}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14.5px] font-extrabold text-[#F5B73B]">{user?.name || namaApp}</span>
-            <span className="block font-mono text-[11.5px] font-semibold tabular-nums text-white/85">{formatJamPpob(jam)}</span>
-          </span>
-          <Link
-            to="/ppob"
-            aria-label="Kembali ke beranda PPOB"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#2563EB] shadow-sm transition active:scale-95"
-          >
-            <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={2.4} />
-          </Link>
-        </div>
-      </header>
 
       {/* ============ CARD PUTIH BESAR (overlap header) ============ */}
-      <div className="mx-auto w-full max-w-md px-4">
-        <section className="-mt-9 rounded-t-[28px] rounded-b-[20px] bg-white p-4 shadow-[0_10px_30px_-14px_rgba(37,99,235,0.4)] dark:bg-slate-900">
+      <div className="mx-auto w-full max-w-md px-4 md:max-w-3xl lg:max-w-5xl lg:px-6">
+        <section className="relative -mt-9 rounded-t-[28px] rounded-b-[20px] bg-white p-4 shadow-[0_10px_30px_-14px_rgba(37,99,235,0.4)] dark:bg-slate-900 md:p-5">
           <h1 className="text-[16px] font-extrabold tracking-tight text-slate-900 dark:text-white">Pulsa Reguler</h1>
           <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
             Isi pulsa semua operator Indonesia — deteksi operator otomatis dari nomor tujuan, proses otomatis 24 jam.
@@ -188,7 +147,7 @@ export default function PpobPulsaRegulerPage() {
                 Masukkan nomor tujuan (08xx) untuk melihat daftar layanan pulsa.
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 {produk.map((p) => {
                   const aktif = terpilih?.id === p.id;
                   return (
@@ -267,7 +226,7 @@ export default function PpobPulsaRegulerPage() {
 
       {/* ============ TOMBOL BELI (sticky, bukan navbar) ============ */}
       {terpilih ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md px-4 pb-4">
+        <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md px-4 pb-4 md:max-w-3xl lg:max-w-5xl lg:px-6">
           <div className="rounded-2xl bg-white/95 p-3 shadow-[0_-6px_24px_-12px_rgba(15,23,42,0.45)] backdrop-blur dark:bg-slate-900/95">
             <div className="mb-2 flex items-center justify-between text-[12px]">
               <span className="truncate font-bold text-slate-600 dark:text-slate-300">

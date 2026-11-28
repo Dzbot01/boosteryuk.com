@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftRight,
-  Bell,
   Coins,
   Eye,
   EyeOff,
@@ -16,12 +15,10 @@ import {
   Send,
   ShoppingCart,
   Smartphone,
-  User,
   Wallet,
   Wifi,
 } from 'lucide-react';
 import Seo from '../components/Seo';
-import UserAvatar from '../components/UserAvatar';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import {
@@ -31,7 +28,6 @@ import {
   PPOB_PENGUMUMAN,
   PPOB_POINT_FALLBACK,
   rupiahTitik,
-  sapaanPpob,
   type PpobMenuIcon,
 } from '../data/ppob';
 
@@ -60,24 +56,14 @@ export default function PpobPage() {
   const navigate = useNavigate();
   const namaApp = settings.brandName || 'Boosteryuk';
 
-  const [jam, setJam] = useState(() => new Date());
   const [lihatSaldo, setLihatSaldo] = useState(false);
   const [slide, setSlide] = useState(0);
   const [catatan, setCatatan] = useState('');
   const scroller = useRef<HTMLDivElement | null>(null);
-  const beritaRef = useRef<HTMLElement | null>(null);
-
-  // Jam untuk sapaan dinamis (cukup disegarkan tiap 30 detik).
-  useEffect(() => {
-    const t = window.setInterval(() => setJam(new Date()), 30_000);
-    return () => window.clearInterval(t);
-  }, []);
 
   const saldo = Number(user?.balance) || 0;
   /** Poin user — bila API belum mengirim, pakai nilai mock di data/ppob.ts. */
   const poin = PPOB_POINT_FALLBACK;
-  const sapaan = useMemo(() => sapaanPpob(jam.getHours()), [jam]);
-  const foto = user?.picture && /^https:\/\//i.test(user.picture) ? user.picture : '';
 
   const bukaLayanan = (id: string, to?: string, pesan?: string) => {
     if (to) {
@@ -97,47 +83,10 @@ export default function PpobPage() {
         noindex
       />
 
-      {/* ============ HEADER BIRU ============ */}
-      <header
-        className="relative overflow-hidden rounded-b-[32px] px-4 pb-16 pt-5"
-        style={{ background: 'linear-gradient(135deg,#3B82F6 0%,#2563EB 100%)' }}
-      >
-        {/* Motif lengkung halus di sisi kanan */}
-        <svg className="pointer-events-none absolute -right-14 -top-16 h-60 w-60 text-white/10" viewBox="0 0 200 200" aria-hidden="true">
-          <circle cx="100" cy="100" r="92" fill="currentColor" />
-          <circle cx="100" cy="100" r="62" fill="none" stroke="currentColor" strokeWidth="12" opacity="0.75" />
-          <circle cx="100" cy="100" r="34" fill="none" stroke="currentColor" strokeWidth="8" opacity="0.5" />
-        </svg>
 
-        <div className="relative flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/70 bg-white">
-            {foto ? (
-              <img src={foto} alt={`Foto profil ${user?.name || ''}`} className="h-full w-full object-cover" />
-            ) : (
-              <UserAvatar user={user ?? null} fallbackClassName="bg-white">
-                <User className="h-5 w-5 text-slate-400" strokeWidth={2} />
-              </UserAvatar>
-            )}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14.5px] font-extrabold text-[#F5B73B]">{user?.name || namaApp}</span>
-            <span className="block text-[11.5px] font-medium text-white/85">{sapaan}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => beritaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            aria-label="Berita & pengumuman"
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition active:scale-95"
-          >
-            <Bell className="h-[18px] w-[18px]" strokeWidth={2.2} />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-[#2563EB]" />
-          </button>
-        </div>
-      </header>
-
-      <div className="mx-auto w-full max-w-md px-4">
+      <div className="mx-auto w-full max-w-md px-4 md:max-w-3xl lg:max-w-5xl lg:px-6">
         {/* ============ CARD SALDO (overlap header) ============ */}
-        <section className="-mt-10 rounded-[20px] bg-white p-4 shadow-[0_10px_30px_-14px_rgba(37,99,235,0.45)] dark:bg-slate-900">
+        <section className="relative -mt-10 rounded-[20px] bg-white p-4 shadow-[0_10px_30px_-14px_rgba(37,99,235,0.45)] dark:bg-slate-900 md:p-5">
           <div className="grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800">
             <div className="pr-3">
               <p className="text-[11px] font-bold text-slate-400">Balance:</p>
@@ -211,7 +160,7 @@ export default function PpobPage() {
             Menu Service
           </span>
 
-          <div className="mt-3.5 grid grid-cols-4 gap-x-2 gap-y-3.5">
+          <div className="mt-3.5 grid grid-cols-4 gap-x-2 gap-y-3.5 md:grid-cols-8">
             {PPOB_MENU.map((m) => {
               const Ikon = IKON_MENU[m.icon];
               return (
@@ -251,7 +200,7 @@ export default function PpobPage() {
             {PPOB_BANNERS.map((b) => (
               <article
                 key={b.id}
-                className="relative flex h-[104px] w-full shrink-0 snap-center flex-col justify-center overflow-hidden rounded-2xl px-4 text-white shadow-sm"
+                className="relative flex h-[104px] w-full shrink-0 snap-center flex-col justify-center overflow-hidden rounded-2xl px-4 text-white shadow-sm md:w-[calc(50%-6px)] lg:w-[calc(33.333%-8px)]"
                 style={{ background: b.gradien }}
               >
                 <span className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full bg-white/10" aria-hidden="true" />
@@ -274,7 +223,7 @@ export default function PpobPage() {
         </section>
 
         {/* ============ NEWS UPDATES ============ */}
-        <section ref={beritaRef} className="mt-5 scroll-mt-4">
+        <section id="berita-ppob" className="mt-5 scroll-mt-28">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.12em] text-slate-700 dark:text-slate-200">
               <Info className="h-4 w-4 text-[#2563EB]" strokeWidth={2.3} />
@@ -285,7 +234,7 @@ export default function PpobPage() {
             </Link>
           </div>
 
-          <div className="mt-2.5 space-y-2.5">
+          <div className="mt-2.5 grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
             {PPOB_BERITA.map((n) => (
               <Link
                 key={n.id}

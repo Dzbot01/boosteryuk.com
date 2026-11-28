@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Gamepad2, Search, SearchX } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Gamepad2, RefreshCw, Search, SearchX, ShieldAlert } from 'lucide-react';
 import Seo from '../components/Seo';
-import { TOPUP_GAMES, filterByName } from '../data/topupGames';
+import { filterByName } from '../data/topupGames';
 import { tvKatalog, type TvKatalogGroup } from '../services/tokovoucherApi';
 
 /**
@@ -24,53 +24,46 @@ interface CardItem {
   slug: string;
   nama: string;
   sub: string;
-  hue: number;
   /** Ada bila item ini game topup (punya halaman detail & produk). */
   game?: boolean;
-  /** Logo resmi game dari penyedia (bila ada); gagal dimuat = fallback ikon gamepad. */
+  /** Logo resmi game dari penyedia; gagal dimuat = placeholder ikon gamepad netral. */
   logo?: string;
 }
 
-function GameThumb({ item, big = false }: { item: CardItem; big?: boolean }) {
+/**
+ * Thumbnail kartu: LANGSUNG image resmi dari API penyedia tanpa card background
+ * berwarna — gambar memenuhi kotak persegi bersudut lembut, zoom halus saat hover.
+ */
+function GameThumb({ item }: { item: CardItem }) {
   return (
-    <div
-      className={`relative aspect-square w-full overflow-hidden rounded-xl ${big ? 'rounded-2xl' : ''}`}
-      style={{ background: `linear-gradient(155deg, hsl(${item.hue} 42% 34%) 0%, hsl(${item.hue} 55% 18%) 62%, #14143c 100%)` }}
-    >
-      {/* logo resmi penyedia bila tersedia; ikon gamepad sebagai watermark/fallback */}
+    <div className="relative aspect-square w-full overflow-hidden rounded-2xl">
       {item.logo ? (
         <img
           src={item.logo}
-          alt=""
+          alt={item.nama}
           loading="lazy"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
             const g = e.currentTarget.nextElementSibling;
             if (g) g.classList.remove('hidden');
           }}
-          className="absolute inset-0 h-full w-full object-contain p-4"
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]"
         />
       ) : null}
       <Gamepad2
-        className={`absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-1/2 -translate-y-1/2 text-white/25 ${item.logo ? 'hidden' : ''}`}
+        className={`absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-300 ${item.logo ? 'hidden' : ''}`}
         strokeWidth={1.4}
       />
-      {/* overlay gradasi navy di bawah thumbnail: tempat logo/nama game */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#14143c] via-[#14143c]/70 to-transparent px-2 pb-2 pt-8">
-        <p className="truncate text-center font-display text-[11px] font-extrabold uppercase italic tracking-wide text-white md:text-[13px]">
-          {item.nama}
-        </p>
-      </div>
     </div>
   );
 }
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-2xl bg-white p-3 shadow-sm">
-      <div className="aspect-square w-full rounded-xl bg-slate-200" />
-      <div className="mx-auto mt-3 h-3.5 w-3/4 rounded-full bg-slate-200" />
-      <div className="mx-auto mt-2 h-3 w-1/2 rounded-full bg-slate-100" />
+    <div className="animate-pulse rounded-2xl">
+      <div className="aspect-square w-full rounded-2xl bg-slate-200/80" />
+      <div className="mx-auto mt-3 h-3.5 w-3/4 rounded-full bg-slate-200/70" />
+      <div className="mx-auto mt-2 h-3 w-1/2 rounded-full bg-slate-200/50" />
     </div>
   );
 }
@@ -79,40 +72,38 @@ export default function TopupGamePage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<TvKatalogGroup[]>([]);
+  /** Server PHP bermasalah (error/non-JSON): TIDAK ada fallback — wajib login ulang. */
+  const [galat, setGalat] = useState(false);
+  const navigate = useNavigate();
 
   /** Grid kartu game LIVE dari API katalog penyedia (kategori Topup, server ID Indonesia). */
-  useEffect(() => {
-    let alive = true;
+  const muatKatalog = useCallback(() => {
     setLoading(true);
+    setGalat(false);
+    let alive = true;
     tvKatalog().then((r) => {
       if (!alive) return;
-      setGroups(r.ok && Array.isArray(r.groups) && r.groups.length ? r.groups : []);
+      if (r.ok && Array.isArray(r.groups)) setGroups(r.groups);
+      else setGalat(true);
       setLoading(false);
     });
     return () => {
       alive = false;
     };
   }, []);
+  useEffect(() => muatKatalog(), [muatKatalog]);
 
-  /** Warna thumbnail: ikut konfigurasi kartu bila game dikenal, selain itu hash slug. */
-  const hueOf = (slug: string) =>
-    TOPUP_GAMES.find((g) => g.slug === slug)?.hue ??
-    [...slug].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
-
-  const items = useMemo<CardItem[]>(() => {
-    if (groups.length) {
-      return groups.map((g) => ({
+  const items = useMemo<CardItem[]>(
+    () =>
+      groups.map((g) => ({
         slug: g.slug,
         nama: g.game,
         sub: `${g.jumlah} produk · server ID (Indonesia)`,
-        hue: hueOf(g.slug),
         game: true,
         logo: g.logo || undefined,
-      }));
-    }
-    // Fallback bila katalog live belum tersedia (server belum dikonfigurasi).
-    return TOPUP_GAMES.map((g) => ({ slug: g.slug, nama: g.nama, sub: g.tagline, hue: g.hue, game: true }));
-  }, [groups]);
+      })),
+    [groups],
+  );
 
   const shown = useMemo(() => filterByName(items, query), [items, query]);
 
@@ -141,8 +132,36 @@ export default function TopupGamePage() {
           />
         </label>
 
+        {/* ============ ERROR SERVER: wajib login ulang (tanpa fallback) ============ */}
+        {galat && !loading && (
+          <div className="mx-auto mt-8 max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
+            <ShieldAlert className="mx-auto h-10 w-10 text-rose-400" strokeWidth={1.7} />
+            <p className="mt-3 font-display text-[16px] font-extrabold text-slate-800">Server tidak dapat dihubungi</p>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">
+              Katalog layanan top up gagal dimuat dari server. Silakan login ulang untuk melanjutkan — sesi anda
+              mungkin sudah berakhir.
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/', { state: { openLogin: true } })}
+                className="rounded-full bg-[#14143c] px-5 py-2 text-[12.5px] font-bold text-white transition hover:bg-[#1f1f52]"
+              >
+                Login ulang
+              </button>
+              <button
+                type="button"
+                onClick={muatKatalog}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-4 py-2 text-[12.5px] font-bold text-slate-700 transition hover:border-slate-400"
+              >
+                <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.2} /> Coba lagi
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ============ GRID KARTU ============ */}
-        <div className="mt-6 grid grid-cols-3 items-stretch gap-4 md:grid-cols-4 md:gap-5 lg:grid-cols-6 xl:gap-6 2xl:grid-cols-8">
+        <div className={`mt-6 grid grid-cols-3 items-stretch gap-4 md:grid-cols-4 md:gap-5 lg:grid-cols-6 xl:gap-6 2xl:grid-cols-8 ${galat ? 'hidden' : ''}`}>
           {loading
             ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
             : shown.map((it) => {
@@ -153,7 +172,7 @@ export default function TopupGamePage() {
                   </>
                 );
                 const cls =
-                  'group block rounded-2xl bg-white p-3 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg focus-visible:-translate-y-1 focus-visible:shadow-lg';
+                  'group block rounded-2xl transition-all duration-200 hover:-translate-y-1 focus-visible:-translate-y-1';
                 return it.game ? (
                   <Link key={it.slug} to={`/topup/${it.slug}`} className={cls} title={it.sub}>
                     {body}
@@ -167,12 +186,12 @@ export default function TopupGamePage() {
         </div>
 
         {/* ============ STATE KOSONG ============ */}
-        {!loading && shown.length === 0 && (
+        {!loading && !galat && shown.length === 0 && (
           <div className="mx-auto mt-10 max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
             <SearchX className="mx-auto h-10 w-10 text-slate-300" strokeWidth={1.6} />
             <p className="mt-3 font-display text-[16px] font-extrabold text-slate-800">Game tidak ditemukan</p>
             <p className="mt-1.5 text-[13px] text-slate-500">
-              Coba kata kunci lain.
+              {query ? 'Coba kata kunci lain.' : 'Katalog penyedia belum tersedia untuk ditampilkan.'}
             </p>
             <button
               type="button"
