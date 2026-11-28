@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeftRight, Coins, Eye, EyeOff, Info, Megaphone, Plus, Send, ShoppingCart } from 'lucide-react';
+import { Coins, Eye, EyeOff, Info, Megaphone, Plus, Send, ShoppingCart, X } from 'lucide-react';
 import { IKON_LAYANAN } from '../lib/ppobIkon';
 import { AlertTriangle, LoaderCircle, RefreshCw } from 'lucide-react';
 import Seo from '../components/Seo';
@@ -9,21 +9,25 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 import { hargaMarkup, markupPpobPct } from '../lib/panelMarkup';
 import { tvLayanan, type TvLayananKelompok } from '../services/tokovoucherApi';
 import {
-  PPOB_BANNERS,
-  PPOB_BERITA,
+  PPOB_GRADIEN_BAWAAN,
   PPOB_MENU_LAINNYA,
   PPOB_MENU_LOKAL,
+  PPOB_NEWS_DEFAULT,
   PPOB_PENGUMUMAN,
   PPOB_POINT_FALLBACK,
   RUTE_LAYANAN_PPOB,
   ikonLayanan,
   rupiahTitik,
+  type PpobBeritaAdmin,
 } from '../data/ppob';
 
-/** Jumlah layanan live maksimum di card Menu Service (sisanya lewat tile "Lainnya"). */
+/** Rute layanan e-money: tujuan aksi cepat Top up & Transfer di card saldo. */
+const RUTE_E_MONEY = `${RUTE_LAYANAN_PPOB}/e-money`;
+
+/** Jumlah layanan live maksimum di card Menu (sisanya lewat tile "Lainnya"). */
 const MAKS_LAYANAN_MENU = 6;
 
-/* Peta ikon Menu Service dipindah ke src/lib/ppobIkon.ts (dipakai juga halaman /ppob/layanan). */
+/* Peta ikon Menu dipindah ke src/lib/ppobIkon.ts (dipakai juga halaman /ppob/layanan). */
 
 /**
  * Beranda PPOB — pulsa, paket data, e-money, dan bayar tagihan.
@@ -41,7 +45,20 @@ export default function PpobPage() {
   const [lihatSaldo, setLihatSaldo] = useState(false);
   const [slide, setSlide] = useState(0);
   const [catatan, setCatatan] = useState('');
+  /** Berita News Update yang sedang dibuka di modal (isinya diatur admin). */
+  const [beritaAktif, setBeritaAktif] = useState<PpobBeritaAdmin | null>(null);
   const scroller = useRef<HTMLDivElement | null>(null);
+
+  /* News Update & kartu promo = kiriman admin (Admin Panel → News Update PPOB);
+     fallback ke isi bawaan bila admin belum menyimpan versinya sendiri. */
+  const berita = useMemo(() => {
+    const b = settings.ppobNews?.berita;
+    return Array.isArray(b) && b.length ? b : PPOB_NEWS_DEFAULT.berita;
+  }, [settings.ppobNews]);
+  const kartu = useMemo(() => {
+    const k = settings.ppobNews?.kartu;
+    return Array.isArray(k) && k.length ? k : PPOB_NEWS_DEFAULT.kartu;
+  }, [settings.ppobNews]);
   /** Markup PPOB child panel (0 bila akses belum dibeli / web utama). */
   const pctPpob = markupPpobPct(tenant);
 
@@ -82,7 +99,7 @@ export default function PpobPage() {
     setCatatan(pesan || menu?.catatan || 'Layanan ini segera hadir.');
   };
 
-  /** Layanan live yang tampil di card Menu Service (sisanya di halaman "Lainnya"). */
+  /** Layanan live yang tampil di card Menu (sisanya di halaman "Lainnya"). */
   const layananMenu = (layanan || []).slice(0, MAKS_LAYANAN_MENU);
   const IkonLainnya = IKON_LAYANAN[PPOB_MENU_LAINNYA.icon];
 
@@ -130,12 +147,11 @@ export default function PpobPage() {
 
           <div className="my-3 border-t border-slate-100 dark:border-slate-800" />
 
-          {/* 3 aksi cepat */}
-          <div className="grid grid-cols-3 gap-2">
+          {/* 2 aksi cepat: Top up & Transfer diarahkan ke layanan e-money (Exchange dihapus). */}
+          <div className="grid grid-cols-2 gap-2">
             {[
-              { label: 'Transfer', ikon: Send, to: '/payment' },
-              { label: 'Top up', ikon: Plus, to: '/deposit' },
-              { label: 'Exchange', ikon: ArrowLeftRight, to: '/event/daily-streak' },
+              { label: 'Transfer', ikon: Send, to: RUTE_E_MONEY },
+              { label: 'Top up', ikon: Plus, to: RUTE_E_MONEY },
             ].map(({ label, ikon: Ikon, to }) => (
               <Link
                 key={label}
@@ -164,14 +180,14 @@ export default function PpobPage() {
           </div>
         </div>
 
-        {/* ============ CARD MENU SERVICE ============ */}
+        {/* ============ CARD MENU ============ */}
         <section className="mt-4 rounded-[20px] bg-white p-4 shadow-[0_8px_24px_-18px_rgba(15,23,42,0.4)] dark:bg-slate-900">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#3B82F6] px-3 py-1 text-[11px] font-extrabold text-white">
             <ShoppingCart className="h-3.5 w-3.5" strokeWidth={2.4} />
-            Menu Service
+            Menu
           </span>
 
-          <div className="mt-3.5 grid grid-cols-4 gap-x-2 gap-y-3.5 md:grid-cols-8">
+          <div className="mt-4 grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {/* Layanan milik aplikasi sendiri (halaman PPOB lokal). */}
             {PPOB_MENU_LOKAL.map((m) => {
               const Ikon = IKON_LAYANAN[m.icon];
@@ -181,12 +197,12 @@ export default function PpobPage() {
                   type="button"
                   onClick={() => bukaLayanan(m.id, m.to, m.catatan)}
                   title={m.desc}
-                  className="group flex flex-col items-center gap-1.5 transition active:scale-95"
+                  className="group flex flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5 transition hover:border-blue-200 hover:bg-[#EFF6FF] active:scale-[0.97] dark:border-slate-800 dark:bg-slate-800/40 dark:hover:border-blue-900/60"
                 >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#3B82F6] text-white shadow-sm shadow-blue-600/30 transition group-active:bg-[#2563EB]">
-                    <Ikon className="h-5 w-5" strokeWidth={2.2} />
+                  <span className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#3B82F6] text-white shadow-sm shadow-blue-600/30 transition group-active:bg-[#2563EB]">
+                    <Ikon className="h-6 w-6" strokeWidth={2.2} />
                   </span>
-                  <span className="w-full truncate text-center text-[10.5px] font-bold leading-tight text-slate-600 dark:text-slate-300">
+                  <span className="line-clamp-2 w-full text-center text-[11.5px] font-bold leading-tight text-slate-700 dark:text-slate-200">
                     {m.label}
                   </span>
                 </button>
@@ -196,9 +212,9 @@ export default function PpobPage() {
             {/* Layanan ASLI penyedia selain top up game (pulsa/data/e-money/voucher/tagihan). */}
             {memuatLayanan
               ? [0, 1, 2].map((i) => (
-                  <span key={`skeleton-${i}`} className="flex flex-col items-center gap-1.5">
-                    <span className="h-11 w-11 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
-                    <span className="h-2.5 w-12 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+                  <span key={`skeleton-${i}`} className="flex flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5 dark:border-slate-800 dark:bg-slate-800/40">
+                    <span className="h-14 w-14 animate-pulse rounded-[18px] bg-slate-200 dark:bg-slate-700" />
+                    <span className="h-2.5 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                   </span>
                 ))
               : layananMenu.map((l) => {
@@ -207,19 +223,19 @@ export default function PpobPage() {
                     <button
                       key={l.id}
                       type="button"
-                      onClick={() => navigate(`${RUTE_LAYANAN_PPOB}?grup=${encodeURIComponent(l.id)}`)}
+                      onClick={() => navigate(`${RUTE_LAYANAN_PPOB}/${encodeURIComponent(l.id)}`)}
                       title={`${l.layanan}${l.kategori ? ` — ${l.kategori}` : ''} · ${l.jumlah} produk, mulai ${rupiahTitik(Math.round(hargaMarkup(l.termurah, pctPpob)))}`}
                       data-layanan={l.id}
-                      className="group flex flex-col items-center gap-1.5 transition active:scale-95"
+                      className="group flex flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5 transition hover:border-blue-200 hover:bg-[#EFF6FF] active:scale-[0.97] dark:border-slate-800 dark:bg-slate-800/40 dark:hover:border-blue-900/60"
                     >
-                      <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-[#3B82F6] text-white shadow-sm shadow-blue-600/30 transition group-active:bg-[#2563EB]">
+                      <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[18px] bg-[#3B82F6] text-white shadow-sm shadow-blue-600/30 transition group-active:bg-[#2563EB]">
                         {l.logo ? (
                           <img src={l.logo} alt="" className="h-full w-full bg-white object-cover" loading="lazy" />
                         ) : (
-                          <Ikon className="h-5 w-5" strokeWidth={2.2} />
+                          <Ikon className="h-6 w-6" strokeWidth={2.2} />
                         )}
                       </span>
-                      <span className="w-full truncate text-center text-[10.5px] font-bold leading-tight text-slate-600 dark:text-slate-300">
+                      <span className="line-clamp-2 w-full text-center text-[11.5px] font-bold leading-tight text-slate-700 dark:text-slate-200">
                         {l.layanan}
                       </span>
                     </button>
@@ -232,12 +248,12 @@ export default function PpobPage() {
               onClick={() => navigate(RUTE_LAYANAN_PPOB)}
               title={PPOB_MENU_LAINNYA.desc}
               data-lainnya="true"
-              className="group flex flex-col items-center gap-1.5 transition active:scale-95"
+              className="group flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[#3B82F6] bg-white p-2.5 transition hover:bg-blue-50 active:scale-[0.97] dark:bg-slate-900"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-dashed border-[#3B82F6] bg-white text-[#2563EB] transition group-active:bg-blue-50 dark:bg-slate-900">
-                <IkonLainnya className="h-5 w-5" strokeWidth={2.2} />
+              <span className="flex h-14 w-14 items-center justify-center rounded-[18px] border border-dashed border-[#3B82F6] bg-white text-[#2563EB] transition group-active:bg-blue-50 dark:bg-slate-900">
+                <IkonLainnya className="h-6 w-6" strokeWidth={2.2} />
               </span>
-              <span className="w-full truncate text-center text-[10.5px] font-bold leading-tight text-slate-600 dark:text-slate-300">
+              <span className="line-clamp-2 w-full text-center text-[11.5px] font-bold leading-tight text-slate-700 dark:text-slate-200">
                 {PPOB_MENU_LAINNYA.label}
               </span>
             </button>
@@ -294,20 +310,22 @@ export default function PpobPage() {
             }}
             className="ppob-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1"
           >
-            {PPOB_BANNERS.map((b) => (
+            {kartu.map((b) => (
               <article
                 key={b.id}
-                className="relative flex h-[104px] w-full shrink-0 snap-center flex-col justify-center overflow-hidden rounded-2xl px-4 text-white shadow-sm md:w-[calc(50%-6px)] lg:w-[calc(33.333%-8px)]"
-                style={{ background: b.gradien }}
+                data-kartu={b.id}
+                className="relative flex h-[112px] w-full shrink-0 snap-center flex-col justify-center overflow-hidden rounded-2xl px-4 text-white shadow-sm md:w-[calc(50%-6px)] lg:w-[calc(33.333%-8px)]"
+                style={{ background: b.gradien || PPOB_GRADIEN_BAWAAN }}
               >
                 <span className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full bg-white/10" aria-hidden="true" />
-                <p className="relative text-[13px] font-extrabold leading-tight">{b.judul}</p>
-                <p className="relative mt-0.5 text-[11.5px] font-semibold text-white/85">{b.sub.replace('{APP}', namaApp)}</p>
+                <p className="relative text-[13.5px] font-extrabold leading-tight">{b.title.replace('{APP}', namaApp)}</p>
+                <p className="relative mt-0.5 text-[11.5px] font-semibold text-white/85">{b.subtitle.replace('{APP}', namaApp)}</p>
+                {b.desc ? <p className="relative mt-1 line-clamp-2 text-[10.5px] font-medium text-white/75">{b.desc.replace('{APP}', namaApp)}</p> : null}
               </article>
             ))}
           </div>
           <div className="mt-2 flex items-center justify-center gap-1.5">
-            {PPOB_BANNERS.map((b, i) => (
+            {kartu.map((b, i) => (
               <button
                 key={b.id}
                 type="button"
@@ -326,33 +344,84 @@ export default function PpobPage() {
               <Info className="h-4 w-4 text-[#2563EB]" strokeWidth={2.3} />
               News Updates
             </h2>
-            <Link to="/artikel" className="text-[11px] font-extrabold uppercase tracking-wide text-[#2563EB] transition active:opacity-70">
-              View All
-            </Link>
+            <span className="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{berita.length} kabar</span>
           </div>
 
           <div className="mt-2.5 grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
-            {PPOB_BERITA.map((n) => (
-              <Link
+            {berita.map((n) => (
+              <button
                 key={n.id}
-                to={n.to}
-                className="flex items-start gap-3 rounded-2xl bg-white p-3.5 shadow-[0_6px_18px_-14px_rgba(15,23,42,0.45)] transition active:scale-[0.99] dark:bg-slate-900"
+                type="button"
+                onClick={() => setBeritaAktif(n)}
+                data-berita={n.id}
+                aria-haspopup="dialog"
+                className="flex items-start gap-3 rounded-2xl bg-white p-3.5 text-left shadow-[0_6px_18px_-14px_rgba(15,23,42,0.45)] transition hover:-translate-y-0.5 active:scale-[0.99] dark:bg-slate-900"
               >
                 <span
                   className="mt-0.5 shrink-0 rounded-md px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-white"
-                  style={{ backgroundColor: n.warna }}
+                  style={{ backgroundColor: n.warna || '#3B82F6' }}
                 >
-                  {n.kategori}
+                  {n.tag || 'INFO'}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[12.5px] font-bold leading-snug text-slate-800 dark:text-slate-100">{n.judul}</span>
-                  <span className="mt-0.5 block text-[11px] text-slate-400">{n.tanggal}</span>
+                  <span className="block text-[12.5px] font-bold leading-snug text-slate-800 dark:text-slate-100">{n.title}</span>
+                  <span className="mt-0.5 block text-[11px] text-slate-400">{n.time}</span>
                 </span>
-              </Link>
+              </button>
             ))}
           </div>
         </section>
       </div>
+
+      {/* ============ MODAL NEWS UPDATE (isi diatur admin) ============ */}
+      {beritaAktif && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          role="presentation"
+          onClick={() => setBeritaAktif(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={beritaAktif.title}
+            data-modal-berita="true"
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-md sm:rounded-3xl dark:bg-slate-900"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span
+                className="shrink-0 rounded-md px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-white"
+                style={{ backgroundColor: beritaAktif.warna || '#3B82F6' }}
+              >
+                {beritaAktif.tag || 'INFO'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setBeritaAktif(null)}
+                aria-label="Tutup kabar"
+                className="-mr-1 -mt-1 rounded-full p-1.5 text-slate-400 transition active:scale-90 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+              >
+                <X className="h-4 w-4" strokeWidth={2.4} />
+              </button>
+            </div>
+            <h3 className="mt-2 text-[15px] font-extrabold leading-snug text-slate-900 dark:text-white">{beritaAktif.title}</h3>
+            <p className="mt-1 text-[11px] font-bold text-slate-400">{beritaAktif.time}</p>
+            {beritaAktif.image ? (
+              <img src={beritaAktif.image} alt="" className="mt-3 w-full rounded-2xl object-cover" />
+            ) : null}
+            <p className="mt-3 whitespace-pre-line text-[12.5px] leading-relaxed text-slate-600 dark:text-slate-300">
+              {beritaAktif.desc || 'Belum ada isi kabar untuk berita ini.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => setBeritaAktif(null)}
+              className="mt-4 h-11 w-full rounded-full bg-[#3B82F6] text-[13px] font-extrabold text-white transition active:scale-[0.99] hover:bg-[#2563EB]"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .ppob-marquee { display: flex; width: max-content; animation: ppob-marquee 22s linear infinite; }

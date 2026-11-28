@@ -186,6 +186,68 @@ export const PPOB_BERITA: PpobBerita[] = [
   { id: 'n3', kategori: 'TAGIHAN', warna: '#3B82F6', judul: 'Bayar tagihan pascabayar sebelum tanggal 20 tiap bulan', tanggal: '18 Nov 2026', to: '/artikel' },
 ];
 
+/**
+ * Berita News Update PPOB yang bisa DIATUR ADMIN (Admin Panel → News Update PPOB).
+ * Disimpan di database lewat site_settings.php (kunci `ppobNews.berita`); nilai di bawah
+ * hanyalah bawaan awal supaya halaman tidak kosong sebelum admin mengisinya.
+ */
+export interface PpobBeritaAdmin {
+  id: number;
+  /** Badge kategori singkat (INFO / PROMO / TAGIHAN / bebas). */
+  tag: string;
+  /** Warna badge (hex) — kosong = warna bawaan biru. */
+  warna: string;
+  title: string;
+  /** Isi lengkap yang tampil di modal News Update. */
+  desc: string;
+  /** Tanggal/waktu tampil (teks bebas, mis. "26 Nov 2026"). */
+  time: string;
+  /** Gambar pendukung (URL atau data URL) — opsional. */
+  image?: string;
+}
+
+/**
+ * Kartu promo "BAYAR TAGIHANMU / HANYA DI …" — juga diatur admin di halaman yang sama.
+ * Jumlahnya bebas (barisnya bisa digeser/swipe), jadi admin bisa menambah kartu baru.
+ */
+export interface PpobKartuAdmin {
+  id: number;
+  /** Judul besar kartu. {APP} diganti nama brand website/child panel. */
+  title: string;
+  /** Baris kedua (subjudul). {APP} diganti nama brand. */
+  subtitle: string;
+  /** Keterangan kecil di bawah subjudul (boleh kosong). */
+  desc: string;
+  /** Latar gradien CSS — kosong = gradien biru bawaan. */
+  gradien: string;
+}
+
+export interface PpobNews {
+  berita: PpobBeritaAdmin[];
+  kartu: PpobKartuAdmin[];
+}
+
+const GRADIEN_BAWAAN = 'linear-gradient(120deg,#1D4ED8 0%,#3B82F6 100%)';
+
+/** Isi bawaan News Update PPOB (dipakai sebelum admin menyimpan versinya sendiri). */
+export const PPOB_NEWS_DEFAULT: PpobNews = {
+  berita: [
+    { id: 1, tag: 'INFO', warna: '#14B8A6', title: 'Pemeliharaan jaringan Telkomsel pukul 02.00–04.00 WIB', desc: 'Selama pemeliharaan, transaksi pulsa & paket data Telkomsel bisa lebih lambat atau tertunda. Pesanan yang tertunda tetap diproses otomatis setelah jaringan normal, dan statusnya bisa dipantau di halaman Riwayat Pesanan.', time: '26 Nov 2026' },
+    { id: 2, tag: 'PROMO', warna: '#F59E0B', title: 'Cashback saldo 5% untuk paket data XL setiap Jumat', desc: 'Setiap pembelian paket data XL pada hari Jumat mendapat cashback 5% ke saldo akun. Cashback masuk otomatis maksimal 1x24 jam setelah transaksi berhasil.', time: '21 Nov 2026' },
+    { id: 3, tag: 'TAGIHAN', warna: '#3B82F6', title: 'Bayar tagihan pascabayar sebelum tanggal 20 tiap bulan', desc: 'Tagihan pascabayar (kartu Halo, XL Prioritas, Indosat, Tri, Smartfren) paling aman dibayar sebelum tanggal 20 agar nomor tidak terkena denda atau isolir.', time: '18 Nov 2026' },
+  ],
+  kartu: PPOB_BANNERS.map((b, i) => ({
+    id: i + 1,
+    title: b.judul,
+    subtitle: b.sub,
+    desc: '',
+    gradien: b.gradien || GRADIEN_BAWAAN,
+  })),
+};
+
+/** Gradien biru bawaan bila admin mengosongkan warna kartu. */
+export const PPOB_GRADIEN_BAWAAN = GRADIEN_BAWAAN;
+
 /** Teks berjalan (marquee) di bawah card saldo. */
 export const PPOB_PENGUMUMAN = 'Selamat datang, terima kasih sudah bergabung';
 

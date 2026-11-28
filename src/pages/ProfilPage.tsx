@@ -10,11 +10,9 @@ import {
   ArrowUp,
   Check,
   ChevronRight,
-  Coins,
   Copy,
   CreditCard,
   Crown,
-  Gift,
   Hash,
   LogOut,
   Mail,
@@ -114,8 +112,6 @@ export default function ProfilPage() {
   const telepon = samarkanTengah(user.phone || '');
   const trial = !!user.plan?.plus_trial_active && !user.plan.plus_permanent && !user.plan.extra_active;
   const until = user.plan?.plus_trial_until;
-  // Referral = program child panel/reseller: pemilik panel ke panelnya, selain itu ke paket Upgrade.
-  const tujuanReferral = user.plan?.child_panel ? '/panel-admin' : '/plus';
 
   const copyId = async () => {
     try {
@@ -231,8 +227,6 @@ export default function ProfilPage() {
         <section className="mt-4 overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] dark:bg-slate-900 md:mt-6 md:rounded-none md:bg-transparent md:shadow-none md:dark:bg-transparent md:border-t md:border-slate-100 md:pt-6 md:dark:border-slate-800 md:overflow-visible">
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             <BarisMenu ikon={Send} warnaIkon="text-emerald-600" latarIkon="bg-emerald-50 dark:bg-emerald-900/25" label="Transfer" to="/payment" />
-            <BarisMenu ikon={Gift} warnaIkon="text-amber-600" latarIkon="bg-amber-50 dark:bg-amber-900/25" label="Referral" to={tujuanReferral} />
-            <BarisMenu ikon={Coins} warnaIkon="text-emerald-600" latarIkon="bg-emerald-50 dark:bg-emerald-900/25" label="Tukar Poin" to="/event/daily-streak" />
             <BarisMenu ikon={Receipt} warnaIkon="text-rose-600" latarIkon="bg-rose-50 dark:bg-rose-900/25" label="Riwayat" to="/riwayat-pesanan" />
           </div>
         </section>

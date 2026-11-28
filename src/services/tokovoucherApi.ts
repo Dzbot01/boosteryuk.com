@@ -62,6 +62,21 @@ export interface TvTransaksi {
   sisa_saldo?: number;
   /** Varian panggilan yang dipakai server: "POST+signature" (docs) atau "GET+secret" (fallback). */
   metode?: string;
+  /* ----- tambahan untuk pesanan top up game & PPOB (harga/saldo dihitung server) ----- */
+  /** Jenis pesanan yang dikenali server dari katalog: 'topup' (game) | 'ppob' (layanan). */
+  jenis?: 'topup' | 'ppob';
+  /** Nama produk asli penyedia yang dipesan. */
+  produk_nama?: string;
+  /** Nama game / layanan penyedia. */
+  layanan?: string;
+  /** Harga jual yang DITAGIH ke user (modal + markup), dihitung server. */
+  harga?: number;
+  /** Harga modal dari katalog penyedia. */
+  harga_modal?: number;
+  /** Persen markup yang dipakai server (child panel atau sistem). */
+  markup_pct?: number;
+  /** Sisa saldo website setelah pesanan dibuat (bila server mengirim). */
+  saldo?: number;
   /** Cuplikan respons asli penyedia untuk troubleshooting. */
   raw?: string;
   /** Balasan mentah penyedia (sudah dibuang field sensitif) untuk detail/troubleshooting. */

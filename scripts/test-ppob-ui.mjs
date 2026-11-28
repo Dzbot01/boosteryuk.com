@@ -138,24 +138,29 @@ assert.match(beranda, /id="berita-ppob"/, 'section berita punya id untuk scroll 
 assert.match(beranda, /mt-4 rounded-\[20px\] bg-white p-4/, 'card saldo berada DI BAWAH header biru (body tidak tertutup header)');
 assert.ok(!beranda.includes('-mt-10'), 'tidak ada margin negatif yang menyelipkan body PPOB ke bawah header');
 assert.match(beranda, /md:max-w-3xl lg:max-w-5xl/, 'kontainer halaman melebar di desktop');
-assert.match(beranda, /md:grid-cols-8/, 'Menu Service 4 kolom mobile → 8 kolom desktop');
+assert.match(beranda, /grid-cols-3 gap-2\.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8/, 'grid card Menu: 3 kolom mobile (card lebih besar) → 8 kolom desktop');
 assert.match(beranda, /IDR ••••••••••/, 'saldo tersamar default');
 assert.match(beranda, /setLihatSaldo\(\(v\) => !v\)/, 'toggle mata berfungsi');
 assert.match(beranda, /divide-x divide-slate-100/, 'dua kolom dipisah garis vertikal tipis');
 assert.match(beranda, /<Coins[\s\S]{0,120}\{poin\}/, 'kolom Point dengan ikon koin');
-for (const aksi of ['Transfer', 'Top up', 'Exchange'])
+for (const aksi of ['Transfer', 'Top up'])
   assert.ok(beranda.includes(`label: '${aksi}'`), `aksi cepat ${aksi} ada`);
+assert.ok(!beranda.includes("'Exchange'"), 'aksi cepat Exchange DIHAPUS dari halaman PPOB');
+assert.match(beranda, /const RUTE_E_MONEY = `\$\{RUTE_LAYANAN_PPOB\}\/e-money`;/, 'rute layanan e-money dipakai aksi cepat');
+assert.match(beranda, /\{ label: 'Transfer', ikon: Send, to: RUTE_E_MONEY \}/, 'Transfer diarahkan ke layanan e-money');
+assert.match(beranda, /\{ label: 'Top up', ikon: Plus, to: RUTE_E_MONEY \}/, 'Top up diarahkan ke layanan e-money');
 assert.match(beranda, /ppob-marquee/, 'banner info berjalan (marquee)');
 assert.match(beranda, /prefers-reduced-motion/, 'marquee menghormati prefers-reduced-motion');
-assert.match(beranda, /Menu Service/, 'chip label Menu Service');
-assert.match(beranda, /grid grid-cols-4 gap-x-2 gap-y-3\.5 md:grid-cols-8/, 'grid 4 kolom mobile, 8 kolom desktop');
+assert.match(beranda, /\n            Menu\n/, 'chip label "Menu" (bukan "Menu Service")');
+assert.ok(!beranda.includes('Menu Service'), 'teks "Menu Service" diganti "Menu"');
+assert.match(beranda, /mt-4 grid grid-cols-3 gap-2\.5/, 'grid card Menu diperbesar (3 kolom mobile, jarak lebih lega)');
 // Layanan di card Menu Service berasal dari endpoint list produk penuh (selain top up game).
 assert.match(beranda, /import \{ tvLayanan, type TvLayananKelompok \} from '\.\.\/services\/tokovoucherApi';/, 'beranda PPOB menarik layanan dari proxy server');
 assert.match(beranda, /const r = await tvLayanan\(\);/, 'layanan dimuat lewat tvLayanan()');
 assert.match(beranda, /MAKS_LAYANAN_MENU = 6/, 'maks 6 layanan live di card Menu Service (sisanya lewat tile Lainnya)');
 assert.match(beranda, /layananMenu\.map\(\(l\) =>/, 'tile layanan live dirender dari data server');
 assert.match(beranda, /data-layanan=\{l\.id\}/, 'tiap tile layanan punya penanda id (bisa diuji/ditelusuri)');
-assert.match(beranda, /navigate\(`\$\{RUTE_LAYANAN_PPOB\}\?grup=\$\{encodeURIComponent\(l\.id\)\}`\)/, 'klik tile layanan membuka layanannya di halaman Semua Layanan');
+assert.match(beranda, /navigate\(`\$\{RUTE_LAYANAN_PPOB\}\/\$\{encodeURIComponent\(l\.id\)\}`\)/, 'klik tile layanan membuka HALAMAN ORDER khusus layanan itu');
 assert.match(beranda, /data-lainnya="true"/, 'tile Lainnya selalu ada di grid Menu Service');
 assert.match(beranda, /ikonLayanan\(/, 'ikon tile layanan live dipilih dari kata kunci namanya');
 assert.ok(!/streaming-game|Streaming & Game/.test(beranda), 'tile top up game TIDAK lagi tampil di card Menu Service PPOB');
@@ -163,12 +168,18 @@ assert.match(beranda, /Katalog penyedia belum mengirim layanan selain top up gam
 assert.match(beranda, /Coba lagi/, 'galat layanan punya tombol Coba lagi');
 assert.match(beranda, /Login ulang/, 'galat layanan punya tombol Login ulang');
 assert.match(beranda, /Memuat layanan dari katalog penyedia/, 'state memuat layanan dijelaskan ke user');
-assert.match(beranda, /h-11 w-11[\s\S]{0,80}rounded-2xl bg-\[#3B82F6\]/, 'kotak ikon rounded biru solid ±44px');
-assert.match(beranda, /truncate text-center text-\[10\.5px\]/, 'label 1 baris dipotong … bila panjang');
-assert.match(beranda, /snap-x snap-mandatory/, 'carousel banner bisa di-swipe');
+assert.match(beranda, /h-14 w-14[\s\S]{0,90}rounded-\[18px\] bg-\[#3B82F6\]/, 'kotak ikon rounded biru solid ±56px (card diperbesar)');
+assert.match(beranda, /line-clamp-2 w-full text-center text-\[11\.5px\]/, 'label 2 baris, teks lebih besar');
+assert.match(beranda, /snap-x snap-mandatory/, 'baris kartu promo bisa digeser (swipe)');
 assert.match(beranda, /scrollTo\(\{ left: i \*/, 'indikator titik banner bisa diklik');
 assert.match(beranda, /News Updates/i, 'section NEWS UPDATES');
-assert.match(beranda, /View All/i, 'link VIEW ALL');
+assert.ok(!/View All/i.test(beranda), 'teks "View All" DIHAPUS dari News Update');
+assert.match(beranda, /settings\.ppobNews\?\.berita/, 'isi News Update diambil dari setelan admin (site_settings)');
+assert.match(beranda, /settings\.ppobNews\?\.kartu/, 'kartu promo diambil dari setelan admin');
+assert.match(beranda, /data-modal-berita="true"/, 'klik card berita membuka modal News Update');
+assert.match(beranda, /setBeritaAktif\(n\)/, 'card berita membuka modal beritanya');
+assert.match(beranda, /PPOB_NEWS_DEFAULT/, 'isi bawaan dipakai bila admin belum menyimpan berita sendiri');
+assert.match(beranda, /data-kartu=\{b\.id\}/, 'kartu promo dirender dari data admin (jumlah bebas, bisa digeser)');
 assert.match(beranda, /settings\.brandName/, 'nama app dinamis (bukan hardcode "Kupedia")');
 assert.match(beranda, /user\?\.balance/, 'saldo dari data user (siap disambung API)');
 
@@ -302,8 +313,11 @@ assert.equal(R.samarkanTengah('082212347543'), '0822••••7543', 'nomor te
 assert.equal(R.samarkanTengah(''), '', 'tanpa nomor → string kosong (UI fallback ke @username)');
 
 const htmlProfil = render('/profil', R.ProfilPage);
-for (const t of ['Akun Saya', 'Pemasukan', 'Pengeluaran', '0822••••7543', 'Melvi Husin', 'Rp 1.250.000', 'Rp 25.000', 'Kartu Saya', 'Tukar Poin', 'Versi App', '6.1.4', 'Isi saldo', 'Keluar'])
+for (const t of ['Akun Saya', 'Pemasukan', 'Pengeluaran', '0822••••7543', 'Melvi Husin', 'Rp 1.250.000', 'Rp 25.000', 'Kartu Saya', 'Versi App', '6.1.4', 'Isi saldo', 'Keluar'])
   assert.ok(htmlProfil.includes(t), `profil merender "${t}"`);
+// Menu Referral & Tukar Poin dihapus dari halaman profil (atas permintaan user).
+for (const t of ['Referral', 'Tukar Poin'])
+  assert.ok(!htmlProfil.includes(`>${t}<`), `menu "${t}" tidak lagi ada di halaman profil`);
 assert.ok(!htmlProfil.includes('Rp 15.000'), 'pesanan batal tidak dihitung sebagai pengeluaran');
 
 const kepalaRender = (variant) =>
@@ -318,8 +332,11 @@ assert.ok(htmlKepalaPulsa.includes('Kembali ke beranda PPOB'), 'tombol kembali d
 assert.ok(!htmlKepalaPulsa.includes('Berita & pengumuman'), 'lonceng hanya di header beranda');
 
 const htmlPpob = render('/ppob', R.PpobPage);
-for (const t of ['Balance:', 'IDR ••••••••••', 'Point', '120', 'Transfer', 'Top up', 'Exchange', 'Menu Service', 'Pulsa Reguler', 'Lainnya', 'Memuat layanan dari katalog penyedia', 'Selamat datang', 'BAYAR TAGIHANMU', 'HANYA DI Boosteryuk', 'News Updates', 'View All'])
+for (const t of ['Balance:', 'IDR ••••••••••', 'Point', '120', 'Transfer', 'Top up', 'Menu', 'Pulsa Reguler', 'Lainnya', 'Memuat layanan dari katalog penyedia', 'Selamat datang', 'BAYAR TAGIHANMU', 'HANYA DI Boosteryuk', 'News Updates'])
   assert.ok(htmlPpob.includes(t), `beranda PPOB merender "${t}"`);
+for (const t of ['Exchange', 'Menu Service', 'View All'])
+  assert.ok(!htmlPpob.includes(t), `beranda PPOB TIDAK lagi merender "${t}"`);
+assert.match(htmlPpob, /href="\/ppob\/layanan\/e-money"/, 'aksi cepat Transfer & Top up menuju layanan e-money');
 // Layanan selain top up game datang dari server: sebelum data tiba yang tampil
 // skeleton + keterangan memuat, bukan daftar mock.
 for (const t of ['Pulsa Internasional', 'Streaming & Game', 'Paket Data'])
@@ -332,4 +349,4 @@ for (const t of ['Pulsa Reguler', 'Nomor Tujuan', '08xx', 'Pilih Layanan', 'Masu
   assert.ok(htmlPulsa.includes(t), `halaman pulsa merender "${t}"`);
 assert.ok(!htmlPulsa.includes('Beli Sekarang'), 'tombol Beli Sekarang belum muncul sebelum produk dipilih');
 
-console.log('PASS PPOB: menu + rute /ppob, /ppob/pulsa-reguler & /ppob/layanan, data mock teruji (deteksi operator, produk, format Rupiah, jam, sapaan); header biru PPOB menjadi HEADER UTAMA situs di rute PPOB (ikon header lama pindah, sticky, responsif mobile+desktop), Beranda PPOB (saldo+point, marquee, Menu Service 4/8 kolom, carousel, News Updates) dan Pulsa Reguler (jam real-time di header, deteksi operator, grid 2/3 kolom available/unavailable, skeleton, tombol Beli sticky) tanpa bottom navbar/scan QR; halaman profil dirombak mobile-first tanpa menghapus fitur lama.');
+console.log('PASS PPOB: menu + rute /ppob, /ppob/pulsa-reguler & /ppob/layanan, data mock teruji (deteksi operator, produk, format Rupiah, jam, sapaan); header biru PPOB menjadi HEADER UTAMA situs di rute PPOB (ikon header lama pindah, sticky, responsif mobile+desktop), Beranda PPOB (saldo+point, marquee, card Menu 3/8 kolom yang diperbesar, kartu promo geser dari setelan admin, News Updates tanpa "View All" + modal isi admin, Exchange dihapus, Transfer/Top up ke layanan e-money) dan Pulsa Reguler (jam real-time di header, deteksi operator, grid 2/3 kolom available/unavailable, skeleton, tombol Beli sticky) tanpa bottom navbar/scan QR; halaman profil tanpa menu Referral & Tukar Poin.');
