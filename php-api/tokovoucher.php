@@ -239,6 +239,76 @@ function tv_walk_products($node, $game, array &$out) {
 }
 
 /** Ambil daftar produk dari endpoint penyedia /produk/code (cache file 6 jam). */
+/**
+ * Katalog LENGKAP dari endpoint resmi /member/produk/full: berisi kategori
+ * ("Topup Game" dst.), operator (game + logo), jenis (varian wilayah/promo +
+ * format_form transaksi), dan produk dengan NAMA ASLI + status aktif.
+ * Ini sumber utama katalog; /produk/code tetap fallback bila endpoint ini gagal.
+ */
+function tv_provider_full() {
+    $cacheFile = __DIR__ . '/tokovoucher_pricelist_cache.json';
+    $cache = is_file($cacheFile) ? json_decode((string)file_get_contents($cacheFile), true) : null;
+    if (!is_array($cache)) $cache = [];
+    $now = time();
+    if (isset($cache['__full__']['data'], $cache['__full__']['ts']) && ($now - (int)$cache['__full__']['ts']) < 21600) {
+        return $cache['__full__']['data'];
+    }
+    $c = tv_cfg();
+    if ($c['member_code'] === '' || $c['secret'] === '') return null;
+    $a = tv_api_get_authed('/member/produk/full');
+    $j = $a['json'];
+    $d = is_array($j) ? ($j['data'] ?? null) : null;
+    if (!is_array($d) || !is_array($d['produk'] ?? null) || !$d['produk']) {
+        tv_log('katalog /member/produk/full http=' . ($a['res'] !== null ? $a['res']['code'] : 0) . ' -> kosong/invalid, fallback /produk/code');
+        return null;
+    }
+    $cache['__full__'] = ['ts' => $now, 'data' => $d];
+    @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
+    return $d;
+}
+
+/**
+ * Normalisasi data /member/produk/full jadi daftar produk siap pakai:
+ * hanya kategori "Topup…", operator/jenis/produk aktif, jenis lolos filter
+ * wilayah (tanpa Promo & server luar), plus nama asli, logo game, dan
+ * butuh_server dari format_form transaksi (ada field server_id atau tidak).
+ */
+function tv_items_from_full($d) {
+    $cats = [];
+    foreach ((array)($d['category'] ?? []) as $c) $cats[(int)($c['id'] ?? -1)] = (string)($c['nama'] ?? '');
+    $ops = [];
+    foreach ((array)($d['operator'] ?? []) as $o) $ops[(int)($o['id'] ?? -1)] = $o;
+    $jns = [];
+    foreach ((array)($d['jenis'] ?? []) as $j) $jns[(int)($j['id'] ?? -1)] = $j;
+    $items = [];
+    foreach ((array)($d['produk'] ?? []) as $p) {
+        if ((int)($p['status'] ?? 1) !== 1) continue;
+        $kode = strtoupper(trim((string)($p['kode_produk'] ?? '')));
+        $harga = (int)($p['price'] ?? 0);
+        if ($kode === '' || $harga <= 0) continue;
+        $op = is_array($ops[(int)($p['operator_id'] ?? -1)] ?? null) ? $ops[(int)$p['operator_id']] : null;
+        $jn = is_array($jns[(int)($p['jenis_id'] ?? -1)] ?? null) ? $jns[(int)$p['jenis_id']] : null;
+        if (!$op || (int)($op['status'] ?? 1) !== 1) continue;
+        if ($jn && (int)($jn['status'] ?? 1) !== 1) continue;
+        $cat = $cats[(int)($p['kategori_id'] ?? -1)] ?? '';
+        if ($cat !== '' && stripos($cat, 'topup') === false) continue;
+        $jenisNama = $jn ? (string)($jn['nama'] ?? '') : '';
+        if (!tv_label_wilayah_ok($jenisNama)) continue;
+        if (!tv_kode_katalog_ok($kode)) continue;
+        $form = $jn ? (string)($jn['format_form'] ?? '') : '';
+        $items[] = [
+            'kode' => $kode,
+            'nama' => trim((string)($p['nama'] ?? $kode)),
+            'harga' => $harga,
+            'game' => trim((string)($op['nama'] ?? '')),
+            'jenis' => $jenisNama,
+            'logo' => (string)($op['logo'] ?? ''),
+            'butuh_server' => $form !== '' && strpos($form, 'server_id') !== false,
+        ];
+    }
+    return $items;
+}
+
 function tv_provider_products() {
     $cacheFile = __DIR__ . '/tokovoucher_pricelist_cache.json';
     $cache = is_file($cacheFile) ? json_decode((string)file_get_contents($cacheFile), true) : null;
@@ -249,6 +319,16 @@ function tv_provider_products() {
     }
     $c = tv_cfg();
     if ($c['member_code'] === '' || $c['secret'] === '') return null;
+    // Sumber utama: /member/produk/full (nama asli, kategori, operator, jenis, status).
+    $full = tv_provider_full();
+    if (is_array($full)) {
+        $itemsFull = tv_items_from_full($full);
+        if ($itemsFull) {
+            $cache['__all__'] = ['ts' => $now, 'items' => $itemsFull];
+            @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
+            return $itemsFull;
+        }
+    }
     $a = tv_api_get_authed('/produk/code');
     $r = $a['res'];
     $j = $a['json'];
@@ -492,11 +572,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             if ($key === '') continue;
             if (!isset($groups[$key])) {
                 $disp = tv_game_display($key);
-                $groups[$key] = ['game' => $disp, 'slug' => tv_slugify($disp), 'jumlah' => 0, 'termurah' => 0, 'labels' => []];
+                $groups[$key] = ['game' => $disp, 'slug' => tv_slugify($disp), 'jumlah' => 0, 'termurah' => 0, 'labels' => [], 'logo' => ''];
             }
             $groups[$key]['jumlah']++;
             if ($groups[$key]['termurah'] === 0 || $p['harga'] < $groups[$key]['termurah']) $groups[$key]['termurah'] = $p['harga'];
-            if ($p['game'] !== '' && !in_array($p['game'], $groups[$key]['labels'], true)) $groups[$key]['labels'][] = $p['game'];
+            if ($groups[$key]['logo'] === '' && !empty($p['logo'])) $groups[$key]['logo'] = (string)$p['logo'];
+            $lb = !empty($p['jenis']) ? (string)$p['jenis'] : (string)$p['game'];
+            if ($lb !== '' && count($groups[$key]['labels']) < 12 && !in_array($lb, $groups[$key]['labels'], true)) $groups[$key]['labels'][] = $lb;
         }
         $out = array_values($groups);
         usort($out, function ($a, $b) { return strcmp($a['game'], $b['game']); });
@@ -540,17 +622,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $rows = [];
             // (a) field game/kategori penyedia (cocok langsung maupun lewat alias);
             foreach ($all as $p) if ($p['game'] !== '' && ($norm($p['game']) === $gN || strpos($norm($p['game']), $gN) === 0 || strpos($gN, $norm($p['game'])) === 0 || $hitAlias($p['game']))) {
-                $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga']];
+                $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga'], 'butuh_server' => !empty($p['butuh_server'])];
             }
             // (b) nama produk menyebut game tsb ("MOBILE LEGENDS 86 Diamond", "MLBB 86", dst);
             if (!$rows) foreach ($all as $p) if ($hitAlias($p['nama'])) {
-                $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga']];
+                $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga'], 'butuh_server' => !empty($p['butuh_server'])];
             }
             // (c) prefiks kode produk (MFF…=Free Fire, ML…/AMLBB…=Mobile Legends, dst).
             if (!$rows) foreach ($all as $p) {
                 $g = tv_code_prefix_game($p['kode']);
                 if ($g !== '' && in_array($gN, array_map($norm, tv_game_aliases($g)), true)) {
-                    $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga']];
+                    $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga'], 'butuh_server' => !empty($p['butuh_server'])];
                 }
             }
             // (d) tetap kosong padahal daftar produk ada: catat label asli penyedia supaya

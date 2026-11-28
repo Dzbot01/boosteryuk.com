@@ -41,6 +41,7 @@ for (const c of ['Topup', 'Voucher', 'Pulsa', 'Join Reseller', 'Token Listrik', 
 assert.ok(!page.includes('TOPUP_CATEGORIES'), 'tombol tab kategori (Voucher dkk) dihapus dari halaman /topup');
 assert.ok(!page.includes('TOPUP_OTHER'), 'daftar voucher/pulsa/reseller hardcode tidak lagi dirender');
 assert.ok(page.includes('tvKatalog'), 'grid kartu game diambil dari API katalog penyedia (action=katalog)');
+assert.ok(page.includes('item.logo') && page.includes('onError'), 'kartu game memakai logo resmi penyedia dengan fallback ikon gamepad');
 assert.ok(page.includes('server ID (Indonesia)'), 'sub kartu menyebut hanya server ID Indonesia');
 assert.match(page, /placeholder="Cari game…"/, 'placeholder search tetap ada');
 assert.match(page, /rounded-full border border-slate-200 bg-white pl-11/, 'search bar rounded-full putih ber-border + ikon kaca');
@@ -123,6 +124,11 @@ assert.ok(php.includes("action === 'katalog'"), 'proxy menyediakan action=katalo
 assert.ok(php.includes('function tv_kode_katalog_ok'), 'filter kode: produk tes, server luar, dan voucher game dibuang');
 assert.ok(php.includes('labels_dilihat'), 'katalog melaporkan label mentah penyedia untuk diagnostik');
 assert.ok(/tv_code_prefix_game\(\$p\['kode'\]\)/.test(php), 'katalog fallback pengelompokan lewat prefiks kode (respons datar)');
+assert.ok(php.includes('/member/produk/full'), 'sumber katalog utama: endpoint resmi /member/produk/full');
+assert.ok(php.includes('function tv_provider_full'), 'fetcher + cache katalog full tersedia');
+assert.ok(php.includes('function tv_items_from_full'), 'normalisasi kategori/operator/jenis/produk (nama asli, status, format_form)');
+assert.ok(php.includes("stripos($cat, 'topup')"), 'hanya kategori Topup yang diambil dari katalog full');
+assert.ok(/butuh_server' => !empty\(\$p\['butuh_server'\]\)/.test(php), 'butuh_server produk (format_form server_id) diteruskan ke pricelist');
 assert.ok(php.includes('function tv_game_key_of_label'), 'label kategori penyedia dipetakan ke game kanonik');
 assert.ok(php.includes('function tv_game_display'), 'nama tampil game untuk kartu grid tersedia di proxy');
 assert.match(php, /if \(\$action === 'pricelist'\)/, 'proxy punya action=pricelist (katalog asli)');
