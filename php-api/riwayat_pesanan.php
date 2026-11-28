@@ -39,13 +39,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
+$orders = [];
 try {
     // order_type ikut dikirim supaya klien mengenali pesanan top up game & PPOB
     // (bukan hanya dari awalan order_id). Kolomnya dibuat otomatis bila belum ada.
     if (is_file(__DIR__ . '/riwayat_schema.php')) require_once __DIR__ . '/riwayat_schema.php';
     $pakaiType = function_exists('riwayat_ensure_columns') && riwayat_ensure_columns($conn);
+    // `catatan` = alasan status (mis. "HTTP 500 dari penyedia") untuk pesanan top up
+    // game / PPOB yang masih PENDING, supaya UI menjelaskan keadaan sebenarnya.
     $kolom = $pakaiType
-        ? "id, order_id, service_name, quantity, price, status, order_type, UNIX_TIMESTAMP(created_at)*1000 AS created_at"
+        ? "id, order_id, service_name, quantity, price, status, order_type, catatan, UNIX_TIMESTAMP(created_at)*1000 AS created_at"
         : "id, order_id, service_name, quantity, price, status, UNIX_TIMESTAMP(created_at)*1000 AS created_at";
     $stmt = $conn->prepare("SELECT $kolom FROM riwayat_pesanan WHERE user_id = ? ORDER BY id DESC LIMIT 1000");
     $stmt->bind_param("i", $user_id);
@@ -54,7 +57,7 @@ try {
     $stmt->close();
     if (!$pakaiType) {
         try {
-            $stmt = $conn->prepare("SELECT id, order_id, service_name, quantity, price, status, order_type, UNIX_TIMESTAMP(created_at)*1000 AS created_at
+            $stmt = $conn->prepare("SELECT id, order_id, service_name, quantity, price, status, order_type, catatan, UNIX_TIMESTAMP(created_at)*1000 AS created_at
                                     FROM riwayat_pesanan WHERE user_id = ? ORDER BY id DESC LIMIT 1000");
             $stmt->bind_param("i", $user_id);
             $stmt->execute();
@@ -77,3 +80,29 @@ if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); else { 
 if (is_file(__DIR__ . '/order_status_lib.php')) require_once __DIR__ . '/order_status_lib.php';
 if (function_exists('osx_sync_user_orders')) osx_sync_user_orders($conn, $user_id); // status user ini segar saat reload berikut
 if (function_exists('osx_maybe_run')) osx_maybe_run($conn);
+
+/* Cek berkala pesanan PENDING penyedia (top up game / PPOB) — aturan API TokoVoucher:
+ * HTTP error & network timeout diset PENDING, lalu status final menunggu callback
+ * penyedia ATAU dicek berkala tiap 10 menit. tokovoucher.php adalah router (tidak
+ * bisa di-require), jadi pemanggilannya lewat request internal SETELAH balasan
+ * dikirim: user tidak menunggu, throttle 10 menit dijaga di tokovoucher.php.
+ * Gagalnya pemanggilan ini tidak berdampak apa pun (webhook/cron tetap jalan). */
+try {
+    $adaMenunggu = false;
+    foreach ((array)$orders as $o) {
+        $oid = (string)($o['order_id'] ?? '');
+        if (in_array((string)($o['status'] ?? ''), ['pending', 'proses'], true)
+            && (stripos($oid, 'TVG-') === 0 || stripos($oid, 'PPOB-') === 0)) { $adaMenunggu = true; break; }
+    }
+    if ($adaMenunggu && function_exists('curl_init')) {
+        $skema = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = (string)($_SERVER['HTTP_HOST'] ?? 'app.boosteryuk.com');
+        $diri = (string)($_SERVER['SCRIPT_NAME'] ?? '/api/riwayat_pesanan.php');
+        $urlSync = $skema . '://' . $host . dirname($diri) . '/tokovoucher.php';
+        $ch = curl_init($urlSync . '?action=pending_sync&token=' . rawurlencode((string)$token) . '&maks=3');
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 25, CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_FOLLOWLOCATION => false, CURLOPT_SSL_VERIFYPEER => false, CURLOPT_USERAGENT => 'riwayat-pending-sync']);
+        @curl_exec($ch);
+        curl_close($ch);
+    }
+} catch (Throwable $e) { /* best-effort: sinkronisasi juga lewat webhook/cron */ }

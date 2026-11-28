@@ -53,8 +53,13 @@ assert.match(php, /UPDATE riwayat_pesanan SET status='batal' WHERE order_id=\? A
 assert.match(php, /UPDATE users SET balance=balance\+\? WHERE id=\?/, 'saldo dikembalikan saat pesanan batal');
 assert.match(php, /function tv_sync_pesanan\(\$conn, \$ref, \$status\) \{[\s\S]{0,400}tv_batalkan_pesanan[\s\S]{0,200}tv_selesaikan_pesanan/, 'status penyedia disinkronkan ke riwayat: gagal → batal+refund, sukses → selesai');
 assert.match(php, /if \(tv_sync_pesanan\(\$conn, \$ref, \$st\) && \$st === 'gagal' && \$saldoSetelah !== null\) \$saldoSetelah \+= \$hargaJual;/, 'hasil transaksi disinkronkan ke riwayat + sisa saldo dibetulkan setelah refund');
-assert.match(php, /if \(tv_batalkan_pesanan\(\$conn, \$ref, 'penyedia tidak dapat dihubungi'\) && \$saldoSetelah !== null\) \$saldoSetelah \+= \$hargaJual;/, 'penyedia tak terjangkau → pesanan batal + saldo dikembalikan (sisa saldo dibetulkan)');
-assert.match(php, /if \(tv_batalkan_pesanan\(\$conn, \$ref, 'balasan penyedia non-JSON'\) && \$saldoSetelah !== null\) \$saldoSetelah \+= \$hargaJual;/, 'balasan penyedia tak terbaca → pesanan batal + saldo dikembalikan');
+// Aturan API TokoVoucher: network timeout / penyedia tak terjangkau = transaksi PENDING
+// (bukan gagal): pesanan TIDAK dibatalkan dan saldo TIDAK dikembalikan di jalur ini.
+assert.ok(!php.includes("tv_batalkan_pesanan($conn, $ref, 'penyedia tidak dapat dihubungi')"), 'penyedia tak terjangkau tidak lagi membatalkan pesanan + refund');
+assert.match(php, /\$alasanNet = tv_alasan_pending\('', '', 0, \(string\)\(\$r\['error'\] \?\? ''\)\);[\s\S]{0,400}?tv_out\(tv_pesanan_pending\(\$conn, \$ref, \$ctxPesanan \+ \['metode' => \$a\['metode'\], 'http' => 0\], \$alasanNet\), 200\);/, 'network timeout/CURL error → pesanan PENDING (HTTP 200, tanpa refund)');
+assert.ok(!php.includes("tv_batalkan_pesanan($conn, $ref, 'balasan penyedia non-JSON')"), 'balasan non-JSON tidak lagi membatalkan pesanan + refund');
+assert.match(php, /\$alasanRaw = tv_alasan_pending\('unknown', \$raw, \(int\)\$r\['code'\], ''\);/, 'balasan non-JSON/HTTP error → alasan PENDING dari kode HTTP penyedia');
+assert.match(php, /\$alasanPending = tv_alasan_pending\(\$st, \$pesan, \(int\)\$r\['code'\], \(string\)\(\$r\['error'\] \?\? ''\)\);\s*\n\s*if \(\$alasanPending !== ''\) \{\s*\n\s*tv_out\(tv_pesanan_pending\(/, 'status penyedia yang belum pasti (pending/unknown/saldo provider) → PENDING sebelum sinkronisasi gagal');
 const badanWebhook = php.slice(php.indexOf("if ($action === 'webhook')"), php.indexOf("if ($action === 'cek_status')"));
 assert.match(badanWebhook, /tv_sync_pesanan\(\$conn, \$ref, \$norm\['status'\]\);/, 'webhook penyedia menyinkron riwayat + refund');
 const badanCek = php.slice(php.indexOf("if ($action === 'cek_status')"));
@@ -70,7 +75,8 @@ assert.match(php, /mb_strlen\(\$tujuan\) < 3 \|\| mb_strlen\(\$tujuan\) > 64/, '
 
 // Riwayat pesanan mengirim order_type ke browser.
 const riwayatPhp = read('php-api/riwayat_pesanan.php');
-assert.match(riwayatPhp, /order_type, UNIX_TIMESTAMP\(created_at\)\*1000 AS created_at/, 'riwayat_pesanan.php mengirim order_type');
+assert.match(riwayatPhp, /order_type, catatan, UNIX_TIMESTAMP\(created_at\)\*1000 AS created_at/, 'riwayat_pesanan.php mengirim order_type + catatan (alasan PENDING)');
+assert.match(riwayatPhp, /action=pending_sync&token=/, 'riwayat_pesanan.php memicu cek berkala pesanan PENDING setelah balasan dikirim (throttle 10 menit di server)');
 assert.match(riwayatPhp, /riwayat_ensure_columns/, 'kolom order_type dibuat otomatis bila belum ada');
 
 // News Update PPOB disimpan admin lewat site_settings.php (kunci ppobNews).
@@ -281,4 +287,4 @@ assert.ok(!dom.window.document.querySelector('[data-modal-berita="true"]'), 'mod
 /* ---------- saldo kurang: order top up/PPOB tidak bisa dipaksa ---------- */
 assert.match(teks(), /Saldo kurang|Rp 50\.000|IDR ••••••••••/, 'saldo user tampil di halaman PPOB');
 
-console.log('PASS Order Topup & PPOB: server menghitung harga+markup dari katalog penyedia, memotong saldo, menulis riwayat_pesanan (order_type topup/ppob) sehingga pesanan top up game & PPOB tampil di Riwayat Pesanan, membatalkan + mengembalikan saldo saat penyedia menolak/tak terjangkau (webhook & cek status ikut menyinkron); News Update PPOB (card+modal) dan kartu promo geser diatur admin lewat halaman Admin Panel baru; halaman top up game masuk sitemap + prerender; Exchange dihapus, Transfer/Top up ke layanan e-money, Referral & Tukar Poin hilang dari profil.');
+console.log('PASS Order Topup & PPOB: server menghitung harga+markup dari katalog penyedia, memotong saldo, menulis riwayat_pesanan (order_type topup/ppob) sehingga pesanan top up game & PPOB tampil di Riwayat Pesanan, membatalkan + mengembalikan saldo HANYA untuk penolakan pasti (HTTP error/timeout/gangguan penyedia = PENDING, diuji di test-tokovoucher-pending.mjs), webhook & cek status ikut menyinkron; News Update PPOB (card+modal) dan kartu promo geser diatur admin lewat halaman Admin Panel baru; halaman top up game masuk sitemap + prerender; Exchange dihapus, Transfer/Top up ke layanan e-money, Referral & Tukar Poin hilang dari profil.');

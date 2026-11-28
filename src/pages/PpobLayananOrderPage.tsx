@@ -43,6 +43,10 @@ type Hasil = {
   sn?: string;
   harga?: number;
   saldo?: number | null;
+  /** true = pesanan PENDING (HTTP error / timeout / gangguan penyedia): bukan gagal. */
+  pending?: boolean;
+  /** Alasan PENDING dari server (mis. "HTTP 500 dari penyedia"). */
+  alasan?: string;
 };
 
 /**
@@ -181,17 +185,35 @@ export default function PpobLayananOrderPage() {
     setMemesan(false);
     const st = String(r.status || '').toLowerCase();
     const saldoBaru = typeof r.saldo === 'number' ? r.saldo : typeof r.sisa_saldo === 'number' ? r.sisa_saldo : null;
-    const pesanTeks = r.message || (r.ok ? 'Transaksi diterima penyedia.' : 'Transaksi tidak dapat diproses.');
-    if (r.ok && (st === 'sukses' || st === 'pending' || st === 'proses' || st === '')) {
+    /* PENDING (aturan API penyedia): SEMUA HTTP error & network timeout diset PENDING,
+     * termasuk gangguan di sisi penyedia (saldo/limit/sistem). Pesanan tidak dibatalkan,
+     * saldo tidak dikembalikan, dan status final menunggu callback / cek berkala 10 menit.
+     * Balasan yang tidak sampai ke browser (r.transport) juga diperlakukan sama: nasib
+     * pesanan tidak pasti sehingga TIDAK boleh ditampilkan sebagai error. */
+    const pending = !!r.pending || ['pending', 'processing', 'diproses'].includes(st) || (!!r.transport && !r.ok);
+    const pesanTeks = pending
+      ? r.transport
+        ? 'Balasan server tidak diterima (jaringan bermasalah). Bila pesanan sudah tercatat, statusnya PENDING di Riwayat Pesanan dan akan dipastikan otomatis setiap 10 menit.'
+        : r.message ||
+          'Pesanan berstatus PENDING: tidak dibatalkan dan saldo tidak dikembalikan. Status final menunggu callback penyedia atau pemeriksaan berkala tiap 10 menit.'
+      : r.message || (r.ok ? 'Transaksi diterima penyedia.' : 'Transaksi tidak dapat diproses.');
+    if (pending || (r.ok && (st === 'sukses' || st === 'proses' || st === ''))) {
+      const sukses = !pending && st === 'sukses';
       setHasil({
-        nada: st === 'sukses' ? 'sukses' : 'proses',
-        judul: st === 'sukses' ? 'Pesanan berhasil' : 'Pesanan diteruskan ke penyedia',
+        nada: sukses ? 'sukses' : 'proses',
+        judul: sukses
+          ? 'Pesanan berhasil'
+          : pending
+            ? 'Pesanan PENDING — menunggu konfirmasi penyedia'
+            : 'Pesanan diteruskan ke penyedia',
         pesan: pesanTeks,
         ref: r.ref_id,
         trx: r.trx_id,
         sn: r.sn,
         harga: typeof r.harga === 'number' ? r.harga : hargaJual,
         saldo: saldoBaru,
+        pending,
+        alasan: r.alasan_pending,
       });
     } else {
       setHasil({
@@ -204,6 +226,42 @@ export default function PpobLayananOrderPage() {
       });
     }
   };
+
+  /* Selama kartu hasil berstatus menunggu, status ditarik ulang otomatis: 30 detik
+   * setelah order lalu tiap 60 detik (maks. 5 kali). Server juga memeriksa berkala tiap
+   * 10 menit (action=pending_sync) dan menerima callback penyedia. */
+  useEffect(() => {
+    if (!hasil?.ref || hasil.nada !== 'proses') return;
+    const ref = hasil.ref;
+    let n = 0;
+    let timer: number | undefined;
+    const tarik = () => {
+      n += 1;
+      tvCekStatus(ref).then((r) => {
+        const st = String(r.status || '').toLowerCase();
+        if (st !== 'sukses' && st !== 'success' && st !== 'berhasil' && st !== 'gagal' && st !== 'failed') {
+          if (n < 5) timer = window.setTimeout(tarik, 60000);
+          return;
+        }
+        setHasil((h) =>
+          h
+            ? {
+                ...h,
+                nada: st === 'gagal' || st === 'failed' ? 'gagal' : 'sukses',
+                judul: st === 'gagal' || st === 'failed' ? 'Pesanan gagal — saldo dikembalikan' : 'Pesanan berhasil',
+                pesan: r.message || h.pesan,
+                trx: r.trx_id || h.trx,
+                sn: r.sn || h.sn,
+              }
+            : h,
+        );
+      });
+    };
+    timer = window.setTimeout(tarik, 30000);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [hasil?.ref, hasil?.nada]);
 
   /** Tarik status terbaru (webhook penyedia biasanya sudah melapor lebih dulu). */
   const cekStatus = async () => {
@@ -563,6 +621,13 @@ export default function PpobLayananOrderPage() {
                 >
                   {hasil.pesan}
                 </p>
+                {hasil.pending ? (
+                  <p data-pending-info className="mt-1 text-[11.5px] leading-relaxed text-amber-700 dark:text-amber-300">
+                    {hasil.alasan ? `Penyebab: ${hasil.alasan}. ` : ''}
+                    Pesanan tidak dibatalkan dan saldo tidak dikembalikan — status final menunggu konfirmasi
+                    penyedia (callback) atau pemeriksaan berkala setiap 10 menit. Pantau di Riwayat Pesanan.
+                  </p>
+                ) : null}
 
                 <dl className="mt-3 grid gap-1.5 text-[11.5px]">
                   {hasil.ref && (
@@ -636,8 +701,10 @@ export default function PpobLayananOrderPage() {
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#2563EB]" strokeWidth={2.2} />
                 <span>
                   Pesanan dikirim ke penyedia resmi lewat server {namaApp}: harga dihitung ulang di server, saldo dipotong
-                  saat pesanan dibuat, dan pesanan yang ditolak penyedia dibatalkan otomatis dengan saldo dikembalikan.
-                  Status pesanan tampil di halaman Riwayat Pesanan.
+                  saat pesanan dibuat, dan pesanan yang DITOLAK PASTI oleh penyedia dibatalkan otomatis dengan saldo
+                  dikembalikan. Bila penyedia membalas HTTP error / tidak menjawab / saldonya sedang bermasalah, pesanan
+                  disimpan sebagai PENDING (bukan gagal) dan dipastikan lewat callback atau pemeriksaan berkala tiap 10
+                  menit. Status pesanan tampil di halaman Riwayat Pesanan.
                 </span>
               </p>
             </section>

@@ -49,6 +49,7 @@ const UNIT_PER_SLUG: Record<string, string> = {
   'garena-undawn': 'Coin',
   'blood-strike': 'Gold',
   'moonlight-blade-m': 'Voucher',
+  'roblox': 'Robux',
 };
 
 type Aturan = {

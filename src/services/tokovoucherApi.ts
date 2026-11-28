@@ -16,14 +16,23 @@ const token = () => {
   }
 };
 
-type Res<T> = T & { ok: boolean; message?: string };
+type Res<T> = T & {
+  ok: boolean;
+  message?: string;
+  /**
+   * true bila kegagalan terjadi di JALAN (browser tidak sampai ke server / balasan
+   * bukan JSON). Nasib pesanan tidak pasti -> UI memperlakukannya sebagai PENDING,
+   * bukan error: pesanan bisa saja sudah tercatat di server.
+   */
+  transport?: boolean;
+};
 
 async function get<T>(qs: string): Promise<Res<T>> {
   try {
     const r = await fetch(`${API}?${qs}`, { cache: 'no-store' });
-    return ((await r.json().catch(() => null)) || { ok: false, message: `Server membalas HTTP ${r.status}.` }) as Res<T>;
+    return ((await r.json().catch(() => null)) || { ok: false, transport: true, message: `Server membalas HTTP ${r.status}.` }) as Res<T>;
   } catch {
-    return { ok: false, message: 'Gagal menghubungi server.' } as Res<T>;
+    return { ok: false, transport: true, message: 'Gagal menghubungi server.' } as Res<T>;
   }
 }
 
@@ -34,9 +43,9 @@ async function post<T>(action: string, body: Record<string, unknown> = {}): Prom
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: token(), action, ...body }),
     });
-    return ((await r.json().catch(() => null)) || { ok: false, message: `Server membalas HTTP ${r.status}.` }) as Res<T>;
+    return ((await r.json().catch(() => null)) || { ok: false, transport: true, message: `Server membalas HTTP ${r.status}.` }) as Res<T>;
   } catch {
-    return { ok: false, message: 'Gagal menghubungi server.' } as Res<T>;
+    return { ok: false, transport: true, message: 'Gagal menghubungi server.' } as Res<T>;
   }
 }
 
@@ -77,6 +86,16 @@ export interface TvTransaksi {
   markup_pct?: number;
   /** Sisa saldo website setelah pesanan dibuat (bila server mengirim). */
   saldo?: number;
+  /**
+   * true bila pesanan berstatus PENDING sesuai aturan API penyedia: semua HTTP error
+   * dan network timeout diset PENDING (bukan gagal), saldo TIDAK dikembalikan, dan
+   * status final menunggu callback penyedia / cek berkala tiap 10 menit.
+   */
+  pending?: boolean;
+  /** Alasan PENDING dari server (mis. "HTTP 500 dari penyedia", "timeout"). */
+  alasan_pending?: string;
+  /** Nominal saldo yang benar-benar dipotong untuk pesanan ini (0 = belum dipotong). */
+  saldo_dipotong?: number;
   /** Cuplikan respons asli penyedia untuk troubleshooting. */
   raw?: string;
   /** Balasan mentah penyedia (sudah dibuang field sensitif) untuk detail/troubleshooting. */
@@ -221,6 +240,10 @@ export interface TvCekStatus {
   sumber?: 'webhook' | 'provider';
   /** pending | sukses | gagal | error | unknown. */
   status?: string;
+  /** true = status belum pasti (penyedia tak terjangkau/menunggu) -> tetap PENDING. */
+  pending?: boolean;
+  /** Alasan status belum pasti. */
+  alasan_pending?: string;
   trx_id?: string;
   sn?: string;
   message?: string;
@@ -237,3 +260,23 @@ export interface TvCekStatus {
  */
 export const tvCekStatus = (ref_id: string) =>
   get<TvCekStatus>('action=cek_status&ref_id=' + encodeURIComponent(ref_id));
+
+export interface TvPendingSync {
+  /** Berapa ref yang benar-benar ditanyakan ke penyedia pada putaran ini. */
+  diperiksa?: number;
+  /** Berapa pesanan yang mendapat status final (sukses -> selesai, gagal -> refund). */
+  selesai?: number;
+  /** Sisa detik menuju pemeriksaan berkala berikutnya (throttle server: 10 menit). */
+  menunggu?: number;
+  interval_detik?: number;
+  hasil?: { ref_id: string; status: string; alasan?: string; sn?: string }[];
+}
+
+/**
+ * Pemeriksaan berkala transaksi PENDING (aturan API TokoVoucher: setiap 10 menit).
+ * Server menahan laju per user, jadi aman dipanggil setiap kali Riwayat Pesanan dibuka.
+ */
+export const tvPendingSync = (maks = 3) =>
+  get<TvPendingSync>(
+    'action=pending_sync&maks=' + encodeURIComponent(String(maks)) + '&token=' + encodeURIComponent(token()),
+  );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   History,
@@ -18,8 +18,11 @@ import {
   Sparkles,
   ShoppingCart,
   Zap,
+  LoaderCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { MAIN_API } from '../lib/apiBase';
+import { tvPendingSync } from '../services/tokovoucherApi';
 import Reveal from '../components/Reveal';
 import EmptyStateModel from '../components/EmptyStateModel';
 import { useAuth } from '../context/AuthContext';
@@ -104,6 +107,7 @@ function normalize(r: Record<string, unknown>): OrderFromDB {
     // Kolom order_type (riwayat_pesanan.php) dipakai bila dikenal; selain itu dikenali
     // dari awalan order_id / nama layanan — jadi pesanan lama tetap terbaca benar.
     type: (rawType && rawType in TYPE_META ? rawType : typeOf(String(r.order_id ?? ''), String(r.service_name ?? ''))) as OrderType,
+    catatan: String(r.catatan ?? ''),
   };
 }
 type OrderFromDB = {
@@ -115,6 +119,8 @@ type OrderFromDB = {
   status: 'pending' | 'proses' | 'selesai' | 'batal';
   created_at: number;
   type: OrderType;
+  /** Alasan status dari server (mis. "HTTP 500 dari penyedia") — pesanan PENDING top up/PPOB. */
+  catatan?: string;
 }
 
 export default function RiwayatPage() {
@@ -127,6 +133,10 @@ export default function RiwayatPage() {
   const [copiedKey, setCopiedKey] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState<OrderType | 'all'>('all');
   const [loadErr, setLoadErr] = useState('');
+  /** Naikkan untuk memuat ulang daftar (dipakai setelah status PENDING berhasil dipastikan). */
+  const [muatUlang, setMuatUlang] = useState(0);
+  const [sinkronBusy, setSinkronBusy] = useState(false);
+  const [sinkronInfo, setSinkronInfo] = useState('');
 
   const token = user?.token;
   useEffect(() => {
@@ -154,7 +164,44 @@ export default function RiwayatPage() {
       }
     })();
     return () => { alive = false; };
-  }, [token]);
+  }, [token, muatUlang]);
+
+  /** Pesanan penyedia (top up game / PPOB) yang masih menunggu status final. */
+  const menunggu = useMemo(
+    () => orders.filter((o) => (o.type === 'topup' || o.type === 'ppob') && (o.status === 'pending' || o.status === 'proses')),
+    [orders],
+  );
+
+  /* Cek berkala transaksi PENDING (aturan API TokoVoucher: tiap 10 menit). Server menahan
+   * lajunya per user, jadi aman dipanggil tiap halaman ini dibuka; hasil yang sudah final
+   * memuat ulang daftar agar status & saldo tampil segar. */
+  const jalankanSinkron = useCallback(
+    async (otomatis: boolean) => {
+      if (sinkronBusy) return;
+      setSinkronBusy(true);
+      setSinkronInfo('');
+      const r = await tvPendingSync(3);
+      setSinkronBusy(false);
+      if (r.ok && Number(r.selesai || 0) > 0) {
+        setSinkronInfo(`${r.selesai} pesanan mendapat status final.`);
+        setMuatUlang((n) => n + 1);
+        return;
+      }
+      if (r.ok && Number(r.menunggu || 0) > 0) {
+        setSinkronInfo(`Pemeriksaan berikutnya dalam ${Math.max(1, Math.ceil(Number(r.menunggu) / 60))} menit (tiap 10 menit).`);
+      } else if (!otomatis) {
+        setSinkronInfo(r.message || (r.ok ? 'Belum ada status final dari penyedia.' : 'Status belum dapat diperiksa.'));
+      }
+    },
+    [sinkronBusy],
+  );
+
+  const sudahOtomatis = useRef(false);
+  useEffect(() => {
+    if (!menunggu.length || sudahOtomatis.current) return;
+    sudahOtomatis.current = true;
+    void jalankanSinkron(true);
+  }, [menunggu.length, jalankanSinkron]);
 
   const statusOf = (item: OrderFromDB): OrderFromDB['status'] => item.status;
 
@@ -215,6 +262,8 @@ export default function RiwayatPage() {
     const s = statusOf(o);
     const waiting = s === 'proses' || s === 'pending';
     if (s === 'batal' && o.type !== 'smm') return 'Batal · saldo dikembalikan';
+    // Pesanan penyedia yang belum pasti: PENDING menunggu callback / cek berkala 10 menit.
+    if (waiting && (o.type === 'topup' || o.type === 'ppob')) return 'Menunggu konfirmasi penyedia';
     if (o.type === 'agent_ai' && waiting) return 'Menunggu tautan';
     if (o.type === 'nexspace') return waiting ? 'Server sedang dibuat' : s === 'selesai' ? 'Aktif' : fallback;
     if (o.type === 'otp') return waiting ? 'Menunggu kode OTP' : s === 'selesai' ? 'Kode diterima' : fallback;
@@ -258,6 +307,30 @@ if(loading) return <div className="text-center py-20">Loading...</div>;
           </div>
         </div>
       </Reveal>
+
+      {menunggu.length > 0 && (
+        <div
+          data-menunggu-penyedia
+          className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800/50 dark:bg-amber-900/20"
+        >
+          <p className="min-w-0 flex-1 text-[12px] leading-relaxed text-amber-800 dark:text-amber-300">
+            <span className="font-extrabold">{menunggu.length} pesanan menunggu konfirmasi penyedia.</span>{' '}
+            Pesanan PENDING tidak dibatalkan dan saldonya tidak dikembalikan — status final diambil dari
+            callback penyedia atau pemeriksaan berkala setiap 10 menit.
+            {sinkronInfo ? <span className="mt-0.5 block font-semibold">{sinkronInfo}</span> : null}
+          </p>
+          <button
+            type="button"
+            data-refresh-pending
+            disabled={sinkronBusy}
+            onClick={() => void jalankanSinkron(false)}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 text-[11.5px] font-extrabold text-white transition active:scale-95 disabled:opacity-60"
+          >
+            {sinkronBusy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            {sinkronBusy ? 'Memeriksa…' : 'Perbarui status'}
+          </button>
+        </div>
+      )}
 
       {/* Controls */}
       <Reveal delay={60}>
@@ -413,6 +486,11 @@ if(loading) return <div className="text-center py-20">Loading...</div>;
                             <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-300">{meta.label}</span>
                             {formatDate(o.created_at)}, {formatTime(o.created_at)}
                           </p>
+                          {o.catatan && (o.status === 'pending' || o.status === 'proses') && (o.type === 'topup' || o.type === 'ppob') ? (
+                            <p data-catatan-pending className="mt-1 max-w-[280px] text-[10.5px] leading-relaxed text-amber-700 dark:text-amber-400">
+                              {o.catatan}
+                            </p>
+                          ) : null}
                         </td>
                         <td className="px-5 py-4">
                           <button

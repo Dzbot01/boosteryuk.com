@@ -14,6 +14,7 @@ const RIWAYAT_EXTRA_COLUMNS = [
     'jatuh_tempo'  => "DATETIME NULL COMMENT 'akhir masa aktif layanan sewa'",
     'target'       => "VARCHAR(2048) NULL COMMENT 'target/link pesanan (SMM), nomor WhatsApp agen, hostname VPS'",
     'detail'       => "TEXT NULL COMMENT 'JSON info tambahan (nama AI, platform, dll)'",
+    'catatan'      => "VARCHAR(255) NULL COMMENT 'catatan status pesanan (mis. alasan PENDING dari penyedia top up / PPOB)'",
     'updated_at'   => "TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP",
 ];
 
