@@ -5,11 +5,16 @@
  * Penyedia (sesuai dokumentasi member):
  *   Base URL        : https://api.tokovoucher.net
  *   Member code     : M250727KGST5158OE (bisa dioverride di config / env TV_MEMBER_CODE)
- *   GET /v1/transaksi         ?ref_id=&produk=&tujuan=&server_id=&member_code=&secret=
- *   GET /v1/transaksi/status  ?ref_id=&member_code=&secret=
- *   GET /member               ?member_code=&secret=
- *   GET /produk/code          ?member_code=&secret=
- *   GET /v1/deposit           ?member_code=&secret=
+ *   POST /v1/transaksi        {ref_id, produk, tujuan, server_id, member_code, signature}
+ *   POST /v1/transaksi/status {ref_id, member_code, signature}
+ *        signature = md5(MEMBER_CODE:SECRET:REF_ID)  ← rumus resmi docs
+ *   GET  /member              ?member_code=&secret=
+ *   GET  /produk/code         ?member_code=&secret=
+ *   GET  /member/produk/full  ?member_code=&signature=
+ *   GET  /v1/deposit          ?member_code=&secret=
+ *   Webhook penyedia (POST/GET) membawa header X-TokoVoucher-Authorization:
+ *        md5(MEMBER_CODE:SECRET:REF_ID); diterima Worker di /api/tokovoucher-webhook
+ *        lalu diteruskan ke sini sebagai ?action=webhook.
  *
  * Keamanan:
  *  - SECRET KEY TIDAK pernah dikirim ke browser: disimpan di php-api/tokovoucher_config.php
@@ -21,9 +26,11 @@
  * Endpoint proxy ini:
  *  GET  ?action=status                 → {ok, configured, member_code tersamar, member?}
  *  GET  ?action=pricelist&game=Nama    → {ok, source: override|provider|scrape|kosong, items[]}
- *  GET  ?action=cek_status&ref_id=...  → {ok, provider} (status transaksi per ref_id)
+ *  GET  ?action=cek_akun&game=&user_id= → {ok, valid, username, reason, message, raw}
+ *  GET  ?action=cek_status&ref_id=...  → {ok, sumber: webhook|provider, status, trx_id, sn, message}
+ *  POST/GET ?action=webhook            → simpan status akhir transaksi dari penyedia (200)
  *  POST {token, action:"transaksi", player_id, server_id?, kode_produk}
- *       → {ok, ref_id, message, provider}
+ *       → {ok, ref_id, status: pending|sukses|gagal, trx_id, sn, message, provider}
  */
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -154,6 +161,118 @@ function tv_api_get($path, array $query, $timeout = 20) {
     $err = curl_error($ch);
     curl_close($ch);
     return ['code' => $code, 'body' => is_string($body) ? $body : null, 'error' => $err];
+}
+
+/* ------------------------------------------------------------------ *
+ *  TRANSAKSI (POST + signature) & PENYIMPANAN STATUS                    *
+ * ------------------------------------------------------------------ */
+
+/** Signature resmi transaksi/cek status/webhook: md5(MEMBER_CODE:SECRET:REF_ID). */
+function tv_tx_signature($c, $ref) {
+    return md5((string)$c['member_code'] . ':' . (string)$c['secret'] . ':' . (string)$ref);
+}
+
+/** POST JSON ke penyedia — docs transaksi memakai method POST dengan body JSON. */
+function tv_api_post_json($path, array $payload, $timeout = 25) {
+    $c = tv_cfg();
+    $ch = curl_init(rtrim($c['base_url'], '/') . $path);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        CURLOPT_TIMEOUT => (int)$timeout,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json'],
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    ]);
+    $body = curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+    return ['code' => $code, 'body' => is_string($body) ? $body : null, 'error' => $err];
+}
+
+/**
+ * Panggil endpoint transaksi sesuai docs: POST JSON + signature md5(mc:secret:ref).
+ * Bila varian itu ditolak (Signature Invalid / Ip Not Allow / HTTP 4xx-5xx / non-JSON)
+ * otomatis dicoba varian lama GET + secret di query, supaya pesanan tidak macet.
+ * Balasan yang lebih meyakinkan (JSON dengan status != 0) yang dipakai.
+ */
+function tv_api_trx($path, array $payload, $timeout = 25) {
+    $c = tv_cfg();
+    $ref = (string)($payload['ref_id'] ?? '');
+    $body = array_merge($payload, [
+        'member_code' => $c['member_code'],
+        'signature'   => tv_tx_signature($c, $ref),
+    ]);
+    $r = tv_api_post_json($path, $body, $timeout);
+    $j = $r['body'] !== null ? json_decode((string)$r['body'], true) : null;
+    $baik = is_array($j) && (int)($j['status'] ?? 0) !== 0 && $r['code'] > 0 && $r['code'] < 400;
+    if ($baik) return ['res' => $r, 'json' => $j, 'metode' => 'POST+signature'];
+
+    tv_log('trx ' . $path . ' POST+signature kurang meyakinkan (http=' . $r['code'] . ') -> coba GET: '
+        . substr(preg_replace('/\s+/', ' ', (string)$r['body']), 0, 200));
+    $r2 = tv_api_get($path, array_merge($payload, [
+        'member_code' => $c['member_code'],
+        'secret'      => $c['secret'],
+    ]), $timeout);
+    $j2 = $r2['body'] !== null ? json_decode((string)$r2['body'], true) : null;
+    $baik2 = is_array($j2) && (int)($j2['status'] ?? 0) !== 0;
+    if ($baik2 || !is_array($j)) return ['res' => $r2, 'json' => $j2, 'metode' => 'GET+secret'];
+    return ['res' => $r, 'json' => $j, 'metode' => 'POST+signature'];
+}
+
+/**
+ * Normalisasi balasan transaksi / cek status / webhook:
+ * status = pending | sukses | gagal | error (status:0 + error_msg) | unknown.
+ */
+function tv_trx_normalize($j) {
+    if (!is_array($j)) return null;
+    $err = trim((string)($j['error_msg'] ?? ''));
+    $st = is_string($j['status'] ?? null) ? strtolower(trim((string)$j['status'])) : '';
+    if ($err !== '' || (isset($j['status']) && !is_string($j['status']) && (int)$j['status'] === 0)) $st = 'error';
+    if ($st === '') $st = 'unknown';
+    return [
+        'status'     => $st,
+        'message'    => trim((string)($j['message'] ?? '')),
+        'error_msg'  => $err,
+        'sn'         => trim((string)($j['sn'] ?? '')),
+        'trx_id'     => trim((string)($j['trx_id'] ?? '')),
+        'ref_id'     => trim((string)($j['ref_id'] ?? '')),
+        'produk'     => trim((string)($j['produk'] ?? '')),
+        'price'      => isset($j['price']) ? (int)$j['price'] : 0,
+        'sisa_saldo' => isset($j['sisa_saldo']) ? (int)$j['sisa_saldo'] : 0,
+    ];
+}
+
+function tv_trx_file() { return __DIR__ . '/tokovoucher_trx_cache.json'; }
+
+/** Status terakhir transaksi per ref_id (dari webhook / hasil transaksi / cek status). */
+function tv_trx_store_read($ref) {
+    $j = is_file(tv_trx_file()) ? json_decode((string)file_get_contents(tv_trx_file()), true) : null;
+    if (!is_array($j)) return null;
+    $e = $j['ref:' . $ref] ?? null;
+    return is_array($e) ? $e : null;
+}
+
+/**
+ * Simpan status transaksi. IDEMPOTEN: trx_id + status yang sama tidak ditulis ulang
+ * (webhook penyedia bisa dikirim berkali-kali). Return true bila ada entri baru.
+ */
+function tv_trx_store_write($ref, array $data) {
+    $f = tv_trx_file();
+    $j = is_file($f) ? json_decode((string)file_get_contents($f), true) : null;
+    if (!is_array($j)) $j = [];
+    $key = 'ref:' . $ref;
+    $lama = $j[$key] ?? null;
+    if (is_array($lama)
+        && ($lama['trx_id'] ?? '') !== '' && ($lama['trx_id'] ?? '') === ($data['trx_id'] ?? '')
+        && strtolower((string)($lama['status'] ?? '')) === strtolower((string)($data['status'] ?? ''))) {
+        return false;
+    }
+    $j[$key] = $data + ['disimpan' => date('Y-m-d H:i:s')];
+    if (count($j) > 400) $j = array_slice($j, -400, null, true);
+    @file_put_contents($f, json_encode($j, JSON_UNESCAPED_UNICODE));
+    return true;
 }
 
 /** Buang field rahasia dari balasan penyedia sebelum diteruskan ke browser. */
@@ -304,20 +423,11 @@ function tv_items_from_full($d) {
         $jenisNama = $jn ? (string)($jn['nama'] ?? '') : '';
         if (!tv_label_wilayah_ok($jenisNama)) continue;
         if (!tv_kode_katalog_ok($kode)) continue;
-        // Server ID hanya bila form transaksi benar-benar memakainya: entri server_id
-        // dengan label/data terisi. (Free Fire mengirim field server_id ber-label
-        // kosong = tidak dipakai; Mobile Legends mengisinya.)
-        $form = $jn ? (string)($jn['format_form'] ?? '') : '';
-        $butuhServer = false;
-        $ff = $form !== '' ? json_decode($form, true) : null;
-        if (is_array($ff)) {
-            foreach ($ff as $fd) {
-                if (!is_array($fd) || (string)($fd['name'] ?? '') !== 'server_id') continue;
-                $lb = trim((string)($fd['label'] ?? ''));
-                $dt = is_array($fd['data'] ?? null) ? $fd['data'] : [];
-                if ($lb !== '' || $dt) $butuhServer = true;
-            }
-        }
+        // Server ID HANYA berlaku untuk produk Mobile Legends. Game lain (termasuk
+        // Free Fire) mengirim field server_id di format_form dengan label kosong =
+        // tidak dipakai, jadi kolomnya tidak boleh muncul.
+        $opNama = trim((string)($op['nama'] ?? ''));
+        $butuhServer = preg_match('/mobile\s*legends?\b/i', $opNama) === 1;
         $items[] = [
             'kode' => $kode,
             'nama' => trim((string)($p['nama'] ?? $kode)),
@@ -567,6 +677,36 @@ $in = json_decode((string)file_get_contents('php://input'), true);
 if (!is_array($in)) $in = [];
 if ($action === '' && isset($in['action'])) $action = (string)$in['action'];
 
+/* ============ WEBHOOK PENYEDIA (POST/GET) — ?action=webhook ============ *
+ * Dipanggil Worker https://app.boosteryuk.com/api/tokovoucher-webhook bila
+ * hosting memblokir webhook masuk. Validasi header
+ * X-TokoVoucher-Authorization: md5(MEMBER_CODE:SECRET:REF_ID).
+ * Status disimpan per ref_id (idempoten lewat trx_id) agar cek_status instan.
+ */
+if ($action === 'webhook') {
+    $c = tv_cfg();
+    $payload = (is_array($in) && $in) ? $in : $_GET;
+    $ref = trim((string)($payload['ref_id'] ?? ''));
+    $hdr = '';
+    foreach ($_SERVER as $k => $v) {
+        if (strcasecmp((string)$k, 'HTTP_X_TOKOVOUCHER_AUTHORIZATION') === 0) $hdr = strtolower(trim((string)$v));
+    }
+    if ($hdr === '') $hdr = strtolower(trim((string)($payload['signature'] ?? '')));
+    $norm = tv_trx_normalize(is_array($payload) ? $payload : []);
+    if ($ref === '' || $norm === null) {
+        tv_log('webhook DITOLAK: payload tanpa ref_id — raw=' . substr((string)json_encode($payload, JSON_UNESCAPED_UNICODE), 0, 200));
+        tv_out(['ok' => false, 'message' => 'ref_id wajib ada di body webhook.'], 400);
+    }
+    $harus = ($c['member_code'] !== '' && $c['secret'] !== '') ? strtolower(tv_tx_signature($c, $ref)) : '';
+    if ($harus === '' || $hdr === '' || !hash_equals($harus, $hdr)) {
+        tv_log('webhook ref=' . $ref . ' DITOLAK: header X-TokoVoucher-Authorization tidak cocok dengan signature md5 member_code:secret:ref_id');
+        tv_out(['ok' => false, 'message' => 'Signature webhook tidak valid.'], 401);
+    }
+    $baru = tv_trx_store_write($ref, $norm + ['sumber' => 'webhook']);
+    tv_log('webhook ref=' . $ref . ' status=' . $norm['status'] . ' trx=' . $norm['trx_id'] . ' sn=' . $norm['sn'] . ($baru ? ' (baru)' : ' (duplikat, dilewati)'));
+    tv_out(['ok' => true, 'ref_id' => $ref, 'status' => $norm['status'], 'trx_id' => $norm['trx_id'], 'baru' => $baru]);
+}
+
 /* ===================== GET ===================== */
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
@@ -582,41 +722,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     if ($action === 'cek_akun') {
-        // Cek akun target (apigames.id) untuk Free Fire & Mobile Legends:
-        // signature = md5 merchant_id + secret_key. Gagal/apapun alasannya =
-        // ok:false supaya UI melewatinya secara senyap (tanpa pesan error).
+        // Cek akun target (apigames.id) — Free Fire & Mobile Legends, GET dengan
+        // signature = md5(merchant_id + secret_key).
+        // Kegagalan teknis (belum dikonfigurasi, koneksi, signature/IP ditolak,
+        // balasan bukan JSON) dikembalikan APA ADANYA + cuplikan respons asli
+        // supaya mudah didiagnosis; "Data Not Found" ditandai reason:not_found.
         $gameSlug = strtolower(trim((string)($_GET['game'] ?? '')));
         $userId = trim((string)($_GET['user_id'] ?? ''));
         $codes = [
-            'free-fire' => 'freefire', 'freefire' => 'freefire',
-            'mobile-legends' => 'mobilelegend', 'mobilelegends' => 'mobilelegend',
+            'free-fire' => 'freefire', 'freefire' => 'freefire', 'ff' => 'freefire',
+            'mobile-legends' => 'mobilelegend', 'mobilelegends' => 'mobilelegend', 'ml' => 'mobilelegend',
         ];
         $gc = $codes[$gameSlug] ?? '';
         $c = tv_cfg();
-        if ($gc === '' || $userId === '' || $c['ag_merchant'] === '' || $c['ag_secret'] === '') {
-            tv_out(['ok' => false, 'valid' => false, 'username' => '']);
+        $gagal = function ($reason, $msg, $extra = []) use (&$urlSamar) {
+            tv_out(array_merge(['ok' => false, 'valid' => false, 'username' => '', 'reason' => $reason, 'message' => $msg], $extra, ['url' => $urlSamar ?? '']));
+        };
+        if ($gc === '') $gagal('unsupported', 'Cek akun hanya tersedia untuk Free Fire dan Mobile Legends (game_code apigames: freefire / mobilelegend).');
+        if ($userId === '') $gagal('kosong', 'Isi Player ID / User ID terlebih dahulu.');
+        if ($c['ag_merchant'] === '' || $c['ag_secret'] === '') {
+            $gagal('unconfigured', 'Cek akun belum aktif di server: ag_merchant / ag_secret masih kosong pada php-api/tokovoucher_config.php (atau env APIGAMES_MERCHANT_ID / APIGAMES_SECRET_KEY).');
         }
         $sig = md5($c['ag_merchant'] . $c['ag_secret']);
         $url = 'https://v1.apigames.id/merchant/' . rawurlencode($c['ag_merchant']) . '/cek-username/' . $gc
             . '?user_id=' . rawurlencode($userId) . '&signature=' . $sig;
+        // Versi tersamar untuk diagnostik (merchant & signature tidak bocor penuh).
+        $urlSamar = 'https://v1.apigames.id/merchant/' . tv_mask_code($c['ag_merchant']) . '/cek-username/' . $gc
+            . '?user_id=' . rawurlencode($userId) . '&signature=' . substr($sig, 0, 6) . '…';
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 12,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTPHEADER => ['Accept: application/json'],
             CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
         ]);
         $body = curl_exec($ch);
         $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        $errno = curl_errno($ch);
         curl_close($ch);
+        $raw = is_string($body) ? substr(preg_replace('/\s+/', ' ', $body), 0, 400) : '';
         $j = is_string($body) ? json_decode($body, true) : null;
-        if (!is_array($j) || (int)($j['status'] ?? 0) !== 1 || !is_array($j['data'] ?? null)) {
-            tv_log('cek_akun ' . $gc . ' http=' . $code . ' -> gagal, silent skip');
-            tv_out(['ok' => false, 'valid' => false, 'username' => '']);
+
+        if ($errno !== 0 || $code === 0) {
+            tv_log('cek_akun ' . $gc . ' user=' . $userId . ' KONEKSI GAGAL errno=' . $errno . ' ' . $err);
+            $gagal('koneksi', 'Apigames tidak dapat dihubungi dari server: ' . ($err !== '' ? $err : 'timeout') . '.', ['http' => $code, 'raw' => $raw]);
+        }
+        if (!is_array($j)) {
+            tv_log('cek_akun ' . $gc . ' user=' . $userId . ' http=' . $code . ' NON_JSON raw=' . $raw);
+            $gagal('non_json', 'Apigames membalas bukan JSON (HTTP ' . $code . '). Respons asli: ' . ($raw !== '' ? $raw : '(kosong)'), ['http' => $code, 'raw' => $raw]);
+        }
+        if ((int)($j['status'] ?? 0) !== 1) {
+            $msg = (string)($j['error_msg'] ?? $j['message'] ?? $j['error'] ?? '');
+            tv_log('cek_akun ' . $gc . ' user=' . $userId . ' http=' . $code . ' DITOLAK raw=' . $raw);
+            $gagal('ditolak', 'Apigames menolak permintaan (HTTP ' . $code . '): ' . ($msg !== '' ? $msg : 'status bukan 1') . '. Respons asli: ' . $raw, ['http' => $code, 'raw' => $raw]);
+        }
+        if (!is_array($j['data'] ?? null)) {
+            tv_log('cek_akun ' . $gc . ' user=' . $userId . ' http=' . $code . ' TANPA_DATA raw=' . $raw);
+            $gagal('tanpa_data', 'Apigames membalas tanpa field data (HTTP ' . $code . '). Respons asli: ' . $raw, ['http' => $code, 'raw' => $raw]);
         }
         $valid = !empty($j['data']['is_valid']);
-        if (!$valid) tv_out(['ok' => false, 'valid' => false, 'username' => '']);
-        tv_out(['ok' => true, 'valid' => true, 'username' => (string)($j['data']['username'] ?? '')]);
+        $uname = trim((string)($j['data']['username'] ?? ''));
+        $pesanApi = (string)($j['message'] ?? ($valid ? 'Data Found' : 'Data Not Found'));
+        tv_log('cek_akun ' . $gc . ' user=' . $userId . ' http=' . $code . ' valid=' . ($valid ? 1 : 0) . ' username=' . $uname);
+        if (!$valid || $uname === '') {
+            $gagal('not_found', $pesanApi, ['http' => $code, 'raw' => $raw]);
+        }
+        tv_out(['ok' => true, 'valid' => true, 'username' => $uname, 'reason' => 'ok', 'message' => $pesanApi, 'url' => $urlSamar]);
     }
 
     if ($action === 'katalog') {
@@ -741,15 +914,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action === 'cek_status') {
         $ref = trim((string)($_GET['ref_id'] ?? ''));
         if ($ref === '') tv_out(['ok' => false, 'message' => 'ref_id wajib diisi.'], 400);
+
+        // Pertama: bila webhook penyedia sudah melaporkan status akhir, itu jawaban pasti —
+        //    tidak perlu menembak API penyedia (hemat & tetap jalan walau IP diblokir).
+        $simpan = tv_trx_store_read($ref);
+        $stSimpan = is_array($simpan) ? strtolower((string)($simpan['status'] ?? '')) : '';
+        if (in_array($stSimpan, ['sukses', 'gagal'], true)) {
+            tv_out([
+                'ok' => true, 'ref_id' => $ref, 'sumber' => 'webhook', 'status' => $stSimpan,
+                'trx_id' => (string)($simpan['trx_id'] ?? ''), 'sn' => (string)($simpan['sn'] ?? ''),
+                'message' => (string)($simpan['message'] ?? ''), 'price' => (int)($simpan['price'] ?? 0),
+                'provider' => $simpan,
+            ]);
+        }
+
         $c = tv_cfg();
         if ($c['member_code'] === '' || $c['secret'] === '') tv_out(['ok' => false, 'message' => 'Integrasi top up belum dikonfigurasi di server.'], 503);
-        $a = tv_api_get_authed('/v1/transaksi/status', ['ref_id' => $ref]);
+
+        // Kedua, docs: POST /v1/transaksi/status {ref_id, member_code, signature}.
+        $a = tv_api_trx('/v1/transaksi/status', ['ref_id' => $ref]);
         $r = $a['res'];
         if ($r === null || $r['body'] === null || $r['code'] === 0) {
-            tv_out(['ok' => false, 'message' => 'Tidak dapat menghubungi server penyedia (' . ($r !== null && $r['error'] !== '' ? $r['error'] : 'timeout') . ').'], 502);
+            tv_out(['ok' => false, 'message' => 'Tidak dapat menghubungi server penyedia (' . ($r !== null && $r['error'] !== '' ? $r['error'] : 'timeout') . ').', 'raw' => is_array($r) ? substr((string)$r['body'], 0, 300) : ''], 502);
         }
         $j = $a['json'];
-        tv_out(['ok' => true, 'ref_id' => $ref, 'provider' => tv_sanitize(is_array($j) ? $j : ['raw' => substr((string)$r['body'], 0, 300)])]);
+        if (!is_array($j)) {
+            tv_out(['ok' => false, 'message' => 'Penyedia membalas format tak dikenal (HTTP ' . $r['code'] . ').', 'raw' => substr(preg_replace('/\s+/', ' ', (string)$r['body']), 0, 300)], 502);
+        }
+        $norm = tv_trx_normalize($j);
+        if ($norm !== null && in_array($norm['status'], ['sukses', 'gagal'], true)) {
+            tv_trx_store_write($ref, $norm + ['sumber' => 'cek_status']);
+        }
+        tv_out([
+            'ok' => true, 'ref_id' => $ref, 'sumber' => 'provider', 'metode' => $a['metode'],
+            'status' => $norm['status'] ?? 'unknown', 'trx_id' => $norm['trx_id'] ?? '', 'sn' => $norm['sn'] ?? '',
+            'message' => ($norm['error_msg'] ?? '') !== '' ? $norm['error_msg'] : ($norm['message'] ?? ''),
+            'error_msg' => $norm['error_msg'] ?? '', 'price' => (int)($norm['price'] ?? 0),
+            'raw' => substr(preg_replace('/\s+/', ' ', (string)$r['body']), 0, 300),
+            'provider' => tv_sanitize($j),
+        ]);
     }
 
     tv_out(['ok' => false, 'message' => 'Aksi tidak dikenal.'], 400);
@@ -776,39 +979,58 @@ if ($produk === '' || mb_strlen($produk) > 40) tv_out(['ok' => false, 'message' 
 // Ref ID unik per permintaan (dipakai juga untuk cek status nanti).
 $ref = 'INV-' . date('ymdHis') . random_int(10, 99);
 
-// Dokumen penyedia: method GET dengan seluruh parameter di query string.
-$r = tv_api_get('/v1/transaksi', [
-    'ref_id'      => $ref,
-    'produk'      => $produk,
-    'tujuan'      => $tujuan,
-    'server_id'   => $server,          // kosong bila produk tidak memiliki Server ID
-    'member_code' => $c['member_code'],
-    'secret'      => $c['secret'],
+// Docs resmi: POST https://api.tokovoucher.net/v1/transaksi dengan body JSON
+//   {ref_id, produk, tujuan, server_id, member_code, signature}
+//   signature = md5(MEMBER_CODE:SECRET:REF_ID)  — dihitung di server, secret tidak keluar.
+// server_id dikirim "" untuk semua game kecuali Mobile Legends. Bila POST ditolak,
+// tv_api_trx otomatis mencoba varian lama (GET + secret) supaya pesanan tidak macet.
+$a = tv_api_trx('/v1/transaksi', [
+    'ref_id'    => $ref,
+    'produk'    => $produk,
+    'tujuan'    => $tujuan,
+    'server_id' => $server,
 ]);
+$r = $a['res'];
+$j = $a['json'];
 
 if ($r['body'] === null || $r['code'] === 0) {
-    tv_log("user=$uid ref=$ref produk=$produk tujuan=$tujuan server=$server CURL_ERROR=" . ($r['error'] !== '' ? $r['error'] : 'timeout'));
-    tv_out(['ok' => false, 'ref_id' => $ref, 'message' => 'Tidak dapat menghubungi server penyedia top up (' . ($r['error'] !== '' ? $r['error'] : 'timeout') . '). Coba lagi sebentar lagi.'], 502);
+    tv_log("user=$uid ref=$ref produk=$produk tujuan=$tujuan server=$server metode=" . $a['metode'] . ' CURL_ERROR=' . ($r['error'] !== '' ? $r['error'] : 'timeout'));
+    tv_out(['ok' => false, 'ref_id' => $ref, 'status' => 'error', 'metode' => $a['metode'], 'message' => 'Tidak dapat menghubungi server penyedia top up (' . ($r['error'] !== '' ? $r['error'] : 'timeout') . '). Coba lagi sebentar lagi.'], 502);
 }
 
-$j = json_decode((string)$r['body'], true);
+$raw = substr(preg_replace('/\s+/', ' ', (string)$r['body']), 0, 400);
 if (!is_array($j)) {
-    tv_log("user=$uid ref=$ref produk=$produk http=" . $r['code'] . ' NON_JSON raw=' . substr((string)$r['body'], 0, 300));
-    tv_out(['ok' => false, 'ref_id' => $ref, 'message' => 'Penyedia top up membalas format tak dikenal (HTTP ' . $r['code'] . '). Simpan nomor ref ini untuk komplain: ' . $ref]);
+    tv_log("user=$uid ref=$ref produk=$produk http=" . $r['code'] . ' metode=' . $a['metode'] . ' NON_JSON raw=' . $raw);
+    tv_out(['ok' => false, 'ref_id' => $ref, 'status' => 'error', 'metode' => $a['metode'], 'raw' => $raw,
+        'message' => 'Penyedia top up membalas format tak dikenal (HTTP ' . $r['code'] . '). Respons asli: ' . $raw . ' — simpan ref ini untuk komplain: ' . $ref]);
 }
 
-// Penolakan bisnis (kode produk salah, saldo kurang, dll) = 200 + ok:false supaya UI
-// bisa menampilkan pesan penyedia apa adanya — BUKAN 502 yang menakuti user.
-$st = $j['status'] ?? $j['success'] ?? null;
-$stLow = is_string($st) ? strtolower($st) : '';
-$okProvider = ($st !== null && filter_var($st, FILTER_VALIDATE_BOOLEAN)) || in_array($stLow, ['success', 'pending', 'processing', 'berhasil', 'diproses'], true);
-$pesan = (string)($j['message'] ?? $j['msg'] ?? $j['error'] ?? $j['keterangan'] ?? '');
+// Balasan docs: status = pending | sukses | gagal, atau {status:0, error_msg:"Ip Not Allow" / "Signature Invalid"}.
+$norm = tv_trx_normalize($j);
+$st = $norm['status'];
+$okProvider = in_array($st, ['sukses', 'pending', 'processing', 'success', 'berhasil', 'diproses'], true);
+$pesan = $norm['error_msg'] !== '' ? $norm['error_msg'] : $norm['message'];
+if ($pesan === '' && $st === 'gagal' && $norm['sn'] !== '') $pesan = $norm['sn'];
 
-tv_log("user=$uid ref=$ref produk=$produk tujuan=$tujuan server=$server http=" . $r['code'] . ' ok=' . ($okProvider ? 1 : 0) . ' msg=' . json_encode($pesan, JSON_UNESCAPED_UNICODE) . ' raw=' . substr((string)$r['body'], 0, 300));
+tv_log("user=$uid ref=$ref produk=$produk tujuan=$tujuan server=$server metode=" . $a['metode'] . ' http=' . $r['code']
+    . ' status=' . $st . ' trx=' . $norm['trx_id'] . ' msg=' . json_encode($pesan, JSON_UNESCAPED_UNICODE) . ' raw=' . $raw);
+
+// Status awal disimpan supaya cek_status/webhook bisa mencocokkan ref_id ini.
+if ($st !== 'error' && $st !== 'unknown') {
+    tv_trx_store_write($ref, $norm + ['sumber' => 'transaksi', 'user_id' => $uid, 'produk_kode' => $produk, 'tujuan' => $tujuan, 'server_id' => $server]);
+}
 
 tv_out([
-    'ok'       => $okProvider,
-    'ref_id'   => $ref,
-    'message'  => $pesan !== '' ? $pesan : ($okProvider ? 'Transaksi diterima penyedia.' : 'Transaksi ditolak penyedia — periksa kode produk / data akun tujuan.'),
-    'provider' => tv_sanitize($j),
+    'ok'         => $okProvider,
+    'ref_id'     => $ref,
+    'status'     => $st,
+    'message'    => $pesan !== '' ? $pesan : ($okProvider ? 'Transaksi diterima penyedia.' : 'Transaksi ditolak penyedia — periksa kode produk / data akun tujuan.'),
+    'error_msg'  => $norm['error_msg'],
+    'trx_id'     => $norm['trx_id'],
+    'sn'         => $norm['sn'],
+    'price'      => $norm['price'],
+    'sisa_saldo' => $norm['sisa_saldo'],
+    'metode'     => $a['metode'],
+    'raw'        => $raw,
+    'provider'   => tv_sanitize($j),
 ], 200);

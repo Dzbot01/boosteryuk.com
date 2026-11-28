@@ -49,8 +49,21 @@ export interface TvStatus {
 
 export interface TvTransaksi {
   ref_id: string;
+  /** Status penyedia: pending | sukses | gagal | error | unknown. */
   status?: string;
   message?: string;
+  /** error_msg asli penyedia bila ditolak (mis. "Ip Not Allow", "Signature Invalid"). */
+  error_msg?: string;
+  /** ID transaksi TokoVoucher (TRXID) bila ada. */
+  trx_id?: string;
+  /** Serial number / alasan gagal dari penyedia. */
+  sn?: string;
+  price?: number;
+  sisa_saldo?: number;
+  /** Varian panggilan yang dipakai server: "POST+signature" (docs) atau "GET+secret" (fallback). */
+  metode?: string;
+  /** Cuplikan respons asli penyedia untuk troubleshooting. */
+  raw?: string;
   /** Balasan mentah penyedia (sudah dibuang field sensitif) untuk detail/troubleshooting. */
   provider?: Record<string, unknown>;
 }
@@ -116,21 +129,44 @@ export interface TvCekAkun {
   valid: boolean;
   /** Nama akun di game bila ditemukan (mis. "¥Vino_TZY™"). */
   username: string;
+  /**
+   * Alasan gagal: unconfigured | koneksi | ditolak | non_json | tanpa_data | not_found | unsupported.
+   * Selain not_found, UI menampilkan pesannya (diagnostik) bersama `raw`.
+   */
+  reason?: string;
+  message?: string;
+  /** Cuplikan respons ASLI apigames untuk troubleshooting. */
+  raw?: string;
+  http?: number;
 }
 
 /**
  * Cek akun target lewat apigames.id (Free Fire & Mobile Legends).
- * Gagal / tidak ditemukan / kredensial belum diisi => ok:false — UI melewatinya senyap.
+ * Akun tidak ditemukan (reason:not_found) => UI melewatinya senyap;
+ * kegagalan teknis => pesan + respons asli ditampilkan.
  */
 export const tvCekAkun = (game: string, userId: string) =>
   get<TvCekAkun>('action=cek_akun&game=' + encodeURIComponent(game) + '&user_id=' + encodeURIComponent(userId));
 
 export interface TvCekStatus {
   ref_id: string;
+  /** Sumber jawaban: webhook penyedia (pasti) atau provider (cek langsung). */
+  sumber?: 'webhook' | 'provider';
+  /** pending | sukses | gagal | error | unknown. */
+  status?: string;
+  trx_id?: string;
+  sn?: string;
+  message?: string;
+  error_msg?: string;
+  price?: number;
+  raw?: string;
   /** Balasan mentah penyedia (sudah dibersihkan) berisi status transaksi. */
   provider?: Record<string, unknown>;
 }
 
-/** Cek status transaksi per ref_id lewat GET /v1/transaksi/status di penyedia. */
+/**
+ * Cek status transaksi per ref_id: status yang sudah dilaporkan webhook dipakai dulu,
+ * selain itu POST /v1/transaksi/status {ref_id, member_code, signature} ke penyedia.
+ */
 export const tvCekStatus = (ref_id: string) =>
   get<TvCekStatus>('action=cek_status&ref_id=' + encodeURIComponent(ref_id));

@@ -34,7 +34,21 @@ export default function TopupGameDetailPage() {
   const [playerId, setPlayerId] = useState('');
   const [serverId, setServerId] = useState('');
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string; refId?: string } | null>(null);
+  const [result, setResult] = useState<{
+    ok: boolean;
+    message: string;
+    refId?: string;
+    /** Status penyedia: pending | sukses | gagal | error. */
+    status?: string;
+    trxId?: string;
+    sn?: string;
+    /** Cuplikan respons asli penyedia (ditampilkan bila gagal). */
+    raw?: string;
+    /** Varian panggilan: POST+signature (docs) atau GET+secret (fallback). */
+    metode?: string;
+    /** Asal jawaban cek status: webhook penyedia atau cek langsung ke API. */
+    sumber?: string;
+  } | null>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [live, setLive] = useState<{ source: string; items: TvPricelistItem[]; updated_at?: string } | null>(null);
   const [katBusy, setKatBusy] = useState(false);
@@ -64,17 +78,18 @@ export default function TopupGameDetailPage() {
   const produk = useMemo(() => produkList.find((p) => p.kode === kode) || null, [produkList, kode]);
 
   /**
-   * Server ID hanya untuk game yang benar-benar membutuhkannya (mis. Mobile Legends).
-   * Free Fire dsb. tidak menampilkan kolom ini: field server_id di format_form
-   * penyedia ber-label kosong = tidak dipakai; slug ML jadi pengaman bila data belum lengkap.
+   * Server ID HANYA berlaku untuk produk Mobile Legends. Free Fire dan game lain
+   * tidak memakai kolom ini (field server_id di format_form mereka ber-label kosong).
    */
-  const butuhServer = !!produk?.butuhServer || slug === 'mobile-legends';
+  const butuhServer = slug === 'mobile-legends';
 
   /**
    * Cek akun target otomatis (Free Fire & Mobile Legends) lewat apigames.id:
-   * skeleton saat memuat; gagal/tidak ditemukan/kredensial kosong = skip senyap.
+   * skeleton saat memuat; akun tidak ditemukan = skip senyap; kegagalan teknis
+   * (belum dikonfigurasi / koneksi / signature / IP ditolak / respons rusak)
+   * = tampilkan pesan + respons ASLI supaya mudah didiagnosis.
    */
-  const [cekAkun, setCekAkun] = useState<{ loading: boolean; username: string } | null>(null);
+  const [cekAkun, setCekAkun] = useState<{ loading: boolean; username: string; error?: { message: string; raw?: string } } | null>(null);
   const slugCekAkun = slug === 'free-fire' || slug === 'mobile-legends' ? slug : '';
   useEffect(() => {
     if (!slugCekAkun) {
@@ -89,7 +104,20 @@ export default function TopupGameDetailPage() {
     setCekAkun({ loading: true, username: '' });
     const t = window.setTimeout(() => {
       tvCekAkun(slugCekAkun, id).then((r) => {
-        setCekAkun(r.ok && r.valid && r.username ? { loading: false, username: r.username } : null);
+        if (r.ok && r.valid && r.username) {
+          setCekAkun({ loading: false, username: r.username });
+          return;
+        }
+        // "Data Not Found" (is_valid=false) bukan error sistem → lewati senyap.
+        if (r.reason === 'not_found') {
+          setCekAkun(null);
+          return;
+        }
+        setCekAkun({
+          loading: false,
+          username: '',
+          error: { message: r.message || 'Cek akun gagal.', raw: r.raw || '' },
+        });
       });
     }, 650);
     return () => window.clearTimeout(t);
@@ -155,9 +183,23 @@ export default function TopupGameDetailPage() {
       return;
     }
     setBusy(true);
-    const r = await tvTransaksi({ player_id: playerId.trim(), server_id: serverId.trim(), kode_produk: produk.kode });
+    // Server ID hanya dikirim untuk Mobile Legends; game lain "" sesuai docs.
+    const r = await tvTransaksi({
+      player_id: playerId.trim(),
+      server_id: butuhServer ? serverId.trim() : '',
+      kode_produk: produk.kode,
+    });
     setBusy(false);
-    setResult({ ok: !!r.ok, message: r.message || (r.ok ? 'Transaksi berhasil dikirim ke penyedia.' : 'Transaksi gagal.'), refId: r.ref_id });
+    setResult({
+      ok: !!r.ok,
+      status: r.status,
+      message: r.message || (r.ok ? 'Transaksi berhasil dikirim ke penyedia.' : 'Transaksi gagal.'),
+      refId: r.ref_id,
+      trxId: r.trx_id,
+      sn: r.sn,
+      raw: r.raw,
+      metode: r.metode,
+    });
   };
 
   return (
@@ -212,6 +254,17 @@ export default function TopupGameDetailPage() {
                 <span className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
                   <CheckCircle2 className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
                   <span className="truncate">Akun terbaca: {cekAkun.username}</span>
+                </span>
+              )}
+              {cekAkun && !cekAkun.loading && cekAkun.username === '' && cekAkun.error && (
+                <span className="mt-1.5 block rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-rose-700">
+                  <span className="font-bold">Cek akun apigames bermasalah — </span>
+                  {cekAkun.error.message}
+                  {cekAkun.error.raw ? (
+                    <code className="mt-1 block break-all rounded bg-white/70 px-1.5 py-1 font-mono text-[10px] text-rose-800">
+                      {cekAkun.error.raw}
+                    </code>
+                  ) : null}
                 </span>
               )}
             </label>
@@ -300,7 +353,7 @@ export default function TopupGameDetailPage() {
                     <span className="block text-[13.5px] font-bold text-slate-800">{p.nama}</span>
                     <span className="mt-0.5 block text-[11px] text-slate-500">
                       kode <code className="rounded bg-slate-100 px-1">{p.kode}</code>
-                      {p.butuhServer ? ' · perlu Server ID' : ''}
+                      {butuhServer ? ' · perlu Server ID' : ''}
                     </span>
                   </span>
                   <span className="whitespace-nowrap font-mono text-[13px] font-bold text-[#14143c]">{rupiah(hargaJual(p.harga))}</span>
@@ -326,48 +379,84 @@ export default function TopupGameDetailPage() {
             </div>
           </dl>
 
-          {result && (
-            <div
-              className={`mt-3 flex items-start gap-2.5 rounded-xl border p-3.5 text-[12.5px] ${
-                result.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-700'
-              }`}
-            >
-              {result.ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} /> : <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />}
-              <span>
-                {result.message}
-                {result.refId ? (
-                  <>
-                    {' '}Ref: <code className="rounded bg-white/70 px-1 font-bold">{result.refId}</code>
-                  </>
-                ) : null}
-                {result.refId ? (
-                  <button
-                    type="button"
-                    disabled={cekBusy}
-                    onClick={() => {
-                      setCekBusy(true);
-                      tvCekStatus(result.refId as string).then((r) => {
-                        setCekBusy(false);
-                        const pv = (r.provider || {}) as Record<string, unknown>;
-                        const st = pv.status ?? pv.state ?? pv.status_transaksi;
-                        const msg = pv.message ?? pv.msg ?? pv.keterangan;
-                        setResult({
-                          ok: !!r.ok,
-                          message: r.ok
-                            ? `Status terakhir: ${String(st ?? msg ?? 'diterima penyedia')}${msg && st ? ` — ${String(msg)}` : ''}.`
-                            : r.message || 'Gagal mengecek status.',
-                          refId: result.refId,
+          {result && (() => {
+            const pending = ['pending', 'processing', 'diproses'].includes((result.status || '').toLowerCase());
+            const nada = pending
+              ? 'border-amber-200 bg-amber-50 text-amber-800'
+              : result.ok
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border-rose-200 bg-rose-50 text-rose-700';
+            return (
+              <div className={`mt-3 flex items-start gap-2.5 rounded-xl border p-3.5 text-[12.5px] ${nada}`}>
+                {result.ok && !pending ? (
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
+                ) : pending ? (
+                  <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin" strokeWidth={2.2} />
+                ) : (
+                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
+                )}
+                <span className="min-w-0 flex-1">
+                  {result.message}
+                  {result.status ? (
+                    <span className="ml-1.5 inline-block rounded-full bg-white/70 px-2 py-0.5 align-middle text-[10px] font-extrabold uppercase tracking-wide">
+                      {result.status}
+                    </span>
+                  ) : null}
+                  {result.refId ? (
+                    <span className="mt-1 block text-[11.5px] leading-relaxed">
+                      Ref: <code className="rounded bg-white/70 px-1 font-bold">{result.refId}</code>
+                      {result.trxId ? (
+                        <>
+                          {' '}· TRX: <code className="rounded bg-white/70 px-1 font-bold">{result.trxId}</code>
+                        </>
+                      ) : null}
+                      {result.sn ? (
+                        <>
+                          {' '}· SN: <code className="rounded bg-white/70 px-1">{result.sn}</code>
+                        </>
+                      ) : null}
+                      {result.sumber ? <span className="opacity-70"> · sumber: {result.sumber}</span> : null}
+                      {result.metode ? <span className="opacity-70"> · {result.metode}</span> : null}
+                    </span>
+                  ) : null}
+                  {!result.ok && result.raw ? (
+                    <code className="mt-1.5 block break-all rounded bg-white/70 px-2 py-1 font-mono text-[10.5px] leading-relaxed">
+                      Respons asli penyedia: {result.raw}
+                    </code>
+                  ) : null}
+                  {result.refId ? (
+                    <button
+                      type="button"
+                      disabled={cekBusy}
+                      onClick={() => {
+                        setCekBusy(true);
+                        tvCekStatus(result.refId as string).then((r) => {
+                          setCekBusy(false);
+                          const st = String(r.status || '');
+                          const msg = r.error_msg || r.message || '';
+                          setResult({
+                            ok: st === 'sukses' || st === 'pending' ? !!r.ok : false,
+                            status: st,
+                            message: st
+                              ? `Status terakhir: ${st.toUpperCase()}${msg ? ` — ${msg}` : ''}.`
+                              : r.message || 'Gagal mengecek status.',
+                            refId: result.refId,
+                            trxId: r.trx_id,
+                            sn: r.sn,
+                            raw: r.raw,
+                            sumber: r.sumber,
+                          });
                         });
-                      });
-                    }}
-                    className="mt-1.5 block rounded-full border border-current/30 px-3.5 py-1 text-[11px] font-bold transition hover:bg-white/60 disabled:opacity-60"
-                  >
-                    {cekBusy ? 'Mengecek…' : 'Cek status pesanan'}
-                  </button>
-                ) : null}
-              </span>
-            </div>
-          )}
+                      }}
+                      className="mt-2 block rounded-full border border-current/30 px-3.5 py-1 text-[11px] font-bold transition hover:bg-white/60 disabled:opacity-60"
+                    >
+                      {cekBusy ? 'Mengecek…' : 'Cek status pesanan'}
+                    </button>
+                  ) : null}
+                </span>
+              </div>
+            );
+          })()}
 
           <button
             type="button"
