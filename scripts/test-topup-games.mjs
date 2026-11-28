@@ -309,6 +309,10 @@ assert.ok(detail.includes('const daftarJenis =') && detail.includes('role="tabli
 assert.ok(detail.includes('setJenisAktif(j)') && detail.includes('aria-selected={jenisAktif === j}'), 'chip wilayah bisa dipilih & ditandai aktif');
 assert.ok(detail.includes('sumber = jenisAktif ? semua.filter((i) => i.jenis === jenisAktif) : semua'), 'pricelist menyesuaikan chip wilayah yang dipilih');
 assert.ok(/semuaWilayah: !!jenisAktif,\s*wilayah: jenisAktif\.replace/.test(detail), 'satu chip wilayah aktif = daftar di-scope ke chip itu (kode non-resmi ikut, wilayah lain dibuang)');
+assert.match(detail, /my-3\.5 border-t border-slate-200\/80/, 'garis pembatas antara modul Paket & Membership dan daftar produk');
+assert.match(detail, /lg:grid-cols-\[minmax\(0,1fr\)_360px\]/, 'desktop: dua kolom (konten + ringkasan konfirmasi sticky)');
+assert.match(detail, /lg:max-w-6xl/, 'kontainer detail melebar di desktop');
+assert.match(detail, /lg:grid-cols-3/, 'grid produk/paket 3 kolom di desktop');
 assert.ok(dname.includes('semuaWilayah?: boolean'), 'rapihkanKatalog punya opsi semuaWilayah');
 assert.ok(dname.includes('const wKode = wilayahKode(k);') && dname.includes('if (wKode !== wilayahChipAktif) continue;'), 'kode ber-token wilayah hanya lolos pada chip wilayah yang sama');
 assert.ok(dname.includes("const TOKEN_WILAYAH = ['SG', 'MY', 'BR', 'PH', 'TH', 'VN', 'TR', 'RU', 'KR', 'TW', 'BD', 'GLOBAL', 'LATAM']"), 'daftar token wilayah mencakup semua varian chip (SG/MY/BR/PH/TH/VN/TR/RU/KR/TW/BD/Global/Latam)');
