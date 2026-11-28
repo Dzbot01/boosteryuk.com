@@ -27,6 +27,8 @@ interface CardItem {
   hue: number;
   /** Ada bila item ini game topup (punya halaman detail & produk). */
   game?: boolean;
+  /** Logo resmi game dari penyedia (bila ada); gagal dimuat = fallback ikon gamepad. */
+  logo?: string;
 }
 
 function GameThumb({ item, big = false }: { item: CardItem; big?: boolean }) {
@@ -35,8 +37,24 @@ function GameThumb({ item, big = false }: { item: CardItem; big?: boolean }) {
       className={`relative aspect-square w-full overflow-hidden rounded-xl ${big ? 'rounded-2xl' : ''}`}
       style={{ background: `linear-gradient(155deg, hsl(${item.hue} 42% 34%) 0%, hsl(${item.hue} 55% 18%) 62%, #14143c 100%)` }}
     >
-      {/* watermark ikon di tengah thumbnail */}
-      <Gamepad2 className="absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-1/2 -translate-y-1/2 text-white/25" strokeWidth={1.4} />
+      {/* logo resmi penyedia bila tersedia; ikon gamepad sebagai watermark/fallback */}
+      {item.logo ? (
+        <img
+          src={item.logo}
+          alt=""
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+            const g = e.currentTarget.nextElementSibling;
+            if (g) g.classList.remove('hidden');
+          }}
+          className="absolute inset-0 h-full w-full object-contain p-4"
+        />
+      ) : null}
+      <Gamepad2
+        className={`absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-1/2 -translate-y-1/2 text-white/25 ${item.logo ? 'hidden' : ''}`}
+        strokeWidth={1.4}
+      />
       {/* overlay gradasi navy di bawah thumbnail: tempat logo/nama game */}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#14143c] via-[#14143c]/70 to-transparent px-2 pb-2 pt-8">
         <p className="truncate text-center font-display text-[11px] font-extrabold uppercase italic tracking-wide text-white md:text-[13px]">
@@ -89,6 +107,7 @@ export default function TopupGamePage() {
         sub: `${g.jumlah} produk · server ID (Indonesia)`,
         hue: hueOf(g.slug),
         game: true,
+        logo: g.logo || undefined,
       }));
     }
     // Fallback bila katalog live belum tersedia (server belum dikonfigurasi).

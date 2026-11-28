@@ -94,6 +94,8 @@ export interface TvKatalogGroup {
   jumlah: number;
   termurah: number;
   labels: string[];
+  /** Logo resmi game dari penyedia (bila ada). */
+  logo?: string;
 }
 
 export interface TvKatalog {
