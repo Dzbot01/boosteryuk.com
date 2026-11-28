@@ -7,12 +7,20 @@
  *   TV_SECRET        = secret key member
  *   TV_MEMBER_CODE   = opsional, menimpa member_code di bawah
  *
- * Dokumentasi endpoint penyedia (semua method GET):
- *   https://api.tokovoucher.net/v1/transaksi?ref_id=&produk=&tujuan=&server_id=&member_code=&secret=
- *   https://api.tokovoucher.net/v1/transaksi/status?ref_id=&member_code=&secret=
- *   https://api.tokovoucher.net/member?member_code=&secret=
- *   https://api.tokovoucher.net/produk/code?member_code=&secret=
- *   https://api.tokovoucher.net/v1/deposit?member_code=&secret=
+ * Dokumentasi endpoint penyedia:
+ *   POST https://api.tokovoucher.net/v1/transaksi         {ref_id, produk, tujuan, server_id, member_code, signature}
+ *   POST https://api.tokovoucher.net/v1/transaksi/status  {ref_id, member_code, signature}
+ *        signature = md5(MEMBER_CODE:SECRET:REF_ID)
+ *   GET  https://api.tokovoucher.net/member?member_code=&secret=
+ *   GET  https://api.tokovoucher.net/produk/code?member_code=&secret=
+ *   GET  https://api.tokovoucher.net/member/produk/full?member_code=&signature=
+ *   GET  https://api.tokovoucher.net/v1/deposit?member_code=&secret=
+ *
+ * WEBHOOK perubahan status transaksi — isi URL ini di Member Area TokoVoucher:
+ *   https://app.boosteryuk.com/api/tokovoucher-webhook
+ * (Worker Cloudflare menerimanya lalu meneruskan ke file ini sebagai ?action=webhook;
+ *  validasi header X-TokoVoucher-Authorization = md5(MEMBER_CODE:SECRET:REF_ID).
+ *  Uji cepat: https://app.boosteryuk.com/api/tokovoucher-webhook?probe=1)
  */
 return [
     'member_code' => 'M250727KGST5158OE',

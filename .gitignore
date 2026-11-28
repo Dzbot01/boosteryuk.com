@@ -27,3 +27,4 @@ php-api/tokovoucher_config.php
 php-api/tokovoucher_log.txt
 php-api/tokovoucher_pricelist.php
 php-api/tokovoucher_pricelist_cache.json
+php-api/tokovoucher_trx_cache.json

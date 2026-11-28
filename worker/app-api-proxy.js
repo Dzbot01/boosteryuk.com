@@ -40,6 +40,20 @@
 
 const ORIGIN = "https://boosteryuk.com";
 const COOKIE_NAME = "__test";
+
+/**
+ * Webhook TokoVoucher (perubahan status transaksi). Hosting PHP sering memblokir
+ * request masuk dari luar, jadi webhook diterima di Worker ini lalu diteruskan ke PHP:
+ *   Penyedia → POST https://app.boosteryuk.com/api/tokovoucher-webhook
+ *            → Worker (teruskan, header X-TokoVoucher-Authorization ikut dikirim)
+ *            → https://boosteryuk.com/api/tokovoucher.php?action=webhook (validasi md5 + simpan)
+ * Penyedia WAJIB menerima HTTP 200 (docs), kecuali origin sedang kena 429 — saat itu
+ * Worker membalas 503 + Retry-After supaya penyedia mengulang dan status tidak hilang.
+ * URL inilah yang diisi di Member Area TokoVoucher (Webhook). IP penyedia: 188.166.243.56.
+ */
+const WEBHOOK_PATH = "/api/tokovoucher-webhook";
+const WEBHOOK_PHP = "/api/tokovoucher.php?action=webhook";
+const WEBHOOK_HEADER = "X-TokoVoucher-Authorization";
 const COOKIE_CACHE_PREFIX = "https://cache.boosteryuk.internal/aeonfree-test-cookie-";
 const API_CACHE_NAME = "by-worker-api-v1";
 const HEALTH_PROBE_PATH = "/api/me.php";
@@ -382,6 +396,14 @@ async function health(ctx) {
     JSON.stringify({
       ok: okJson,
       origin: ORIGIN,
+      webhook: {
+        url: "https://app.boosteryuk.com" + WEBHOOK_PATH,
+        metode: "POST/GET",
+        header: WEBHOOK_HEADER,
+        rumus_signature: "md5(MEMBER_CODE:SECRET:REF_ID)",
+        diteruskan_ke: ORIGIN + WEBHOOK_PHP,
+        uji: "https://app.boosteryuk.com" + WEBHOOK_PATH + "?probe=1",
+      },
       probe,
       verdict: okJson
         ? "Worker dapat memanggil PHP di AeonFree (respons JSON diterima). Proxy /api siap dipakai."
@@ -391,10 +413,106 @@ async function health(ctx) {
   );
 }
 
+function jsonOut(obj, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "Content-Type": "application/json; charset=UTF-8", "Cache-Control": "no-store", ...extraHeaders },
+  });
+}
+
+/**
+ * Terima webhook penyedia, teruskan ke PHP untuk validasi signature
+ * md5(MEMBER_CODE:SECRET:REF_ID) + penyimpanan status (idempoten lewat trx_id).
+ * Balasan ke penyedia selalu 200 (kecuali origin kena 429 → 503 agar dikirim ulang).
+ */
+async function handleWebhook(request, ctx) {
+  const url = new URL(request.url);
+  const method = request.method.toUpperCase();
+  if (!["GET", "POST"].includes(method)) return jsonOut({ ok: false, message: "Metode tidak didukung (pakai POST/GET)." }, 405);
+
+  // ?probe=1 → cek rute hidup tanpa meneruskan apa pun (untuk uji URL di Member Area).
+  if (url.searchParams.get("probe") === "1") {
+    return jsonOut({
+      ok: true,
+      endpoint: "webhook TokoVoucher",
+      url: url.origin + WEBHOOK_PATH,
+      metode: "POST/GET",
+      header_validasi: WEBHOOK_HEADER,
+      rumus_signature: "md5(MEMBER_CODE:SECRET:REF_ID)",
+      diteruskan_ke: ORIGIN + WEBHOOK_PHP,
+      catatan: "Kirim webhook asli (POST JSON) ke URL ini; respons selalu 200 bila diteruskan.",
+    });
+  }
+
+  const auth = (request.headers.get(WEBHOOK_HEADER) || "").trim();
+  let raw = "";
+  let buf;
+  try {
+    if (method === "POST") {
+      buf = await request.arrayBuffer();
+      raw = new TextDecoder().decode(buf).slice(0, 8000);
+    }
+  } catch (_) { buf = undefined; }
+
+  let payload = null;
+  try { payload = raw ? JSON.parse(raw) : null; } catch (_) { payload = null; }
+  if (!payload || typeof payload !== "object") payload = Object.fromEntries(url.searchParams.entries());
+  const refId = String(payload.ref_id || url.searchParams.get("ref_id") || "");
+
+  // Origin sedang menahan diri (429): balas 503 supaya penyedia mengirim ulang webhook.
+  if (Date.now() < blockedUntil) {
+    return jsonOut(
+      { ok: false, message: "Server asal sedang membatasi request; coba kirim ulang webhook.", ref_id: refId },
+      503,
+      { "Retry-After": "120" },
+    );
+  }
+
+  const target = ORIGIN + WEBHOOK_PHP;
+  const fwd = new Request(target, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(auth ? { [WEBHOOK_HEADER]: auth } : {}),
+      "X-Webhook-Source-IP": request.headers.get("cf-connecting-ip") || "",
+    },
+  });
+  const bodyBuf = buf && buf.byteLength ? buf : new TextEncoder().encode(JSON.stringify(payload)).buffer;
+
+  let php = null;
+  try {
+    const result = await callOrigin(fwd, target, bodyBuf, ctx);
+    if (result.error) {
+      php = { ok: false, detail: result.error };
+    } else {
+      const text = await result.res.text();
+      let parsed = null;
+      try { parsed = JSON.parse(text); } catch (_) { parsed = null; }
+      php = {
+        ...(parsed && typeof parsed === "object" ? parsed : { ok: false, raw: text.slice(0, 300) }),
+        http: result.res.status,
+      };
+    }
+  } catch (e) {
+    php = { ok: false, detail: e instanceof Error ? e.message.slice(0, 120) : "forward failed" };
+  }
+
+  return jsonOut({
+    ok: true,
+    diterima: true,
+    ref_id: refId,
+    signature_diterima: auth !== "",
+    disimpan_di_php: !!(php && php.ok),
+    php,
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/api/__health") return health(ctx);
+    if (url.pathname === WEBHOOK_PATH) return handleWebhook(request, ctx);
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) return proxyApi(request, ctx);
     // Selain /api: layani file statis hasil build (UI tidak disentuh).
     return env.ASSETS.fetch(request);

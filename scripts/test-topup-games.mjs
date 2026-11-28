@@ -24,7 +24,7 @@ assert.match(app, /<Route path="topup" element=\{<TopupGamePage \/>} \/>/, 'rout
 assert.match(app, /<Route path="topup\/:slug" element=\{<TopupGameDetailPage \/>} \/>/, 'route detail /topup/:slug terdaftar');
 assert.match(app, /const TopupGamePage = lazy\(\(\) => import\('\.\/pages\/TopupGamePage'\)\);/, 'halaman dimuat malas (tidak membebani bundle awal)');
 const menu = read('src/components/SideMenu.tsx');
-assert.match(menu, /\| 'topup';/, 'PageId topup ada');
+assert.match(menu, /\| 'topup'\n  \| 'ppob';/, 'PageId topup (dan ppob) ada');
 assert.match(menu, /topup: '\/topup',/, 'ROUTE_PATH topup = /topup');
 assert.match(menu, /\{ id: 'topup', icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital' \},/, 'menu "TopUp All Game" ada di SideMenu');
 assert.match(menu, /Gamepad2,/, 'ikon Gamepad2 diimpor');
@@ -102,8 +102,8 @@ assert.equal(hargaJual(12066), 12100, 'pembulatan ratusan konsisten');
 const detail = read('src/pages/TopupGameDetailPage.tsx');
 assert.match(detail, /Player ID \/ User ID/, 'form Player ID ada');
 assert.match(detail, /Server ID/, 'form Server ID ada (produk yang membutuhkannya)');
-assert.match(detail, /const butuhServer = !!produk\?\.butuhServer/, 'Server ID hanya tampil bila produk/game memerlukannya (Free Fire tidak, Mobile Legends ya)');
-assert.match(detail, /tvTransaksi\(\{ player_id: playerId\.trim\(\), server_id: serverId\.trim\(\), kode_produk: produk\.kode \}\)/, 'pesanan dikirim lewat layanan proxy');
+assert.match(detail, /const butuhServer = slug === 'mobile-legends';/, 'Server ID HANYA untuk Mobile Legends (Free Fire & game lain tidak)');
+assert.match(detail, /tvTransaksi\(\{\s*player_id: playerId\.trim\(\),\s*server_id: butuhServer \? serverId\.trim\(\) : '',\s*kode_produk: produk\.kode,\s*\}\)/, 'pesanan dikirim lewat layanan proxy; server_id dikirim hanya untuk Mobile Legends');
 assert.match(detail, /Silakan login dulu untuk memesan top up\./, 'pesan wajib login sebelum memesan');
 assert.match(detail, /tokovoucher_config\.php/, 'notice bila integrasi belum dikonfigurasi di server');
 assert.match(detail, /tvPricelist\(game\.nama\)/, 'halaman detail menarik katalog ASLI dari server saat dibuka');
@@ -119,20 +119,27 @@ assert.ok(!/md5\(/i.test(svc) && !/signature\s*=/.test(svc), 'signature tidak di
 const php = read('php-api/tokovoucher.php');
 assert.ok(php.includes('function tv_label_wilayah_ok'), 'proxy PHP punya filter kategori wilayah (hanya ID Indonesia)');
 assert.ok(php.includes("strpos($l, 'promo')"), 'kategori Promo dibuang di sumbernya');
-assert.ok(/array_filter\(\$all, function \(\$p\) \{ return tv_label_wilayah_ok/.test(php), 'pricelist menerapkan filter wilayah ke seluruh daftar produk penyedia');
+assert.ok(/array_key_exists\('wilayah_ok', \$p\)/.test(php), 'pricelist memakai flag wilayah_ok: semua wilayah ikut (chip), sumber datar tetap ID-saja');
+assert.ok(php.includes("'wilayah_ok' => \$wilayahOk"), 'item dari /member/produk/full membawa flag wilayah_ok per jenis');
+assert.ok(php.includes('function tv_kode_katalog_ok($kode, $izinkanWilayah = false)'), 'filter kode punya opsi izinkan token wilayah (produk chip server luar)');
+assert.ok(/\$okWilayah = array_key_exists\('wilayah_ok', \$p\)/.test(php), 'grid katalog tetap ringkasan varian Indonesia (wilayah_ok)');
 assert.ok(php.includes("action === 'katalog'"), 'proxy menyediakan action=katalog untuk grid game live di /topup');
 assert.ok(php.includes('function tv_kode_katalog_ok'), 'filter kode: produk tes, server luar, dan voucher game dibuang');
 assert.ok(php.includes('labels_dilihat'), 'katalog melaporkan label mentah penyedia untuk diagnostik');
 assert.ok(/tv_code_prefix_game\(\$p\['kode'\]\)/.test(php), 'katalog fallback pengelompokan lewat prefiks kode (respons datar)');
 assert.ok(php.includes('/member/produk/full'), 'sumber katalog utama: endpoint resmi /member/produk/full');
-assert.ok(php.includes('__all_v2__') && php.includes('__full_v2__'), 'kunci cache diversi ulang: cache lama skema datar tidak menutupi endpoint full');
+assert.ok(php.includes('__all_v3__') && php.includes('__full_v2__'), 'kunci cache diversi ulang lagi (item kini membawa wilayah_ok + varian luar): cache lama tidak menutupi');
 assert.ok(php.includes('sumber_katalog') && php.includes('tv_full_error'), 'katalog melaporkan sumber data & alasan gagal endpoint full untuk diagnostik');
 assert.ok(php.includes('function tv_provider_full'), 'fetcher + cache katalog full tersedia');
 assert.ok(php.includes('function tv_items_from_full'), 'normalisasi kategori/operator/jenis/produk (nama asli, status, format_form)');
 assert.ok(php.includes("stripos($cat, 'topup')"), 'hanya kategori Topup yang diambil dari katalog full');
 assert.ok(/butuh_server' => !empty\(\$p\['butuh_server'\]\)/.test(php), 'butuh_server produk (format_form server_id) diteruskan ke pricelist');
-assert.ok(php.includes("!== 'server_id'") && php.includes('$butuhServer = false;'), 'Server ID hanya bila entri server_id format_form benar-benar dipakai (label/data terisi) — Free Fire tidak');
+assert.ok(php.includes("preg_match('/mobile\\s*legends?\\b/i', $opNama)") && php.includes('$butuhServer ='), 'PHP menandai butuh_server hanya untuk operator Mobile Legends');
+assert.ok(!php.includes("(string)($fd['name'] ?? '') !== 'server_id'"), 'aturan lama server_id dari format_form sudah dibuang (label kosong di game lain menyesatkan)');
 assert.ok(php.includes('cek-username') && php.includes("md5($c['ag_merchant'] . $c['ag_secret'])"), 'action=cek_akun memanggil apigames.id dengan signature md5(merchant+secret)');
+assert.ok(php.includes("$gagal('unconfigured'") && php.includes("$gagal('ditolak'") && php.includes("$gagal('koneksi'") && php.includes("$gagal('non_json'"), 'cek akun mengembalikan alasan gagal + cuplikan respons ASLI apigames');
+assert.ok(php.includes("$gagal('not_found'") && php.includes("$raw = is_string($body) ? substr(preg_replace"), 'Data Not Found ditandai not_found dan raw respons ikut dikirim');
+assert.ok(detail.includes("r.reason === 'not_found'") && detail.includes('Cek akun apigames bermasalah'), 'UI: not_found dilewati senyap, error teknis ditampilkan beserta respons asli');
 assert.ok(php.includes("'ag_merchant' => ''"), 'kredensial apigames dibaca dari config/env (kosong = skip senyap)');
 assert.ok(php.includes("\\b(sg|my|br|th|vn|ph|tr|ru|kr|tw|bd"), 'filter wilayah diperkuat: token region polos (Free Fire SG, ML MY, Genshin KR) dibuang');
 assert.ok(php.includes("'label:' ."), 'operator di luar tabel alias tetap jadi grup katalog dengan namanya sendiri');
@@ -148,7 +155,8 @@ assert.match(php, /if \(\$action === 'pricelist'\)/, 'proxy punya action=priceli
 assert.match(php, /function tv_parse_pricelist_html\(\$html\)/, 'proxy bisa membaca tabel pricelist penyedia');
 assert.match(php, /function tv_pricelist_override\(\)/, 'proxy mendukung override katalog manual di server');
 assert.match(php, /tokovoucher_pricelist_cache\.json/, 'pricelist live di-cache di server (6 jam)');
-assert.match(php, /filter_var\(\$st, FILTER_VALIDATE_BOOLEAN\)/, 'status sukses penyedia dibaca toleran (true/success/dll)');
+assert.match(php, /function tv_trx_normalize\(\$j\)/, 'status penyedia dinormalisasi: pending | sukses | gagal | error (status:0 + error_msg)');
+assert.ok(php.includes("'error_msg'") && php.includes("'trx_id'") && php.includes("'sisa_saldo'"), 'field docs (error_msg, trx_id, sn, price, sisa_saldo) ikut dibaca');
 assert.ok(!php.includes('$okProvider ? 200 : 502'), 'penolakan bisnis TIDAK lagi membalas 502 (UI dapat pesan penyedia)');
 assert.match(php, /CURL_ERROR=/, 'gagal koneksi dicatat terpisah di log server');
 assert.ok(existsSync('php-api/tokovoucher_pricelist.example.php'), 'contoh file override katalog tersedia');
@@ -158,39 +166,65 @@ assert.match(php, /'member_code' => 'M250727KGST5158OE',/, 'member code default 
 assert.match(php, /getenv\('TV_SECRET'\)/, 'secret bisa dari env TV_SECRET');
 assert.match(php, /is_file\(__DIR__ \. '\/tokovoucher_config\.php'\)/, 'secret dibaca dari file config server (tidak di-commit)');
 assert.match(php, /cp_user_id\(\$conn, \(string\)\(\$in\['token'\] \?\? ''\)\)/, 'transaksi wajib token login valid');
-assert.match(php, /tv_api_get\('\/v1\/transaksi', \[/, 'transaksi memanggil GET /v1/transaksi');
+assert.match(php, /tv_api_trx\('\/v1\/transaksi', \[/, 'transaksi memanggil /v1/transaksi lewat helper POST+signature');
+assert.match(php, /function tv_api_post_json\(\$path, array \$payload, \$timeout = 25\)/, 'ada helper POST JSON ke penyedia (docs: transaksi metode POST)');
+assert.match(php, /function tv_tx_signature\(\$c, \$ref\)/, 'signature transaksi = md5(MEMBER_CODE:SECRET:REF_ID) sesuai docs');
+assert.match(php, /md5\(\(string\)\$c\['member_code'\] \. ':' \. \(string\)\$c\['secret'\] \. ':' \. \(string\)\$ref\)/, 'rumus signature persis md5(member_code:secret:ref_id)');
 for (const param of ['ref_id', 'produk', 'tujuan', 'server_id', 'member_code', 'secret']) {
   assert.ok(php.includes(`'${param}'      =>`) || php.includes(`'${param}' =>`) || php.includes(`'${param}'      => $`) || new RegExp(`'${param}'\\s*=>`).test(php), `parameter query ${param} dikirim ke penyedia`);
 }
-assert.match(php, /tv_api_get_authed\('\/v1\/transaksi\/status'/, 'cek status memakai GET /v1/transaksi/status (helper ber-signature)');
+assert.match(php, /tv_api_trx\('\/v1\/transaksi\/status', \['ref_id' => \$ref\]\)/, 'cek status memakai POST /v1/transaksi/status + signature (docs)');
 assert.match(php, /tv_api_get_authed\('\/member'/, 'info member memakai GET /member (helper ber-signature)');
 assert.match(php, /tv_api_get_authed\('\/produk\/code'/, 'katalog live memakai GET /produk/code (helper ber-signature)');
 assert.match(php, /function tv_walk_products\(\$node, \$game, array &\$out\)/, 'respons /produk/code dibaca tahan-bentuk (list datar, map ber-kunci kode, grup per game, bungkus status/data)');
 assert.match(php, /\(b\) nama produk menyebut game/, 'filter per game punya fallback cocokkan nama produk (bila JSON tanpa field kategori)');
 assert.match(php, /PARSE_KOSONG/, 'bila katalog tetap tak terbaca, raw response dicatat di log server (secret disamarkan)');
-/* Endpoint katalog (/produk/code, /member, status) menuntut `signature` menurut log produksi
-   ("signature not valid"); proxy harus mencoba rumus otomatis & mengingat yang berhasil,
-   sementara /v1/transaksi tetap tanpa signature (terbukti bekerja di produksi). */
+/* Endpoint katalog (/produk/code, /member, /member/produk/full) menuntut `signature` menurut log
+   produksi ("signature not valid"); proxy mencoba rumus otomatis & mengingat yang berhasil.
+   Transaksi & cek status memakai rumus resmi docs: md5(MEMBER_CODE:SECRET:REF_ID) lewat POST,
+   dengan fallback GET+secret bila POST ditolak (tv_api_trx). */
 assert.match(php, /function tv_sig_candidates\(\$c\)/, 'proxy punya kandidat rumus signature');
 assert.match(php, /function tv_api_get_authed\(\$path, array \$extra = \[\], \$timeout = 15\)/, 'proxy mencoba signature otomatis bila endpoint menolaknya (timeout bisa diperpanjang untuk katalog besar)');
 assert.match(php, /tv_sig_cache_write\(\$i\)/, 'rumus signature yang berhasil disimpan ke cache');
 assert.match(php, /tv_api_get_authed\('\/produk\/code'\)/, '/produk/code dipanggil lewat helper ber-signature');
 assert.match(php, /tv_api_get_authed\('\/member'\)/, '/member dipanggil lewat helper ber-signature');
-assert.match(php, /tv_api_get_authed\('\/v1\/transaksi\/status', \['ref_id' => \$ref\]\)/, 'cek status dipanggil lewat helper ber-signature');
+assert.match(php, /\$simpan = tv_trx_store_read\(\$ref\);/, 'cek status mendahulukan status yang dilaporkan webhook (tanpa menembak API)');
 assert.match(php, /function tv_game_aliases\(\$game\)/, 'pencocokan game punya tabel alias (MLBB=Mobile Legends dll)');
 assert.match(php, /function tv_code_prefix_game\(\$kode\)/, 'pencocokan terakhir lewat prefiks kode produk (MFF/ML/AMLBB…)');
 assert.match(php, /TIDAK cocok \| label penyedia:/, 'bila tetap tidak cocok, label asli penyedia dicatat ke log (dasar pemetaan berikutnya)');
-const txCall = php.split("tv_api_get('/v1/transaksi', [")[1].split(']);')[0];
-assert.ok(!txCall.includes('signature'), 'transaksi TETAP tanpa signature (persis docs & terbukti bekerja)');
-const totalMd5 = (php.match(/md5\(/g) || []).length;
+const txCall = php.split("tv_api_trx('/v1/transaksi', [")[1].split(']);')[0];
+assert.ok(!txCall.includes('secret') && !txCall.includes('signature'), 'body transaksi hanya ref_id/produk/tujuan/server_id — signature & member_code ditambah helper di server');
+assert.ok(php.includes("'GET+secret'") && php.includes("'POST+signature'"), 'bila POST+signature ditolak, otomatis dicoba varian GET lama dan metodenya dilaporkan');
+assert.ok(php.includes("tv_trx_store_write($ref, $norm + ['sumber' => 'transaksi'"), 'hasil transaksi disimpan per ref_id agar cocok dengan webhook/cek status');
+const phpCode = php.split('\n').filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l)).join('\n');
+const totalMd5 = (phpCode.match(/md5\(/g) || []).length;
 const candBody = php.split('function tv_sig_candidates')[1].split('\n}')[0];
 const candMd5 = (candBody.match(/md5\(/g) || []).length;
 const agMd5 = (php.match(/md5\(\$c\['ag_merchant'\] \. \$c\['ag_secret'\]\)/g) || []).length;
-assert.ok(totalMd5 > 0 && totalMd5 === candMd5 + agMd5, 'md5 HANYA untuk kandidat signature + signature cek akun apigames — transaksi tetap tanpa signature');
+const txMd5 = (php.match(/md5\(\(string\)\$c\['member_code'\]/g) || []).length;
+assert.ok(totalMd5 > 0 && totalMd5 === candMd5 + agMd5 + txMd5, 'md5 hanya untuk: kandidat signature, signature apigames, signature transaksi/webhook — tidak ada di browser');
 assert.match(php, /function tv_sanitize\(\$j\)/, 'field rahasia dibuang dari balasan penyedia sebelum ke browser');
 assert.match(php, /\$ref = 'INV-' \. date\('ymdHis'\) \. random_int\(10, 99\);/, 'ref_id unik dibuat server (pola INV-…)');
-assert.match(svc, /export const tvCekStatus = \(ref_id: string\)/, 'frontend punya tvCekStatus (GET /v1/transaksi/status via proxy)');
+const WEBHOOK_HEADER_LIT = 'X-TokoVoucher-Authorization';
+assert.match(svc, /export const tvCekStatus = \(ref_id: string\)/, 'frontend punya tvCekStatus (POST /v1/transaksi/status via proxy)');
+assert.match(php, /if \(\$action === 'webhook'\) \{/, 'PHP punya action=webhook untuk callback penyedia');
+assert.ok(php.includes('HTTP_X_TOKOVOUCHER_AUTHORIZATION') && php.includes('hash_equals($harus, $hdr)'), 'webhook divalidasi dengan header X-TokoVoucher-Authorization = md5(member:secret:ref) (hash_equals)');
+assert.match(php, /function tv_trx_store_write\(\$ref, array \$data\)/, 'status webhook disimpan per ref_id');
+assert.ok(php.includes("($lama['trx_id'] ?? '') === ($data['trx_id'] ?? '')"), 'penyimpanan IDEMPOTEN: trx_id + status sama tidak ditulis ulang');
+assert.match(php, /tokovoucher_trx_cache\.json/, 'status transaksi disimpan di file cache sendiri (terpisah dari cache katalog)');
+const worker = read('worker/app-api-proxy.js');
+assert.ok(worker.includes('const WEBHOOK_PATH = "/api/tokovoucher-webhook";'), 'Worker punya endpoint webhook /api/tokovoucher-webhook');
+assert.ok(worker.includes('url.pathname === WEBHOOK_PATH') && worker.includes('handleWebhook(request, ctx)'), 'endpoint webhook dirutekan sebelum proxy /api umum');
+assert.ok(worker.includes('WEBHOOK_PHP = "/api/tokovoucher.php?action=webhook"'), 'Worker meneruskan webhook ke PHP action=webhook');
+assert.ok(worker.includes(WEBHOOK_HEADER_LIT) || worker.includes('"X-TokoVoucher-Authorization"'), 'header validasi penyedia diteruskan ke PHP');
+assert.ok(worker.includes('status: 200') || /return jsonOut\(\{\n    ok: true,\n    diterima: true,/.test(worker), 'Worker membalas HTTP 200 ke penyedia (syarat docs)');
+assert.ok(worker.includes('503') && worker.includes('Retry-After'), 'bila origin kena 429, webhook dibalas 503 + Retry-After agar penyedia mengulang');
+assert.ok(worker.includes('probe=1'), 'ada mode ?probe=1 untuk menguji URL webhook tanpa payload');
 assert.match(detail, /Cek status pesanan/, 'halaman detail punya tombol cek status pesanan per ref_id');
+assert.ok(detail.includes('result.status') && detail.includes('result.trxId') && detail.includes('result.sn'), 'hasil pesanan menampilkan status, TRX ID, dan SN dari penyedia');
+assert.ok(detail.includes('Respons asli penyedia:'), 'bila transaksi gagal, respons ASLI penyedia ditampilkan ke user');
+assert.ok(detail.includes("['pending', 'processing', 'diproses'].includes"), 'status pending diberi nada amber + ikon berputar (bukan gagal)');
+assert.ok(svc.includes('raw?: string') && svc.includes('error_msg?: string'), 'tipe API memuat raw & error_msg untuk diagnostik');
 assert.ok(existsSync('php-api/tokovoucher_config.example.php'), 'contoh config tersedia untuk server');
 const gi = read('.gitignore');
 assert.match(gi, /php-api\/tokovoucher_config\.php/, 'config rahasia di-gitignore');
@@ -264,13 +298,22 @@ for (const t of ['Membership Mingguan', 'Membership Bulanan', 'Level Up Pass', '
 assert.ok(dname.includes("'free-fire': { root: 'FF', kanalDepan: ['M'] }"), 'Free Fire dikunci ke kanal resmi M (daftar 122 kode MFF dari web penyedia)');
 assert.ok(!detail.includes('Katalog live dari pricelist penyedia'), 'teks log "Katalog live … diperbarui" dihapus dari halaman detail');
 assert.ok(detail.includes('rapihkanKatalog('), 'halaman detail merapikan katalog lewat rapihkanKatalog');
+assert.ok(detail.includes('const daftarJenis =') && detail.includes('role="tablist"'), 'halaman detail punya chip wilayah/server (tablist) dari jenis pricelist');
+assert.ok(detail.includes('setJenisAktif(j)') && detail.includes('aria-selected={jenisAktif === j}'), 'chip wilayah bisa dipilih & ditandai aktif');
+assert.ok(detail.includes('sumber = jenisAktif ? semua.filter((i) => i.jenis === jenisAktif) : semua'), 'pricelist menyesuaikan chip wilayah yang dipilih');
+assert.ok(/semuaWilayah: !!jenisAktif,\s*wilayah: jenisAktif\.replace/.test(detail), 'satu chip wilayah aktif = daftar di-scope ke chip itu (kode non-resmi ikut, wilayah lain dibuang)');
+assert.ok(dname.includes('semuaWilayah?: boolean'), 'rapihkanKatalog punya opsi semuaWilayah');
+assert.ok(dname.includes('const wKode = wilayahKode(k);') && dname.includes('if (wKode !== wilayahChipAktif) continue;'), 'kode ber-token wilayah hanya lolos pada chip wilayah yang sama');
+assert.ok(dname.includes("const TOKEN_WILAYAH = ['SG', 'MY', 'BR', 'PH', 'TH', 'VN', 'TR', 'RU', 'KR', 'TW', 'BD', 'GLOBAL', 'LATAM']"), 'daftar token wilayah mencakup semua varian chip (SG/MY/BR/PH/TH/VN/TR/RU/KR/TW/BD/Global/Latam)');
+assert.ok(dname.includes('wilayah?: string'), 'rapihkanKatalog menerima nama chip wilayah aktif');
 assert.ok(detail.includes('Paket &amp; Membership'), 'halaman detail punya seksi Paket & Membership di atas list eceran');
 assert.ok(!detail.includes('>Eceran<'), 'judul seksi "Eceran" dihapus sesuai permintaan pemilik');
 assert.ok(detail.indexOf('1 · Data akun tujuan') < detail.indexOf('2 · Pilih produk'), 'input ID akun pindah ke atas, sebelum list produk');
 assert.ok(detail.includes('scrollIntoView'), 'klik produk menggulir otomatis ke langkah konfirmasi pesanan');
 assert.ok(detail.includes(".split('-')"), 'halaman detail mensintesis kartu game baru dari slug katalog live');
 assert.ok(!read('src/pages/TopupGamePage.tsx').includes('Halaman detail:'), 'teks bantuan route "/topup/{slug}" dihapus dari halaman daftar game');
-assert.ok(dname.includes('(RU|SG|MY|BR|PH|LATAM|GLOBAL)'), 'filter server luar (hanya server ID/Indonesia) lintas game');
+assert.ok(dname.includes("const m = /(GLOBAL|LATAM|SG|MY|BR|PH|TH|VN|TR|RU|KR|TW|BD)(?=\\d|$|_|[A-Z])/.exec(kode);"), 'token wilayah terdeteksi di kode lintas game (SG/MY/BR/PH/TH/VN/TR/RU/KR/TW/BD/Global/Latam)');
+assert.ok(dname.includes('} else if (!semuaWilayah) continue;'), 'tanpa chip wilayah, kode server luar tetap dibuang (hanya server ID/Indonesia)');
 // Uji perilaku helper (type-stripping Node) terhadap kode asli dari /produk/code.
 const perilaku = execFileSync(
   process.execPath,
@@ -366,6 +409,34 @@ const perilaku = execFileSync(
     if (RESMI_FF.length !== 122) throw new Error('daftar resmi FF harus 122 kode: ' + RESMI_FF.length);
     const ff2 = rapihkanKatalog('free-fire', RESMI_FF.map((k, i) => ({ kode: k, nama: k, harga: 1000 + i })));
     if (ff2.eceran.length !== 118 || ff2.paket.length !== 4) throw new Error('122 kode resmi FF => 118 eceran + 4 paket, dapat ' + ff2.eceran.length + '+' + ff2.paket.length);
+    // Chip wilayah: kode nyata dari pricelist live (FF_SG_25, FFBDS25, FFTH33,
+    // FFMYLT, ZFF70, MFFLPR6) tampil di chip-nya masing-masing dengan nama asli
+    // penyedia; chip lain tidak ikut; tanpa chip aturan ketat lama tetap berlaku.
+    const chip = (jenis, items) => rapihkanKatalog('free-fire', items.map(([kode, nama, harga]) => ({ kode, nama, harga, jenis })), { semuaWilayah: true, wilayah: jenis });
+    const sg = chip('Free Fire SG', [['FF_SG_25', '25 Diamonds (SG)', 4414], ['FF_SG_100', '100 Diamonds (SG)', 19102], ['FFBDS25', '25 Diamonds', 3794]]);
+    if (sg.eceran.length !== 2 || sg.eceran[0].kode !== 'FF_SG_25') throw new Error('chip SG harus 2 produk SG saja, dapat ' + sg.eceran.map((i) => i.kode).join(','));
+    const th = chip('Free Fire TH', [['FFTH33', '33 Diamond', 5253], ['FFTH172', '172 Diamond', 26302]]);
+    if (th.eceran.length !== 2 || th.eceran[0].nama !== '33 Diamond') throw new Error('chip TH salah: ' + JSON.stringify(th.eceran));
+    const my = chip('Free Fire MY', [['FFMYLT', 'Weekly Lite', 5912]]);
+    if (my.eceran.length !== 1 || my.eceran[0].nama !== 'Weekly Lite') throw new Error('chip MY salah: ' + JSON.stringify(my.eceran));
+    const promo = chip('Free Fire ID Promo', [['ZFF70', 'Freefire Jalur Promo 70 Diamond', 8010], ['MFFLPR6', '(PROMO) - Level 6', 5093]]);
+    if (promo.eceran.length !== 2) throw new Error('chip Promo harus menampilkan jalur promo, dapat ' + promo.eceran.length);
+    // Chip ID: kode kanal non-resmi (FF5/FF10) TIDAK dibuang lagi karena daftar
+    // sudah ter-scope per chip; pass/membership resmi tetap masuk kelompok paket.
+    const fast = chip('Free Fire  ID Fast', [['FF5', '5 Diamond Free Fire', 814], ['FF10', '10 Diamond Free Fire', 1628], ['FFMD20', '20 MD', 20000]]);
+    if (fast.eceran.length !== 3) throw new Error('chip ID Fast harus menampilkan kanal FF, dapat ' + fast.eceran.length);
+    const murah = chip('Free Fire  ID Murah', [['MFF5', 'Free Fire 5 Diamonds', 734], ['MFFLUP', 'Level Up Pass - Level 30', 13886], ['MFFM', 'Free Fire Mingguan Membership', 24406]]);
+    if (murah.eceran.length !== 1 || murah.paket.length !== 2) throw new Error('chip ID Murah: 1 eceran + 2 paket, dapat ' + murah.eceran.length + '+' + murah.paket.length);
+    const tanpa = rapihkanKatalog('free-fire', [
+      { kode: 'MFF5', nama: 'Free Fire 5 Diamonds', harga: 734 },
+      { kode: 'FF5', nama: '5 Diamond Free Fire', harga: 814 },
+      { kode: 'FF_SG_25', nama: '25 Diamonds (SG)', harga: 4414 },
+      { kode: 'FFTH33', nama: '33 Diamond', harga: 5253 },
+    ]);
+    if (tanpa.eceran.length !== 1 || tanpa.eceran[0].kode !== 'MFF5') throw new Error('tanpa chip (snapshot/sumber datar) tetap ketat: ' + tanpa.eceran.map((i) => i.kode).join(','));
+    // FFM/FFMD20 bukan token wilayah (MY) — tidak boleh tersaring chip wilayah.
+    const bukanWilayah = chip('Free Fire  ID Fast', [['FFM', 'Member Mingguan Free Fire', 27132], ['FFMD20', 'MD 20', 20000]]);
+    if (bukanWilayah.eceran.length + bukanWilayah.paket.length !== 2) throw new Error('FFM/FFMD20 salah dianggap kode wilayah');
     console.log('OK');
   `],
   { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },

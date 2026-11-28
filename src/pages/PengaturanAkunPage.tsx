@@ -176,7 +176,7 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
   };
 
   return (
-    <div id="pengaturan-akun" className={embedded ? "mt-8 border-t border-slate-200 pt-8 dark:border-slate-700" : "page-align-left mx-auto max-w-2xl px-4 py-10 sm:px-6"}>
+    <div id="pengaturan-akun" className={embedded ? "mt-4 dark:border-slate-700" : "page-align-left mx-auto max-w-2xl px-4 py-10 sm:px-6"}>
 
       <Reveal delay={40}>
         <div className="flex items-center gap-3.5">
@@ -191,7 +191,7 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
               Pengaturan Akun
             </h1>
             {/* Tampilkan username asli */}
-            <p className="mt-1 text-[13px] font-semibold text-cyan-600 dark:text-cyan-400">
+            <p className="mt-1 text-[13px] font-semibold text-violet-600 dark:text-violet-400">
               @{user?.username?? '-'}
             </p>
             <p className="mt-0.5 text-[12.5px] text-slate-500 dark:text-slate-400">
@@ -208,7 +208,7 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
         </div>
       )}
 
-      {!embedded && <div className="mb-6"><AvatarPicker /><a href="/profil" className="mt-3 inline-block text-xs font-semibold text-cyan-700 underline dark:text-cyan-400">Lihat halaman profil</a></div>}
+      {!embedded && <div className="mb-6"><AvatarPicker /><a href="/profil" className="mt-3 inline-block text-xs font-semibold text-violet-700 underline dark:text-violet-400">Lihat halaman profil</a></div>}
 
       {/* Profile data */}
       <Reveal delay={70}>
@@ -245,7 +245,7 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
             <button
               onClick={saveProfile}
               disabled={loading}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 text-[13.5px] font-bold text-white shadow-md shadow-cyan-600/25 transition-all hover:bg-cyan-700 active:scale-[0.99] disabled:opacity-70"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-[13.5px] font-bold text-white shadow-md shadow-violet-600/25 transition-all hover:bg-violet-700 active:scale-[0.99] disabled:opacity-70"
             >
               {loading? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Save className="h-4 w-4" strokeWidth={2.3} />}
               Simpan Profil
@@ -274,7 +274,7 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
 
             <div className="flex items-center justify-between rounded-xl border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 dark:bg-cyan-900/25 dark:text-cyan-400">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-900/25 dark:text-violet-400">
                   <Mail className="h-5 w-5" strokeWidth={2.1} />
                 </span>
                 <div className="min-w-0">
@@ -295,7 +295,7 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
                 <button
                   onClick={requestEmailOtp}
                   disabled={otpSending || cooldownLeft > 0}
-                  className="shrink-0 rounded-lg bg-cyan-600 px-3 py-2 font-mono text-[12px] font-bold tabular-nums text-white transition-all hover:bg-cyan-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-cyan-600"
+                  className="shrink-0 rounded-lg bg-violet-600 px-3 py-2 font-mono text-[12px] font-bold tabular-nums text-white transition-all hover:bg-violet-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-violet-600"
                 >
                   {cooldownLeft > 0 ? `Tunggu ${fmtCooldown(cooldownLeft)}` : otpSending ? 'Mengirim...' : 'Verifikasi'}
                 </button>
@@ -312,7 +312,7 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
             )}
 
             {!emailVerified && showOtp && (
-              <div className="animate-fade-in space-y-3 rounded-xl border border-cyan-200 bg-cyan-50/40 p-4 dark:border-cyan-800/40 dark:bg-cyan-900/15">
+              <div className="animate-fade-in space-y-3 rounded-xl border border-violet-200 bg-violet-50/40 p-4 dark:border-violet-800/40 dark:bg-violet-900/15">
                 <div className="relative">
                   <KeySquare className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-400" />
                   <input
@@ -327,7 +327,7 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
                 )}
                 <button
                   onClick={verifyOtp}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 text-[13.5px] font-bold text-white shadow-md shadow-cyan-600/25 transition-all hover:bg-cyan-700 active:scale-[0.99]"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-[13.5px] font-bold text-white shadow-md shadow-violet-600/25 transition-all hover:bg-violet-700 active:scale-[0.99]"
                 >
                   <Check className="h-4 w-4" strokeWidth={2.3} />
                   Konfirmasi
@@ -408,9 +408,9 @@ export default function PengaturanAkunPage({ embedded = false }: { embedded?: bo
           transition: all.2s;
         }
       .akun-input:focus {
-          border-color: #06b6d4;
+          border-color: #7C3AED;
           background: #fff;
-          box-shadow: 0 0 0 4px rgba(6,182,212,.12);
+          box-shadow: 0 0 0 4px rgba(124,58,237,.14);
         }
       .dark.akun-input {
           border-color: #334155;
