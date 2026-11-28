@@ -129,7 +129,7 @@ const baseMenu: {
   { id: 'home', icon: Home, label: 'Dashboard', desc: 'Beranda utama' },
   { id: 'overview', icon: LayoutGrid, label: 'Overview', desc: 'Ringkasan akun & statistik' },
   { id: 'layanan', icon: ShoppingCart, label: 'Buat Pesanan', desc: 'Katalog & order layanan' },
-  { id: 'topup', icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital' },
+  { id: 'topup', icon: Gamepad2, label: 'Topup Game', desc: 'Top up game & produk digital' },
   { id: 'ppob', icon: Zap, label: 'PPOB', desc: 'Pulsa, paket data, e-money & bayar tagihan' },
   { id: 'ordervps', icon: Server, label: 'NexSpace', desc: 'Server Linux Started & Pro' },
   { id: 'sewa-agen', icon: Bot, label: 'Sewa Agen AI', desc: 'Agen AI WhatsApp, Telegram, dll' },
@@ -159,9 +159,9 @@ export { baseMenu, authMenu };
 
 export const ADMIN_MENU = [
   // Admin juga mendapat dua menu layanan di paling atas, berdampingan seperti di menu user:
-  // Order Nomor (OTP) lalu TopUp All Game.
+  // Order Nomor (OTP) lalu Topup Game.
   { id: 'nokos' as const, icon: Smartphone, label: 'Order Nomor', desc: 'Nomor OTP WhatsApp, Telegram, dll', path: '/otp-service' },
-  { id: 'topup' as const, icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital', path: '/topup' },
+  { id: 'topup' as const, icon: Gamepad2, label: 'Topup Game', desc: 'Top up game & produk digital', path: '/topup' },
   { id: 'cek-status' as const, icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan', path: '/cek-status' },
   { id: 'event' as const, icon: Gift, label: 'Event', desc: 'Game & event yang berlangsung', path: '/event' },
   { id: 'ppob' as const, icon: Zap, label: 'PPOB', desc: 'Pulsa, paket data, e-money & bayar tagihan', path: '/ppob' },
@@ -185,9 +185,9 @@ export function getUserMenuItems(signedIn: boolean, isAdmin: boolean, child: boo
   // UI halamannya sama (OrderOtpPage); pendapatan OTP root dicatat di My Profit admin.
   const base = [baseMenu[0], baseMenu[1], baseMenu[2], { id: 'nokos' as PageId, icon: Smartphone, label: 'Order Nomor', desc: 'Nomor OTP WhatsApp, Telegram, dll' }, ...baseMenu.slice(3)];
   // Urutan atas: Dashboard, Overview, Buat Pesanan, lalu PASANGAN layanan cepat
-  // "Order Nomor" (OTP) + "TopUp All Game" — baru kemudian grup deposit dll, supaya
+  // "Order Nomor" (OTP) + "Topup Game" — baru kemudian grup deposit dll, supaya
   // dua menu transaksi harian itu selalu berada di bagian atas side menu.
-  // base[3] = Order Nomor, base[4] = TopUp All Game, base[5] = PPOB: tiga menu transaksi
+  // base[3] = Order Nomor, base[4] = Topup Game, base[5] = PPOB: tiga menu transaksi
   // harian itu berdampingan di atas, baru grup deposit dsb.
   const combined = signedIn
    ? [...base.slice(0, 6),...authMenu,...base.slice(6)]

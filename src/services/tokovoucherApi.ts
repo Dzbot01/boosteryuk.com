@@ -128,6 +128,54 @@ export interface TvKatalog {
  */
 export const tvKatalog = () => get<TvKatalog>('action=katalog');
 
+export interface TvLayananKelompok {
+  /** id kelompok (slug kategori + nama layanan) — dipakai mengambil daftar produknya. */
+  id: string;
+  /** Nama layanan/operator asli penyedia (mis. "AIS", "TrueMove H", "DTAC", "OVO"). */
+  layanan: string;
+  /** Kategori penyedia (mis. "Pulsa", "Paket Data", "E-Money") — kosong bila tidak dikirim. */
+  kategori: string;
+  /** Logo resmi dari penyedia (boleh kosong). */
+  logo?: string;
+  jumlah: number;
+  termurah: number;
+  termahal: number;
+  /** Contoh varian (jenis) di layanan ini. */
+  labels: string[];
+}
+
+export interface TvLayanan {
+  /** provider = katalog live; kosong = penyedia tidak punya layanan non-game. */
+  source: 'provider' | 'kosong';
+  sumber?: string;
+  total_produk?: number;
+  kelompok: TvLayananKelompok[];
+  /** Diagnostik: daftar kategori & operator asli penyedia (untuk menyetel filter). */
+  kategori_penyedia?: string[];
+  operator_penyedia?: string[];
+  updated_at?: string;
+}
+
+/**
+ * Layanan SELAIN top up game dari katalog penuh penyedia (/member/produk/full):
+ * pulsa, paket data, e-money, voucher, token listrik, tagihan, operator telekomunikasi.
+ * Dipakai card "Menu Service" di halaman PPOB dan grid kartu halaman "Lainnya".
+ */
+export const tvLayanan = () => get<TvLayanan>('action=layanan&cb=' + Date.now().toString(36));
+
+export interface TvLayananProdukItem {
+  kode: string;
+  nama: string;
+  harga: number;
+  jenis?: string;
+}
+
+/** Daftar produk (denominasi/varian) satu layanan, urut dari yang termurah. */
+export const tvLayananProduk = (kelompok: string) =>
+  get<{ kelompok: TvLayananKelompok | null; items: TvLayananProdukItem[]; updated_at?: string }>(
+    'action=layanan_produk&kelompok=' + encodeURIComponent(kelompok),
+  );
+
 export interface TvCekAkun {
   ok: boolean;
   valid: boolean;

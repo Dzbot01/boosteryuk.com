@@ -220,7 +220,7 @@ export default function TopupGameDetailPage() {
         <Gamepad2 className="mx-auto h-10 w-10 text-slate-300" strokeWidth={1.6} />
         <p className="mt-3 font-display text-[16px] font-extrabold text-slate-800">Game tidak ditemukan</p>
         <Link to="/topup" className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#14143c] px-5 py-2 text-[12.5px] font-bold text-white">
-          <ArrowLeft className="h-3.5 w-3.5" /> Kembali ke TopUp All Game
+          <ArrowLeft className="h-3.5 w-3.5" /> Kembali ke Topup Game
         </Link>
       </div>
     );
@@ -269,7 +269,7 @@ export default function TopupGameDetailPage() {
       <Seo title={`Top Up ${game.nama}`} description={`Top up ${game.nama} — ${game.tagline}. Proses otomatis lewat penyedia resmi.`} />
       <div className="mx-auto max-w-3xl lg:max-w-6xl">
         <Link to="/topup" className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-slate-600 transition hover:text-[#14143c]">
-          <ArrowLeft className="h-3.5 w-3.5" /> TopUp All Game
+          <ArrowLeft className="h-3.5 w-3.5" /> Topup Game
         </Link>
 
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">

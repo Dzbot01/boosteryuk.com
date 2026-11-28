@@ -6,7 +6,7 @@ import { filterByName } from '../data/topupGames';
 import { tvKatalog, type TvKatalogGroup } from '../services/tokovoucherApi';
 
 /**
- * Marketplace "TopUp All Game": tab kategori + pencarian realtime + grid kartu game.
+ * Marketplace "Topup Game": tab kategori + pencarian realtime + grid kartu game.
  * Pola latar = watermark gamepad pixel-art (SVG inline, sedikit lebih gelap dari #E5E5E7).
  */
 const PATTERN_SVG =
@@ -112,10 +112,10 @@ export default function TopupGamePage() {
       className="min-h-screen px-4 pb-24 pt-6 md:px-6 xl:px-10"
       style={{ backgroundColor: '#e5e5e7', backgroundImage: PATTERN_URL }}
     >
-      <Seo title="TopUp All Game" description="Marketplace top up game: katalog live dari penyedia resmi, hanya server ID (Indonesia), proses otomatis." />
+      <Seo title="Topup Game" description="Marketplace top up game: katalog live dari penyedia resmi, hanya server ID (Indonesia), proses otomatis." />
       <div className="mx-auto max-w-[1900px]">
         <header className="mb-5">
-          <h1 className="font-display text-[22px] font-extrabold tracking-tight text-[#14143c] sm:text-[26px]">TopUp All Game</h1>
+          <h1 className="font-display text-[22px] font-extrabold tracking-tight text-[#14143c] sm:text-[26px]">Topup Game</h1>
           <p className="mt-1 text-[13px] text-slate-600">
             Top up game favorit — katalog live penyedia, hanya server ID (Indonesia), proses otomatis.
           </p>

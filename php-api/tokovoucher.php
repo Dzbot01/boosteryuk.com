@@ -446,6 +446,128 @@ function tv_items_from_full($d) {
     return $items;
 }
 
+/* ------------------------------------------------------------------ *
+ *  LAYANAN PPOB (produk SELAIN top up game)                            *
+ * ------------------------------------------------------------------ */
+
+/**
+ * Kata kunci layanan non-game di label penyedia: pulsa, paket data, e-money,
+ * voucher, token listrik, tagihan, sampai operator telekomunikasi (AIS,
+ * TrueMove H, DTAC, Telkomsel, …). Dipakai untuk memisahkan layanan PPOB dari
+ * katalog top up game yang berasal dari endpoint /member/produk/full yang sama.
+ */
+function tv_layanan_label($teks) {
+    $t = strtolower(trim((string)$teks));
+    if ($t === '') return false;
+    return preg_match('/(pulsa|paket\s*data|\bdata\b|credit|kredit|token|listrik|\bpln\b|wifi|internet|voucher|\bsim\b|e-?money|e-?wallet|dompet|\bovo\b|\bdana\b|gopay|go-?pay|shopee\s*pay|link\s*aja|bpjs|pascabayar|prabayar|prepaid|postpaid|tagihan|pdam|telecom|\bdtac\b|\bais\b|truemove|true\s*move|\bnt\b|celcom|\bdigi\b|maxis|u\s*mobile|touch\s*n\'?\s*go|t-?money|airtel|vodafone|\bstc\b|zain|ooredoo|\bjio\b|banglalink|robi|grameenphone|teletalk|ncell|dialog|mobitel|telkomsel|indosat|\bxl\b|axis|\btri\b|smartfren|by\.?u|netflix|spotify|youtube|google\s*play|unipin|streaming)/', $t) === 1;
+}
+
+/**
+ * Benarkah baris produk ini LAYANAN (bukan top up game)?
+ * Game yang dikenal tabel alias atau berlabel "game" selalu ditolak lebih dulu,
+ * sisanya harus menyebut kata kunci layanan — label tak dikenal tidak diklaim.
+ */
+function tv_is_layanan($operatorNama, $jenisNama, $kategori) {
+    if (tv_game_key_of_label($operatorNama) !== '') return false;
+    if (preg_match('/top\s*-?\s*up\s*game|\bgames?\b/i', $kategori . ' ' . $operatorNama)) return false;
+    if (tv_layanan_label($kategori)) return true;
+    return tv_layanan_label($operatorNama) || tv_layanan_label($jenisNama);
+}
+
+/**
+ * Layanan PPOB dari /member/produk/full: semua produk aktif yang BUKAN top up
+ * game (pulsa, paket data, e-money, voucher, token listrik, tagihan, operator
+ * telekomunikasi). Bentuk data sama dengan tv_items_from_full sehingga
+ * harga/kode yang tampil di halaman PPOB adalah data asli penyedia.
+ */
+function tv_layanan_from_full($d) {
+    $cats = [];
+    foreach ((array)($d['category'] ?? []) as $c) $cats[(int)($c['id'] ?? -1)] = (string)($c['nama'] ?? '');
+    $ops = [];
+    foreach ((array)($d['operator'] ?? []) as $o) $ops[(int)($o['id'] ?? -1)] = $o;
+    $jns = [];
+    foreach ((array)($d['jenis'] ?? []) as $j) $jns[(int)($j['id'] ?? -1)] = $j;
+    $items = [];
+    foreach ((array)($d['produk'] ?? []) as $p) {
+        if ((int)($p['status'] ?? 1) !== 1) continue;
+        $kode = strtoupper(trim((string)($p['kode_produk'] ?? '')));
+        $harga = (int)($p['price'] ?? 0);
+        if ($kode === '' || $harga <= 0 || strpos($kode, 'CEK') !== false) continue;
+        $op = is_array($ops[(int)($p['operator_id'] ?? -1)] ?? null) ? $ops[(int)$p['operator_id']] : null;
+        $jn = is_array($jns[(int)($p['jenis_id'] ?? -1)] ?? null) ? $jns[(int)$p['jenis_id']] : null;
+        if (!$op || (int)($op['status'] ?? 1) !== 1) continue;
+        if ($jn && (int)($jn['status'] ?? 1) !== 1) continue;
+        $opNama = trim((string)($op['nama'] ?? ''));
+        $jenisNama = $jn ? trim((string)($jn['nama'] ?? '')) : '';
+        $cat = trim((string)($cats[(int)($p['kategori_id'] ?? -1)] ?? ''));
+        if (!tv_is_layanan($opNama, $jenisNama, $cat)) continue;
+        $items[] = [
+            'kode'     => $kode,
+            'nama'     => trim((string)($p['nama'] ?? $kode)),
+            'harga'    => $harga,
+            'layanan'  => $opNama !== '' ? $opNama : ($jenisNama !== '' ? $jenisNama : ($cat !== '' ? $cat : $kode)),
+            'kategori' => $cat,
+            'jenis'    => $jenisNama,
+            'logo'     => (string)($op['logo'] ?? ''),
+        ];
+    }
+    return $items;
+}
+
+/** Kelompokkan layanan jadi kartu: satu kartu per layanan (operator) + kategori. */
+function tv_layanan_kelompok($items) {
+    $g = [];
+    foreach ((array)$items as $it) {
+        $nama = (string)$it['layanan'];
+        $id = tv_slugify($it['kategori'] !== '' ? ($it['kategori'] . ' ' . $nama) : $nama);
+        if ($id === '') $id = 'layanan';
+        while (isset($g[$id]) && $g[$id]['layanan'] !== $nama) $id .= '-2';
+        if (!isset($g[$id])) {
+            $g[$id] = ['id' => $id, 'layanan' => $nama, 'kategori' => (string)$it['kategori'], 'logo' => (string)$it['logo'],
+                       'jumlah' => 0, 'termurah' => 0, 'termahal' => 0, 'labels' => []];
+        }
+        $g[$id]['jumlah']++;
+        if ($g[$id]['termurah'] === 0 || $it['harga'] < $g[$id]['termurah']) $g[$id]['termurah'] = (int)$it['harga'];
+        if ($it['harga'] > $g[$id]['termahal']) $g[$id]['termahal'] = (int)$it['harga'];
+        if ($g[$id]['logo'] === '' && !empty($it['logo'])) $g[$id]['logo'] = (string)$it['logo'];
+        $lb = $it['jenis'] !== '' ? (string)$it['jenis'] : (string)$it['nama'];
+        if ($lb !== '' && count($g[$id]['labels']) < 8 && !in_array($lb, $g[$id]['labels'], true)) $g[$id]['labels'][] = $lb;
+    }
+    $out = array_values($g);
+    usort($out, function ($a, $b) { return strcmp($a['layanan'], $b['layanan']); });
+    return $out;
+}
+
+/** Layanan PPOB siap pakai (cache file 6 jam, sumber sama dengan katalog game). */
+function tv_provider_layanan() {
+    $cacheFile = __DIR__ . '/tokovoucher_pricelist_cache.json';
+    $cache = is_file($cacheFile) ? json_decode((string)file_get_contents($cacheFile), true) : null;
+    if (!is_array($cache)) $cache = [];
+    $now = time();
+    if (isset($cache['__layanan_v1__']['items'], $cache['__layanan_v1__']['ts']) && ($now - (int)$cache['__layanan_v1__']['ts']) < 21600) {
+        $GLOBALS['tv_sumber_layanan'] = (string)($cache['__layanan_v1__']['sumber'] ?? 'cache');
+        $GLOBALS['tv_layanan_diag'] = (array)($cache['__layanan_v1__']['diag'] ?? []);
+        return $cache['__layanan_v1__']['items'];
+    }
+    $full = tv_provider_full();
+    if (!is_array($full)) {
+        $GLOBALS['tv_sumber_layanan'] = '';
+        tv_log('layanan: /member/produk/full tidak tersedia (' . (string)($GLOBALS['tv_full_error'] ?? '') . ')');
+        return null;
+    }
+    $items = tv_layanan_from_full($full);
+    // Diagnostik: daftar kategori & operator ASLI penyedia (untuk menyetel filter).
+    $diag = [
+        'kategori' => array_values(array_slice(array_map(function ($c) { return (string)($c['nama'] ?? ''); }, (array)($full['category'] ?? [])), 0, 60)),
+        'operator' => array_values(array_slice(array_map(function ($o) { return (string)($o['nama'] ?? ''); }, (array)($full['operator'] ?? [])), 0, 120)),
+    ];
+    $GLOBALS['tv_layanan_diag'] = $diag;
+    $GLOBALS['tv_sumber_layanan'] = 'full';
+    $cache['__layanan_v1__'] = ['ts' => $now, 'items' => $items, 'sumber' => 'full', 'diag' => $diag];
+    @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
+    return $items;
+}
+
 function tv_provider_products() {
     $cacheFile = __DIR__ . '/tokovoucher_pricelist_cache.json';
     $cache = is_file($cacheFile) ? json_decode((string)file_get_contents($cacheFile), true) : null;
@@ -826,9 +948,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $custom = false;
             if ($key === '' && $p['game'] !== '') {
                 // Operator di luar tabel alias (Delta Force, Eggy Party, …) tetap
-                // tampil di grid dengan namanya sendiri; operator non-game
-                // (pulsa/wifi/operator luar) dibuang.
-                if (preg_match('/\b(ais|truemove|nt|pulsa|paket data|token|listrik|wifi|internet|voucher|sim|data)\b/i', $p['game'])) continue;
+                // tampil di grid dengan namanya sendiri; layanan non-game
+                // (pulsa/data/e-money/voucher/operator telekom: AIS, TrueMove H,
+                // DTAC, …) dibuang dari grid game — masuk halaman PPOB.
+                if (tv_is_layanan((string)$p['game'], (string)($p['jenis'] ?? ''), '')) continue;
                 $key = 'label:' . preg_replace('/[^a-z0-9]+/', '', strtolower($p['game']));
                 $custom = true;
             }
@@ -852,6 +975,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'full_error' => (string)($GLOBALS['tv_full_error'] ?? ''),
             'groups' => $out,
             'labels_dilihat' => $labelsDilihat,
+            'updated_at' => date('Y-m-d H:i'),
+        ]);
+    }
+
+    /* Layanan SELAIN top up game (bahan card Menu Service di halaman PPOB dan
+     * grid "Lainnya"): pulsa, paket data, e-money, voucher, token listrik,
+     * tagihan, operator telekomunikasi — semua dari /member/produk/full. */
+    if ($action === 'layanan') {
+        $items = tv_provider_layanan();
+        if (!is_array($items)) {
+            tv_out([
+                'ok' => false,
+                'message' => 'Daftar layanan belum dapat diambil dari server penyedia'
+                    . ((string)($GLOBALS['tv_full_error'] ?? '') !== '' ? ' (' . (string)$GLOBALS['tv_full_error'] . ')' : '') . '.',
+                'sumber' => '',
+            ], 502);
+        }
+        $kelompok = tv_layanan_kelompok($items);
+        $diag = (array)($GLOBALS['tv_layanan_diag'] ?? []);
+        tv_out([
+            'ok' => true,
+            'source' => $kelompok ? 'provider' : 'kosong',
+            'sumber' => (string)($GLOBALS['tv_sumber_layanan'] ?? ''),
+            'total_produk' => count($items),
+            'kelompok' => $kelompok,
+            'kategori_penyedia' => (array)($diag['kategori'] ?? []),
+            'operator_penyedia' => (array)($diag['operator'] ?? []),
+            'updated_at' => date('Y-m-d H:i'),
+        ]);
+    }
+
+    if ($action === 'layanan_produk') {
+        $id = tv_slugify((string)($_GET['kelompok'] ?? ''));
+        $items = tv_provider_layanan();
+        if (!is_array($items)) {
+            tv_out(['ok' => false, 'message' => 'Daftar layanan belum dapat diambil dari server penyedia.'], 502);
+        }
+        if ($id === '') tv_out(['ok' => false, 'message' => 'Parameter kelompok layanan wajib diisi.'], 400);
+        $punya = [];
+        foreach ($items as $it) {
+            $gid = tv_slugify($it['kategori'] !== '' ? ($it['kategori'] . ' ' . $it['layanan']) : $it['layanan']);
+            if ($gid === $id) $punya[] = $it;
+        }
+        if (!$punya) tv_out(['ok' => false, 'message' => 'Layanan tidak ditemukan di katalog penyedia.'], 404);
+        usort($punya, function ($a, $b) { return $a['harga'] <=> $b['harga']; });
+        $kelompok = tv_layanan_kelompok($punya);
+        tv_out([
+            'ok' => true,
+            'kelompok' => $kelompok[0] ?? null,
+            'items' => array_map(function ($it) {
+                return ['kode' => $it['kode'], 'nama' => $it['nama'], 'harga' => (int)$it['harga'], 'jenis' => (string)$it['jenis']];
+            }, array_slice($punya, 0, 300)),
             'updated_at' => date('Y-m-d H:i'),
         ]);
     }

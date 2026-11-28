@@ -46,6 +46,7 @@ const php = read('php-api/child_panel.php');
 const lib = read('php-api/child_panel_lib.php');
 const sql = read('php-api/child_panel.sql');
 const migrasi = read('php-api/child_panel_markup_akses.sql');
+const libSrc = read('php-api/child_panel_lib.php');
 for (const kolom of ['markup_topup_pct', 'markup_ppob_pct', 'access_topup_markup', 'access_ppob_markup']) {
   assert.ok(sql.includes(kolom), `schema child_panels punya kolom ${kolom}`);
   assert.ok(migrasi.includes(`ADD COLUMN ${kolom}`), `migrasi menambah kolom ${kolom}`);
@@ -54,10 +55,23 @@ for (const kolom of ['markup_topup_pct', 'markup_ppob_pct', 'access_topup_markup
 assert.match(php, /'owner_buy_markup_access'/, 'aksi beli akses markup terdaftar di allowlist owner');
 assert.match(php, /\$harga = 35000;/, 'harga akses markup Rp35.000 di server');
 assert.match(php, /cp_q\(\$conn, 'SELECT balance FROM users WHERE id=\? FOR UPDATE', 'i', \$owner\)/, 'saldo pemilik dikunci (FOR UPDATE) sebelum dipotong');
+// BUG FIX: cp_resolve() menyembunyikan owner_user_id sebagai '_owner_user_id'.
+assert.match(php, /\$owner = \(int\)\(\$tenant\['_owner_user_id'\] \?\? 0\);/, 'id pemilik dibaca dari kunci internal _owner_user_id (bukan owner_user_id yang tidak dikirim cp_public)');
+assert.ok(!/\$tenant\['owner_user_id'\]/.test(php), 'tidak lagi membaca $tenant[owner_user_id] yang selalu kosong (penyebab galat saat beli akses)');
+assert.match(php, /Panel ini tidak punya akun pemilik/, 'pesan jelas bila panel tidak punya akun pemilik');
+assert.match(php, /\$cfg\['markupAccess'\]\[\$kind\] = \['harga' => \$harga/, 'pembelian akses dicatat di config panel (jejak audit)');
+// Kolom baru dibuat otomatis supaya panel lama tidak butuh migrasi SQL manual.
+const ensure = libSrc.slice(libSrc.indexOf('function cp_ensure_schema('), libSrc.indexOf('function cp_public('));
+for (const kolom of ['markup_topup_pct', 'markup_ppob_pct', 'access_topup_markup', 'access_ppob_markup'])
+  assert.ok(ensure.includes(`'${kolom}'`), `cp_ensure_schema menambah kolom ${kolom} otomatis`);
+assert.match(ensure, /ALTER TABLE child_panels ADD COLUMN \$kolom \$definisi/, 'kolom markup/akses dibuat otomatis bila belum ada');
+assert.match(libSrc, /SHOW COLUMNS FROM child_panels LIKE '\$kolom'/, 'cek kolom lewat SHOW COLUMNS sebelum ALTER TABLE');
 assert.match(php, /UPDATE users SET balance=balance-\? WHERE id=\?/, 'pembelian memotong saldo pemilik');
 assert.match(php, /cp_out\(\['ok' => false, 'message' => 'Saldo tidak cukup/, 'saldo kurang → ditolak (402) tanpa memotong saldo');
 assert.match(php, /if \(\(int\)\(\$tenant\[\$col\] \?\? 0\) === 1\) cp_out/, 'akses yang sudah aktif tidak bisa dibeli ulang');
+assert.match(php, /\$ubahTopup = array_key_exists\('markup_topup_pct', \$in\) && abs\(round\(\(float\)\$in\['markup_topup_pct'\], 2\) - \$mTopup\) > 0\.001;/, 'gate top up game hanya menolak bila nilainya benar-benar diubah');
 assert.match(php, /if \(\(int\)\(\$tenant\['access_topup_markup'\] \?\? 0\) !== 1\)/, 'markup top up game ditolak bila akses belum dibeli');
+assert.match(php, /\$ubahPpob = array_key_exists\('markup_ppob_pct', \$in\)/, 'gate PPOB sama: hanya menolak saat nilainya diubah');
 assert.match(php, /if \(\(int\)\(\$tenant\['access_ppob_markup'\] \?\? 0\) !== 1\)/, 'markup PPOB ditolak bila akses belum dibeli');
 assert.match(php, /max\(0, min\(CP_MAX_MARKUP, round\(\(float\)\$in\['markup_topup_pct'\], 2\)\)\)/, 'markup top up game dibatasi 0–CP_MAX_MARKUP');
 assert.match(php, /markup_topup_pct=\?, markup_ppob_pct=\?/, 'markup top up & PPOB disimpan ke child_panels');
@@ -82,7 +96,8 @@ assert.match(panel, /Buka akses \$\{rupiah\(HARGA_AKSES_MARKUP\)\}/, 'tombol bel
 assert.match(panel, /TERKUNCI/, 'badge TERKUNCI saat akses belum dibeli');
 assert.match(panel, /AKSES AKTIF/, 'badge AKSES AKTIF setelah dibeli');
 assert.match(panel, /dibeli terpisah \(satu per satu\)/, 'keterangan: akses dibeli terpisah satu per satu');
-assert.match(panel, /panelApi\.setMarkup\([\s\S]{0,220}?Number\(topup\) \|\| 0, Number\(ppob\) \|\| 0\)/, 'simpan markup ikut mengirim persen top up & PPOB');
+assert.match(panel, /aksesTopup \? Number\(topup\) \|\| 0 : undefined/, 'persen top up hanya dikirim bila aksesnya sudah dibeli (kalau tidak, server menolak dan markup lain gagal tersimpan)');
+assert.match(panel, /aksesPpob \? Number\(ppob\) \|\| 0 : undefined/, 'persen PPOB hanya dikirim bila aksesnya sudah dibeli');
 assert.match(detail, /const pctTopup = markupTopupPct\(tenant\);/, 'harga top up game memakai markup tenant');
 assert.match(detail, /const jual = \(n: number\) => rupiah\(hargaJual\(n, pctTopup\)\);/, 'semua harga tampilan top up lewat satu helper markup');
 assert.ok(!/rupiah\(hargaJual\(p\.harga\)\)/.test(detail), 'tidak ada lagi harga top up yang memakai markup sistem hardcode');

@@ -1,47 +1,29 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  ArrowLeftRight,
-  Coins,
-  Eye,
-  EyeOff,
-  Gamepad2,
-  Globe,
-  Info,
-  LayoutGrid,
-  Megaphone,
-  Plus,
-  Receipt,
-  Send,
-  ShoppingCart,
-  Smartphone,
-  Wallet,
-  Wifi,
-} from 'lucide-react';
+import { ArrowLeftRight, Coins, Eye, EyeOff, Info, Megaphone, Plus, Send, ShoppingCart } from 'lucide-react';
+import { IKON_LAYANAN } from '../lib/ppobIkon';
+import { AlertTriangle, LoaderCircle, RefreshCw } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { hargaMarkup, markupPpobPct } from '../lib/panelMarkup';
+import { tvLayanan, type TvLayananKelompok } from '../services/tokovoucherApi';
 import {
   PPOB_BANNERS,
   PPOB_BERITA,
-  PPOB_MENU,
+  PPOB_MENU_LAINNYA,
+  PPOB_MENU_LOKAL,
   PPOB_PENGUMUMAN,
   PPOB_POINT_FALLBACK,
+  RUTE_LAYANAN_PPOB,
+  ikonLayanan,
   rupiahTitik,
-  type PpobMenuIcon,
 } from '../data/ppob';
 
-/** Peta ikon Menu Service (data berupa nama ikon supaya file data bebas JSX). */
-const IKON_MENU: Record<PpobMenuIcon, typeof Smartphone> = {
-  smartphone: Smartphone,
-  send: Send,
-  wifi: Wifi,
-  wallet: Wallet,
-  gamepad: Gamepad2,
-  receipt: Receipt,
-  globe: Globe,
-  grid: LayoutGrid,
-};
+/** Jumlah layanan live maksimum di card Menu Service (sisanya lewat tile "Lainnya"). */
+const MAKS_LAYANAN_MENU = 6;
+
+/* Peta ikon Menu Service dipindah ke src/lib/ppobIkon.ts (dipakai juga halaman /ppob/layanan). */
 
 /**
  * Beranda PPOB — pulsa, paket data, e-money, dan bayar tagihan.
@@ -52,7 +34,7 @@ const IKON_MENU: Record<PpobMenuIcon, typeof Smartphone> = {
  */
 export default function PpobPage() {
   const { user } = useAuth();
-  const { settings } = useSiteSettings();
+  const { settings, tenant } = useSiteSettings();
   const navigate = useNavigate();
   const namaApp = settings.brandName || 'Boosteryuk';
 
@@ -60,6 +42,31 @@ export default function PpobPage() {
   const [slide, setSlide] = useState(0);
   const [catatan, setCatatan] = useState('');
   const scroller = useRef<HTMLDivElement | null>(null);
+  /** Markup PPOB child panel (0 bila akses belum dibeli / web utama). */
+  const pctPpob = markupPpobPct(tenant);
+
+  /* Layanan SELAIN top up game dari endpoint list produk penuh penyedia. */
+  const [layanan, setLayanan] = useState<TvLayananKelompok[] | null>(null);
+  const [memuatLayanan, setMemuatLayanan] = useState(true);
+  const [galatLayanan, setGalatLayanan] = useState('');
+
+  const muatLayanan = useCallback(async () => {
+    setMemuatLayanan(true);
+    setGalatLayanan('');
+    const r = await tvLayanan();
+    setMemuatLayanan(false);
+    if (!r.ok) {
+      // Tidak ada daftar dummy: tampilkan galat asli + cara memulihkan.
+      setLayanan(null);
+      setGalatLayanan(r.message || 'Daftar layanan gagal dimuat.');
+      return;
+    }
+    setLayanan(Array.isArray(r.kelompok) ? r.kelompok : []);
+  }, []);
+
+  useEffect(() => {
+    void muatLayanan();
+  }, [muatLayanan]);
 
   const saldo = Number(user?.balance) || 0;
   /** Poin user — bila API belum mengirim, pakai nilai mock di data/ppob.ts. */
@@ -71,9 +78,13 @@ export default function PpobPage() {
       navigate(to);
       return;
     }
-    const menu = PPOB_MENU.find((m) => m.id === id);
+    const menu = PPOB_MENU_LOKAL.find((m) => m.id === id);
     setCatatan(pesan || menu?.catatan || 'Layanan ini segera hadir.');
   };
+
+  /** Layanan live yang tampil di card Menu Service (sisanya di halaman "Lainnya"). */
+  const layananMenu = (layanan || []).slice(0, MAKS_LAYANAN_MENU);
+  const IkonLainnya = IKON_LAYANAN[PPOB_MENU_LAINNYA.icon];
 
   return (
     <div className="min-h-screen bg-[#F4F6FB] pb-[100px] dark:bg-slate-950">
@@ -161,8 +172,9 @@ export default function PpobPage() {
           </span>
 
           <div className="mt-3.5 grid grid-cols-4 gap-x-2 gap-y-3.5 md:grid-cols-8">
-            {PPOB_MENU.map((m) => {
-              const Ikon = IKON_MENU[m.icon];
+            {/* Layanan milik aplikasi sendiri (halaman PPOB lokal). */}
+            {PPOB_MENU_LOKAL.map((m) => {
+              const Ikon = IKON_LAYANAN[m.icon];
               return (
                 <button
                   key={m.id}
@@ -180,7 +192,92 @@ export default function PpobPage() {
                 </button>
               );
             })}
+
+            {/* Layanan ASLI penyedia selain top up game (pulsa/data/e-money/voucher/tagihan). */}
+            {memuatLayanan
+              ? [0, 1, 2].map((i) => (
+                  <span key={`skeleton-${i}`} className="flex flex-col items-center gap-1.5">
+                    <span className="h-11 w-11 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
+                    <span className="h-2.5 w-12 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+                  </span>
+                ))
+              : layananMenu.map((l) => {
+                  const Ikon = IKON_LAYANAN[ikonLayanan(`${l.kategori} ${l.layanan} ${l.labels.join(' ')}`)];
+                  return (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => navigate(`${RUTE_LAYANAN_PPOB}?grup=${encodeURIComponent(l.id)}`)}
+                      title={`${l.layanan}${l.kategori ? ` — ${l.kategori}` : ''} · ${l.jumlah} produk, mulai ${rupiahTitik(Math.round(hargaMarkup(l.termurah, pctPpob)))}`}
+                      data-layanan={l.id}
+                      className="group flex flex-col items-center gap-1.5 transition active:scale-95"
+                    >
+                      <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-[#3B82F6] text-white shadow-sm shadow-blue-600/30 transition group-active:bg-[#2563EB]">
+                        {l.logo ? (
+                          <img src={l.logo} alt="" className="h-full w-full bg-white object-cover" loading="lazy" />
+                        ) : (
+                          <Ikon className="h-5 w-5" strokeWidth={2.2} />
+                        )}
+                      </span>
+                      <span className="w-full truncate text-center text-[10.5px] font-bold leading-tight text-slate-600 dark:text-slate-300">
+                        {l.layanan}
+                      </span>
+                    </button>
+                  );
+                })}
+
+            {/* Tile "Lainnya": grid card SEMUA layanan selain top up game. */}
+            <button
+              type="button"
+              onClick={() => navigate(RUTE_LAYANAN_PPOB)}
+              title={PPOB_MENU_LAINNYA.desc}
+              data-lainnya="true"
+              className="group flex flex-col items-center gap-1.5 transition active:scale-95"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-dashed border-[#3B82F6] bg-white text-[#2563EB] transition group-active:bg-blue-50 dark:bg-slate-900">
+                <IkonLainnya className="h-5 w-5" strokeWidth={2.2} />
+              </span>
+              <span className="w-full truncate text-center text-[10.5px] font-bold leading-tight text-slate-600 dark:text-slate-300">
+                {PPOB_MENU_LAINNYA.label}
+              </span>
+            </button>
           </div>
+
+          {/* Galat / kosong: jujur, tanpa daftar layanan karangan. */}
+          {galatLayanan && (
+            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-900/50 dark:bg-rose-950/40">
+              <p className="flex items-start gap-2 text-[11.5px] font-bold leading-relaxed text-rose-600 dark:text-rose-300">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2.3} />
+                <span className="break-words">{galatLayanan}</span>
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void muatLayanan()}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-[11px] font-extrabold text-white transition active:scale-95"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Coba lagi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/', { state: { openLogin: true } })}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-1.5 text-[11px] font-extrabold text-rose-600 transition active:scale-95 dark:border-rose-800 dark:text-rose-300"
+                >
+                  Login ulang
+                </button>
+              </div>
+            </div>
+          )}
+          {!galatLayanan && !memuatLayanan && layanan && layanan.length === 0 && (
+            <p className="mt-3 text-[11.5px] font-semibold leading-relaxed text-slate-500">
+              Katalog penyedia belum mengirim layanan selain top up game. Semua layanan yang tersedia tetap bisa dibuka lewat tile Lainnya.
+            </p>
+          )}
+          {memuatLayanan && (
+            <p className="mt-3 flex items-center gap-1.5 text-[11.5px] font-semibold text-slate-400">
+              <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Memuat layanan dari katalog penyedia…
+            </p>
+          )}
 
           <p aria-live="polite" className={`mt-3 text-[11.5px] font-semibold leading-relaxed text-[#2563EB] ${catatan ? '' : 'hidden'}`}>
             {catatan}
