@@ -34,11 +34,15 @@ export type GameCard = {
 };
 
 /** Margin penjualan top up dalam persen (0 = jual sama dengan harga penyedia). */
-export const TOPUP_MARKUP_PCT = 0;
+export const TOPUP_MARKUP_PCT = 2;
 
-/** Harga jual ke user: harga penyedia + TOPUP_MARKUP_PCT, dibulatkan ke ratusan ke atas. */
-export const hargaJual = (hargaModal: number) =>
-  Math.ceil((hargaModal * (1 + TOPUP_MARKUP_PCT / 100)) / 100) * 100;
+/**
+ * Harga jual ke user: modal + markup persen, TANPA pembulatan ratusan —
+ * modal + markup = harga untuk user (pembulatan hanya saat format Rupiah).
+ * `pct` opsional: child panel yang membeli akses markup memakai persennya sendiri.
+ */
+export const hargaJual = (hargaModal: number, pct: number = TOPUP_MARKUP_PCT) =>
+  hargaModal * (1 + pct / 100);
 
 export const TOPUP_CATEGORIES = [
   'Topup',

@@ -18,6 +18,9 @@ assert.match(detailSrc, /role="tablist"/, 'chip wilayah dirender sebagai tablist
 assert.match(detailSrc, /daftarJenis\.map\(\(j\) =>/, 'chip diambil dari jenis pricelist live');
 assert.match(detailSrc, /semuaWilayah: !!jenisAktif,\s*wilayah: jenisAktif\.replace/, 'pricelist di-scope ke chip aktif (label rapi)');
 assert.match(detailSrc, /namaWilayahJenis\(j\)/, 'label chip memakai nama wilayah lengkap (tanpa singkatan)');
+// Produk/chip murah lebih dulu di SEMUA game, dan markup 2% eksak (tanpa pembulatan ratusan).
+assert.match(detailSrc, /urutan\.sort\(\(a, b\) => min\[a\] - min\[b\]\)/, 'chip varian diurut dari yang termurah (ID Murah sebelum ID Fast)');
+assert.match(detailSrc, /markupTopupPct\(tenant\)/, 'markup top up game mengikuti tenant child panel (default sistem 2%)');
 
 // Pricelist live Free Fire (kode & nama asli penyedia, dipangkas).
 const ITEMS = [
@@ -52,10 +55,11 @@ const { outputFiles } = await build({
   plugins: [{
     name: 'mocks',
     setup(b) {
-      b.onResolve({ filter: /(components\/Seo|context\/AuthContext|services\/tokovoucherApi|react-router-dom)$/ }, (a) => ({ path: a.path, namespace: 'mock' }));
+      b.onResolve({ filter: /(components\/Seo|context\/AuthContext|context\/SiteSettingsContext|services\/tokovoucherApi|react-router-dom)$/ }, (a) => ({ path: a.path, namespace: 'mock' }));
       b.onLoad({ filter: /.*/, namespace: 'mock' }, (a) => {
         if (a.path.endsWith('Seo')) return { contents: 'export default function Seo(){return null;}', resolveDir: process.cwd() };
         if (a.path.endsWith('AuthContext')) return { contents: 'export const useAuth=()=>({user:null});', resolveDir: process.cwd() };
+        if (a.path.endsWith('SiteSettingsContext')) return { contents: "export const useSiteSettings=()=>({settings:{brandName:'Boosteryuk'},tenant:null});", resolveDir: process.cwd() };
         if (a.path.endsWith('tokovoucherApi')) {
           return {
             contents: `export const tvStatus=async()=>({ok:true,configured:true});
@@ -102,20 +106,21 @@ try {
     h(ctx.module.exports.MemoryRouter, { initialEntries: ['/topup/free-fire'] },
       h(ctx.module.exports.Routes, null,
         h(ctx.module.exports.Route, { path: '/topup/:slug', element: h(Page) })))));
-  // Chip tampil: semua varian (jenis) pricelist, ID dulu baru server luar/Promo.
+  // Chip tampil: semua varian (jenis) pricelist, diurut dari yang TERMURAH lebih dulu.
   const labels = chips().map((c) => c.textContent.trim());
   assert.deepEqual(labels, [
-    'Free Fire Indonesia Fast', 'Free Fire Indonesia Murah', 'Free Fire Indonesia Promo', 'Free Fire Singapura',
-    'Free Fire Thailand', 'Free Fire Malaysia', 'Free Fire Membership',
-  ], 'satu chip per jenis; singkatan wilayah diperjelas (ID→Indonesia, SG→Singapore, TH→Thailand, MY→Malaysia)');
+    'Free Fire Indonesia Murah', 'Free Fire Indonesia Fast', 'Free Fire Singapura',
+    'Free Fire Thailand', 'Free Fire Malaysia', 'Free Fire Indonesia Promo', 'Free Fire Membership',
+  ], 'chip murah di depan (ID Murah 734 < ID Fast 814 < SG 4414 < TH 5253 < MY 5912 < Promo 8010 < Membership 23934); singkatan wilayah diperjelas');
+  assert.equal(labels[0], 'Free Fire Indonesia Murah', 'chip PERTAMA Free Fire = Indonesia Murah (bukan Indonesia Fast)');
   const aktif = chips().find((c) => c.getAttribute('aria-selected') === 'true');
   assert.match(aktif.className, /bg-white/, 'chip terpilih = pill putih berbingkai + bayangan (sesuai desain)');
   assert.match(aktif.className, /shadow-sm/, 'chip terpilih berbayang');
   assert.equal(chips().filter((c) => c.getAttribute('aria-selected') === 'true').length, 1, 'tepat satu chip aktif');
-  // Chip ID default: pricelist hanya kanal ID Fast (kode FF…), tanpa SG/TH/MY/Promo.
-  assert.deepEqual(produk(), ['FF5', 'FF10'], 'chip ID Fast: pricelist ikut pilihan (FF5, FF10)');
-  assert.match(teks(), /Rp[\s\u00a0]?900/, 'harga Rupiah titik ribuan (814 → jual Rp 900, markup 0%)');
-  assert.match(teks(), /Rp[\s\u00a0]?1\.700/, 'pembulatan ratusan: 1628 → Rp 1.700');
+  // Chip bawaan = varian Indonesia termurah: hanya kanal resmi M, tanpa SG/TH/MY/Promo/Fast.
+  assert.deepEqual(produk(), ['MFF5', 'MFF100'], 'chip ID Murah (termurah): pricelist ikut pilihan');
+  assert.match(teks(), /Rp[\s\u00a0]?749/, 'markup 2% eksak tanpa pembulatan: 734 → 748,68 → Rp 749');
+  assert.match(teks(), /Rp[\s\u00a0]?11\.949/, '11715 + 2% = 11.949,3 → Rp 11.949 (bukan dibulatkan ke ratusan)');
 
   const klik = async (label) => {
     const c = chips().find((x) => x.textContent.trim() === label);
@@ -137,7 +142,9 @@ try {
   assert.match(teks(), /Paket & Membership/, 'pass/membership jadi kartu kecil di atas list');
   assert.deepEqual(produk(), ['FFBDSWM'], 'chip Membership: produk membership tampil');
   await klik('Free Fire Indonesia Fast');
-  assert.deepEqual(produk(), ['FF5', 'FF10'], 'kembali ke chip ID Fast: pricelist ikut lagi');
+  assert.deepEqual(produk(), ['FF5', 'FF10'], 'chip ID Fast: pricelist ikut lagi');
+  assert.match(teks(), /Rp[\s\u00a0]?830/, '814 + 2% = 830,28 → Rp 830 (tanpa pembulatan ratusan ke Rp 900)');
+  assert.match(teks(), /Rp[\s\u00a0]?1\.661/, '1628 + 2% = 1.660,56 → Rp 1.661');
   assert.equal(dom.window.document.querySelectorAll('section').length > 2, true, 'satu halaman detail (satu produk/game) untuk semua wilayah');
 
   // Fase 2 — pricelist versi lama di hosting (item tanpa `jenis`): chip tidak muncul

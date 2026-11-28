@@ -99,9 +99,13 @@ assert.equal(filterByName(TOPUP_GAMES, '').length, 16, 'pencarian kosong = semua
 assert.equal(filterByName(TOPUP_GAMES, 'mobile').length, 3, 'filter "mobile" => PUBG Mobile, Call of Duty Mobile, Mobile Legends');
 assert.equal(filterByName(TOPUP_GAMES, 'GENSHIN').length, 1, 'filter case-insensitive');
 assert.equal(filterByName(TOPUP_GAMES, 'zzz').length, 0, 'filter tanpa hasil => state kosong');
-assert.equal(TOPUP_MARKUP_PCT, 0, 'margin default 0 (jual = harga penyedia; setel di satu tempat bila mau margin)');
-assert.equal(hargaJual(756), 800, 'harga jual dibulatkan ke ratusan ke atas (pola pembulatan ala OTP)');
-assert.equal(hargaJual(12066), 12100, 'pembulatan ratusan konsisten');
+const topupSrc = read('src/data/topupGames.ts');
+assert.equal(TOPUP_MARKUP_PCT, 2, 'markup sistem 2% dari harga modal');
+assert.equal(hargaJual(756), 756 * 1.02, 'markup 2% eksak: 756 → 771,12 (TIDAK dibulatkan ke ratusan)');
+assert.equal(hargaJual(12066), 12066 * 1.02, '12066 + 2% = 12.307,32 (bukan 12.400)');
+assert.equal(hargaJual(814), 830.28, '814 + 2% = 830,28 — modal + markup = harga user');
+assert.equal(hargaJual(1000, 5), 1050, 'persen child panel (yang sudah beli akses) menimpa markup sistem');
+assert.ok(!/Math\.ceil\(\(hargaModal \* \(1 \+ TOPUP_MARKUP_PCT/.test(topupSrc), 'tidak ada lagi pembulatan ke ratusan terdekat');
 
 /* ---------- 4. Halaman detail + layanan + keamanan integrasi ---------- */
 const detail = read('src/pages/TopupGameDetailPage.tsx');
@@ -113,7 +117,8 @@ assert.match(detail, /Silakan login dulu untuk memesan top up\./, 'pesan wajib l
 assert.match(detail, /tokovoucher_config\.php/, 'notice bila integrasi belum dikonfigurasi di server');
 assert.match(detail, /tvPricelist\(game\.nama\)/, 'halaman detail menarik katalog ASLI dari server saat dibuka');
 assert.match(detail, /Katalog produk game ini belum tersedia di server/, 'game tanpa katalog menampilkan state jujur (bukan kode karangan)');
-assert.match(detail, /rupiah\(hargaJual\(p\.harga\)\)/, 'harga tampilan lewat hargaJual (margin + pembulatan terpusat)');
+assert.match(detail, /rupiah\(hargaJual\(n, pctTopup\)\)/, 'harga tampilan lewat hargaJual dengan markup tenant (margin terpusat)');
+assert.match(detail, /daftarJenis\.find\(\(j\) => wilayahOkJenis\[j\] !== false\)/, 'chip bawaan = varian Indonesia termurah');
 const svc = read('src/services/tokovoucherApi.ts');
 assert.match(svc, /export const tvPricelist = \(game\?: string\) =>/, 'layanan punya tvPricelist (katalog asli dari server)');
 assert.match(svc, /action=pricelist/, 'tvPricelist memanggil action=pricelist');

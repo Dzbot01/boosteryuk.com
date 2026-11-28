@@ -8,6 +8,7 @@ import { panelApi, usePanelOwner, type PanelOrder, type PanelSummary, type Panel
 import { PanelEditor, toDraft, type Draft, type PanelEditorApi } from '../components/childpanel/PanelEditor';
 import { ownerPanelApi, type MyPanel } from '../services/childPanelApi';
 import { planApi } from '../services/planApi';
+import { HARGA_AKSES_MARKUP } from '../lib/panelMarkup';
 
 const rupiah = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
 const waktu = (s: string) => {
@@ -320,18 +321,44 @@ function MarkupForm({ summary, onSaved }: { summary: PanelSummary; onSaved: (s: 
   const [agent, setAgent] = useState(String(summary.panel.markup_agent_pct));
   const [eventMarkup,setEventMarkup]=useState(String(summary.panel.markup_event_pct??0));
   const [otp, setOtp] = useState(String(summary.panel.markup_otp_pct ?? 0));
+  const [topup, setTopup] = useState(String(summary.panel.markup_topup_pct ?? 0));
+  const [ppob, setPpob] = useState(String(summary.panel.markup_ppob_pct ?? 0));
+  const aksesTopup = Number(summary.panel.access_topup_markup ?? 0) === 1;
+  const aksesPpob = Number(summary.panel.access_ppob_markup ?? 0) === 1;
+  const [buying, setBuying] = useState<'' | 'topup' | 'ppob'>('');
+  const { refresh } = useAuth();
+  /** Beli akses markup (Rp35.000 per akses, satu per satu) — dipotong saldo pemilik. */
+  const buy = async (kind: 'topup' | 'ppob') => {
+    setBuying(kind);
+    setMsg(null);
+    const r = await panelApi.buyMarkupAccess(kind);
+    setBuying('');
+    if (!r.ok) return setMsg({ ok: false, text: r.message || 'Gagal membeli akses.' });
+    await refresh();
+    onSaved({
+      ...summary,
+      panel: {
+        ...summary.panel,
+        access_topup_markup: kind === 'topup' ? 1 : summary.panel.access_topup_markup,
+        access_ppob_markup: kind === 'ppob' ? 1 : summary.panel.access_ppob_markup,
+      },
+    });
+    setMsg({ ok: true, text: `Akses markup ${kind === 'topup' ? 'Top Up Game' : 'PPOB'} sudah aktif.` });
+  };
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const save = async () => {
     setSaving(true);
     setMsg(null);
-    const r = await panelApi.setMarkup(Number(smm) || 0, Number(agent) || 0, Number(otp) || 0, Number(eventMarkup)||0);
+    const r = await panelApi.setMarkup(Number(smm) || 0, Number(agent) || 0, Number(otp) || 0, Number(eventMarkup)||0, Number(topup) || 0, Number(ppob) || 0);
     setSaving(false);
     if (!r.ok) return setMsg({ ok: false, text: r.message || 'Gagal menyimpan.' });
     setSmm(String(r.markup_smm_pct));
     setAgent(String(r.markup_agent_pct));
     setOtp(String(r.markup_otp_pct ?? 0));
     setEventMarkup(String(r.markup_event_pct??0));
+    setTopup(String(r.markup_topup_pct ?? 0));
+    setPpob(String(r.markup_ppob_pct ?? 0));
     onSaved({ ...summary, panel: { ...summary.panel, markup_smm_pct: r.markup_smm_pct ?? 0, markup_agent_pct: r.markup_agent_pct ?? 0, markup_otp_pct: r.markup_otp_pct ?? 0, markup_event_pct:r.markup_event_pct??0 } });
     setMsg({ ok: true, text: 'Markup tersimpan. Harga di panel langsung mengikuti setelah halaman dimuat ulang.' });
   };
@@ -357,6 +384,51 @@ function MarkupForm({ summary, onSaved }: { summary: PanelSummary; onSaved: (s: 
           <input className={inp} type="number" min={0} max={300} step={0.5} value={otp} onChange={(e) => setOtp(e.target.value)} />
           <span className="mt-1 block text-[11.5px] text-slate-500">Contoh: {rupiah(3600)} → {rupiah(Math.ceil(ex(3600, otp) / 100) * 100)}</span>
         </label>
+      </div>
+
+      {/* Markup Top Up Game & PPOB: akses dibeli terpisah (Rp35.000 masing-masing). */}
+      <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 dark:border-slate-800 sm:grid-cols-2">
+        {[
+          { kind: 'topup' as const, judul: 'Top Up Game (%)', nilai: topup, set: setTopup, akses: aksesTopup, contoh: 10000 },
+          { kind: 'ppob' as const, judul: 'PPOB (%)', nilai: ppob, set: setPpob, akses: aksesPpob, contoh: 2025 },
+        ].map(({ kind, judul, nilai, set, akses, contoh }) => (
+          <div key={kind} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+            <span className="mb-1 flex items-center justify-between text-[11.5px] font-semibold text-slate-500">
+              Markup {judul}
+              {akses ? (
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">AKSES AKTIF</span>
+              ) : (
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">TERKUNCI</span>
+              )}
+            </span>
+            <input
+              className={inp}
+              type="number"
+              min={0}
+              max={300}
+              step={0.5}
+              value={nilai}
+              disabled={!akses}
+              onChange={(e) => set(e.target.value)}
+            />
+            {akses ? (
+              <span className="mt-1 block text-[11.5px] text-slate-500">Contoh: {rupiah(contoh)} → {rupiah(contoh * (1 + (Number(nilai) || 0) / 100))}</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void buy(kind)}
+                disabled={buying !== ''}
+                className="mt-2 w-full rounded-lg bg-cyan-600 px-3 py-2 text-[11.5px] font-bold text-white transition hover:bg-cyan-700 disabled:opacity-70"
+              >
+                {buying === kind ? 'Memproses…' : `Buka akses ${rupiah(HARGA_AKSES_MARKUP)}`}
+              </button>
+            )}
+          </div>
+        ))}
+        <p className="text-[11.5px] leading-relaxed text-slate-500 sm:col-span-2">
+          Akses markup Top Up Game dan PPOB dibeli terpisah (satu per satu) seharga {rupiah(HARGA_AKSES_MARKUP)} per akses,
+          dipotong dari saldo akun pemilik panel. Markup top up game sistem di web utama tetap 2% tanpa pembulatan.
+        </p>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button onClick={() => void save()} disabled={saving} aria-busy={saving} className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-4 py-2 text-[12.5px] font-bold text-white hover:bg-cyan-700 disabled:opacity-70">

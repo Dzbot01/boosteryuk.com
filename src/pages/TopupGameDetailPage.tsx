@@ -7,6 +7,8 @@ import { tvCekAkun, tvCekStatus, tvPricelist, tvStatus, tvTransaksi } from '../s
 import type { TvPricelistItem } from '../services/tokovoucherApi';
 import { TOPUP_GAMES, hargaJual, rupiah, type TopupProduk } from '../data/topupGames';
 import { namaWilayahJenis, rapihkanKatalog } from '../lib/topupDisplayName';
+import { useSiteSettings } from '../context/SiteSettingsContext';
+import { markupTopupPct } from '../lib/panelMarkup';
 
 /** Banner artwork resmi per game untuk kartu judul halaman detail. */
 const BANNER_PER_SLUG: Record<string, string> = {
@@ -20,6 +22,11 @@ const BANNER_PER_SLUG: Record<string, string> = {
  */
 export default function TopupGameDetailPage() {
   const { slug = '' } = useParams();
+  const { tenant } = useSiteSettings();
+  /** Markup top up game: sistem 2% (atau setelan child panel yang sudah beli akses). */
+  const pctTopup = markupTopupPct(tenant);
+  /** Harga jual user = modal + markup eksak, lalu format Rupiah. */
+  const jual = (n: number) => rupiah(hargaJual(n, pctTopup));
   const game = useMemo(() => {
     const found = TOPUP_GAMES.find((g) => g.slug === slug);
     if (found) return found;
@@ -74,12 +81,29 @@ export default function TopupGameDetailPage() {
    * mengganti seluruh pricelist yang ditampilkan (satu produk, banyak wilayah).
    */
   const daftarJenis = useMemo(() => {
-    const lihat: string[] = [];
+    const min: Record<string, number> = {};
+    const urutan: string[] = [];
     for (const i of live?.items || []) {
       const j = (i.jenis || '').trim();
-      if (j && !lihat.includes(j)) lihat.push(j);
+      if (!j) continue;
+      if (!(j in min)) {
+        min[j] = i.harga;
+        urutan.push(j);
+      } else if (i.harga < min[j]) min[j] = i.harga;
     }
-    return lihat;
+    // Varian termurah di posisi pertama (stabil): daftar chip dibuka dari pilihan
+    // paling murah (mis. Free Fire: ID Murah, bukan ID Fast).
+    return urutan.sort((a, b) => min[a] - min[b]);
+  }, [live]);
+
+  /** Flag wilayah per jenis: chip Indonesia tetap jadi pilihan bawaan walau bukan termurah. */
+  const wilayahOkJenis = useMemo(() => {
+    const peta: Record<string, boolean> = {};
+    for (const i of live?.items || []) {
+      const j = (i.jenis || '').trim();
+      if (j && !(j in peta)) peta[j] = i.wilayah_ok !== false;
+    }
+    return peta;
   }, [live]);
   const [jenisAktif, setJenisAktif] = useState('');
   useEffect(() => {
@@ -87,10 +111,10 @@ export default function TopupGameDetailPage() {
   }, [slug]);
   useEffect(() => {
     if (jenisAktif && daftarJenis.includes(jenisAktif)) return;
-    const bawaan =
-      (live?.items || []).find((i) => i.jenis && i.wilayah_ok !== false)?.jenis || daftarJenis[0] || '';
-    setJenisAktif(bawaan);
-  }, [live, daftarJenis, jenisAktif]);
+    // Chip bawaan = varian termurah yang berlaku untuk Indonesia (daftar sudah urut
+    // harga minimum menaik), jadi produk murah tampil lebih dulu di semua game.
+    setJenisAktif(daftarJenis.find((j) => wilayahOkJenis[j] !== false) || daftarJenis[0] || '');
+  }, [live, daftarJenis, wilayahOkJenis, jenisAktif]);
 
   /** Produk tampil: katalog ASLI dari server bila ada, selain itu snapshot repo. */
   const katalog = useMemo(() => {
@@ -399,7 +423,7 @@ export default function TopupGameDetailPage() {
                           kode <code className="rounded bg-slate-100 px-1">{p.kode}</code>
                         </span>
                       </span>
-                      <span className="whitespace-nowrap font-mono text-[12px] font-bold text-[#14143c]">{rupiah(hargaJual(p.harga))}</span>
+                      <span className="whitespace-nowrap font-mono text-[12px] font-bold text-[#14143c]">{jual(p.harga)}</span>
                     </button>
                   );
                 })}
@@ -429,7 +453,7 @@ export default function TopupGameDetailPage() {
                       {butuhServer ? ' · perlu Server ID' : ''}
                     </span>
                   </span>
-                  <span className="whitespace-nowrap font-mono text-[13px] font-bold text-[#14143c]">{rupiah(hargaJual(p.harga))}</span>
+                  <span className="whitespace-nowrap font-mono text-[13px] font-bold text-[#14143c]">{jual(p.harga)}</span>
                 </button>
               );
             })}
@@ -451,7 +475,7 @@ export default function TopupGameDetailPage() {
             )}
             <div className="flex justify-between border-t border-slate-100 pt-2 text-[14px]">
               <dt className="font-bold text-slate-800">Total</dt>
-              <dd className="font-mono font-extrabold text-[#14143c]">{produk ? rupiah(hargaJual(produk.harga)) : '—'}</dd>
+              <dd className="font-mono font-extrabold text-[#14143c]">{produk ? jual(produk.harga) : '—'}</dd>
             </div>
           </dl>
 
