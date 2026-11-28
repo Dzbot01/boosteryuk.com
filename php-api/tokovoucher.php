@@ -299,7 +299,20 @@ function tv_items_from_full($d) {
         $jenisNama = $jn ? (string)($jn['nama'] ?? '') : '';
         if (!tv_label_wilayah_ok($jenisNama)) continue;
         if (!tv_kode_katalog_ok($kode)) continue;
+        // Server ID hanya bila form transaksi benar-benar memakainya: entri server_id
+        // dengan label/data terisi. (Free Fire mengirim field server_id ber-label
+        // kosong = tidak dipakai; Mobile Legends mengisinya.)
         $form = $jn ? (string)($jn['format_form'] ?? '') : '';
+        $butuhServer = false;
+        $ff = $form !== '' ? json_decode($form, true) : null;
+        if (is_array($ff)) {
+            foreach ($ff as $fd) {
+                if (!is_array($fd) || (string)($fd['name'] ?? '') !== 'server_id') continue;
+                $lb = trim((string)($fd['label'] ?? ''));
+                $dt = is_array($fd['data'] ?? null) ? $fd['data'] : [];
+                if ($lb !== '' || $dt) $butuhServer = true;
+            }
+        }
         $items[] = [
             'kode' => $kode,
             'nama' => trim((string)($p['nama'] ?? $kode)),
@@ -307,7 +320,7 @@ function tv_items_from_full($d) {
             'game' => trim((string)($op['nama'] ?? '')),
             'jenis' => $jenisNama,
             'logo' => (string)($op['logo'] ?? ''),
-            'butuh_server' => $form !== '' && strpos($form, 'server_id') !== false,
+            'butuh_server' => $butuhServer,
         ];
     }
     return $items;

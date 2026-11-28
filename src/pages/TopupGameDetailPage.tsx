@@ -63,6 +63,13 @@ export default function TopupGameDetailPage() {
 
   const produk = useMemo(() => produkList.find((p) => p.kode === kode) || null, [produkList, kode]);
 
+  /**
+   * Server ID hanya untuk game yang benar-benar membutuhkannya (mis. Mobile Legends).
+   * Free Fire dsb. tidak menampilkan kolom ini: field server_id di format_form
+   * penyedia ber-label kosong = tidak dipakai; slug ML jadi pengaman bila data belum lengkap.
+   */
+  const butuhServer = !!produk?.butuhServer || slug === 'mobile-legends';
+
   useEffect(() => {
     let alive = true;
     tvStatus().then((r) => { if (alive) setConfigured(r.ok ? r.configured : false); });
@@ -118,7 +125,7 @@ export default function TopupGameDetailPage() {
       setResult({ ok: false, message: 'Player ID wajib diisi dengan benar.' });
       return;
     }
-    if (produk.butuhServer && serverId.trim().length < 2) {
+    if (butuhServer && serverId.trim().length < 2) {
       setResult({ ok: false, message: 'Produk ini membutuhkan Server ID.' });
       return;
     }
@@ -171,7 +178,7 @@ export default function TopupGameDetailPage() {
                 className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-[13.5px] outline-none transition focus:border-[#14143c]/40 focus:bg-white focus:ring-2 focus:ring-[#14143c]/15"
               />
             </label>
-            {produk?.butuhServer && (
+            {butuhServer && (
               <label className="block">
                 <span className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-slate-600">
                   <Server className="h-3.5 w-3.5" /> Server ID
@@ -273,7 +280,7 @@ export default function TopupGameDetailPage() {
             <div className="flex justify-between"><dt>Game</dt><dd className="font-bold text-slate-800">{game.nama}</dd></div>
             <div className="flex justify-between"><dt>Produk</dt><dd className="font-bold text-slate-800">{produk ? `${produk.nama} (${produk.kode})` : '—'}</dd></div>
             <div className="flex justify-between"><dt>Player ID</dt><dd className="font-mono font-bold text-slate-800">{playerId || '—'}</dd></div>
-            {produk?.butuhServer && (
+            {butuhServer && (
               <div className="flex justify-between"><dt>Server ID</dt><dd className="font-mono font-bold text-slate-800">{serverId || '—'}</dd></div>
             )}
             <div className="flex justify-between border-t border-slate-100 pt-2 text-[14px]">
