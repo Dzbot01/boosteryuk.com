@@ -1,14 +1,14 @@
 // Layanan PPOB dari endpoint list produk penuh penyedia (/member/produk/full):
 // hanya layanan SELAIN top up game yang dikirim ke halaman PPOB — tampil sebagai
-// card "Menu Service", dan tile "Lainnya" membuka grid card semua layanan itu.
+// card "Menu", dan tile "Lainnya" membuka grid card semua layanan itu.
 //
 // Yang diuji:
-//  1. filter PHP (tv_layanan_label / tv_is_layanan) — pola aslinya dibaca dari
-//     php-api/tokovoucher.php lalu dijalankan terhadap label penyedia sungguhan
-//     (game vs operator telekomunikasi/e-money) supaya game tidak ikut ke PPOB;
+//  1. filter PHP (tv_layanan_label / tv_is_layanan berbasis KATEGORI penyedia) —
+//     pola aslinya dibaca dari php-api/tokovoucher.php lalu dijalankan terhadap
+//     label penyedia sungguhan (game vs operator telekomunikasi/e-money);
 //  2. aksi layanan & layanan_produk (cache, status aktif, diagnostik kategori);
-//  3. render sungguhan halaman /ppob/layanan + card Menu Service di /ppob
-//     (grid card, kategori, harga + markup PPOB panel, pencarian, galat jujur).
+//  3. render sungguhan halaman /ppob/layanan (grid card → halaman order per layanan)
+//     + card Menu di /ppob (harga + markup PPOB panel, pencarian, galat jujur).
 //
 // NODE_PATH=/tmp/server3-tests/node_modules node scripts/test-ppob-layanan.mjs
 import assert from 'node:assert/strict';
@@ -33,12 +33,17 @@ assert.match(php, /if \(!\$op \|\| \(int\)\(\$op\['status'\] \?\? 1\) !== 1\) co
 assert.match(php, /'kategori_penyedia' => \(array\)\(\$diag\['kategori'\] \?\? \[\]\)/, 'respons membawa diagnostik kategori asli penyedia');
 assert.match(php, /'operator_penyedia' => \(array\)\(\$diag\['operator'\] \?\? \[\]\)/, 'respons membawa diagnostik operator asli penyedia');
 // Game tidak boleh bocor ke grid top up game bila ternyata layanan (AIS/TrueMove/DTAC).
-assert.match(php, /if \(tv_is_layanan\(\(string\)\$p\['game'\], \(string\)\(\$p\['jenis'\] \?\? ''\), ''\)\) continue;/, 'aksi katalog membuang operator layanan dari grid top up game');
+assert.match(php, /if \(tv_is_layanan\(\(string\)\$p\['game'\], \(string\)\(\$p\['jenis'\] \?\? ''\), \(string\)\(\$p\['kategori'\] \?\? ''\)\)\) continue;/, 'aksi katalog membuang layanan PPOB dari grid top up game (memakai kategori penyedia)');
+assert.match(php, /'kategori' => \$cat,/, 'item katalog game membawa kategori penyedia supaya filternya jujur');
 // Urutan keputusan: game dikenal ditolak dulu, baru kata kunci layanan.
 const badanIsLayanan = php.slice(php.indexOf('function tv_is_layanan('), php.indexOf('function tv_layanan_from_full('));
 assert.ok(badanIsLayanan.indexOf('tv_game_key_of_label') < badanIsLayanan.indexOf('tv_layanan_label'), 'game yang dikenal tabel alias ditolak sebelum cek kata kunci layanan');
 assert.match(badanIsLayanan, /preg_match\('\/top[^\n]*up[^\n]*game\|[^\n]*games\?[^\n]*\/i'/, 'label/kategori yang menyebut "game" tidak dianggap layanan');
-assert.match(badanIsLayanan, /return tv_layanan_label\(\$operatorNama\) \|\| tv_layanan_label\(\$jenisNama\);/, 'label tak dikenal tidak diklaim sebagai layanan (default false)');
+assert.match(badanIsLayanan, /return tv_layanan_label\(\$operatorNama\) \|\| tv_layanan_label\(\$jenisNama\);/, 'tanpa kategori: label tak dikenal tidak diklaim sebagai layanan (default false)');
+// Kategori penyedia = penanda utama: "Topup Game"/"Voucher Game" ditolak, kategori lain diterima.
+const badanKategori = badanIsLayanan.slice(0, badanIsLayanan.indexOf('// Tanpa kategori'));
+assert.match(badanKategori, /if \(preg_match\('\/\\bgames\?\\b\/i', \$kat\)\) return false;/, 'kategori yang menyebut game (Topup Game / Voucher Game) BUKAN layanan PPOB');
+assert.match(badanKategori, /return true;/, 'kategori non-game (Pulsa, Paket Data, PLN, E-Money, TV, dst) diterima sebagai layanan walau namanya tak dikenal tabel kata kunci');
 
 // Jalankan pola aslinya (dibaca dari source PHP) terhadap label penyedia sungguhan.
 const polaMatch = php.match(/function tv_layanan_label\(\$teks\) \{[\s\S]*?preg_match\('\/([\s\S]*?)\/', \$t\) === 1;/);
@@ -77,6 +82,7 @@ const { outputFiles } = await build({
   stdin: {
     contents:
       "export {default as LayananPage} from './src/pages/PpobLayananPage';" +
+      "export {default as OrderPage} from './src/pages/PpobLayananOrderPage';" +
       "export {default as PpobPage} from './src/pages/PpobPage';" +
       "export {MemoryRouter,Routes,Route} from 'react-router-dom';" +
       "export {createElement,act} from 'react';export {createRoot} from 'react-dom/client';",
@@ -97,6 +103,8 @@ const { outputFiles } = await build({
           return {
             contents: `export const tvLayanan=async()=>globalThis.__LAYANAN__();
 export const tvLayananProduk=async(id)=>globalThis.__LAYANAN_PRODUK__(id);
+export const tvTransaksi=async(b)=>globalThis.__TRANSAKSI__(b);
+export const tvCekStatus=async(ref)=>globalThis.__CEK_STATUS__(ref);
 export const tvStatus=async()=>({ok:true,configured:true});
 export const tvKatalog=async()=>({ok:true,source:'kosong',groups:[]});`,
             resolveDir: process.cwd(),
@@ -124,6 +132,9 @@ const ctx = {
   __TENANT__: null,
   __LAYANAN__: async () => ({ ok: true, source: 'provider', sumber: 'full', total_produk: 25, kelompok: KELOMPOK, updated_at: '2026-11-28 12:00' }),
   __LAYANAN_PRODUK__: async (id) => (id === 'pulsa-dtac' ? { ok: true, kelompok: KELOMPOK[2], items: PRODUK_DTAC } : { ok: false, message: 'Layanan tidak ditemukan di katalog penyedia.' }),
+  __PESANAN__: [],
+  __TRANSAKSI__: async (b) => { ctx.__PESANAN__.push(b); return { ok: true, ref_id: 'PPOB-26112812000011', status: 'pending', jenis: 'ppob', harga: 8500, saldo: 1241500, message: 'Transaksi diterima penyedia.' }; },
+  __CEK_STATUS__: async () => ({ ok: true, ref_id: 'PPOB-26112812000011', sumber: 'webhook', status: 'sukses', trx_id: 'TV991122', sn: '0123456789', message: 'Berhasil' }),
 };
 ctx.global = ctx;
 vm.runInNewContext(outputFiles[0].text, ctx);
@@ -133,11 +144,15 @@ const { LayananPage, PpobPage, createElement: h, act, createRoot } = ctx.module.
 const teks = () => dom.window.document.body.textContent || '';
 const kartu = () => [...dom.window.document.querySelectorAll('[data-layanan]')];
 
+const rute = () =>
+  h(ctx.module.exports.Routes, null,
+    h(ctx.module.exports.Route, { path: '/ppob/layanan', element: h(LayananPage) }),
+    h(ctx.module.exports.Route, { path: '/ppob/layanan/:id', element: h(ctx.module.exports.OrderPage) }),
+    h(ctx.module.exports.Route, { path: '/ppob', element: h(PpobPage) }));
+
 const root = createRoot(dom.window.document.getElementById('root'));
 await act(async () => root.render(
-  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan'] },
-    h(ctx.module.exports.Routes, null,
-      h(ctx.module.exports.Route, { path: '/ppob/layanan', element: h(LayananPage) })))));
+  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan'] }, rute())));
 
 assert.match(teks(), /Semua Layanan/, 'judul halaman Semua Layanan');
 assert.match(teks(), /selain top up game/, 'keterangan: hanya layanan selain top up game');
@@ -146,21 +161,106 @@ assert.deepEqual(kartu().map((k) => k.getAttribute('data-layanan')).sort(), ['e-
 for (const nama of ['AIS', 'TrueMove H', 'DTAC', 'OVO']) assert.ok(teks().includes(nama), `layanan "${nama}" tampil sebagai card`);
 for (const kat of ['Pulsa', 'Paket Data', 'E-Money']) assert.ok(teks().includes(kat), `kategori "${kat}" jadi judul seksi grid`);
 assert.match(teks(), /4 layanan · 25 produk/, 'ringkasan jumlah layanan & produk dari server');
+// Kartu = tautan ke HALAMAN ORDER khusus layanan itu (bukan membuka daftar harga di tempat).
+assert.equal(kartu()[0].tagName, 'A', 'card layanan adalah tautan (navigasi ke halaman order)');
+assert.deepEqual(
+  kartu().map((k) => k.getAttribute('href')).sort(),
+  ['/ppob/layanan/e-money-ovo', '/ppob/layanan/paket-data-truemove-h', '/ppob/layanan/pulsa-ais', '/ppob/layanan/pulsa-dtac'],
+  'tiap card menuju halaman order layanannya sendiri',
+);
+assert.match(teks(), /Order sekarang/, 'card mengajak user memesan (bukan melihat daftar harga)');
+assert.ok(!/Lihat produk|Tutup daftar/.test(teks()), 'daftar harga inline dihapus dari halaman grid');
+// Judul kategori juga punya halaman sendiri (mis. Aktivasi Perdana → pemilih operator).
+const kat = [...dom.window.document.querySelectorAll('[data-kategori]')].map((k) => k.getAttribute('href'));
+assert.ok(kat.includes('/ppob/layanan/pulsa') && kat.includes('/ppob/layanan/e-money'), 'judul kategori menaut ke halaman order kategori itu');
 assert.match(teks(), /Rp 8\.500/, 'harga termurah DTAC tampil (harga asli penyedia, tanpa markup di web utama)');
 assert.match(teks(), /Rp 13\.353/, 'harga termurah AIS tampil');
 assert.ok(!/Free Fire|Mobile Legends/.test(teks()), 'tidak ada kartu top up game di halaman layanan PPOB');
 
-// Klik card → daftar produk layanan itu (urut termurah) dimuat dari server.
-await act(async () => kartu().find((k) => k.getAttribute('data-layanan') === 'pulsa-dtac').click());
-assert.match(teks(), /DTAC 10 THB/, 'produk layanan tampil setelah card dibuka');
-assert.match(teks(), /DTACDATA1|DTACDATA 1 GB|DTAC DATA 1 GB/, 'kode/varian produk asli penyedia tampil');
-assert.match(teks(), /Rp 4\.250/, 'harga produk termurah di daftar');
-assert.match(teks(), /Tutup daftar/, 'ada cara menutup daftar produk');
+/* ---------- 3b. Halaman order khusus layanan (klik card DTAC) ---------- */
+await act(async () => root.unmount());
+const rootOrder = createRoot(dom.window.document.getElementById('root'));
+await act(async () => rootOrder.render(
+  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan/pulsa-dtac'] }, rute())));
 
-// Galat per layanan ditampilkan apa adanya (tidak mengarang produk).
-await act(async () => kartu().find((k) => k.getAttribute('data-layanan') === 'pulsa-ais').click());
+assert.match(teks(), /DTAC/, 'halaman order menampilkan nama layanannya');
+assert.match(teks(), /Pulsa/, 'kategori penyedia ikut tampil');
+assert.match(teks(), /1\. Data tujuan/, 'langkah 1 = data tujuan (sesuai dokumentasi transaksi penyedia)');
+assert.match(teks(), /Nomor HP/, 'layanan pulsa meminta nomor HP');
+assert.match(teks(), /2\. Pilih produk/, 'langkah 2 = pilih produk dari katalog penyedia');
+assert.match(teks(), /DTAC 10 THB/, 'produk asli penyedia tampil di halaman order');
+assert.match(teks(), /DTACDATA1/, 'kode produk asli penyedia tampil (bukan karangan)');
+assert.match(teks(), /Rp 4\.250/, 'harga produk termurah tampil');
+assert.match(teks(), /Bayar & Proses/, 'tombol order ada di halaman layanan');
+assert.match(teks(), /saldo dipotong\s*saat pesanan dibuat|saldo dipotong saat pesanan dibuat/, 'user diberi tahu saldo dipotong server saat pesanan dibuat');
+
+// Tombol order mati sampai produk dipilih + nomor tujuan valid.
+const tombolPesan = () => dom.window.document.querySelector('[data-pesan="true"]');
+assert.ok(tombolPesan().disabled, 'order belum bisa dikirim sebelum produk dipilih');
+await act(async () => dom.window.document.querySelector('[data-produk="DTAC10"]').click());
+assert.ok(tombolPesan().disabled, 'order masih terkunci selama nomor tujuan kosong');
+
+const inputTujuan = dom.window.document.querySelector('[data-tujuan="true"]');
+assert.ok(inputTujuan, 'input nomor tujuan ada');
+const setterInput = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
+const isiInput2 = async (el, nilai) => {
+  await act(async () => {
+    setterInput.call(el, nilai);
+    el.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  });
+};
+await isiInput2(inputTujuan, '08123');
+await act(async () => inputTujuan.dispatchEvent(new dom.window.FocusEvent('focusout', { bubbles: true }))); // onBlur React = focusout
+assert.match(teks(), /hanya angka, 8–16 digit/, 'nomor terlalu pendek ditolak di browser sebelum dikirim');
+assert.ok(tombolPesan().disabled, 'order terkunci selama nomor tujuan tidak valid');
+
+await isiInput2(inputTujuan, '081234567890');
+assert.ok(!tombolPesan().disabled, 'order bisa dikirim setelah produk + nomor tujuan valid');
+await act(async () => tombolPesan().click());
+assert.equal(JSON.stringify(ctx.__PESANAN__.at(-1)), JSON.stringify({ player_id: '081234567890', kode_produk: 'DTAC10' }), 'order mengirim kode produk asli + nomor tujuan ke proxy server');
+assert.match(teks(), /Pesanan diteruskan ke penyedia/, 'status pending dijelaskan ke user');
+assert.match(teks(), /PPOB-26112812000011/, 'ref pesanan ditampilkan (dipakai cek status & komplain)');
+assert.match(teks(), /Rp 1\.241\.500/, 'sisa saldo dari server ditampilkan');
+assert.match(teks(), /Riwayat pesanan/, 'ada jalan ke Riwayat Pesanan setelah order');
+
+// Cek status menarik jawaban webhook/provider.
+await act(async () => [...dom.window.document.querySelectorAll('button')].find((b) => /Cek status/.test(b.textContent || '')).click());
+assert.match(teks(), /Pesanan berhasil/, 'status sukses dari webhook mengubah tampilan hasil');
+assert.match(teks(), /TV991122/, 'ID transaksi penyedia ditampilkan');
+assert.match(teks(), /0123456789/, 'serial number/token ditampilkan');
+
+/* ---------- 3c. Halaman order per KATEGORI (mis. Aktivasi Perdana / e-money) ---------- */
+await act(async () => rootOrder.unmount());
+const rootKat = createRoot(dom.window.document.getElementById('root'));
+await act(async () => rootKat.render(
+  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan/pulsa'] }, rute())));
+assert.match(teks(), /Pilih layanan/, 'kategori dengan beberapa operator menampilkan pemilih layanan');
+const operator = [...dom.window.document.querySelectorAll('[data-operator]')].map((o) => o.getAttribute('data-operator'));
+assert.deepEqual(operator, ['pulsa-ais', 'pulsa-dtac'], 'pemilih berisi operator dalam kategori itu');
+await act(async () => dom.window.document.querySelector('[data-operator="pulsa-dtac"]').click());
+assert.match(teks(), /DTAC 10 THB/, 'produk operator pilihan dimuat di halaman kategori');
+
+/* ---------- 3d. Layanan tak dikenal: jujur, tanpa data karangan ---------- */
+await act(async () => rootKat.unmount());
+const root404 = createRoot(dom.window.document.getElementById('root'));
+await act(async () => root404.render(
+  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan/tidak-ada-layanan'] }, rute())));
+assert.match(teks(), /tidak ada di katalog penyedia/, 'id layanan tak dikenal dijelaskan apa adanya');
+assert.match(teks(), /Pilih layanan lain/, 'ada jalan kembali memilih layanan');
+await act(async () => root404.unmount());
+
+/* ---------- 3e. Galat daftar produk di halaman order ---------- */
+const rootGalat = createRoot(dom.window.document.getElementById('root'));
+await act(async () => rootGalat.render(
+  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan/pulsa-ais'] }, rute())));
 assert.match(teks(), /Layanan tidak ditemukan di katalog penyedia\./, 'galat daftar produk ditampilkan apa adanya');
+assert.match(teks(), /Coba lagi/, 'galat produk punya tombol Coba lagi');
+await act(async () => rootGalat.unmount());
 
+/* ---------- 3f. Pencarian di halaman Semua Layanan ---------- */
+const rootCari = createRoot(dom.window.document.getElementById('root'));
+await act(async () => rootCari.render(
+  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan'] }, rute())));
 // Pencarian menyaring kartu layanan.
 const inputCari = dom.window.document.querySelector('input[aria-label="Cari layanan PPOB"]');
 assert.ok(inputCari, 'kotak pencarian layanan ada');
@@ -177,15 +277,13 @@ assert.equal(kartu().length, 1, 'pencarian "ovo" menyisakan satu kartu');
 assert.equal(kartu()[0].getAttribute('data-layanan'), 'e-money-ovo', 'kartu yang tersisa = OVO');
 await isiInput(inputCari, 'zzz-tidak-ada');
 assert.match(teks(), /Tidak ada layanan yang cocok/, 'pencarian tanpa hasil punya state kosong');
+await act(async () => rootCari.unmount());
 
 /* ---------- 4. Markup PPOB child panel ikut dihitung di halaman layanan ---------- */
 ctx.__TENANT__ = { name: 'Panelku', hostname: 'panelku.contoh', access_ppob_markup: 1, markup_ppob_pct: 3, config: {} };
-await act(async () => root.unmount());
 const root2 = createRoot(dom.window.document.getElementById('root'));
 await act(async () => root2.render(
-  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan'] },
-    h(ctx.module.exports.Routes, null,
-      h(ctx.module.exports.Route, { path: '/ppob/layanan', element: h(LayananPage) })))));
+  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan'] }, rute())));
 assert.match(teks(), /Rp 8\.755/, 'DTAC 8.500 + markup PPOB 3% = Rp 8.755 (child panel ber-akses)');
 assert.match(teks(), /harga sudah termasuk markup panel 3%/, 'user diberi tahu harga sudah termasuk markup panel');
 
@@ -194,28 +292,30 @@ ctx.__LAYANAN__ = async () => ({ ok: false, message: 'Daftar layanan belum dapat
 await act(async () => root2.unmount());
 const root3 = createRoot(dom.window.document.getElementById('root'));
 await act(async () => root3.render(
-  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan'] },
-    h(ctx.module.exports.Routes, null,
-      h(ctx.module.exports.Route, { path: '/ppob/layanan', element: h(LayananPage) })))));
+  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob/layanan'] }, rute())));
 assert.match(teks(), /http=0 timeout/, 'pesan galat asli dari server ditampilkan');
 assert.match(teks(), /Coba lagi/, 'tombol Coba lagi saat galat');
 assert.match(teks(), /Login ulang/, 'tombol Login ulang saat galat');
 assert.equal(kartu().length, 0, 'tidak ada kartu layanan karangan saat endpoint gagal');
 
-/* ---------- 6. Card Menu Service di beranda PPOB ---------- */
+/* ---------- 6. Card Menu di beranda PPOB ---------- */
 ctx.__TENANT__ = null;
 ctx.__LAYANAN__ = async () => ({ ok: true, source: 'provider', kelompok: KELOMPOK });
 await act(async () => root3.unmount());
 const root4 = createRoot(dom.window.document.getElementById('root'));
 await act(async () => root4.render(
-  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob'] },
-    h(ctx.module.exports.Routes, null,
-      h(ctx.module.exports.Route, { path: '/ppob', element: h(PpobPage) })))));
-assert.match(teks(), /Menu Service/, 'card Menu Service tetap ada di beranda PPOB');
+  h(ctx.module.exports.MemoryRouter, { initialEntries: ['/ppob'] }, rute())));
+assert.match(teks(), /\nMenu\n|Menu/, 'card Menu tetap ada di beranda PPOB');
+assert.ok(!teks().includes('Menu Service'), 'labelnya "Menu", bukan "Menu Service"');
 const tile = [...dom.window.document.querySelectorAll('[data-layanan]')].map((t) => t.getAttribute('data-layanan'));
 assert.deepEqual(tile, ['pulsa-ais', 'paket-data-truemove-h', 'pulsa-dtac', 'e-money-ovo'], 'tile layanan live = layanan selain top up game dari endpoint');
 assert.ok(teks().includes('Pulsa Reguler'), 'layanan lokal Pulsa Reguler tetap dipatok di grid');
-assert.ok(dom.window.document.querySelector('[data-lainnya="true"]'), 'tile Lainnya ada di grid Menu Service');
-assert.ok(!/Streaming & Game|Pulsa Internasional/.test(teks()), 'tile mock lama (termasuk top up game) hilang dari Menu Service');
+assert.ok(dom.window.document.querySelector('[data-lainnya="true"]'), 'tile Lainnya ada di grid Menu');
+assert.ok(!/Streaming & Game|Pulsa Internasional/.test(teks()), 'tile mock lama (termasuk top up game) hilang dari Menu');
+assert.ok(!teks().includes('Exchange'), 'aksi cepat Exchange dihapus dari halaman PPOB');
+assert.deepEqual(
+  [...dom.window.document.querySelectorAll('a[href="/ppob/layanan/e-money"]')].length, 2,
+  'aksi cepat Transfer & Top up menuju layanan e-money',
+);
 
-console.log('PASS Layanan PPOB: endpoint list produk penuh difilter jadi layanan SELAIN top up game (AIS/TrueMove H/DTAC/OVO lolos, 30 label game asli penyedia ditolak), tampil sebagai card Menu Service di /ppob dan grid card semua layanan di /ppob/layanan (kategori, harga + markup PPOB panel, daftar produk per layanan, pencarian, galat jujur tanpa daftar dummy).');
+console.log('PASS Layanan PPOB: endpoint list produk penuh difilter berbasis KATEGORI penyedia (AIS/TrueMove H/DTAC/OVO lolos, 30 label game asli ditolak), tampil sebagai card Menu di /ppob dan grid card di /ppob/layanan yang menavigasi ke HALAMAN ORDER khusus per layanan/kategori (form tujuan sesuai jenis layanan, produk asli penyedia + markup, validasi, kirim transaksi, ref/status/serial, cek status, galat jujur tanpa data dummy).');

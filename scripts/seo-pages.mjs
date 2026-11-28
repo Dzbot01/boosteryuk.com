@@ -18,6 +18,13 @@ export function seoPages() {
     const name = CATEGORY_NAMES[slug] || slug;
     pages.push({ ...c, kind: 'category', slug, name, path: `/layanan/${slug}`, h1: `Layanan ${name}` });
   }
+  // Halaman Topup Game (marketplace /topup + halaman detail per game dari src/seo/pages.json):
+  // ikut di sitemap.xml DAN di-prerender sebagai HTML statis supaya bisa diindeks Google.
+  for (const g of data.topupGames || []) {
+    if (!g || !g.slug) continue;
+    pages.push({ kind: 'topup', slug: g.slug, name: g.nama || g.slug, path: `/topup/${g.slug}`,
+      updated: g.updated || data.updated || '0000-00-00', title: g.title, description: g.description, h1: g.h1, intro: g.intro });
+  }
   // Artikel (src/content/articles.json): indeks + tiap artikel, isi lengkap ikut di-prerender.
   const art = JSON.parse(readFileSync(join(ROOT, 'src/content/articles.json'), 'utf8'));
   const latest = art.articles.reduce((m, a) => (a.updated > m ? a.updated : m), '0000-00-00');

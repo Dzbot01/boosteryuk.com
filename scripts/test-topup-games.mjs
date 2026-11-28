@@ -216,7 +216,10 @@ const agMd5 = (php.match(/md5\(\$c\['ag_merchant'\] \. \$c\['ag_secret'\]\)/g) |
 const txMd5 = (php.match(/md5\(\(string\)\$c\['member_code'\]/g) || []).length;
 assert.ok(totalMd5 > 0 && totalMd5 === candMd5 + agMd5 + txMd5, 'md5 hanya untuk: kandidat signature, signature apigames, signature transaksi/webhook — tidak ada di browser');
 assert.match(php, /function tv_sanitize\(\$j\)/, 'field rahasia dibuang dari balasan penyedia sebelum ke browser');
-assert.match(php, /\$ref = 'INV-' \. date\('ymdHis'\) \. random_int\(10, 99\);/, 'ref_id unik dibuat server (pola INV-…)');
+assert.match(php, /\$ref = \(\$jenisOrder === 'ppob' \? 'PPOB-' : 'TVG-'\) \. date\('ymdHis'\) \. random_int\(10, 99\);/, 'ref_id unik dibuat server (TVG- top up game, PPOB- layanan)');
+// Pesanan sekarang diproses server: harga+markup dari katalog, saldo dipotong, tercatat di riwayat.
+assert.match(php, /\$buat = tv_buat_pesanan\(\$conn, \$uid, \$ref, \$jenisOrder, \$judulPesanan, \$tujuan, \$hargaJual, \$hargaModal, \$tenant\);/, 'saldo dipotong + riwayat ditulis server sebelum transaksi dikirim');
+assert.match(php, /'saldo'      => \$saldoSetelah,/, 'balasan transaksi membawa sisa saldo');
 const WEBHOOK_HEADER_LIT = 'X-TokoVoucher-Authorization';
 assert.match(svc, /export const tvCekStatus = \(ref_id: string\)/, 'frontend punya tvCekStatus (POST /v1/transaksi/status via proxy)');
 assert.match(php, /if \(\$action === 'webhook'\) \{/, 'PHP punya action=webhook untuk callback penyedia');

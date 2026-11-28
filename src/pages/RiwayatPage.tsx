@@ -12,10 +12,12 @@ import {
   Ban,
   Bot,
   ChevronRight,
+  Gamepad2,
   Server,
   Smartphone,
   Sparkles,
   ShoppingCart,
+  Zap,
 } from 'lucide-react';
 import { MAIN_API } from '../lib/apiBase';
 import Reveal from '../components/Reveal';
@@ -61,9 +63,13 @@ function agentInfo(o: { order_id: string; service_name: string }): { title: stri
   return { title: title.trim() || 'Agen AI', due };
 }
 
-type OrderType = 'smm' | 'agent_ai' | 'nexspace' | 'otp' | 'upgrade' | 'event';
+type OrderType = 'smm' | 'agent_ai' | 'nexspace' | 'otp' | 'upgrade' | 'event' | 'topup' | 'ppob';
 const TYPE_META: Record<OrderType, { label: string; icon: typeof Bot; to: string | null; hint: string }> = {
   event: {label:'Event',icon:ShoppingCart,to:'/event',hint:'Buka Event'},
+  // Pesanan top up game & PPOB ditulis server oleh php-api/tokovoucher.php saat order
+  // (order_type 'topup'/'ppob', order_id berawalan TVG-/PPOB-).
+  topup: { label: 'Topup Game', icon: Gamepad2, to: '/topup', hint: 'Buka Topup Game' },
+  ppob: { label: 'PPOB', icon: Zap, to: '/ppob', hint: 'Buka PPOB' },
   smm: { label: 'SMM', icon: ShoppingCart, to: null, hint: '' },
   agent_ai: { label: 'Agen AI', icon: Bot, to: '/agen-ai-saya', hint: 'Lihat detail Agen AI' },
   nexspace: { label: 'NexSpace', icon: Server, to: '/nexspace', hint: 'Lihat server NexSpace' },
@@ -73,6 +79,8 @@ const TYPE_META: Record<OrderType, { label: string; icon: typeof Bot; to: string
 /** Jenis pesanan dari awalan ID / nama layanan (NX… / OTP… / AI… / UP…). */
 function typeOf(orderId: string, name: string): OrderType {
   const n = name.toLowerCase();
+  if (/^PPOB[0-9A-Z-]/i.test(orderId) || n.startsWith('ppob')) return 'ppob';
+  if (/^TVG[0-9A-Z-]/i.test(orderId) || n.startsWith('topup game')) return 'topup';
   if (/^EVG[0-9A-F]+$/.test(orderId) || n.startsWith('event merchant:')) return 'event';
   if (/^NX[0-9A-Z]/.test(orderId) || n.startsWith('nexspace')) return 'nexspace';
   if (/^OTP\d/.test(orderId) || n.startsWith('nomor otp')) return 'otp';
@@ -84,6 +92,7 @@ function typeOf(orderId: string, name: string): OrderType {
 /** Normalisasi baris dari riwayat_pesanan.php (mysqli mengirim DECIMAL/INT sebagai string). */
 function normalize(r: Record<string, unknown>): OrderFromDB {
   const st = String(r.status ?? '').toLowerCase();
+  const rawType = String(r.type ?? r.order_type ?? '');
   return {
     id: Number(r.id) || 0,
     order_id: String(r.order_id ?? ''),
@@ -92,7 +101,9 @@ function normalize(r: Record<string, unknown>): OrderFromDB {
     price: Number(r.price) || 0,
     status: (STATUSES as readonly string[]).includes(st) ? (st as OrderFromDB['status']) : 'pending',
     created_at: Number(r.created_at) || 0,
-    type: (r.type && String(r.type) in TYPE_META ? String(r.type) : typeOf(String(r.order_id ?? ''), String(r.service_name ?? ''))) as OrderType,
+    // Kolom order_type (riwayat_pesanan.php) dipakai bila dikenal; selain itu dikenali
+    // dari awalan order_id / nama layanan — jadi pesanan lama tetap terbaca benar.
+    type: (rawType && rawType in TYPE_META ? rawType : typeOf(String(r.order_id ?? ''), String(r.service_name ?? ''))) as OrderType,
   };
 }
 type OrderFromDB = {
@@ -199,7 +210,7 @@ export default function RiwayatPage() {
   const typeTabs = (Object.keys(TYPE_META) as OrderType[]).filter((t) => typeCounts[t]);
   /** Label jumlah & status yang sesuai jenis pesanan. */
   const qtyLabel = (o: OrderFromDB) =>
-    o.type === 'agent_ai' || o.type === 'nexspace' ? `${o.quantity} bulan` : o.type === 'otp' ? '1 nomor' : o.type === 'upgrade' ? (/extra/i.test(o.service_name) ? `${o.quantity || 1} bulan` : 'Selamanya') : formatQty(o.quantity);
+    o.type === 'agent_ai' || o.type === 'nexspace' ? `${o.quantity} bulan` : o.type === 'otp' ? '1 nomor' : o.type === 'upgrade' ? (/extra/i.test(o.service_name) ? `${o.quantity || 1} bulan` : 'Selamanya') : o.type === 'topup' || o.type === 'ppob' ? '1 transaksi' : formatQty(o.quantity);
   const statusLabel = (o: OrderFromDB, fallback: string) => {
     const s = statusOf(o);
     const waiting = s === 'proses' || s === 'pending';

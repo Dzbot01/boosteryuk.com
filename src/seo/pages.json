@@ -95,6 +95,35 @@
       "title": "Bantuan & Support",
       "description": "Butuh bantuan soal deposit, pesanan yang belum masuk, atau akun? Hubungi tim support Boosteryuk dan temukan jawaban atas kendala yang paling sering ditanyakan.",
       "h1": "Bantuan & Support Boosteryuk"
+    },
+    {
+      "path": "/topup",
+      "updated": "2026-11-28",
+      "title": "Topup Game Murah & Otomatis — Katalog Resmi Penyedia",
+      "description": "Top up game di Boosteryuk: Free Fire, Mobile Legends, PUBG Mobile, Genshin Impact, Honkai Star Rail, dan puluhan game lain. Katalog produk diambil langsung dari penyedia resmi, hanya server Indonesia, harga tampil sebelum bayar, proses otomatis 24 jam.",
+      "h1": "Topup Game — isi diamond, UC, crystal & voucher game resmi",
+      "intro": [
+        "Halaman Topup Game Boosteryuk menampilkan katalog produk langsung dari penyedia resmi: pilih game, masukkan Player ID (dan Server ID untuk Mobile Legends), pilih nominal, lalu bayar dari saldo akun. Tidak ada kode produk karangan — semua varian dan harga berasal dari katalog penyedia dan diperbarui otomatis.",
+        "Harga yang tampil sudah termasuk biaya layanan, jadi nominal yang kamu lihat adalah nominal yang dipotong dari saldo. Setelah transaksi dikirim, statusnya (pending, sukses, atau gagal) bisa dipantau di halaman Cek Status Pesanan dan Riwayat Pesanan. Pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ],
+      "faq": [
+        {
+          "q": "Bagaimana cara top up game di Boosteryuk?",
+          "a": "Isi saldo lewat menu Deposit, buka Topup Game, pilih game, masukkan Player ID (dan Server ID bila diminta), pilih nominal produk, lalu klik Bayar & Proses. Saldo terpotong otomatis dan pesanan diteruskan ke penyedia resmi."
+        },
+        {
+          "q": "Apakah perlu memberikan password akun game?",
+          "a": "Tidak. Cukup Player ID atau User ID yang bersifat publik. Jangan pernah memberikan password akun game kepada siapa pun."
+        },
+        {
+          "q": "Berapa lama proses top up game?",
+          "a": "Sebagian besar produk diproses otomatis dalam hitungan detik sampai beberapa menit. Statusnya bisa dipantau di Cek Status Pesanan; bila penyedia menolak transaksi, pesanan dibatalkan dan saldo dikembalikan."
+        },
+        {
+          "q": "Game apa saja yang tersedia?",
+          "a": "Katalog mengikuti penyedia resmi, antara lain Free Fire, Mobile Legends, PUBG Mobile, Genshin Impact, Honkai Star Rail, Call of Duty Mobile, Point Blank, Valorant, dan voucher game seperti Google Play, Unipin, Razer Gold, serta Steam Wallet."
+        }
+      ]
     }
   ],
   "categories": {
@@ -351,5 +380,215 @@
         }
       ]
     }
-  }
+  },
+  "topupGames": [
+    {
+      "slug": "free-fire",
+      "nama": "Free Fire",
+      "tagline": "Diamond & membership Free Fire (FFMAX)",
+      "updated": "2026-11-28",
+      "title": "Top Up Free Fire Murah & Otomatis — Diamond & membership Free Fire (FFMAX)",
+      "description": "Top up Free Fire di Boosteryuk: diamond dan membership dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Free Fire",
+      "intro": [
+        "Halaman ini berisi produk top up Free Fire yang diambil langsung dari katalog penyedia resmi: diamond dan membership. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Free Fire diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "mobile-legends",
+      "nama": "Mobile Legends",
+      "tagline": "Diamond MLBB",
+      "updated": "2026-11-28",
+      "title": "Top Up Mobile Legends Murah & Otomatis — Diamond MLBB",
+      "description": "Top up Mobile Legends di Boosteryuk: diamond MLBB dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Mobile Legends",
+      "intro": [
+        "Halaman ini berisi produk top up Mobile Legends yang diambil langsung dari katalog penyedia resmi: diamond MLBB. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Mobile Legends diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "hago",
+      "nama": "Hago",
+      "tagline": "Hago diamond & coins",
+      "updated": "2026-11-28",
+      "title": "Top Up Hago Murah & Otomatis — Hago diamond & coins",
+      "description": "Top up Hago di Boosteryuk: diamond dan coins Hago dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Hago",
+      "intro": [
+        "Halaman ini berisi produk top up Hago yang diambil langsung dari katalog penyedia resmi: diamond dan coins Hago. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Hago diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "pubg-mobile",
+      "nama": "PUBG Mobile",
+      "tagline": "UC resmi & cepat",
+      "updated": "2026-11-28",
+      "title": "Top Up PUBG Mobile Murah & Otomatis — UC resmi & cepat",
+      "description": "Top up PUBG Mobile di Boosteryuk: UC (Unknown Cash) dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up PUBG Mobile",
+      "intro": [
+        "Halaman ini berisi produk top up PUBG Mobile yang diambil langsung dari katalog penyedia resmi: UC (Unknown Cash). Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi PUBG Mobile diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "honor-of-kings",
+      "nama": "Honor of Kings",
+      "tagline": "Token & skin",
+      "updated": "2026-11-28",
+      "title": "Top Up Honor of Kings Murah & Otomatis — Token & skin",
+      "description": "Top up Honor of Kings di Boosteryuk: token dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Honor of Kings",
+      "intro": [
+        "Halaman ini berisi produk top up Honor of Kings yang diambil langsung dari katalog penyedia resmi: token. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Honor of Kings diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "genshin-impact",
+      "nama": "Genshin Impact",
+      "tagline": "Genesis Crystal & Blessing of the Welkin Moon",
+      "updated": "2026-11-28",
+      "title": "Top Up Genshin Impact Murah & Otomatis — Genesis Crystal & Blessing of the Welkin Moon",
+      "description": "Top up Genshin Impact di Boosteryuk: Genesis Crystal dan Welkin Moon dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Genshin Impact",
+      "intro": [
+        "Halaman ini berisi produk top up Genshin Impact yang diambil langsung dari katalog penyedia resmi: Genesis Crystal dan Welkin Moon. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Genshin Impact diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "garena-undawn",
+      "nama": "Garena Undawn",
+      "tagline": "Undawn coin",
+      "updated": "2026-11-28",
+      "title": "Top Up Garena Undawn Murah & Otomatis — Undawn coin",
+      "description": "Top up Garena Undawn di Boosteryuk: coin Undawn dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Garena Undawn",
+      "intro": [
+        "Halaman ini berisi produk top up Garena Undawn yang diambil langsung dari katalog penyedia resmi: coin Undawn. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Garena Undawn diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "point-blank",
+      "nama": "Point Blank",
+      "tagline": "PB Cash",
+      "updated": "2026-11-28",
+      "title": "Top Up Point Blank Murah & Otomatis — PB Cash",
+      "description": "Top up Point Blank di Boosteryuk: PB Cash dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Point Blank",
+      "intro": [
+        "Halaman ini berisi produk top up Point Blank yang diambil langsung dari katalog penyedia resmi: PB Cash. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Point Blank diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "call-of-duty-mobile",
+      "nama": "Call of Duty Mobile",
+      "tagline": "CP resmi",
+      "updated": "2026-11-28",
+      "title": "Top Up Call of Duty Mobile Murah & Otomatis — CP resmi",
+      "description": "Top up Call of Duty Mobile di Boosteryuk: CP (CODM Points) dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Call of Duty Mobile",
+      "intro": [
+        "Halaman ini berisi produk top up Call of Duty Mobile yang diambil langsung dari katalog penyedia resmi: CP (CODM Points). Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Call of Duty Mobile diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "blood-strike",
+      "nama": "Blood Strike",
+      "tagline": "Gold & voucher",
+      "updated": "2026-11-28",
+      "title": "Top Up Blood Strike Murah & Otomatis — Gold & voucher",
+      "description": "Top up Blood Strike di Boosteryuk: gold dan voucher dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Blood Strike",
+      "intro": [
+        "Halaman ini berisi produk top up Blood Strike yang diambil langsung dari katalog penyedia resmi: gold dan voucher. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Blood Strike diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "honkai-star-rail",
+      "nama": "Honkai Star Rail",
+      "tagline": "Oneiric Shard & Express Supply Pass",
+      "updated": "2026-11-28",
+      "title": "Top Up Honkai Star Rail Murah & Otomatis — Oneiric Shard & Express Supply Pass",
+      "description": "Top up Honkai Star Rail di Boosteryuk: Oneiric Shard dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Honkai Star Rail",
+      "intro": [
+        "Halaman ini berisi produk top up Honkai Star Rail yang diambil langsung dari katalog penyedia resmi: Oneiric Shard. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Honkai Star Rail diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "metal-slug-awakening",
+      "nama": "Metal Slug : Awakening",
+      "tagline": "Diamond & pass",
+      "updated": "2026-11-28",
+      "title": "Top Up Metal Slug : Awakening Murah & Otomatis — Diamond & pass",
+      "description": "Top up Metal Slug : Awakening di Boosteryuk: diamond dan pass dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Metal Slug : Awakening",
+      "intro": [
+        "Halaman ini berisi produk top up Metal Slug : Awakening yang diambil langsung dari katalog penyedia resmi: diamond dan pass. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Metal Slug : Awakening diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "magic-chess-go-go",
+      "nama": "Magic Chess GO GO",
+      "tagline": "Diamond MCGG",
+      "updated": "2026-11-28",
+      "title": "Top Up Magic Chess GO GO Murah & Otomatis — Diamond MCGG",
+      "description": "Top up Magic Chess GO GO di Boosteryuk: diamond MCGG dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Magic Chess GO GO",
+      "intro": [
+        "Halaman ini berisi produk top up Magic Chess GO GO yang diambil langsung dari katalog penyedia resmi: diamond MCGG. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Magic Chess GO GO diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "farlight-84",
+      "nama": "Farlight 84",
+      "tagline": "Diamond FL84",
+      "updated": "2026-11-28",
+      "title": "Top Up Farlight 84 Murah & Otomatis — Diamond FL84",
+      "description": "Top up Farlight 84 di Boosteryuk: diamond FL84 dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Farlight 84",
+      "intro": [
+        "Halaman ini berisi produk top up Farlight 84 yang diambil langsung dari katalog penyedia resmi: diamond FL84. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Farlight 84 diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "moonlight-blade-m",
+      "nama": "Moonlight Blade M",
+      "tagline": "Voucher & gold",
+      "updated": "2026-11-28",
+      "title": "Top Up Moonlight Blade M Murah & Otomatis — Voucher & gold",
+      "description": "Top up Moonlight Blade M di Boosteryuk: voucher dan gold dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Moonlight Blade M",
+      "intro": [
+        "Halaman ini berisi produk top up Moonlight Blade M yang diambil langsung dari katalog penyedia resmi: voucher dan gold. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Moonlight Blade M diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    },
+    {
+      "slug": "zenless-zone-zero",
+      "nama": "Zenless Zone Zero",
+      "tagline": "Monochrome & pass",
+      "updated": "2026-11-28",
+      "title": "Top Up Zenless Zone Zero Murah & Otomatis — Monochrome & pass",
+      "description": "Top up Zenless Zone Zero di Boosteryuk: Monochrome dengan katalog resmi penyedia, hanya server Indonesia. Masukkan Player ID, pilih nominal, bayar dari saldo — proses otomatis 24 jam dan status pesanan bisa dipantau sendiri.",
+      "h1": "Top Up Zenless Zone Zero",
+      "intro": [
+        "Halaman ini berisi produk top up Zenless Zone Zero yang diambil langsung dari katalog penyedia resmi: Monochrome. Pilih produk, masukkan Player ID (dan Server ID bila diminta), lalu bayar dari saldo akun. Harga yang tampil sudah termasuk biaya layanan.",
+        "Transaksi Zenless Zone Zero diproses otomatis setelah pembayaran diterima. Status pesanan (pending, sukses, gagal) dapat dilihat di halaman Cek Status Pesanan dan Riwayat Pesanan; pesanan yang ditolak penyedia dibatalkan otomatis dan saldonya dikembalikan."
+      ]
+    }
+  ]
 }

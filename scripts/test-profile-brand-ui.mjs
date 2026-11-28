@@ -32,9 +32,12 @@ assert.ok(!profile.includes('-mt-10'), 'tidak ada lagi margin negatif yang menye
 assert.match(profile, /md:rounded-3xl md:bg-white md:p-6/, 'desktop: semua card profil menyatu menjadi SATU card');
 assert.match(profile, /VERSI_APP = '6\.1\.4'/, 'baris Versi App menampilkan 6.1.4 (variabel)');
 assert.match(profile, /formatRupiah\(/, 'semua nominal diformat Rupiah');
-for (const baris of ['Transfer', 'Referral', 'Tukar Poin', 'Riwayat', 'Kartu Saya', 'Pengaturan Profil', 'Saldo'])
+for (const baris of ['Transfer', 'Riwayat', 'Kartu Saya', 'Pengaturan Profil', 'Saldo'])
   assert.ok(profile.includes(`label="${baris}"`), `baris menu "${baris}" ada`);
+// Menu Referral & Tukar Poin DIHAPUS dari halaman profil atas permintaan user.
+for (const baris of ['Referral', 'Tukar Poin'])
+  assert.ok(!profile.includes(`label="${baris}"`), `baris menu "${baris}" sudah dihapus`);
 assert.match(profile, /active:scale-\[0\.99\] active:bg-slate-50/, 'baris menu punya efek tekan');
 assert.match(profile, /<PengaturanAkunPage embedded \/>/, 'Pengaturan Akun tetap ter-embed');
 assert.match(profile, /<OwnedTitles \/>/, 'OwnedTitles tetap dirender');
-console.log('PASS footer white logo card, sky-blue header/sidebar brand; halaman profil mobile-first (header ungu bergelombang, body di bawah header tidak tertutup, desktop satu card, menu Transfer/Referral/Tukar Poin/Riwayat, Versi App) dengan semua fitur lama dipertahankan.');
+console.log('PASS footer white logo card, sky-blue header/sidebar brand; halaman profil mobile-first (header ungu bergelombang, body di bawah header tidak tertutup, desktop satu card, menu Transfer/Riwayat (Referral & Tukar Poin dihapus), Versi App) dengan semua fitur lama dipertahankan.');

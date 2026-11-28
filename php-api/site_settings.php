@@ -237,6 +237,45 @@ if (array_key_exists('infoItems', $patch) && is_array($patch['infoItems'])) {
     }
     $clean['infoItems'] = $items;
 }
+/* ----- News Update PPOB (Admin -> News Update PPOB) -----
+   ppobNews = { berita: [{id,tag,title,desc,time,image?}], kartu: [{id,title,subtitle,desc}] }
+   "berita" mengisi modal News Update di halaman PPOB; "kartu" mengisi baris kartu promo
+   (digeser/swipe) di halaman yang sama. Keduanya boleh dikosongkan (web memakai bawaan). */
+if (array_key_exists('ppobNews', $patch) && is_array($patch['ppobNews'])) {
+    $src = $patch['ppobNews'];
+    $berita = [];
+    if (isset($src['berita']) && is_array($src['berita'])) {
+        foreach (array_slice($src['berita'], 0, 30) as $i => $it) {
+            if (!is_array($it)) continue;
+            $img = isset($it['image']) ? trim((string)$it['image']) : '';
+            if ($img !== '' && (stripos($img, 'blob:') === 0 || strlen($img) > 450000)) $img = '';
+            $row = [
+                'id'    => is_numeric($it['id'] ?? null) ? (int)$it['id'] : $i,
+                'tag'   => clean_str($it['tag'] ?? '', 40),
+                'title' => clean_str($it['title'] ?? '', 200),
+                'desc'  => clean_str($it['desc'] ?? '', 5000),
+                'time'  => clean_str($it['time'] ?? '', 60),
+                'warna' => clean_str($it['warna'] ?? '', 20),
+            ];
+            if ($img !== '') $row['image'] = $img;
+            $berita[] = $row;
+        }
+    }
+    $kartu = [];
+    if (isset($src['kartu']) && is_array($src['kartu'])) {
+        foreach (array_slice($src['kartu'], 0, 30) as $i => $it) {
+            if (!is_array($it)) continue;
+            $kartu[] = [
+                'id'       => is_numeric($it['id'] ?? null) ? (int)$it['id'] : $i,
+                'title'    => clean_str($it['title'] ?? '', 120),
+                'subtitle' => clean_str($it['subtitle'] ?? '', 160),
+                'desc'     => clean_str($it['desc'] ?? '', 600),
+                'gradien'  => clean_str($it['gradien'] ?? '', 200),
+            ];
+        }
+    }
+    $clean['ppobNews'] = ['berita' => $berita, 'kartu' => $kartu];
+}
 /* ----- Tema ----- */
 foreach (['brandAccent', 'headerTint', 'menuActive'] as $k) {
     if (!array_key_exists($k, $patch)) continue;

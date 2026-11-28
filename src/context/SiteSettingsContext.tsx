@@ -12,6 +12,7 @@ import { LOGO_URL as DEFAULT_LOGO } from '../constants';
 import { applyRootBranding, ROOT_APPLE_ICON } from '../lib/rootBranding';
 import { MAIN_API, IS_CHILD_PANEL } from '../lib/apiBase';
 import { loadTenant, tenantAssetUrl, type Tenant, type TenantSlide, type VoiceMode } from '../lib/tenant';
+import { PPOB_NEWS_DEFAULT, type PpobBeritaAdmin, type PpobKartuAdmin, type PpobNews } from '../data/ppob';
 
 export interface InfoItem {
   id: number;
@@ -56,12 +57,22 @@ export interface SiteSettings {
    * '2' Naizop, '3' Medanpedia/Google Maps Review, '4' SMMGen). [] = semua server terbuka.
    */
   closedServers: string[];
+  /**
+   * News Update halaman PPOB (Admin Panel → News Update PPOB): berita yang tampil
+   * sebagai card + modal, dan kartu promo yang bisa digeser. Keduanya disimpan di
+   * database (site_settings.php, kunci `ppobNews`) supaya berlaku untuk semua user.
+   */
+  ppobNews: PpobNews;
 }
 
 interface SiteCtx {
   settings: SiteSettings;
   updateSettings: (patch: Partial<SiteSettings>) => void;
   setInfoItems: (items: InfoItem[]) => void;
+  /** Simpan berita News Update PPOB (admin). */
+  setPpobBerita: (items: PpobBeritaAdmin[]) => void;
+  /** Simpan kartu promo PPOB (admin) — jumlah bebas, barisnya bisa digeser user. */
+  setPpobKartu: (items: PpobKartuAdmin[]) => void;
   setMusicFile: (file: File | null) => void;
   setLogoFile: (file: File | null) => void;
   resetMusic: () => void;
@@ -109,6 +120,7 @@ const SHARED_KEYS = [
   'menuActive',
   'headerOrnament',
   'closedServers',
+  'ppobNews',
 ] as const;
 // heroImageUrl TIDAK di SHARED_KEYS untuk penyimpanan: diunggah lewat saveHeroImage()
 // (gambar disimpan terpisah di DB & disajikan site_settings.php?asset=hero).
@@ -138,6 +150,14 @@ function pickShared(src: Partial<SiteSettings>): Partial<SiteSettings> {
     out.infoItems = (out.infoItems as InfoItem[]).map((it) =>
       it.image && it.image.startsWith('blob:') ? { ...it, image: undefined } : it,
     );
+  }
+  // Berita PPOB: blob: URL hanya hidup di browser admin → jangan dikirim ke server.
+  const news = out.ppobNews as PpobNews | undefined;
+  if (news && Array.isArray(news.berita)) {
+    out.ppobNews = {
+      ...news,
+      berita: news.berita.map((it) => (it.image && it.image.startsWith('blob:') ? { ...it, image: undefined } : it)),
+    };
   }
   return out as Partial<SiteSettings>;
 }
@@ -200,6 +220,7 @@ const DEFAULTS: SiteSettings = {
   headerOrnament: '',
   headerTagline: '',
   closedServers: [],
+  ppobNews: PPOB_NEWS_DEFAULT,
 };
 
 function load(): SiteSettings {
@@ -216,6 +237,8 @@ const SiteContext = createContext<SiteCtx>({
   settings: DEFAULTS,
   updateSettings: () => {},
   setInfoItems: () => {},
+  setPpobBerita: () => {},
+  setPpobKartu: () => {},
   setMusicFile: () => {},
   setLogoFile: () => {},
   resetMusic: () => {},
@@ -439,6 +462,17 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     setSettings((s) => ({ ...s, infoItems: items }));
   };
 
+  /** News Update PPOB: berita & kartu promo diatur admin (tersimpan di database). */
+  const setPpobBerita = (items: PpobBeritaAdmin[]) => {
+    markDirty(['ppobNews']);
+    setSettings((s) => ({ ...s, ppobNews: { ...s.ppobNews, berita: items } }));
+  };
+
+  const setPpobKartu = (items: PpobKartuAdmin[]) => {
+    markDirty(['ppobNews']);
+    setSettings((s) => ({ ...s, ppobNews: { ...s.ppobNews, kartu: items } }));
+  };
+
   const setMusicFile = (file: File | null) => {
     if (!file) return;
     const url = URL.createObjectURL(file);
@@ -482,6 +516,8 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         settings: effective,
         updateSettings,
         setInfoItems,
+        setPpobBerita,
+        setPpobKartu,
         setMusicFile,
         setLogoFile,
         resetMusic,

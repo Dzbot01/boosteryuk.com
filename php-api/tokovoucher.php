@@ -290,6 +290,178 @@ function tv_sanitize($j) {
 }
 
 /* ------------------------------------------------------------------ *
+ *  ORDER (top up game & PPOB): markup, saldo, riwayat, refund           *
+ * ------------------------------------------------------------------ */
+
+/**
+ * Markup sistem untuk top up game (%) — HARUS sama dengan TOPUP_MARKUP_PCT di
+ * src/data/topupGames.ts supaya harga yang dilihat user = harga yang ditagih server.
+ * Harga jual = modal + markup, TANPA pembulatan ratusan (dibulatkan ke rupiah penuh).
+ */
+const TV_MARKUP_TOPUP_PCT = 2;
+
+/** Persen markup berlaku: child panel yang sudah membeli akses memakai setelannya. */
+function tv_markup_pct($tenant, $jenis) {
+    if (is_array($tenant)) {
+        if ($jenis === 'ppob' && (int)($tenant['access_ppob_markup'] ?? 0) === 1) {
+            return max(0, min(CP_MAX_MARKUP, (float)($tenant['markup_ppob_pct'] ?? 0)));
+        }
+        if ($jenis === 'topup' && (int)($tenant['access_topup_markup'] ?? 0) === 1) {
+            return max(0, min(CP_MAX_MARKUP, (float)($tenant['markup_topup_pct'] ?? 0)));
+        }
+    }
+    return $jenis === 'ppob' ? 0.0 : (float)TV_MARKUP_TOPUP_PCT;
+}
+
+/** Format Rupiah untuk pesan ke user. */
+function tv_rupiah($n) { return 'Rp' . number_format((float)$n, 0, ',', '.'); }
+
+/**
+ * Cari produk berdasar kode di katalog penyedia (game lalu layanan PPOB).
+ * @return array{0: array|null, 1: string, 2: bool} [item, 'topup'|'ppob'|'', katalogTersedia]
+ */
+function tv_find_produk($kode) {
+    $k = strtoupper(trim((string)$kode));
+    if ($k === '') return [null, '', false];
+    // Override manual server (file tidak di-commit) ikut diakui.
+    foreach (tv_pricelist_override() as $name => $rows) {
+        foreach ((is_array($rows) ? $rows : []) as $r) {
+            if (strtoupper((string)($r['kode'] ?? '')) !== $k) continue;
+            return [['kode' => $k, 'nama' => (string)($r['nama'] ?? $k), 'harga' => (int)($r['harga'] ?? 0),
+                     'game' => (string)$name, 'jenis' => (string)($r['jenis'] ?? ''), 'kategori' => 'Topup Game'], 'topup', true];
+        }
+    }
+    $adaKatalog = false;
+    $game = tv_provider_products();
+    if (is_array($game)) {
+        $adaKatalog = true;
+        foreach ($game as $it) {
+            if (strtoupper((string)($it['kode'] ?? '')) === $k) return [$it, 'topup', true];
+        }
+    }
+    $layanan = tv_provider_layanan();
+    if (is_array($layanan)) {
+        $adaKatalog = true;
+        foreach ($layanan as $it) {
+            if (strtoupper((string)($it['kode'] ?? '')) === $k) return [$it, 'ppob', true];
+        }
+    }
+    return [null, '', $adaKatalog];
+}
+
+/** Judul pesanan untuk riwayat (dipakai juga halaman Riwayat Pesanan mengenali jenisnya). */
+function tv_judul_pesanan($jenis, $item) {
+    if ($jenis === 'ppob') {
+        $layanan = (string)($item['layanan'] ?? '');
+        $kat = (string)($item['kategori'] ?? '');
+        $dep = $layanan !== '' ? $layanan : ($kat !== '' ? $kat : 'Layanan');
+        return mb_substr('PPOB: ' . $dep . ' — ' . (string)($item['nama'] ?? ''), 0, 255);
+    }
+    $game = (string)($item['game'] ?? '');
+    return mb_substr('Topup Game: ' . ($game !== '' ? $game . ' — ' : '') . (string)($item['nama'] ?? ''), 0, 255);
+}
+
+/**
+ * Potong saldo user + tulis riwayat_pesanan dalam satu transaksi DB.
+ * Gagal (saldo kurang / DB error) = pesanan tidak dibuat dan saldo utuh.
+ */
+function tv_buat_pesanan($conn, $uid, $ref, $jenis, $judul, $tujuan, $hargaJual, $hargaModal, $tenant) {
+    if (!($conn instanceof mysqli)) {
+        return ['ok' => false, 'code' => 503, 'message' => 'Koneksi database tidak tersedia di server — pesanan tidak diproses dan saldo tidak dipotong.'];
+    }
+    if (is_file(__DIR__ . '/riwayat_schema.php')) require_once __DIR__ . '/riwayat_schema.php';
+    try {
+        if (function_exists('riwayat_ensure_columns')) riwayat_ensure_columns($conn);
+        $conn->begin_transaction();
+        $st = cp_q($conn, 'SELECT balance FROM users WHERE id=? FOR UPDATE', 'i', (int)$uid);
+        $saldo = (float)($st->get_result()->fetch_assoc()['balance'] ?? 0);
+        $st->close();
+        if ($saldo < $hargaJual) {
+            $conn->rollback();
+            return ['ok' => false, 'code' => 402, 'saldo' => $saldo,
+                    'message' => 'Saldo tidak cukup (' . tv_rupiah($saldo) . ' dari ' . tv_rupiah($hargaJual) . '). Isi saldo terlebih dahulu.'];
+        }
+        cp_q($conn, 'UPDATE users SET balance=balance-? WHERE id=?', 'di', $hargaJual, (int)$uid)->close();
+        cp_q($conn, "INSERT INTO riwayat_pesanan (user_id, order_id, service_name, quantity, price, status, order_type, target)
+                     VALUES (?,?,?,1,?, 'proses', ?, ?)", 'issdss', (int)$uid, (string)$ref, $judul, $hargaJual, $jenis === 'ppob' ? 'ppob' : 'topup', mb_substr((string)$tujuan, 0, 255))->close();
+        $conn->commit();
+    } catch (Throwable $e) {
+        try { $conn->rollback(); } catch (Throwable $e2) { /* abaikan */ }
+        // Kolom order_type/target bisa belum ada di instalasi lama: coba format minimal.
+        try {
+            $conn->begin_transaction();
+            $st = cp_q($conn, 'SELECT balance FROM users WHERE id=? FOR UPDATE', 'i', (int)$uid);
+            $saldo = (float)($st->get_result()->fetch_assoc()['balance'] ?? 0);
+            $st->close();
+            if ($saldo < $hargaJual) {
+                $conn->rollback();
+                return ['ok' => false, 'code' => 402, 'saldo' => $saldo, 'message' => 'Saldo tidak cukup (' . tv_rupiah($saldo) . ' dari ' . tv_rupiah($hargaJual) . '). Isi saldo terlebih dahulu.'];
+            }
+            cp_q($conn, 'UPDATE users SET balance=balance-? WHERE id=?', 'di', $hargaJual, (int)$uid)->close();
+            cp_q($conn, "INSERT INTO riwayat_pesanan (user_id, order_id, service_name, quantity, price, status) VALUES (?,?,?,1,?, 'proses')",
+                'issd', (int)$uid, (string)$ref, $judul, $hargaJual)->close();
+            $conn->commit();
+        } catch (Throwable $e2) {
+            try { $conn->rollback(); } catch (Throwable $e3) { /* abaikan */ }
+            tv_log('order ' . $ref . ' GAGAL DB: ' . $e2->getMessage());
+            return ['ok' => false, 'code' => 500, 'message' => 'Gagal membuat pesanan (database), saldo tidak dipotong.'];
+        }
+    }
+    // Pendapatan child panel: selisih harga jual - harga modal (markup) tercatat.
+    if (is_array($tenant) && (int)($tenant['id'] ?? 0) > 0) {
+        try {
+            cp_record_order($conn, (int)$tenant['id'], (int)$uid, (string)$ref, $jenis === 'ppob' ? 'ppob' : 'topup', $judul, 1, $hargaJual, $hargaModal);
+        } catch (Throwable $e) { tv_log('child panel order ' . $ref . ' tidak tercatat: ' . $e->getMessage()); }
+    }
+    return ['ok' => true, 'saldo' => $saldo - $hargaJual];
+}
+
+/**
+ * Batalkan pesanan: kembalikan saldo + tandai riwayat 'batal' (sekali saja).
+ * UPDATE bersyarat membuat refund idempoten walau webhook & cek_status balapan.
+ */
+function tv_batalkan_pesanan($conn, $ref, $alasan = '') {
+    if (!($conn instanceof mysqli) || $ref === '') return false;
+    try {
+        $st = cp_q($conn, "UPDATE riwayat_pesanan SET status='batal' WHERE order_id=? AND status IN ('proses','pending')", 's', (string)$ref);
+        $ubah = $st->affected_rows;
+        $st->close();
+        if ($ubah < 1) return false;
+        $st = cp_q($conn, 'SELECT user_id, price FROM riwayat_pesanan WHERE order_id=? ORDER BY id DESC LIMIT 1', 's', (string)$ref);
+        $row = $st->get_result()->fetch_assoc();
+        $st->close();
+        if (!$row) return false;
+        cp_q($conn, 'UPDATE users SET balance=balance+? WHERE id=?', 'di', (float)$row['price'], (int)$row['user_id'])->close();
+        tv_log('refund ' . $ref . ' user=' . $row['user_id'] . ' nominal=' . $row['price'] . ($alasan !== '' ? ' alasan=' . $alasan : ''));
+        return true;
+    } catch (Throwable $e) {
+        tv_log('refund ' . $ref . ' gagal: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/** Tandai pesanan selesai (status penyedia sukses). */
+function tv_selesaikan_pesanan($conn, $ref) {
+    if (!($conn instanceof mysqli) || $ref === '') return false;
+    try {
+        $st = cp_q($conn, "UPDATE riwayat_pesanan SET status='selesai' WHERE order_id=? AND status IN ('proses','pending')", 's', (string)$ref);
+        $ubah = $st->affected_rows;
+        $st->close();
+        return $ubah > 0;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+/** Sinkron riwayat pesanan dengan status akhir penyedia (dipanggil webhook, cek_status, transaksi). */
+function tv_sync_pesanan($conn, $ref, $status) {
+    $s = strtolower(trim((string)$status));
+    if (in_array($s, ['gagal', 'failed', 'error', 'ditolak', 'cancel', 'cancelled', 'batal'], true)) return tv_batalkan_pesanan($conn, $ref, 'status penyedia: ' . $s);
+    if (in_array($s, ['sukses', 'success', 'berhasil', 'selesai', 'done'], true)) return tv_selesaikan_pesanan($conn, $ref);
+    return false;
+}
+
+/* ------------------------------------------------------------------ *
  *  KATALOG PRODUK (pricelist)                                          *
  * ------------------------------------------------------------------ */
 
@@ -441,6 +613,7 @@ function tv_items_from_full($d) {
             'wilayah_ok' => $wilayahOk,
             'logo' => (string)($op['logo'] ?? ''),
             'butuh_server' => $butuhServer,
+            'kategori' => $cat,
         ];
     }
     return $items;
@@ -468,9 +641,21 @@ function tv_layanan_label($teks) {
  * sisanya harus menyebut kata kunci layanan — label tak dikenal tidak diklaim.
  */
 function tv_is_layanan($operatorNama, $jenisNama, $kategori) {
+    // Kategori penyedia adalah penanda paling jujur: "Topup Game" & "Voucher Game"
+    // = top up game (bukan layanan PPOB); kategori lain (Pulsa, Paket Data, PLN,
+    // E-Money, TV, Masa Aktif, Pascabayar, E-Toll, Transfer Dana, Aktivasi Perdana,
+    // Pulsa Transfer, Injek Voucher Kosong, eSIM, Hiburan & Voucher Digital,
+    // Malaysia/Vietnam/Thailand/Singapore Topup) = layanan.
+    $kat = trim((string)$kategori);
+    if ($kat !== '') {
+        if (preg_match('/\bgames?\b/i', $kat)) return false;
+        if (tv_game_key_of_label($operatorNama) !== '') return false;
+        if (preg_match('/\bgames?\b|voucher\s+game/i', $operatorNama)) return false;
+        return true;
+    }
+    // Tanpa kategori (mis. dipanggil dari grid katalog game): andalkan kata kunci.
     if (tv_game_key_of_label($operatorNama) !== '') return false;
-    if (preg_match('/top\s*-?\s*up\s*game|\bgames?\b/i', $kategori . ' ' . $operatorNama)) return false;
-    if (tv_layanan_label($kategori)) return true;
+    if (preg_match('/top\s*-?\s*up\s*game|\bgames?\b/i', $operatorNama)) return false;
     return tv_layanan_label($operatorNama) || tv_layanan_label($jenisNama);
 }
 
@@ -832,8 +1017,10 @@ if ($action === 'webhook') {
         tv_out(['ok' => false, 'message' => 'Signature webhook tidak valid.'], 401);
     }
     $baru = tv_trx_store_write($ref, $norm + ['sumber' => 'webhook']);
-    tv_log('webhook ref=' . $ref . ' status=' . $norm['status'] . ' trx=' . $norm['trx_id'] . ' sn=' . $norm['sn'] . ($baru ? ' (baru)' : ' (duplikat, dilewati)'));
-    tv_out(['ok' => true, 'ref_id' => $ref, 'status' => $norm['status'], 'trx_id' => $norm['trx_id'], 'baru' => $baru]);
+    // Riwayat pesanan + refund (bila gagal) disinkron dari status akhir penyedia.
+    $sync = tv_sync_pesanan($conn, $ref, $norm['status']);
+    tv_log('webhook ref=' . $ref . ' status=' . $norm['status'] . ' trx=' . $norm['trx_id'] . ' sn=' . $norm['sn'] . ($baru ? ' (baru)' : ' (duplikat, dilewati)') . ($sync ? ' riwayat-disinkron' : ''));
+    tv_out(['ok' => true, 'ref_id' => $ref, 'status' => $norm['status'], 'trx_id' => $norm['trx_id'], 'baru' => $baru, 'riwayat' => $sync]);
 }
 
 /* ===================== GET ===================== */
@@ -951,7 +1138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 // tampil di grid dengan namanya sendiri; layanan non-game
                 // (pulsa/data/e-money/voucher/operator telekom: AIS, TrueMove H,
                 // DTAC, …) dibuang dari grid game — masuk halaman PPOB.
-                if (tv_is_layanan((string)$p['game'], (string)($p['jenis'] ?? ''), '')) continue;
+                if (tv_is_layanan((string)$p['game'], (string)($p['jenis'] ?? ''), (string)($p['kategori'] ?? ''))) continue;
                 $key = 'label:' . preg_replace('/[^a-z0-9]+/', '', strtolower($p['game']));
                 $custom = true;
             }
@@ -1116,6 +1303,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $simpan = tv_trx_store_read($ref);
         $stSimpan = is_array($simpan) ? strtolower((string)($simpan['status'] ?? '')) : '';
         if (in_array($stSimpan, ['sukses', 'gagal'], true)) {
+            tv_sync_pesanan($conn, $ref, $stSimpan); // idempoten: riwayat & refund hanya sekali
             tv_out([
                 'ok' => true, 'ref_id' => $ref, 'sumber' => 'webhook', 'status' => $stSimpan,
                 'trx_id' => (string)($simpan['trx_id'] ?? ''), 'sn' => (string)($simpan['sn'] ?? ''),
@@ -1140,6 +1328,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $norm = tv_trx_normalize($j);
         if ($norm !== null && in_array($norm['status'], ['sukses', 'gagal'], true)) {
             tv_trx_store_write($ref, $norm + ['sumber' => 'cek_status']);
+            tv_sync_pesanan($conn, $ref, $norm['status']);
         }
         tv_out([
             'ok' => true, 'ref_id' => $ref, 'sumber' => 'provider', 'metode' => $a['metode'],
@@ -1165,15 +1354,42 @@ if ($c['member_code'] === '' || $c['secret'] === '') {
 $uid = isset($conn) && $conn instanceof mysqli ? cp_user_id($conn, (string)($in['token'] ?? '')) : null;
 if (!$uid) tv_out(['ok' => false, 'message' => 'Silakan login terlebih dahulu untuk memesan.'], 401);
 
-$tujuan = preg_replace('/[^A-Za-z0-9._-]/', '', (string)($in['player_id'] ?? ''));
+// Tujuan = Player ID (game) atau nomor HP / ID pelanggan / email akun (PPOB),
+// jadi karakter @ dan + ikut diizinkan (voucher digital & nomor internasional).
+$tujuan = preg_replace('/[^A-Za-z0-9._@+-]/', '', (string)($in['player_id'] ?? ''));
 $server = preg_replace('/[^A-Za-z0-9._-]/', '', (string)($in['server_id'] ?? ''));
 $produk = preg_replace('/[^A-Za-z0-9._-]/', '', (string)($in['kode_produk'] ?? ''));
-if (mb_strlen($tujuan) < 3 || mb_strlen($tujuan) > 40) tv_out(['ok' => false, 'message' => 'Player ID / tujuan tidak valid.'], 400);
+if (mb_strlen($tujuan) < 3 || mb_strlen($tujuan) > 64) tv_out(['ok' => false, 'message' => 'Player ID / nomor tujuan tidak valid.'], 400);
 if (mb_strlen($server) > 20) tv_out(['ok' => false, 'message' => 'Server ID terlalu panjang.'], 400);
 if ($produk === '' || mb_strlen($produk) > 40) tv_out(['ok' => false, 'message' => 'Kode produk tidak valid.'], 400);
 
-// Ref ID unik per permintaan (dipakai juga untuk cek status nanti).
-$ref = 'INV-' . date('ymdHis') . random_int(10, 99);
+/* Harga & nama produk diambil dari KATALOG PENYEDIA di server (bukan dari browser),
+ * jadi user tidak bisa memesan kode asal atau mengubah harga. */
+[$itemProduk, $jenisOrder, $katalogAda] = tv_find_produk($produk);
+if (!$itemProduk) {
+    tv_out(['ok' => false, 'message' => $katalogAda
+        ? 'Kode produk tidak ditemukan di katalog penyedia. Muat ulang halaman lalu pilih ulang produknya.'
+        : 'Katalog penyedia sedang tidak tersedia, pesanan belum bisa diproses. Coba beberapa saat lagi.'], $katalogAda ? 404 : 503);
+}
+$hargaModal = (int)($itemProduk['harga'] ?? 0);
+if ($hargaModal <= 0) tv_out(['ok' => false, 'message' => 'Harga produk ini tidak tersedia di katalog penyedia.'], 503);
+
+// Markup: child panel yang sudah membeli akses memakai persennya; web utama 2% (top up game).
+$tenant = (isset($conn) && $conn instanceof mysqli) ? cp_resolve($conn) : null;
+$markupPct = tv_markup_pct($tenant, $jenisOrder);
+$hargaJual = (int)round($hargaModal * (1 + $markupPct / 100));
+
+// Ref ID unik per permintaan (dipakai juga untuk cek status nanti); awalan menandai jenis pesanan.
+$ref = ($jenisOrder === 'ppob' ? 'PPOB-' : 'TVG-') . date('ymdHis') . random_int(10, 99);
+
+// Potong saldo + tulis riwayat_pesanan SEBELUM menembak penyedia.
+$judulPesanan = tv_judul_pesanan($jenisOrder, $itemProduk);
+$buat = tv_buat_pesanan($conn, $uid, $ref, $jenisOrder, $judulPesanan, $tujuan, $hargaJual, $hargaModal, $tenant);
+if (empty($buat['ok'])) {
+    tv_out(['ok' => false, 'ref_id' => $ref, 'status' => 'batal', 'jenis' => $jenisOrder, 'harga' => $hargaJual,
+            'saldo' => $buat['saldo'] ?? null, 'message' => (string)($buat['message'] ?? 'Pesanan tidak dapat dibuat.')], (int)($buat['code'] ?? 500));
+}
+$saldoSetelah = $buat['saldo'] ?? null;
 
 // Docs resmi: POST https://api.tokovoucher.net/v1/transaksi dengan body JSON
 //   {ref_id, produk, tujuan, server_id, member_code, signature}
@@ -1191,14 +1407,17 @@ $j = $a['json'];
 
 if ($r['body'] === null || $r['code'] === 0) {
     tv_log("user=$uid ref=$ref produk=$produk tujuan=$tujuan server=$server metode=" . $a['metode'] . ' CURL_ERROR=' . ($r['error'] !== '' ? $r['error'] : 'timeout'));
-    tv_out(['ok' => false, 'ref_id' => $ref, 'status' => 'error', 'metode' => $a['metode'], 'message' => 'Tidak dapat menghubungi server penyedia top up (' . ($r['error'] !== '' ? $r['error'] : 'timeout') . '). Coba lagi sebentar lagi.'], 502);
+    if (tv_batalkan_pesanan($conn, $ref, 'penyedia tidak dapat dihubungi') && $saldoSetelah !== null) $saldoSetelah += $hargaJual;
+    tv_out(['ok' => false, 'ref_id' => $ref, 'status' => 'error', 'metode' => $a['metode'], 'harga' => $hargaJual, 'saldo' => $saldoSetelah,
+            'message' => 'Tidak dapat menghubungi server penyedia (' . ($r['error'] !== '' ? $r['error'] : 'timeout') . '). Saldo dikembalikan. Coba lagi sebentar lagi.'], 502);
 }
 
 $raw = substr(preg_replace('/\s+/', ' ', (string)$r['body']), 0, 400);
 if (!is_array($j)) {
     tv_log("user=$uid ref=$ref produk=$produk http=" . $r['code'] . ' metode=' . $a['metode'] . ' NON_JSON raw=' . $raw);
-    tv_out(['ok' => false, 'ref_id' => $ref, 'status' => 'error', 'metode' => $a['metode'], 'raw' => $raw,
-        'message' => 'Penyedia top up membalas format tak dikenal (HTTP ' . $r['code'] . '). Respons asli: ' . $raw . ' — simpan ref ini untuk komplain: ' . $ref]);
+    if (tv_batalkan_pesanan($conn, $ref, 'balasan penyedia non-JSON') && $saldoSetelah !== null) $saldoSetelah += $hargaJual;
+    tv_out(['ok' => false, 'ref_id' => $ref, 'status' => 'error', 'metode' => $a['metode'], 'raw' => $raw, 'harga' => $hargaJual, 'saldo' => $saldoSetelah,
+        'message' => 'Penyedia membalas format tak dikenal (HTTP ' . $r['code'] . '). Respons asli: ' . $raw . ' — saldo dikembalikan; simpan ref ini untuk komplain: ' . $ref]);
 }
 
 // Balasan docs: status = pending | sukses | gagal, atau {status:0, error_msg:"Ip Not Allow" / "Signature Invalid"}.
@@ -1215,12 +1434,21 @@ tv_log("user=$uid ref=$ref produk=$produk tujuan=$tujuan server=$server metode="
 if ($st !== 'error' && $st !== 'unknown') {
     tv_trx_store_write($ref, $norm + ['sumber' => 'transaksi', 'user_id' => $uid, 'produk_kode' => $produk, 'tujuan' => $tujuan, 'server_id' => $server]);
 }
+// Riwayat pesanan ikut status penyedia: sukses → 'selesai', gagal → 'batal' + saldo kembali.
+if (tv_sync_pesanan($conn, $ref, $st) && $st === 'gagal' && $saldoSetelah !== null) $saldoSetelah += $hargaJual;
 
 tv_out([
     'ok'         => $okProvider,
     'ref_id'     => $ref,
     'status'     => $st,
-    'message'    => $pesan !== '' ? $pesan : ($okProvider ? 'Transaksi diterima penyedia.' : 'Transaksi ditolak penyedia — periksa kode produk / data akun tujuan.'),
+    'jenis'      => $jenisOrder,
+    'produk_nama' => (string)($itemProduk['nama'] ?? $produk),
+    'layanan'    => (string)($itemProduk['layanan'] ?? $itemProduk['game'] ?? ''),
+    'harga'      => $hargaJual,
+    'harga_modal' => $hargaModal,
+    'markup_pct' => $markupPct,
+    'saldo'      => $saldoSetelah,
+    'message'    => $pesan !== '' ? $pesan : ($okProvider ? 'Transaksi diterima penyedia.' : 'Transaksi ditolak penyedia — saldo dikembalikan. Periksa kode produk / data tujuan.'),
     'error_msg'  => $norm['error_msg'],
     'trx_id'     => $norm['trx_id'],
     'sn'         => $norm['sn'],

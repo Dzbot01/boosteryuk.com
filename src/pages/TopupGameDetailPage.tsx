@@ -60,6 +60,11 @@ export default function TopupGameDetailPage() {
     metode?: string;
     /** Asal jawaban cek status: webhook penyedia atau cek langsung ke API. */
     sumber?: string;
+    /** Harga yang DITAGIH server (modal + markup) & sisa saldo setelah pesanan dibuat. */
+    harga?: number;
+    saldo?: number | null;
+    /** Jenis pesanan yang dikenali server dari katalog: topup (game) atau ppob. */
+    jenis?: string;
   } | null>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [live, setLive] = useState<{ source: string; items: TvPricelistItem[]; updated_at?: string } | null>(null);
@@ -255,12 +260,21 @@ export default function TopupGameDetailPage() {
     setResult({
       ok: !!r.ok,
       status: r.status,
-      message: r.message || (r.ok ? 'Transaksi berhasil dikirim ke penyedia.' : 'Transaksi gagal.'),
+      // Pesanan sekarang diproses server: saldo dipotong + tercatat di Riwayat Pesanan,
+      // dan pesanan yang ditolak/gagal dibatalkan otomatis dengan saldo dikembalikan.
+      message:
+        r.message ||
+        (r.ok
+          ? 'Transaksi dikirim ke penyedia. Saldo dipotong dan pesanan tercatat di Riwayat Pesanan.'
+          : 'Transaksi tidak diproses. Bila saldo sempat terpotong, jumlahnya dikembalikan otomatis.'),
       refId: r.ref_id,
       trxId: r.trx_id,
       sn: r.sn,
       raw: r.raw,
       metode: r.metode,
+      harga: typeof r.harga === 'number' ? r.harga : undefined,
+      saldo: typeof r.saldo === 'number' ? r.saldo : typeof r.sisa_saldo === 'number' ? r.sisa_saldo : null,
+      jenis: r.jenis,
     });
   };
 
@@ -519,6 +533,19 @@ export default function TopupGameDetailPage() {
                       {result.metode ? <span className="opacity-70"> · {result.metode}</span> : null}
                     </span>
                   ) : null}
+                  {typeof result.harga === 'number' && result.harga > 0 ? (
+                    <span className="mt-1 block text-[11.5px] leading-relaxed">
+                      Dibayar: <span className="font-mono font-extrabold">{rupiah(result.harga)}</span>
+                      {typeof result.saldo === 'number' ? (
+                        <>
+                          {' '}· Sisa saldo: <span className="font-mono font-extrabold">{rupiah(result.saldo)}</span>
+                        </>
+                      ) : null}
+                    </span>
+                  ) : null}
+                  <Link to="/riwayat-pesanan" className="mt-1.5 inline-block text-[11.5px] font-extrabold underline decoration-current/40 underline-offset-2">
+                    Lihat di Riwayat Pesanan
+                  </Link>
                   {!result.ok && result.raw ? (
                     <code className="mt-1.5 block break-all rounded bg-white/70 px-2 py-1 font-mono text-[10.5px] leading-relaxed">
                       Respons asli penyedia: {result.raw}

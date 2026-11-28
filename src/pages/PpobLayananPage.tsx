@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Check, ChevronDown, LayoutGrid, LoaderCircle, RefreshCw, Search } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { AlertTriangle, ChevronRight, LayoutGrid, RefreshCw, Search, ShoppingCart } from 'lucide-react';
 import Seo from '../components/Seo';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { hargaMarkup, markupPpobPct } from '../lib/panelMarkup';
-import { tvLayanan, tvLayananProduk, type TvLayananKelompok, type TvLayananProdukItem } from '../services/tokovoucherApi';
+import { tvLayanan, type TvLayananKelompok } from '../services/tokovoucherApi';
 import { ikonLayanan, rupiahTitik } from '../data/ppob';
 import { IKON_LAYANAN } from '../lib/ppobIkon';
+import { slugKategori } from '../lib/ppobOrder';
+
+/** Rute halaman order khusus satu layanan / satu kategori layanan. */
+export const ruteOrder = (id: string) => `/ppob/layanan/${encodeURIComponent(id)}`;
 
 /**
  * Halaman "Lainnya" PPOB — grid card SEMUA layanan dari katalog penuh penyedia
@@ -14,13 +18,18 @@ import { IKON_LAYANAN } from '../lib/ppobIkon';
  * e-money, voucher, token listrik, tagihan, sampai operator telekomunikasi.
  * Top up game tetap di /topup, jadi tidak ada kartu game di halaman ini.
  *
+ * Klik kartu TIDAK membuka daftar harga di tempat: user diarahkan ke halaman
+ * order khusus layanan itu (/ppob/layanan/:id) yang formnya mengikuti kebutuhan
+ * penyedia (nomor HP / ID pelanggan / nomor meter / email akun). Judul kategori
+ * juga punya halamannya sendiri (mis. "Aktivasi Perdana") berisi pemilih operator.
+ *
  * Data sepenuhnya dari server — tidak ada daftar layanan karangan: saat gagal
  * memuat, yang tampil kartu galat (Coba lagi / Login ulang), bukan dummy.
  */
 export default function PpobLayananPage() {
   const { settings, tenant } = useSiteSettings();
   const navigate = useNavigate();
-  const [param, setParam] = useSearchParams();
+  const [param] = useSearchParams();
   const namaApp = settings.brandName || 'Boosteryuk';
   /** Markup PPOB child panel (0 bila akses belum dibeli / web utama). */
   const pctPpob = markupPpobPct(tenant);
@@ -29,10 +38,6 @@ export default function PpobLayananPage() {
   const [memuat, setMemuat] = useState(true);
   const [galat, setGalat] = useState('');
   const [cari, setCari] = useState('');
-  const [terbuka, setTerbuka] = useState<string>('');
-  const [produk, setProduk] = useState<Record<string, TvLayananProdukItem[]>>({});
-  const [memuatProduk, setMemuatProduk] = useState<Record<string, boolean>>({});
-  const [galatProduk, setGalatProduk] = useState<Record<string, string>>({});
 
   const muat = useCallback(async () => {
     setMemuat(true);
@@ -76,39 +81,15 @@ export default function PpobLayananPage() {
   const totalLayanan = (kelompok || []).length;
   const totalProduk = useMemo(() => (kelompok || []).reduce((n, k) => n + (k.jumlah || 0), 0), [kelompok]);
 
-  /** Buka/tutup daftar produk satu layanan (data produk ditarik sekali, lalu disimpan). */
-  const toggle = async (id: string) => {
-    if (terbuka === id) {
-      setTerbuka('');
-      return;
-    }
-    setTerbuka(id);
-    if (produk[id] || memuatProduk[id]) return;
-    setMemuatProduk((m) => ({ ...m, [id]: true }));
-    const r = await tvLayananProduk(id);
-    setMemuatProduk((m) => ({ ...m, [id]: false }));
-    if (!r.ok) {
-      setGalatProduk((g) => ({ ...g, [id]: r.message || 'Daftar produk gagal dimuat.' }));
-      return;
-    }
-    setProduk((p) => ({ ...p, [id]: Array.isArray(r.items) ? r.items : [] }));
-  };
-
-  /** `?grup=<id>` dari tile Menu Service: langsung buka layanan itu. */
+  /**
+   * `?grup=<id>` dari tile Menu halaman PPOB: langsung buka halaman order layanan itu
+   * (bukan membuka daftar harga di halaman ini).
+   */
   useEffect(() => {
     const id = (param.get('grup') || '').trim();
     if (!id || memuat || !kelompok) return;
-    if (kelompok.some((k) => k.id === id)) void toggle(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memuat, kelompok]);
-
-  const tutupGrup = () => {
-    setTerbuka('');
-    if (param.get('grup')) {
-      param.delete('grup');
-      setParam(param, { replace: true });
-    }
-  };
+    if (kelompok.some((k) => k.id === id)) navigate(ruteOrder(id), { replace: true });
+  }, [memuat, kelompok, param, navigate]);
 
   return (
     <div className="min-h-screen bg-[#F4F6FB] pb-[100px] dark:bg-slate-950">
@@ -128,7 +109,7 @@ export default function PpobLayananPage() {
               <h1 className="text-[16px] font-extrabold tracking-tight text-slate-900 dark:text-white">Semua Layanan</h1>
               <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
                 Layanan dari katalog penyedia <span className="font-bold">selain top up game</span> — pulsa, paket data,
-                e-money, voucher, token listrik & tagihan. Top up game ada di halaman Topup Game.
+                e-money, voucher, token listrik & tagihan. Ketuk layanan untuk membuka halaman ordernya.
               </p>
             </div>
           </div>
@@ -202,28 +183,34 @@ export default function PpobLayananPage() {
           )}
 
           {/* ============ GRID CARD PER KATEGORI ============ */}
-          {seksi.map(([kategori, daftar]) => (
-            <div key={kategori} className="mt-4">
+          {seksi.map(([kategori, daftar]) => {
+            const slug = slugKategori(kategori);
+            const judul = slug ? (
+              <Link
+                to={ruteOrder(slug)}
+                data-kategori={slug}
+                className="group inline-flex items-center gap-1 text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-slate-400 transition hover:text-[#2563EB]"
+                title={`Buka halaman order ${kategori}`}
+              >
+                {kategori}
+                <ChevronRight className="h-3 w-3 transition group-hover:translate-x-0.5" strokeWidth={2.6} />
+              </Link>
+            ) : (
               <p className="text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-slate-400">{kategori}</p>
-              <div className="mt-2.5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {daftar.map((k) => {
-                  const Ikon = IKON_LAYANAN[ikonLayanan(`${k.kategori} ${k.layanan} ${k.labels.join(' ')}`)];
-                  const buka = terbuka === k.id;
-                  return (
-                    <div
-                      key={k.id}
-                      className={`col-span-2 overflow-hidden rounded-2xl border transition sm:col-span-1 ${
-                        buka
-                          ? 'border-[#3B82F6] bg-white shadow-[0_10px_26px_-16px_rgba(37,99,235,0.55)] dark:bg-slate-900'
-                          : 'border-slate-100 bg-white hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-16px_rgba(15,23,42,0.45)] dark:border-slate-800 dark:bg-slate-900'
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => void toggle(k.id)}
-                        aria-expanded={buka}
+            );
+            return (
+              <div key={kategori} className="mt-4">
+                {judul}
+                <div className="mt-2.5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {daftar.map((k) => {
+                    const Ikon = IKON_LAYANAN[ikonLayanan(`${k.kategori} ${k.layanan} ${k.labels.join(' ')}`)];
+                    return (
+                      <Link
+                        key={k.id}
+                        to={ruteOrder(k.id)}
                         data-layanan={k.id}
-                        className="flex w-full items-start gap-2.5 p-3 text-left transition active:scale-[0.99]"
+                        title={`Order ${k.layanan}${k.kategori ? ` — ${k.kategori}` : ''}`}
+                        className="col-span-2 flex items-start gap-2.5 rounded-2xl border border-slate-100 bg-white p-3 transition hover:-translate-y-0.5 hover:border-[#3B82F6] hover:shadow-[0_10px_24px_-16px_rgba(15,23,42,0.45)] active:scale-[0.99] dark:border-slate-800 dark:bg-slate-900 sm:col-span-1"
                       >
                         <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-800">
                           {k.logo ? (
@@ -238,62 +225,16 @@ export default function PpobLayananPage() {
                             {k.jumlah} produk · mulai {jual(k.termurah)}
                           </span>
                           <span className="mt-1.5 flex items-center gap-1 text-[10px] font-extrabold text-[#2563EB]">
-                            {buka ? 'Tutup daftar' : 'Lihat produk'}
-                            <ChevronDown className={`h-3 w-3 transition ${buka ? 'rotate-180' : ''}`} strokeWidth={2.6} />
+                            <ShoppingCart className="h-3 w-3" strokeWidth={2.6} /> Order sekarang
                           </span>
                         </span>
-                      </button>
-
-                      {buka && (
-                        <div className="border-t border-slate-100 p-3 dark:border-slate-800">
-                          {memuatProduk[k.id] && (
-                            <p className="flex items-center gap-1.5 text-[11.5px] font-semibold text-slate-400">
-                              <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Memuat produk…
-                            </p>
-                          )}
-                          {galatProduk[k.id] && (
-                            <p className="break-words text-[11.5px] font-bold leading-relaxed text-rose-600 dark:text-rose-300">
-                              {galatProduk[k.id]}
-                            </p>
-                          )}
-                          {!memuatProduk[k.id] && !galatProduk[k.id] && produk[k.id] && (
-                            produk[k.id].length === 0 ? (
-                              <p className="text-[11.5px] font-semibold text-slate-500">Produk layanan ini belum dikirim penyedia.</p>
-                            ) : (
-                              <ul className="grid max-h-[280px] gap-1.5 overflow-y-auto pr-0.5">
-                                {produk[k.id].map((p) => (
-                                  <li
-                                    key={p.kode}
-                                    className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/60"
-                                  >
-                                    <span className="min-w-0">
-                                      <span className="block truncate text-[11.5px] font-bold text-slate-700 dark:text-slate-200">{p.nama}</span>
-                                      <code className="block truncate text-[10px] font-semibold text-slate-400">{p.kode}</code>
-                                    </span>
-                                    <span className="shrink-0 font-mono text-[11.5px] font-extrabold text-[#14143c] dark:text-white">{jual(p.harga)}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            )
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-
-          {terbuka && (
-            <button
-              type="button"
-              onClick={tutupGrup}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-[11.5px] font-extrabold text-slate-600 transition active:scale-95 dark:border-slate-700 dark:text-slate-300"
-            >
-              <Check className="h-3.5 w-3.5" /> Tutup daftar produk
-            </button>
-          )}
+            );
+          })}
         </section>
       </div>
     </div>

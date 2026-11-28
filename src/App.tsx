@@ -55,6 +55,7 @@ const DepositHistoryPage = lazy(() => import('./pages/DepositHistoryPage'));
 const DepositMethodPage = lazy(() => import('./pages/DepositMethodPage'));
 const AdminHomePage = lazy(() => import('./pages/admin/AdminHomePage'));
 const AdminWebsitePage = lazy(() => import('./pages/admin/AdminWebsitePage'));
+const AdminPpobNewsPage = lazy(() => import('./pages/admin/AdminPpobNewsPage'));
 const AdminServerPage = lazy(() => import('./pages/admin/AdminServerPage'));
 const AdminProfitPage = lazy(() => import('./pages/admin/AdminProfitPage'));
 const AdminBroadcastPage = lazy(() => import('./pages/admin/AdminBroadcastPage'));
@@ -66,6 +67,7 @@ const TopupGameDetailPage = lazy(() => import('./pages/TopupGameDetailPage'));
 const PpobPage = lazy(() => import('./pages/PpobPage'));
 const PpobPulsaRegulerPage = lazy(() => import('./pages/PpobPulsaRegulerPage'));
 const PpobLayananPage = lazy(() => import('./pages/PpobLayananPage'));
+const PpobLayananOrderPage = lazy(() => import('./pages/PpobLayananOrderPage'));
 
 export default function App() {
   return (
@@ -101,6 +103,8 @@ export default function App() {
           <Route path="ppob/pulsa-reguler" element={<ProtectedRoute><PpobPulsaRegulerPage /></ProtectedRoute>} />
           {/* Semua layanan SELAIN top up game (dari katalog penuh penyedia) — grid card. */}
           <Route path="ppob/layanan" element={<ProtectedRoute><PpobLayananPage /></ProtectedRoute>} />
+          {/* Halaman order KHUSUS per layanan (mis. ACT AXIS, OVO) atau per kategori (mis. Aktivasi Perdana). */}
+          <Route path="ppob/layanan/:id" element={<ProtectedRoute><PpobLayananOrderPage /></ProtectedRoute>} />
           <Route path="playground" element={IS_CHILD_PANEL ? <Navigate to="/" replace /> : <PlaygroundPage />} />
           <Route path="sewa-agen-ai" element={<SewaAgenAiPage />} />
           <Route path="overview" element={<ProtectedRoute><OverviewPage /></ProtectedRoute>} />
@@ -132,6 +136,8 @@ export default function App() {
           <Route path="admin/profit" element={<ProtectedRoute adminOnly><AdminProfitPage /></ProtectedRoute>} />
           <Route path="admin/broadcast" element={<ProtectedRoute adminOnly><AdminBroadcastPage /></ProtectedRoute>} />
           <Route path="admin/website" element={<ProtectedRoute adminOnly><AdminWebsitePage /></ProtectedRoute>} />
+          {/* News Update PPOB: berita (card + modal) & kartu promo halaman PPOB. */}
+          <Route path="admin/ppob-news" element={<ProtectedRoute adminOnly><AdminPpobNewsPage /></ProtectedRoute>} />
           <Route path="admin/child-panel" element={<ProtectedRoute adminOnly><AdminChildPanelPage /></ProtectedRoute>} />
           <Route path="admin/orders" element={<ProtectedRoute adminOnly><AdminOrdersPage /></ProtectedRoute>} />
           <Route path="admin/users" element={<ProtectedRoute adminOnly><AdminUsersPage /></ProtectedRoute>} />
