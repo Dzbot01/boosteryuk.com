@@ -350,7 +350,16 @@ function MarkupForm({ summary, onSaved }: { summary: PanelSummary; onSaved: (s: 
   const save = async () => {
     setSaving(true);
     setMsg(null);
-    const r = await panelApi.setMarkup(Number(smm) || 0, Number(agent) || 0, Number(otp) || 0, Number(eventMarkup)||0, Number(topup) || 0, Number(ppob) || 0);
+    // Persen top up/PPOB hanya dikirim bila aksesnya sudah dibeli — kalau tidak,
+    // server menolak (403) dan markup SMM/agen/OTP/event ikut gagal tersimpan.
+    const r = await panelApi.setMarkup(
+      Number(smm) || 0,
+      Number(agent) || 0,
+      Number(otp) || 0,
+      Number(eventMarkup)||0,
+      aksesTopup ? Number(topup) || 0 : undefined,
+      aksesPpob ? Number(ppob) || 0 : undefined,
+    );
     setSaving(false);
     if (!r.ok) return setMsg({ ok: false, text: r.message || 'Gagal menyimpan.' });
     setSmm(String(r.markup_smm_pct));

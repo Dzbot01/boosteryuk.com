@@ -79,6 +79,19 @@ function cp_ensure_schema($conn) {
         $hasOtp = $conn->query("SHOW COLUMNS FROM child_panels LIKE 'markup_otp_pct'");
         if ($hasOtp && $hasOtp->num_rows === 0) $conn->query("ALTER TABLE child_panels ADD COLUMN markup_otp_pct DECIMAL(6,2) NOT NULL DEFAULT 0 AFTER markup_agent_pct");
     } catch (Throwable $e) { /* abaikan */ }
+    // Markup Top Up Game & PPOB + akses berbayar (Rp35.000 per akses) — dibuat
+    // otomatis supaya panel lama tidak perlu migrasi SQL manual.
+    foreach ([
+        'markup_topup_pct'    => "DECIMAL(6,2) NOT NULL DEFAULT 0 AFTER markup_agent_pct",
+        'markup_ppob_pct'     => "DECIMAL(6,2) NOT NULL DEFAULT 0 AFTER markup_topup_pct",
+        'access_topup_markup' => "TINYINT(1) NOT NULL DEFAULT 0 AFTER markup_ppob_pct",
+        'access_ppob_markup'  => "TINYINT(1) NOT NULL DEFAULT 0 AFTER access_topup_markup",
+    ] as $kolom => $definisi) {
+        try {
+            $has = $conn->query("SHOW COLUMNS FROM child_panels LIKE '$kolom'");
+            if ($has && $has->num_rows === 0) $conn->query("ALTER TABLE child_panels ADD COLUMN $kolom $definisi");
+        } catch (Throwable $e) { /* abaikan: fitur markup tetap jalan tanpa kolom ini */ }
+    }
     // Pesanan yang dibuat lewat child panel (dasar perhitungan pendapatan reseller).
     $conn->query("CREATE TABLE IF NOT EXISTS child_panel_orders (
         id             INT AUTO_INCREMENT PRIMARY KEY,

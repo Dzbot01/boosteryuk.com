@@ -115,17 +115,44 @@ export interface PpobMenu {
   catatan?: string;
 }
 
-/** Grid 4 kolom × 2 baris di card "Menu Service". */
-export const PPOB_MENU: PpobMenu[] = [
+/**
+ * Card "Menu Service" halaman PPOB diisi layanan ASLI dari katalog penyedia
+ * (endpoint list produk penuh, difilter: hanya layanan SELAIN top up game).
+ * Yang di sini hanyalah layanan milik aplikasi sendiri (halaman lokal) +
+ * tile "Lainnya" yang membuka grid semua layanan non-game.
+ */
+export const PPOB_MENU_LOKAL: PpobMenu[] = [
   { id: 'pulsa-reguler', label: 'Pulsa Reguler', icon: 'smartphone', to: '/ppob/pulsa-reguler', desc: 'Isi pulsa semua operator, masuk 24 jam nonstop.' },
-  { id: 'pulsa-transfer', label: 'Pulsa Transfer', icon: 'send', desc: 'Kirim pulsa antar nomor operator yang sama.', catatan: 'Pulsa Transfer sedang disiapkan — segera hadir.' },
-  { id: 'paket-data', label: 'Paket Data', icon: 'wifi', desc: 'Paket internet harian sampai bulanan.', catatan: 'Paket Data sedang disiapkan — segera hadir.' },
-  { id: 'e-money', label: 'E-Money', icon: 'wallet', desc: 'Top up saldo OVO, DANA, GoPay, ShopeePay, LinkAja.', catatan: 'E-Money sedang disiapkan — segera hadir.' },
-  { id: 'streaming-game', label: 'Streaming & Game', icon: 'gamepad', to: '/topup', desc: 'Voucher streaming & top up game resmi.', catatan: '' },
-  { id: 'pascabayar', label: 'Pascabayar', icon: 'receipt', desc: 'Bayar tagihan kartu pascabayar bulanan.', catatan: 'Pascabayar sedang disiapkan — segera hadir.' },
-  { id: 'pulsa-internasional', label: 'Pulsa Internasional', icon: 'globe', desc: 'Isi pulsa nomor luar negeri.', catatan: 'Pulsa Internasional sedang disiapkan — segera hadir.' },
-  { id: 'lainnya', label: 'Lainnya', icon: 'grid', to: '/layanan', desc: 'Listrik, BPJS, air, internet & layanan lain.', catatan: '' },
 ];
+
+/** Tile terakhir grid Menu Service: semua layanan selain top up game (grid card). */
+export const PPOB_MENU_LAINNYA: PpobMenu = {
+  id: 'lainnya',
+  label: 'Lainnya',
+  icon: 'grid',
+  to: '/ppob/layanan',
+  desc: 'Semua layanan selain top up game: pulsa, paket data, e-money, voucher, token listrik & tagihan.',
+};
+
+/** Rute halaman grid semua layanan PPOB (dipakai tile "Lainnya" & tile layanan live). */
+export const RUTE_LAYANAN_PPOB = '/ppob/layanan';
+
+/**
+ * Ikon untuk layanan live dari penyedia: dipilih dari kata kunci nama
+ * layanan/kategori supaya card Menu Service tetap punya ikon walau penyedia
+ * tidak mengirim logo.
+ */
+export function ikonLayanan(teks: string): PpobMenuIcon {
+  const t = (teks || '').toLowerCase();
+  if (/(pulsa|prepaid|prabayar|credit|kredit|telepon|\bmsisdn\b)/.test(t)) return 'smartphone';
+  if (/(transfer|kirim|send)/.test(t)) return 'send';
+  if (/(data|internet|wifi|paket|broadband|fiber)/.test(t)) return 'wifi';
+  if (/(e-?money|e-?wallet|dompet|ovo|dana|gopay|shopee\s*pay|link\s*aja|t-?money|saldo)/.test(t)) return 'wallet';
+  if (/(tagihan|pascabayar|postpaid|bpjs|listrik|pln|token|pdam|\bair\b|internet\s*rumah|tv|asuransi|pajak|tilang|telkom)/.test(t)) return 'receipt';
+  if (/(voucher|streaming|netflix|spotify|youtube|unipin|google\s*play|game)/.test(t)) return 'gamepad';
+  if (/(luar\s*negeri|internasional|global|roaming|\bais\b|truemove|dtac|celcom|digi|maxis|globe|smart|vodafone|airtel|zain|ooredoo|stc|jio|banglalink|robi|grameenphone|teletalk|ncell|dialog|mobitel)/.test(t)) return 'globe';
+  return 'grid';
+}
 
 export interface PpobBanner {
   id: string;

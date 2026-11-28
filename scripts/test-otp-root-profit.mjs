@@ -95,7 +95,7 @@ try {
   // Dua menu riwayat berdekatan (Riwayat Deposit → Riwayat Pesanan), Order Nomor mengikuti setelahnya.
   assert.equal(ids(rootIn).indexOf('riwayat'), ids(rootIn).indexOf('riwayat-deposit') + 1, 'Riwayat Pesanan tepat setelah Riwayat Deposit');
   assert.equal(ids(rootIn).indexOf('nokos'), ids(rootIn).indexOf('layanan') + 1, 'Order Nomor (OTP) di bagian atas: tepat setelah Buat Pesanan');
-  assert.equal(ids(rootIn).indexOf('topup'), ids(rootIn).indexOf('nokos') + 1, 'TopUp All Game berdampingan dengan Order Nomor');
+  assert.equal(ids(rootIn).indexOf('topup'), ids(rootIn).indexOf('nokos') + 1, 'Topup Game berdampingan dengan Order Nomor');
   assert.equal(ids(childIn).indexOf('riwayat'), ids(childIn).indexOf('riwayat-deposit') + 1, 'child panel: dua menu riwayat juga berdekatan');
   assert.ok(!ids(rootOut).includes('riwayat-deposit'), 'belum login: Riwayat Deposit tetap tersembunyi');
   assert.ok(!rootOut.some((i) => i.id === 'nokos'), 'belum login: menu disembunyikan (halaman memang butuh login)');

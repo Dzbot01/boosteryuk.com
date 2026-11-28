@@ -1,5 +1,5 @@
 /**
- * Katalog TopUp All Game.
+ * Katalog Topup Game.
  *
  * ATURAN DATA (jangan pakai dummy lagi):
  *  - `produk` hanya boleh berisi kode produk ASLI dari pricelist penyedia

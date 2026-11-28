@@ -268,13 +268,15 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
         // Markup Top Up Game & PPOB: hanya boleh diatur bila aksesnya sudah dibeli (Rp35.000 masing-masing).
         $mTopup = (float)($tenant['markup_topup_pct'] ?? 0);
         $mPpob  = (float)($tenant['markup_ppob_pct'] ?? 0);
-        if (array_key_exists('markup_topup_pct', $in)) {
+        $ubahTopup = array_key_exists('markup_topup_pct', $in) && abs(round((float)$in['markup_topup_pct'], 2) - $mTopup) > 0.001;
+        if ($ubahTopup) {
             if ((int)($tenant['access_topup_markup'] ?? 0) !== 1) {
                 cp_out(['ok' => false, 'message' => 'Akses markup Top Up Game belum dibuka. Beli akses terlebih dahulu (Rp35.000).'], 403);
             }
             $mTopup = max(0, min(CP_MAX_MARKUP, round((float)$in['markup_topup_pct'], 2)));
         }
-        if (array_key_exists('markup_ppob_pct', $in)) {
+        $ubahPpob = array_key_exists('markup_ppob_pct', $in) && abs(round((float)$in['markup_ppob_pct'], 2) - $mPpob) > 0.001;
+        if ($ubahPpob) {
             if ((int)($tenant['access_ppob_markup'] ?? 0) !== 1) {
                 cp_out(['ok' => false, 'message' => 'Akses markup PPOB belum dibuka. Beli akses terlebih dahulu (Rp35.000).'], 403);
             }
@@ -297,8 +299,9 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
         $col = $kind === 'topup' ? 'access_topup_markup' : 'access_ppob_markup';
         if ((int)($tenant[$col] ?? 0) === 1) cp_out(['ok' => false, 'message' => 'Akses markup ini sudah aktif.'], 400);
         $harga = 35000;
-        $owner = (int)($tenant['owner_user_id'] ?? 0);
-        if ($owner <= 0) cp_out(['ok' => false, 'message' => 'Pemilik panel tidak ditemukan.'], 404);
+        // cp_resolve() menyembunyikan owner_user_id di balik kunci internal '_owner_user_id'.
+        $owner = (int)($tenant['_owner_user_id'] ?? 0);
+        if ($owner <= 0) cp_out(['ok' => false, 'message' => 'Panel ini tidak punya akun pemilik, jadi akses markup tidak bisa dibeli. Hubungi admin.'], 404);
         $conn->begin_transaction();
         $st = cp_q($conn, 'SELECT balance FROM users WHERE id=? FOR UPDATE', 'i', $owner);
         $bal = (float)($st->get_result()->fetch_assoc()['balance'] ?? 0);
@@ -309,8 +312,14 @@ if (in_array($action, ['ping', 'record_order', 'owner_summary', 'owner_orders', 
         }
         cp_q($conn, 'UPDATE users SET balance=balance-? WHERE id=?', 'di', $harga, $owner)->close();
         cp_q($conn, "UPDATE child_panels SET $col=1 WHERE id=?", 'i', $pid)->close();
+        // Jejak pembelian (config JSON) supaya riwayatnya terlihat di panel.
+        $st = cp_q($conn, 'SELECT config FROM child_panels WHERE id=? FOR UPDATE', 'i', $pid);
+        $cfg = json_decode((string)($st->get_result()->fetch_assoc()['config'] ?? '{}'), true) ?: [];
+        $st->close();
+        $cfg['markupAccess'][$kind] = ['harga' => $harga, 'dibeli_pada' => date('Y-m-d H:i:s'), 'user_id' => $owner, 'saldo_sebelum' => $bal, 'saldo_sesudah' => $bal - $harga];
+        cp_q($conn, 'UPDATE child_panels SET config=? WHERE id=?', 'si', json_encode($cfg, JSON_UNESCAPED_UNICODE), $pid)->close();
         $conn->commit();
-        cp_out(['ok' => true, $col => 1, 'balance' => $bal - $harga, 'message' => 'Akses markup ' . ($kind === 'topup' ? 'Top Up Game' : 'PPOB') . ' aktif.']);
+        cp_out(['ok' => true, $col => 1, 'balance' => $bal - $harga, 'message' => 'Akses markup ' . ($kind === 'topup' ? 'Top Up Game' : 'PPOB') . ' aktif. Saldo terpotong Rp35.000.']);
     }
 }
 

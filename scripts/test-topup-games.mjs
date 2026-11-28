@@ -1,4 +1,4 @@
-// Halaman + menu "TopUp All Game": marketplace top up game & produk digital.
+// Halaman + menu "Topup Game": marketplace top up game & produk digital.
 //  • UI sesuai spesifikasi: latar #E5E5E7 + pola gamepad, tab pill (aktif navy #14143C),
 //    search rounded-full, grid 3/4/6/8 kolom, kartu hover terangkat, skeleton, state kosong;
 //  • data 16 game dummy dalam array terpisah (mudah diganti data asli);
@@ -26,7 +26,7 @@ assert.match(app, /const TopupGamePage = lazy\(\(\) => import\('\.\/pages\/Topup
 const menu = read('src/components/SideMenu.tsx');
 assert.match(menu, /\| 'topup'\n  \| 'ppob';/, 'PageId topup (dan ppob) ada');
 assert.match(menu, /topup: '\/topup',/, 'ROUTE_PATH topup = /topup');
-assert.match(menu, /\{ id: 'topup', icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital' \},/, 'menu "TopUp All Game" ada di SideMenu');
+assert.match(menu, /\{ id: 'topup', icon: Gamepad2, label: 'Topup Game', desc: 'Top up game & produk digital' \},/, 'menu "Topup Game" ada di SideMenu');
 assert.match(menu, /Gamepad2,/, 'ikon Gamepad2 diimpor');
 
 /* ---------- 2. Halaman marketplace: spesifikasi UI ---------- */
@@ -245,8 +245,8 @@ assert.ok(!read('php-api/tokovoucher_config.example.php').includes("'secret'    
 
 /* ---------- 5. Menu benar-benar ter-render untuk SEMUA peran (bundle SideMenu) ---------- */
 // Admin: daftar "Navigasi" (menu user) disembunyikan seluruhnya, jadi entri topup juga harus
-// ada di ADMIN_MENU — kalau tidak, admin tidak pernah melihat menu TopUp All Game.
-assert.match(menu, /\{ id: 'topup' as const, icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital', path: '\/topup' \},/, 'ADMIN_MENU juga punya TopUp All Game (path /topup)');
+// ada di ADMIN_MENU — kalau tidak, admin tidak pernah melihat menu Topup Game.
+assert.match(menu, /\{ id: 'topup' as const, icon: Gamepad2, label: 'Topup Game', desc: 'Top up game & produk digital', path: '\/topup' \},/, 'ADMIN_MENU juga punya Topup Game (path /topup)');
 const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<div id="root"></div>', { url: 'https://boosteryuk.com' });
 globalThis.window = dom.window; globalThis.document = dom.window.document; globalThis.localStorage = dom.window.localStorage;
@@ -277,29 +277,29 @@ const ids = (arr) => arr.map((i) => i.id);
 const guest = getUserMenuItems(false, false, false);      // belum login, root domain
 const userIn = getUserMenuItems(true, false, false);      // user login, root domain
 const childIn = getUserMenuItems(true, false, true);      // user login, child panel
-assert.ok(ids(guest).includes('topup'), 'menu TopUp All Game tampil untuk pengunjung (belum login)');
-assert.ok(ids(userIn).includes('topup'), 'menu TopUp All Game tampil untuk user login');
-assert.ok(ids(childIn).includes('topup'), 'menu TopUp All Game tampil di child panel');
+assert.ok(ids(guest).includes('topup'), 'menu Topup Game tampil untuk pengunjung (belum login)');
+assert.ok(ids(userIn).includes('topup'), 'menu Topup Game tampil untuk user login');
+assert.ok(ids(childIn).includes('topup'), 'menu Topup Game tampil di child panel');
 // Posisi: di baseMenu topup tepat setelah "Buat Pesanan" (layanan). Untuk user login, "Buat Pesanan"
 // & "Order Nomor" berada di depan grup deposit sehingga topup mengikuti "Order Nomor"; untuk
 // pengunjung (belum login) layanan/nokos tersembunyi sehingga topup langsung setelah Dashboard.
 assert.equal(ids(userIn).indexOf('nokos'), ids(userIn).indexOf('layanan') + 1, 'user login: "Order Nomor" (OTP) di atas, tepat setelah Buat Pesanan');
-assert.equal(ids(userIn).indexOf('topup'), ids(userIn).indexOf('nokos') + 1, 'user login: TopUp All Game berdampingan dengan Order Nomor');
+assert.equal(ids(userIn).indexOf('topup'), ids(userIn).indexOf('nokos') + 1, 'user login: Topup Game berdampingan dengan Order Nomor');
 assert.equal(ids(guest).indexOf('topup'), ids(guest).indexOf('home') + 1, 'pengunjung: item pertama setelah Dashboard');
 assert.equal(ids(childIn).indexOf('topup'), ids(childIn).indexOf('nokos') + 1, 'child panel: urutan sama dengan root domain');
 const topupGuest = guest.find((i) => i.id === 'topup');
-assert.equal(topupGuest.label, 'TopUp All Game', 'label menu sesuai permintaan');
+assert.equal(topupGuest.label, 'Topup Game', 'label menu sesuai permintaan');
 assert.equal(topupGuest.desc, 'Top up game & produk digital');
 const adminRoot = getAdminMenuItems(false);
 const adminChild = getAdminMenuItems(true);
-assert.ok(ids(adminRoot).includes('topup'), 'ADMIN juga melihat menu TopUp All Game di side menu');
+assert.ok(ids(adminRoot).includes('topup'), 'ADMIN juga melihat menu Topup Game di side menu');
 assert.equal(ids(adminRoot)[0], 'nokos', 'admin: menu paling atas = Order Nomor (OTP)');
-assert.equal(ids(adminRoot)[1], 'topup', 'admin: urutan kedua = TopUp All Game (berdampingan dengan OTP)');
+assert.equal(ids(adminRoot)[1], 'topup', 'admin: urutan kedua = Topup Game (berdampingan dengan OTP)');
 assert.equal(adminRoot[0].path, '/otp-service', 'menu OTP admin membuka /otp-service');
 assert.ok(ids(adminChild).includes('topup'), 'pemilik child panel (admin ke-2) juga melihatnya');
 const topupAdmin = adminRoot.find((i) => i.id === 'topup');
 assert.equal(topupAdmin.path, '/topup', 'menu admin membuka /topup');
-assert.equal(topupAdmin.label, 'TopUp All Game');
+assert.equal(topupAdmin.label, 'Topup Game');
 assert.ok(!ids(getUserMenuItems(true, true, false)).length, 'admin memang tidak merender daftar menu user (karena itu entri ADMIN_MENU wajib ada)');
 
 // ---------- Nama produk manusiawi (kode penyedia -> nama baca) ----------
@@ -475,5 +475,5 @@ const perilaku = execFileSync(
 ).trim();
 assert.equal(perilaku, 'OK', 'perilaku nama tampilan & rapihkanKatalog sesuai konvensi pricelist resmi');
 
-console.log('PASS TopUp All Game: menu tampil untuk pengunjung/user/child panel DAN admin (ADMIN_MENU) + route /topup & /topup/:slug, UI marketplace sesuai spesifikasi (latar #E5E5E7 berpola, tab pill navy, search realtime, grid 3/4/6/8, skeleton, state kosong), 16 game dummy + helper teruji, halaman detail dengan Player/Server ID, dan transaksi lewat proxy server (signature MD5 user_code:secret:ref_id dihitung di server, secret tidak pernah ke browser).');
+console.log('PASS Topup Game: menu tampil untuk pengunjung/user/child panel DAN admin (ADMIN_MENU) + route /topup & /topup/:slug, UI marketplace sesuai spesifikasi (latar #E5E5E7 berpola, tab pill navy, search realtime, grid 3/4/6/8, skeleton, state kosong), 16 game dummy + helper teruji, halaman detail dengan Player/Server ID, dan transaksi lewat proxy server (signature MD5 user_code:secret:ref_id dihitung di server, secret tidak pernah ke browser).');
 process.exit(0);

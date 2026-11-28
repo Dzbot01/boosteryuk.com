@@ -10,7 +10,7 @@
 //    terpilih = border biru tebal + latar biru muda), skeleton loading, tombol "Beli Sekarang"
 //    sticky di bawah (bukan navbar);
 //  • TANPA bottom navigation bar & TANPA tombol scan QR melayang; padding bawah ±100px;
-//  • menu PPOB terdaftar di side menu user (setelah TopUp All Game) & admin, rute /ppob +
+//  • menu PPOB terdaftar di side menu user (setelah Topup Game) & admin, rute /ppob +
 //    /ppob/pulsa-reguler dilindungi login; halaman profil tetap mempertahankan fitur lama.
 //
 // NODE_PATH=/tmp/server3-tests/node_modules node scripts/test-ppob-ui.mjs
@@ -31,6 +31,8 @@ assert.match(app, /const PpobPage = lazy\(\(\) => import\('\.\/pages\/PpobPage'\
 assert.match(app, /const PpobPulsaRegulerPage = lazy\(\(\) => import\('\.\/pages\/PpobPulsaRegulerPage'\)\);/, 'halaman Pulsa Reguler dimuat malas');
 assert.match(app, /<Route path="ppob" element=\{<ProtectedRoute><PpobPage \/><\/ProtectedRoute>\} \/>/, 'route /ppob terdaftar & wajib login');
 assert.match(app, /<Route path="ppob\/pulsa-reguler" element=\{<ProtectedRoute><PpobPulsaRegulerPage \/><\/ProtectedRoute>\} \/>/, 'route /ppob/pulsa-reguler terdaftar & wajib login');
+assert.match(app, /const PpobLayananPage = lazy\(\(\) => import\('\.\/pages\/PpobLayananPage'\)\);/, 'halaman Semua Layanan dimuat malas');
+assert.match(app, /<Route path="ppob\/layanan" element=\{<ProtectedRoute><PpobLayananPage \/><\/ProtectedRoute>\} \/>/, 'route /ppob/layanan (grid semua layanan selain top up game) terdaftar & wajib login');
 assert.ok(app.indexOf('path="ppob"') < app.indexOf('path=":slug"'), 'route PPOB didefinisikan sebelum catch-all :slug (struk)');
 
 const menu = read('src/components/SideMenu.tsx');
@@ -39,8 +41,8 @@ assert.match(menu, /ppob: '\/ppob',/, 'ROUTE_PATH ppob = /ppob');
 assert.match(menu, /\{ id: 'ppob', icon: Zap, label: 'PPOB', desc: 'Pulsa, paket data, e-money & bayar tagihan' \},/, 'menu PPOB ada di baseMenu (side menu user)');
 assert.match(menu, /\{ id: 'ppob' as const, icon: Zap, label: 'PPOB', desc: 'Pulsa, paket data, e-money & bayar tagihan', path: '\/ppob' \},/, 'menu PPOB juga ada di ADMIN_MENU');
 assert.match(menu, /'overview', 'ppob'\];/, 'PPOB butuh login (AUTH_REQUIRED)');
-assert.ok(menu.indexOf("label: 'TopUp All Game', desc: 'Top up game & produk digital' },") < menu.indexOf("label: 'PPOB'"), 'PPOB tepat setelah TopUp All Game di baseMenu');
-assert.ok(menu.indexOf("...base.slice(0, 6),...authMenu,...base.slice(6)") > 0, 'urutan menu user: Order Nomor → TopUp All Game → PPOB → grup deposit');
+assert.ok(menu.indexOf("label: 'Topup Game', desc: 'Top up game & produk digital' },") < menu.indexOf("label: 'PPOB'"), 'PPOB tepat setelah Topup Game di baseMenu');
+assert.ok(menu.indexOf("...base.slice(0, 6),...authMenu,...base.slice(6)") > 0, 'urutan menu user: Order Nomor → Topup Game → PPOB → grup deposit');
 
 /* ---------- 2. Data PPOB sebagai modul (deteksi operator, produk, helper) ---------- */
 const { outputFiles: dataFiles } = await build({
@@ -75,14 +77,26 @@ assert.equal(cari(3000).tersedia, false, 'ada produk berstatus unavailable (badg
 for (const op of Object.keys(data.PPOB_PULSA_REGULER))
   assert.ok(data.PPOB_PULSA_REGULER[op].length >= 8, `daftar produk ${op} lengkap`);
 
-assert.equal(data.PPOB_MENU.length, 8, 'grid Menu Service 4 kolom × 2 baris = 8 layanan');
-assert.deepEqual(
-  data.PPOB_MENU.map((m) => m.label),
-  ['Pulsa Reguler', 'Pulsa Transfer', 'Paket Data', 'E-Money', 'Streaming & Game', 'Pascabayar', 'Pulsa Internasional', 'Lainnya'],
-  'label layanan sesuai spesifikasi',
-);
-assert.equal(data.PPOB_MENU[0].to, '/ppob/pulsa-reguler', 'klik "Pulsa Reguler" membuka Halaman B');
-assert.ok(data.PPOB_MENU.every((m) => m.desc && m.desc.length > 10), 'tiap layanan punya deskripsi');
+// Card Menu Service tidak lagi mock: isinya layanan ASLI dari endpoint list produk
+// penuh penyedia, difilter HANYA layanan selain top up game. Yang di data hanya
+// layanan halaman lokal + tile "Lainnya" (grid semua layanan non-game).
+assert.equal(data.PPOB_MENU_LOKAL.length, 1, 'satu layanan lokal dipatok di grid Menu Service');
+assert.equal(data.PPOB_MENU_LOKAL[0].label, 'Pulsa Reguler', 'label layanan lokal');
+assert.equal(data.PPOB_MENU_LOKAL[0].to, '/ppob/pulsa-reguler', 'klik "Pulsa Reguler" membuka Halaman B');
+assert.equal(data.PPOB_MENU_LAINNYA.label, 'Lainnya', 'tile terakhir = Lainnya');
+assert.equal(data.PPOB_MENU_LAINNYA.to, '/ppob/layanan', 'klik "Lainnya" membuka grid semua layanan selain top up game');
+assert.equal(data.RUTE_LAYANAN_PPOB, '/ppob/layanan', 'rute halaman layanan diekspor (dipakai tile live + Lainnya)');
+assert.ok(!('PPOB_MENU' in data), 'daftar layanan mock lama (termasuk tile top up game) sudah dilepas');
+assert.ok(data.PPOB_MENU_LOKAL.every((m) => m.desc && m.desc.length > 10), 'tiap layanan punya deskripsi');
+// Ikon tile layanan live dipilih dari kata kunci nama layanan/kategori.
+assert.equal(data.ikonLayanan('Pulsa Telkomsel'), 'smartphone', 'layanan pulsa → ikon smartphone');
+assert.equal(data.ikonLayanan('Paket Data XL'), 'wifi', 'paket data → ikon wifi');
+assert.equal(data.ikonLayanan('OVO E-Money'), 'wallet', 'e-money → ikon dompet');
+assert.equal(data.ikonLayanan('PLN Token Listrik'), 'receipt', 'token listrik/tagihan → ikon struk');
+assert.equal(data.ikonLayanan('AIS'), 'globe', 'operator telekomunikasi luar → ikon globe');
+assert.equal(data.ikonLayanan('TrueMove H'), 'globe', 'TrueMove H → ikon globe');
+assert.equal(data.ikonLayanan('Voucher Netflix'), 'gamepad', 'voucher streaming → ikon voucher/game');
+assert.equal(data.ikonLayanan('Entah Apa'), 'grid', 'label tak dikenal → ikon grid (netral)');
 
 assert.equal(data.hargaPulsa(2025), 'Rp 2.025,-', 'format harga jual pulsa');
 assert.equal(data.rupiahTitik(1000000), 'Rp 1.000.000', 'format Rupiah pemisah titik');
@@ -135,6 +149,20 @@ assert.match(beranda, /ppob-marquee/, 'banner info berjalan (marquee)');
 assert.match(beranda, /prefers-reduced-motion/, 'marquee menghormati prefers-reduced-motion');
 assert.match(beranda, /Menu Service/, 'chip label Menu Service');
 assert.match(beranda, /grid grid-cols-4 gap-x-2 gap-y-3\.5 md:grid-cols-8/, 'grid 4 kolom mobile, 8 kolom desktop');
+// Layanan di card Menu Service berasal dari endpoint list produk penuh (selain top up game).
+assert.match(beranda, /import \{ tvLayanan, type TvLayananKelompok \} from '\.\.\/services\/tokovoucherApi';/, 'beranda PPOB menarik layanan dari proxy server');
+assert.match(beranda, /const r = await tvLayanan\(\);/, 'layanan dimuat lewat tvLayanan()');
+assert.match(beranda, /MAKS_LAYANAN_MENU = 6/, 'maks 6 layanan live di card Menu Service (sisanya lewat tile Lainnya)');
+assert.match(beranda, /layananMenu\.map\(\(l\) =>/, 'tile layanan live dirender dari data server');
+assert.match(beranda, /data-layanan=\{l\.id\}/, 'tiap tile layanan punya penanda id (bisa diuji/ditelusuri)');
+assert.match(beranda, /navigate\(`\$\{RUTE_LAYANAN_PPOB\}\?grup=\$\{encodeURIComponent\(l\.id\)\}`\)/, 'klik tile layanan membuka layanannya di halaman Semua Layanan');
+assert.match(beranda, /data-lainnya="true"/, 'tile Lainnya selalu ada di grid Menu Service');
+assert.match(beranda, /ikonLayanan\(/, 'ikon tile layanan live dipilih dari kata kunci namanya');
+assert.ok(!/streaming-game|Streaming & Game/.test(beranda), 'tile top up game TIDAK lagi tampil di card Menu Service PPOB');
+assert.match(beranda, /Katalog penyedia belum mengirim layanan selain top up game/, 'state kosong jujur (tanpa daftar layanan karangan)');
+assert.match(beranda, /Coba lagi/, 'galat layanan punya tombol Coba lagi');
+assert.match(beranda, /Login ulang/, 'galat layanan punya tombol Login ulang');
+assert.match(beranda, /Memuat layanan dari katalog penyedia/, 'state memuat layanan dijelaskan ke user');
 assert.match(beranda, /h-11 w-11[\s\S]{0,80}rounded-2xl bg-\[#3B82F6\]/, 'kotak ikon rounded biru solid ±44px');
 assert.match(beranda, /truncate text-center text-\[10\.5px\]/, 'label 1 baris dipotong … bila panjang');
 assert.match(beranda, /snap-x snap-mandatory/, 'carousel banner bisa di-swipe');
@@ -208,8 +236,8 @@ const userIn = getUserMenuItems(true, false, false);
 const guest = getUserMenuItems(false, false, false);
 const childIn = getUserMenuItems(true, false, true);
 assert.ok(ids(userIn).includes('ppob'), 'menu PPOB tampil untuk user login');
-assert.equal(ids(userIn).indexOf('ppob'), ids(userIn).indexOf('topup') + 1, 'PPOB tepat setelah TopUp All Game');
-assert.equal(ids(userIn).indexOf('topup'), ids(userIn).indexOf('nokos') + 1, 'urutan lama tetap: Order Nomor → TopUp All Game');
+assert.equal(ids(userIn).indexOf('ppob'), ids(userIn).indexOf('topup') + 1, 'PPOB tepat setelah Topup Game');
+assert.equal(ids(userIn).indexOf('topup'), ids(userIn).indexOf('nokos') + 1, 'urutan lama tetap: Order Nomor → Topup Game');
 assert.ok(!ids(guest).includes('ppob'), 'belum login: PPOB tersembunyi (butuh saldo & akun)');
 assert.ok(ids(childIn).includes('ppob'), 'child panel juga melihat PPOB');
 assert.equal(userIn.find((i) => i.id === 'ppob').label, 'PPOB');
@@ -248,7 +276,7 @@ const { outputFiles: renderFiles } = await build({
     const MAP = [
       [/context\/AuthContext$/, 'auth', `export const useAuth=()=>({user:{id:7,name:'Melvi Husin',username:'melvi',email:'melvi@contoh.com',phone:'082212347543',joined:'2025-01-01',balance:1250000,role:'user',plusActive:false,plan:{plus:false,extra_active:false,promo_available:false,price_plus:0,price_extra:0,price_extra_first:0,child_panel:null}},isAdmin:false,logout:()=>{}});`],
       [/context\/OrderHistoryContext$/, 'hist', `export const useOrderHistory=()=>({orders:[{key:'a',serviceName:'IG Followers',orderId:'1',quantity:100,price:25000,createdAt:Date.now(),status:'selesai'},{key:'b',serviceName:'TikTok Likes',orderId:'2',quantity:50,price:15000,createdAt:Date.now(),status:'batal'}],addOrder:()=>{}});`],
-      [/context\/SiteSettingsContext$/, 'set', `export const useSiteSettings=()=>({settings:{brandName:'Boosteryuk'}});`],
+      [/context\/SiteSettingsContext$/, 'set', `export const useSiteSettings=()=>({settings:{brandName:'Boosteryuk'},tenant:null});`],
       [/components\/Seo$/, 'seo', 'export default function Seo(){return null;}'],
       [/UserAvatar$/, 'ava', 'export default function UserAvatar({children}){return children;}'],
       [/BottomNavbar$/, 'bnb', 'export default function BottomNavbar(){return null;}'],
@@ -290,8 +318,13 @@ assert.ok(htmlKepalaPulsa.includes('Kembali ke beranda PPOB'), 'tombol kembali d
 assert.ok(!htmlKepalaPulsa.includes('Berita & pengumuman'), 'lonceng hanya di header beranda');
 
 const htmlPpob = render('/ppob', R.PpobPage);
-for (const t of ['Balance:', 'IDR ••••••••••', 'Point', '120', 'Transfer', 'Top up', 'Exchange', 'Menu Service', 'Pulsa Reguler', 'Pulsa Internasional', 'Selamat datang', 'BAYAR TAGIHANMU', 'HANYA DI Boosteryuk', 'News Updates', 'View All'])
+for (const t of ['Balance:', 'IDR ••••••••••', 'Point', '120', 'Transfer', 'Top up', 'Exchange', 'Menu Service', 'Pulsa Reguler', 'Lainnya', 'Memuat layanan dari katalog penyedia', 'Selamat datang', 'BAYAR TAGIHANMU', 'HANYA DI Boosteryuk', 'News Updates', 'View All'])
   assert.ok(htmlPpob.includes(t), `beranda PPOB merender "${t}"`);
+// Layanan selain top up game datang dari server: sebelum data tiba yang tampil
+// skeleton + keterangan memuat, bukan daftar mock.
+for (const t of ['Pulsa Internasional', 'Streaming & Game', 'Paket Data'])
+  assert.ok(!htmlPpob.includes(`>${t}<`), `layanan mock lama "${t}" tidak lagi dirender di Menu Service`);
+assert.match(htmlPpob, /data-lainnya="true"/, 'tile Lainnya dirender sebagai pintu masuk grid semua layanan');
 assert.ok(!htmlPpob.includes('<header'), 'beranda PPOB tidak merender header sendiri (pakai header utama dari Layout)');
 
 const htmlPulsa = render('/ppob/pulsa-reguler', R.PulsaPage);
@@ -299,4 +332,4 @@ for (const t of ['Pulsa Reguler', 'Nomor Tujuan', '08xx', 'Pilih Layanan', 'Masu
   assert.ok(htmlPulsa.includes(t), `halaman pulsa merender "${t}"`);
 assert.ok(!htmlPulsa.includes('Beli Sekarang'), 'tombol Beli Sekarang belum muncul sebelum produk dipilih');
 
-console.log('PASS PPOB: menu + rute /ppob & /ppob/pulsa-reguler, data mock teruji (deteksi operator, produk, format Rupiah, jam, sapaan); header biru PPOB menjadi HEADER UTAMA situs di rute PPOB (ikon header lama pindah, sticky, responsif mobile+desktop), Beranda PPOB (saldo+point, marquee, Menu Service 4/8 kolom, carousel, News Updates) dan Pulsa Reguler (jam real-time di header, deteksi operator, grid 2/3 kolom available/unavailable, skeleton, tombol Beli sticky) tanpa bottom navbar/scan QR; halaman profil dirombak mobile-first tanpa menghapus fitur lama.');
+console.log('PASS PPOB: menu + rute /ppob, /ppob/pulsa-reguler & /ppob/layanan, data mock teruji (deteksi operator, produk, format Rupiah, jam, sapaan); header biru PPOB menjadi HEADER UTAMA situs di rute PPOB (ikon header lama pindah, sticky, responsif mobile+desktop), Beranda PPOB (saldo+point, marquee, Menu Service 4/8 kolom, carousel, News Updates) dan Pulsa Reguler (jam real-time di header, deteksi operator, grid 2/3 kolom available/unavailable, skeleton, tombol Beli sticky) tanpa bottom navbar/scan QR; halaman profil dirombak mobile-first tanpa menghapus fitur lama.');
