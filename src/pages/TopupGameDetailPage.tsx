@@ -6,7 +6,12 @@ import { useAuth } from '../context/AuthContext';
 import { tvCekAkun, tvCekStatus, tvPricelist, tvStatus, tvTransaksi } from '../services/tokovoucherApi';
 import type { TvPricelistItem } from '../services/tokovoucherApi';
 import { TOPUP_GAMES, hargaJual, rupiah, type TopupProduk } from '../data/topupGames';
-import { rapihkanKatalog } from '../lib/topupDisplayName';
+import { namaWilayahJenis, rapihkanKatalog } from '../lib/topupDisplayName';
+
+/** Banner artwork resmi per game untuk kartu judul halaman detail. */
+const BANNER_PER_SLUG: Record<string, string> = {
+  'free-fire': '/images/topup/free-fire-9th.jpg',
+};
 
 /**
  * Halaman detail top up satu game: pilih produk, isi Player ID (+ Server ID bila produk
@@ -246,9 +251,19 @@ export default function TopupGameDetailPage() {
         {/* ============ HEADER GAME ============ */}
         <div
           className="relative mt-3 overflow-hidden rounded-2xl p-6 shadow-sm md:p-8"
-          style={{ background: `linear-gradient(140deg, hsl(${game.hue} 45% 32%) 0%, hsl(${game.hue} 55% 17%) 55%, #14143c 100%)` }}
+          style={
+            BANNER_PER_SLUG[slug]
+              ? {
+                  backgroundImage: `linear-gradient(90deg, rgba(9,9,44,0.82) 0%, rgba(9,9,44,0.45) 55%, rgba(9,9,44,0.18) 100%), url(${BANNER_PER_SLUG[slug]})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }
+              : { background: `linear-gradient(140deg, hsl(${game.hue} 45% 32%) 0%, hsl(${game.hue} 55% 17%) 55%, #14143c 100%)` }
+          }
         >
-          <Gamepad2 className="absolute -right-6 -top-6 h-40 w-40 text-white/10" strokeWidth={1.2} />
+          {BANNER_PER_SLUG[slug] ? null : (
+            <Gamepad2 className="absolute -right-6 -top-6 h-40 w-40 text-white/10" strokeWidth={1.2} />
+          )}
           <h1 className="font-display text-[24px] font-extrabold tracking-tight text-white md:text-[30px]">{game.nama}</h1>
           <p className="mt-1 text-[13px] text-white/75">{game.tagline} · proses otomatis 1–5 menit</p>
         </div>
@@ -290,14 +305,9 @@ export default function TopupGameDetailPage() {
                 </span>
               )}
               {cekAkun && !cekAkun.loading && cekAkun.username === '' && cekAkun.error && (
-                <span className="mt-1.5 block rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-rose-700">
-                  <span className="font-bold">Cek akun apigames bermasalah — </span>
-                  {cekAkun.error.message}
-                  {cekAkun.error.raw ? (
-                    <code className="mt-1 block break-all rounded bg-white/70 px-1.5 py-1 font-mono text-[10px] text-rose-800">
-                      {cekAkun.error.raw}
-                    </code>
-                  ) : null}
+                /* Sesuai permintaan: tampilkan respons penyedia APA ADANYA tanpa teks tambahan. */
+                <span className="mt-1.5 block break-all rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 font-mono text-[10.5px] leading-relaxed text-rose-700">
+                  {cekAkun.error.raw || cekAkun.error.message}
                 </span>
               )}
             </label>
@@ -342,7 +352,7 @@ export default function TopupGameDetailPage() {
                       : 'border border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
-                  {j.replace(/\s+/g, ' ').trim()}
+                  {namaWilayahJenis(j)}
                 </button>
               ))}
             </div>

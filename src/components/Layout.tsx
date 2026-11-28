@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PENDING_ORDER_PATH_KEY } from './GoogleMapsReviewColumns';
 import Header from './Header';
+import PpobHeader from './PpobHeader';
 import { AdminNotificationsProvider } from '../context/AdminNotificationsContext';
 import GuriVoiceSession from './GuriVoiceSession';
 import SideMenu from './SideMenu';
@@ -68,11 +69,23 @@ export default function Layout() {
         <div className="absolute bottom-0 left-1/2 h-[380px] w-[820px] -translate-x-1/2 rounded-full bg-sky-100/60 blur-[100px] dark:bg-white/[0.03]" />
       </div>
 
-      <Header onToggleMenu={() => setMenuOpen((v) => !v)} menuOpen={menuOpen} />
-      {/* Aksesoris tema (ketupat, lentera, dll) menggantung di bawah header */}
-      <HeaderOrnament />
-      {/* spacer for fixed header */}
-      <div className="h-[68px]" />
+      {pathname === '/ppob' || pathname.startsWith('/ppob/') ? (
+        /* Halaman PPOB: header biru PPOB MENJADI header utama situs (ikon header lama
+           pindah ke sana); header glass + ornamen + spacer tidak dirender. */
+        <PpobHeader
+          variant={pathname === '/ppob' ? 'beranda' : 'pulsa'}
+          onToggleMenu={() => setMenuOpen((v) => !v)}
+          menuOpen={menuOpen}
+        />
+      ) : (
+        <>
+          <Header onToggleMenu={() => setMenuOpen((v) => !v)} menuOpen={menuOpen} />
+          {/* Aksesoris tema (ketupat, lentera, dll) menggantung di bawah header */}
+          <HeaderOrnament />
+          {/* spacer for fixed header */}
+          <div className="h-[68px]" />
+        </>
+      )}
       {/* Pintu masuk kembali ke Portal Server NexSpace Pro (pesanan belum diambil) */}
       <NexSpaceBanner />
       {/* Notifikasi pesanan selesai → ajakan beri penilaian (mobile: bawah header, desktop: atas) */}

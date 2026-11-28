@@ -138,6 +138,23 @@ export function namaTampilanTopup(slug: string, kode: string, namaPenyedia?: str
  *  - masing-masing kelompok urut menaik menurut harga.
  * Game tanpa aturan (belum ada daftar resmi) tampil apa adanya sebagai eceran.
  */
+/** Nama lengkap wilayah/server untuk label chip: singkatan diperjelas. */
+const NAMA_WILAYAH: Record<string, string> = {
+  ID: 'Indonesia', SG: 'Singapura', MY: 'Malaysia', BR: 'Brasil', TH: 'Thailand',
+  BD: 'Bangladesh', PH: 'Filipina', VN: 'Vietnam', TR: 'Turki', RU: 'Rusia', // ejaan Indonesia
+  KR: 'Korea', TW: 'Taiwan', LATAM: 'Amerika Latin', GLOBAL: 'Global',
+};
+
+/**
+ * Label chip wilayah yang terbaca penuh: "Free Fire PH" → "Free Fire Filipina",
+ * "Free Fire  ID Fast" → "Free Fire Indonesia Fast" (spasi ganda dirapikan).
+ * Hanya untuk tampilan — identitas chip tetap string `jenis` asli penyedia.
+ */
+export function namaWilayahJenis(label: string): string {
+  const bersih = (label || '').replace(/\s+/g, ' ').trim();
+  return bersih.replace(/\b(GLOBAL|LATAM|ID|SG|MY|BR|TH|BD|PH|VN|TR|RU|KR|TW)\b/gi, (t) => NAMA_WILAYAH[t.toUpperCase()] || t);
+}
+
 /** Token wilayah/server yang pernah muncul di kode produk penyedia. */
 const TOKEN_WILAYAH = ['SG', 'MY', 'BR', 'PH', 'TH', 'VN', 'TR', 'RU', 'KR', 'TW', 'BD', 'GLOBAL', 'LATAM'];
 /** "Free Fire  ID Fast" -> "FREEFIREIDFAST"; chip tanpa kata wilayah -> ''. */

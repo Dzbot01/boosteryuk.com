@@ -46,10 +46,15 @@ assert.ok(page.includes('server ID (Indonesia)'), 'sub kartu menyebut hanya serv
 assert.match(page, /placeholder="Cari game…"/, 'placeholder search tetap ada');
 assert.match(page, /rounded-full border border-slate-200 bg-white pl-11/, 'search bar rounded-full putih ber-border + ikon kaca');
 assert.match(page, /grid grid-cols-3 items-stretch gap-4 md:grid-cols-4 md:gap-5 lg:grid-cols-6 xl:gap-6 2xl:grid-cols-8/, 'grid 3/4/6/8 kolom responsif + items-stretch');
-assert.match(page, /hover:-translate-y-1 hover:shadow-lg/, 'hover: kartu naik + shadow membesar');
+assert.match(page, /hover:-translate-y-1/, 'hover: kartu naik');
 assert.match(page, /duration-200/, 'transisi hover 200ms');
-assert.match(page, /aspect-square w-full overflow-hidden rounded-xl/, 'thumbnail persegi rounded-xl');
-assert.match(page, /bg-gradient-to-t from-\[#14143c\]/, 'overlay gradasi navy di bawah thumbnail (tempat nama game)');
+assert.match(page, /aspect-square w-full overflow-hidden rounded-2xl/, 'thumbnail persegi rounded-2xl');
+assert.ok(!page.includes('bg-gradient-to-t from-[#14143c]'), 'overlay gradasi navy dihapus — image API tampil langsung');
+assert.ok(!page.includes('linear-gradient(155deg'), 'card background berwarna pada thumbnail dihapus');
+assert.ok(!/rounded-2xl bg-white p-3 shadow-sm/.test(page), 'kartu grid tidak lagi memakai card background putih');
+assert.match(page, /object-cover transition-transform duration-300 group-hover:scale/, 'image API langsung tanpa background + zoom halus saat hover');
+assert.match(page, /login ulang/i, 'PHP error: pesan wajib login ulang (tanpa fallback snapshot repo)');
+assert.ok(!page.includes('TOPUP_GAMES.map'), 'fallback snapshot repo dihapus dari grid /topup');
 assert.match(page, /text-\[13px\] leading-snug text-slate-800 md:text-\[18px\]/, 'nama game 13px mobile / 18px desktop, rata tengah');
 assert.match(page, /Game tidak ditemukan/, 'state kosong "Game tidak ditemukan"');
 assert.match(page, /animate-pulse/, 'skeleton loading kartu');
@@ -139,7 +144,9 @@ assert.ok(!php.includes("(string)($fd['name'] ?? '') !== 'server_id'"), 'aturan 
 assert.ok(php.includes('cek-username') && php.includes("md5($c['ag_merchant'] . $c['ag_secret'])"), 'action=cek_akun memanggil apigames.id dengan signature md5(merchant+secret)');
 assert.ok(php.includes("$gagal('unconfigured'") && php.includes("$gagal('ditolak'") && php.includes("$gagal('koneksi'") && php.includes("$gagal('non_json'"), 'cek akun mengembalikan alasan gagal + cuplikan respons ASLI apigames');
 assert.ok(php.includes("$gagal('not_found'") && php.includes("$raw = is_string($body) ? substr(preg_replace"), 'Data Not Found ditandai not_found dan raw respons ikut dikirim');
-assert.ok(detail.includes("r.reason === 'not_found'") && detail.includes('Cek akun apigames bermasalah'), 'UI: not_found dilewati senyap, error teknis ditampilkan beserta respons asli');
+assert.ok(detail.includes("r.reason === 'not_found'") && detail.includes('cekAkun.error.raw || cekAkun.error.message') && !detail.includes('Cek akun apigames bermasalah'), 'UI: not_found senyap; error lain menampilkan HANYA respons penyedia tanpa teks tambahan');
+assert.ok(php.includes("trim((string)$c['ag_merchant']") && php.includes("trim((string)$c['ag_secret']"), 'kredensial apigames dinormalisasi (spasi/newline/kutipan dibuang) supaya signature tidak Unauthorized');
+assert.ok(php.includes("$gagal('ditolak', $raw !== '' ? $raw"), 'pesan penolakan apigames = respons penyedia apa adanya');
 assert.ok(php.includes("'ag_merchant' => ''"), 'kredensial apigames dibaca dari config/env (kosong = skip senyap)');
 assert.ok(php.includes("\\b(sg|my|br|th|vn|ph|tr|ru|kr|tw|bd"), 'filter wilayah diperkuat: token region polos (Free Fire SG, ML MY, Genshin KR) dibuang');
 assert.ok(php.includes("'label:' ."), 'operator di luar tabel alias tetap jadi grup katalog dengan namanya sendiri');
@@ -318,7 +325,23 @@ assert.ok(dname.includes('} else if (!semuaWilayah) continue;'), 'tanpa chip wil
 const perilaku = execFileSync(
   process.execPath,
   ['--experimental-strip-types', '--input-type=module', '-e', `
-    import { namaTampilanTopup, rapihkanKatalog } from './src/lib/topupDisplayName.ts';
+    import { namaTampilanTopup, namaWilayahJenis, rapihkanKatalog } from './src/lib/topupDisplayName.ts';
+    const wilayah = [
+      ['Free Fire  ID Fast', 'Free Fire Indonesia Fast'],
+      ['Free Fire ID Promo', 'Free Fire Indonesia Promo'],
+      ['Free Fire PH', 'Free Fire Filipina'],
+      ['Free Fire BD', 'Free Fire Bangladesh'],
+      ['Free Fire SG', 'Free Fire Singapura'],
+      ['Free Fire BR', 'Free Fire Brasil'],
+      ['Free Fire MY', 'Free Fire Malaysia'],
+      ['Free Fire TH', 'Free Fire Thailand'],
+      ['Free Fire Latam', 'Free Fire Amerika Latin'],
+      ['Free Fire Level Up Pass', 'Free Fire Level Up Pass'],
+    ];
+    for (const [asal, ingin] of wilayah) {
+      const dapat = namaWilayahJenis(asal);
+      if (dapat !== ingin) throw new Error('namaWilayahJenis(' + asal + ') => ' + dapat + ' (ingin ' + ingin + ')');
+    }
     const kasus = [
       ['free-fire', 'MFF5', 'MFF5', '5 Diamond'],
       ['free-fire', 'MFF2020', 'MFF2020', '2020 Diamond'],

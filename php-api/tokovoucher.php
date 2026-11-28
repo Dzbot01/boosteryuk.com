@@ -742,6 +742,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         ];
         $gc = $codes[$gameSlug] ?? '';
         $c = tv_cfg();
+        // Kredensial kerap diselipi spasi/newline/kutipan saat disalin ke file config —
+        // buang semuanya supaya signature md5(merchant+secret) tidak gagal "Unauthorized".
+        $c['ag_merchant'] = trim((string)$c['ag_merchant'], " \t\r\n\0\x0B\"'");
+        $c['ag_secret'] = trim((string)$c['ag_secret'], " \t\r\n\0\x0B\"'");
         $gagal = function ($reason, $msg, $extra = []) use (&$urlSamar) {
             tv_out(array_merge(['ok' => false, 'valid' => false, 'username' => '', 'reason' => $reason, 'message' => $msg], $extra, ['url' => $urlSamar ?? '']));
         };
@@ -774,20 +778,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
         if ($errno !== 0 || $code === 0) {
             tv_log('cek_akun ' . $gc . ' user=' . $userId . ' KONEKSI GAGAL errno=' . $errno . ' ' . $err);
-            $gagal('koneksi', 'Apigames tidak dapat dihubungi dari server: ' . ($err !== '' ? $err : 'timeout') . '.', ['http' => $code, 'raw' => $raw]);
+            $gagal('koneksi', $raw !== '' ? $raw : 'Penyedia tidak dapat dihubungi dari server: ' . ($err !== '' ? $err : 'timeout') . '.', ['http' => $code, 'raw' => $raw]);
         }
         if (!is_array($j)) {
             tv_log('cek_akun ' . $gc . ' user=' . $userId . ' http=' . $code . ' NON_JSON raw=' . $raw);
-            $gagal('non_json', 'Apigames membalas bukan JSON (HTTP ' . $code . '). Respons asli: ' . ($raw !== '' ? $raw : '(kosong)'), ['http' => $code, 'raw' => $raw]);
+            $gagal('non_json', $raw !== '' ? $raw : 'Respons penyedia kosong (HTTP ' . $code . ').', ['http' => $code, 'raw' => $raw]);
         }
         if ((int)($j['status'] ?? 0) !== 1) {
             $msg = (string)($j['error_msg'] ?? $j['message'] ?? $j['error'] ?? '');
             tv_log('cek_akun ' . $gc . ' user=' . $userId . ' http=' . $code . ' DITOLAK raw=' . $raw);
-            $gagal('ditolak', 'Apigames menolak permintaan (HTTP ' . $code . '): ' . ($msg !== '' ? $msg : 'status bukan 1') . '. Respons asli: ' . $raw, ['http' => $code, 'raw' => $raw]);
+            // UI menampilkan respons penyedia APA ADANYA tanpa teks tambahan.
+            $gagal('ditolak', $raw !== '' ? $raw : ($msg !== '' ? $msg : 'status bukan 1'), ['http' => $code, 'raw' => $raw]);
         }
         if (!is_array($j['data'] ?? null)) {
             tv_log('cek_akun ' . $gc . ' user=' . $userId . ' http=' . $code . ' TANPA_DATA raw=' . $raw);
-            $gagal('tanpa_data', 'Apigames membalas tanpa field data (HTTP ' . $code . '). Respons asli: ' . $raw, ['http' => $code, 'raw' => $raw]);
+            $gagal('tanpa_data', $raw !== '' ? $raw : 'Respons penyedia tanpa field data (HTTP ' . $code . ').', ['http' => $code, 'raw' => $raw]);
         }
         $valid = !empty($j['data']['is_valid']);
         $uname = trim((string)($j['data']['username'] ?? ''));
