@@ -94,7 +94,7 @@ export default function PpobPulsaRegulerPage() {
 
       {/* ============ CARD PUTIH BESAR (overlap header) ============ */}
       <div className="mx-auto w-full max-w-md px-4 md:max-w-3xl lg:max-w-5xl lg:px-6">
-        <section className="relative -mt-9 rounded-t-[28px] rounded-b-[20px] bg-white p-4 shadow-[0_10px_30px_-14px_rgba(37,99,235,0.4)] dark:bg-slate-900 md:p-5">
+        <section className="mt-4 rounded-[20px] bg-white p-4 shadow-[0_10px_30px_-14px_rgba(37,99,235,0.4)] dark:bg-slate-900 md:p-5">
           <h1 className="text-[16px] font-extrabold tracking-tight text-slate-900 dark:text-white">Pulsa Reguler</h1>
           <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
             Isi pulsa semua operator Indonesia — deteksi operator otomatis dari nomor tujuan, proses otomatis 24 jam.

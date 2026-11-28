@@ -41,7 +41,7 @@ export default function PpobHeader({
 
   return (
     <header
-      className={`sticky top-0 z-30 overflow-hidden px-4 ${beranda ? 'rounded-b-[32px] pb-16 pt-3' : 'rounded-b-[24px] pb-12 pt-3'} md:px-6`}
+      className={`sticky top-0 z-30 overflow-hidden px-4 ${beranda ? 'rounded-b-[32px] pb-8 pt-3' : 'rounded-b-[24px] pb-8 pt-3'} md:px-6`}
       style={{ background: 'linear-gradient(135deg,#3B82F6 0%,#2563EB 100%)' }}
     >
       {/* Motif lengkung halus di sisi kanan */}

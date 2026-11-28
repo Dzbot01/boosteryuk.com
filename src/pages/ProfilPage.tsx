@@ -133,7 +133,7 @@ export default function ProfilPage() {
 
       {/* ============ HEADER UNGU ============ */}
       <header
-        className="relative overflow-hidden px-4 pb-16 pt-6 text-center"
+        className="relative overflow-hidden px-4 pb-8 pt-6 text-center"
         style={{ background: 'linear-gradient(160deg,#5B21B6 0%,#7C3AED 100%)' }}
       >
         {/* Pola gelombang halus ungu lebih terang di bagian bawah */}
@@ -177,9 +177,11 @@ export default function ProfilPage() {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-md px-4">
-        {/* ============ CARD 1: RINGKASAN + SALDO (overlap header) ============ */}
-        <section className="-mt-10 rounded-2xl bg-white p-4 shadow-[0_10px_30px_-12px_rgba(76,29,149,0.35)] dark:bg-slate-900">
+      <div className="mx-auto w-full max-w-md px-4 md:max-w-3xl">
+        {/* Desktop: semua card menyatu jadi SATU card besar; mobile tetap card terpisah. */}
+        <div className="md:rounded-3xl md:bg-white md:p-6 md:shadow-[0_18px_50px_-30px_rgba(76,29,149,0.45)] md:dark:bg-slate-900">
+        {/* ============ CARD 1: RINGKASAN + SALDO (di bawah header, tidak tertutup) ============ */}
+        <section className="mt-4 rounded-2xl bg-white p-4 shadow-[0_10px_30px_-12px_rgba(76,29,149,0.35)] dark:bg-slate-900 md:mt-0 md:rounded-none md:bg-transparent md:p-0 md:shadow-none md:dark:bg-transparent">
           <div className="grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800">
             <div className="flex items-center gap-2.5 pr-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#22C55E]">
@@ -223,7 +225,7 @@ export default function ProfilPage() {
         </section>
 
         {/* ============ CARD 2: MENU UTAMA ============ */}
-        <section className="mt-4 overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] dark:bg-slate-900">
+        <section className="mt-4 overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] dark:bg-slate-900 md:mt-6 md:rounded-none md:bg-transparent md:shadow-none md:dark:bg-transparent md:border-t md:border-slate-100 md:pt-6 md:dark:border-slate-800 md:overflow-visible">
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             <BarisMenu ikon={Send} warnaIkon="text-emerald-600" latarIkon="bg-emerald-50 dark:bg-emerald-900/25" label="Transfer" to="/payment" />
             <BarisMenu ikon={Gift} warnaIkon="text-amber-600" latarIkon="bg-amber-50 dark:bg-amber-900/25" label="Referral" to={tujuanReferral} />
@@ -233,7 +235,7 @@ export default function ProfilPage() {
         </section>
 
         {/* ============ CARD 3: PENGATURAN ============ */}
-        <section className="mt-4 overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] dark:bg-slate-900">
+        <section className="mt-4 overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] dark:bg-slate-900 md:mt-6 md:rounded-none md:bg-transparent md:shadow-none md:dark:bg-transparent md:border-t md:border-slate-100 md:pt-6 md:dark:border-slate-800 md:overflow-visible">
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             <BarisMenu ikon={Settings} warnaIkon="text-violet-600 dark:text-violet-400" latarIkon="bg-violet-50 dark:bg-violet-900/25" label="Pengaturan Profil" onClick={bukaPengaturan} />
             <BarisMenu ikon={Hash} warnaIkon="text-slate-500" latarIkon="bg-slate-100 dark:bg-slate-800" label="Versi App" nilai={VERSI_APP} chevron={false} />
@@ -241,7 +243,7 @@ export default function ProfilPage() {
         </section>
 
         {/* ============ CARD 4: DATA AKUN (fitur lama dipertahankan) ============ */}
-        <section className="mt-4 overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] dark:bg-slate-900">
+        <section className="mt-4 overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] dark:bg-slate-900 md:mt-6 md:rounded-none md:bg-transparent md:shadow-none md:dark:bg-transparent md:border-t md:border-slate-100 md:pt-6 md:dark:border-slate-800 md:overflow-visible">
           <p className="border-b border-slate-100 px-4 py-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800">
             Data Akun
           </p>
@@ -295,16 +297,17 @@ export default function ProfilPage() {
         </section>
 
         {/* ============ FITUR LAMA YANG DIPERTAHANKAN ============ */}
-        <div className="mt-4 overflow-hidden rounded-2xl bg-white p-4 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] dark:bg-slate-900">
+        <div className="mt-4 overflow-hidden rounded-2xl bg-white p-4 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.35)] dark:bg-slate-900 md:mt-6 md:rounded-none md:bg-transparent md:shadow-none md:dark:bg-transparent md:border-t md:border-slate-100 md:pt-6 md:dark:border-slate-800 md:overflow-visible md:p-0">
           <p className="text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-slate-400">Ikon Profil</p>
           <AvatarPicker />
+        </div>
         </div>
         <TikTokAnalytics />
         <OwnedTitles />
       </div>
 
       {/* Pengaturan Akun (ubah profil, verifikasi email OTP, ubah/reset password) — tetap ter-embed. */}
-      <div className="mx-auto w-full max-w-md px-4">
+      <div className="mx-auto w-full max-w-md px-4 md:max-w-3xl">
         <PengaturanAkunPage embedded />
       </div>
     </div>

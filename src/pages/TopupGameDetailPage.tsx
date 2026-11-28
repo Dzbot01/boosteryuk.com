@@ -243,11 +243,13 @@ export default function TopupGameDetailPage() {
   return (
     <div className="min-h-screen px-4 pb-32 pt-6 md:px-6" style={{ backgroundColor: '#e5e5e7' }}>
       <Seo title={`Top Up ${game.nama}`} description={`Top up ${game.nama} — ${game.tagline}. Proses otomatis lewat penyedia resmi.`} />
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-3xl lg:max-w-6xl">
         <Link to="/topup" className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-slate-600 transition hover:text-[#14143c]">
           <ArrowLeft className="h-3.5 w-3.5" /> TopUp All Game
         </Link>
 
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">
+        <div className="min-w-0">
         {/* ============ HEADER GAME ============ */}
         <div
           className="relative mt-3 overflow-hidden rounded-2xl p-6 shadow-sm md:p-8"
@@ -379,7 +381,7 @@ export default function TopupGameDetailPage() {
           {katalog.paket.length > 0 && (
             <>
               <p className="mt-3 text-[12px] font-bold uppercase tracking-wide text-slate-500">Paket &amp; Membership</p>
-              <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+              <div className="mt-1.5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {katalog.paket.map((p) => {
                   const on = p.kode === kode;
                   return (
@@ -404,7 +406,11 @@ export default function TopupGameDetailPage() {
               </div>
             </>
           )}
-          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+          {/* Garis pembatas antara modul "Paket & Membership" dan daftar produk pilih produk. */}
+          {katalog.paket.length > 0 && (
+            <div className="my-3.5 border-t border-slate-200/80 dark:border-slate-700" aria-hidden="true" />
+          )}
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {katalog.eceran.map((p) => {
               const on = p.kode === kode;
               return (
@@ -429,7 +435,10 @@ export default function TopupGameDetailPage() {
             })}
           </div>
         </section>
+        </div>
 
+        {/* Kolom kanan desktop: ringkasan konfirmasi menempel (sticky) saat scroll. */}
+        <aside className="min-w-0 lg:sticky lg:top-6">
         {/* ============ RINGKASAN + TOMBOL ============ */}
         <section ref={konfirmasiRef} className="mt-4 scroll-mt-4 rounded-2xl bg-white p-4 shadow-sm md:p-5">
           <h2 className="font-display text-[15px] font-extrabold text-slate-900">3 · Konfirmasi pesanan</h2>
@@ -538,6 +547,8 @@ export default function TopupGameDetailPage() {
             Transaksi diproses penyedia; tanda tangan permintaan (signature) dihitung aman di server.
           </p>
         </section>
+        </aside>
+        </div>
       </div>
     </div>
   );

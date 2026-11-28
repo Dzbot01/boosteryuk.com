@@ -21,7 +21,9 @@ assert.match(profile, /viewBox="0 0 1440 120"/, 'pola gelombang halus di bawah h
 assert.match(profile, /fill="#8B5CF6"/, 'gelombang ungu lebih terang');
 assert.match(profile, /bg-\[#22C55E\]/, 'lingkaran hijau Pemasukan + titik indikator akun aktif');
 assert.match(profile, /bg-\[#F59E0B\]/, 'lingkaran oranye Pengeluaran');
-assert.match(profile, /-mt-10 rounded-2xl bg-white p-4/, 'card pertama menimpa (overlap) bagian bawah header');
+assert.match(profile, /mt-4 rounded-2xl bg-white p-4/, 'card pertama berada DI BAWAH header ungu (body tidak tertutup header)');
+assert.ok(!profile.includes('-mt-10'), 'tidak ada lagi margin negatif yang menyelipkan body ke bawah header');
+assert.match(profile, /md:rounded-3xl md:bg-white md:p-6/, 'desktop: semua card profil menyatu menjadi SATU card');
 assert.match(profile, /VERSI_APP = '6\.1\.4'/, 'baris Versi App menampilkan 6.1.4 (variabel)');
 assert.match(profile, /formatRupiah\(/, 'semua nominal diformat Rupiah');
 for (const baris of ['Transfer', 'Referral', 'Tukar Poin', 'Riwayat', 'Kartu Saya', 'Pengaturan Profil', 'Saldo'])
@@ -29,4 +31,4 @@ for (const baris of ['Transfer', 'Referral', 'Tukar Poin', 'Riwayat', 'Kartu Say
 assert.match(profile, /active:scale-\[0\.99\] active:bg-slate-50/, 'baris menu punya efek tekan');
 assert.match(profile, /<PengaturanAkunPage embedded \/>/, 'Pengaturan Akun tetap ter-embed');
 assert.match(profile, /<OwnedTitles \/>/, 'OwnedTitles tetap dirender');
-console.log('PASS footer white logo card, sky-blue header/sidebar brand; halaman profil mobile-first (header ungu bergelombang, card overlap, menu Transfer/Referral/Tukar Poin/Riwayat, Versi App) dengan semua fitur lama dipertahankan.');
+console.log('PASS footer white logo card, sky-blue header/sidebar brand; halaman profil mobile-first (header ungu bergelombang, body di bawah header tidak tertutup, desktop satu card, menu Transfer/Referral/Tukar Poin/Riwayat, Versi App) dengan semua fitur lama dipertahankan.');

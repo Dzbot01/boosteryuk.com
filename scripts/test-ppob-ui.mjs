@@ -103,6 +103,7 @@ const layout = read('src/components/Layout.tsx');
 assert.match(kepala, /sticky top-0 z-30/, 'header biru PPOB sticky di atas = header utama situs');
 assert.match(kepala, /linear-gradient\(135deg,#3B82F6 0%,#2563EB 100%\)/, 'header gradient biru #3B82F6 → #2563EB');
 assert.match(kepala, /rounded-b-\[32px\]/, 'sudut bawah header melengkung');
+assert.match(kepala, /pb-8 pt-3/, 'padding bawah header secukupnya supaya body mulai di bawah header');
 assert.match(kepala, /text-\[#F5B73B\]/, 'nama user kuning/emas');
 assert.match(kepala, /sapaanPpob\(jam\.getHours\(\)\)/, 'sapaan dinamis sesuai jam');
 assert.match(kepala, /<Bell[\s\S]{0,400}bg-rose-500/, 'ikon lonceng dengan titik merah notifikasi');
@@ -120,7 +121,8 @@ assert.match(beranda, /bg-\[#F4F6FB\] pb-\[100px\]/, 'latar #F4F6FB + padding ba
 assert.match(beranda, /mx-auto w-full max-w-md px-4/, 'mobile-first 360–414px');
 assert.ok(!beranda.includes('<header'), 'halaman tidak lagi merender header sendiri (header utama dari Layout)');
 assert.match(beranda, /id="berita-ppob"/, 'section berita punya id untuk scroll tombol lonceng di header');
-assert.match(beranda, /relative -mt-10 rounded-\[20px\] bg-white p-4/, 'card saldo overlap ke header sticky');
+assert.match(beranda, /mt-4 rounded-\[20px\] bg-white p-4/, 'card saldo berada DI BAWAH header biru (body tidak tertutup header)');
+assert.ok(!beranda.includes('-mt-10'), 'tidak ada margin negatif yang menyelipkan body PPOB ke bawah header');
 assert.match(beranda, /md:max-w-3xl lg:max-w-5xl/, 'kontainer halaman melebar di desktop');
 assert.match(beranda, /md:grid-cols-8/, 'Menu Service 4 kolom mobile → 8 kolom desktop');
 assert.match(beranda, /IDR ••••••••••/, 'saldo tersamar default');
@@ -151,7 +153,8 @@ assert.ok(!pulsa.includes('<header'), 'halaman pulsa tidak lagi merender header 
 assert.match(kepala, /setInterval\(\(\) => setJam\(new Date\(\)\), 1000\)/, 'jam real-time update tiap detik (di header)');
 assert.match(kepala, /formatJamPpob\(jam\)/, 'format jam HH:mm:ss AM/PM (di header)');
 assert.match(kepala, /to="\/ppob"[\s\S]{0,200}rounded-full bg-white/, 'tombol kembali bulat putih di header varian pulsa');
-assert.match(pulsa, /relative -mt-9 rounded-t-\[28px\]/, 'card putih overlap dengan sudut atas sangat melengkung');
+assert.match(pulsa, /mt-4 rounded-\[20px\]/, 'card putih pulsa berada DI BAWAH header (tidak tertutup)');
+assert.ok(!pulsa.includes('-mt-9'), 'tidak ada margin negatif yang menyelipkan body pulsa ke bawah header');
 assert.match(pulsa, /md:grid-cols-3/, 'grid produk 2 kolom mobile → 3 kolom desktop');
 assert.match(pulsa, />Pulsa Reguler</, 'judul card "Pulsa Reguler"');
 assert.match(pulsa, /placeholder="08xx"/, 'input Nomor Tujuan placeholder 08xx');
