@@ -63,6 +63,8 @@ const ReviewSubmitPage = lazy(() => import('./pages/ReviewSubmitPage'));
 const ReviewBoardPage = lazy(() => import('./pages/ReviewBoardPage'));
 const TopupGamePage = lazy(() => import('./pages/TopupGamePage'));
 const TopupGameDetailPage = lazy(() => import('./pages/TopupGameDetailPage'));
+const PpobPage = lazy(() => import('./pages/PpobPage'));
+const PpobPulsaRegulerPage = lazy(() => import('./pages/PpobPulsaRegulerPage'));
 
 export default function App() {
   return (
@@ -93,6 +95,9 @@ export default function App() {
           <Route path="layanan" element={<LayananPage />} />
           <Route path="topup" element={<TopupGamePage />} />
           <Route path="topup/:slug" element={<TopupGameDetailPage />} />
+          {/* PPOB — pulsa, paket data, e-money & bayar tagihan (beranda + pulsa reguler). */}
+          <Route path="ppob" element={<ProtectedRoute><PpobPage /></ProtectedRoute>} />
+          <Route path="ppob/pulsa-reguler" element={<ProtectedRoute><PpobPulsaRegulerPage /></ProtectedRoute>} />
           <Route path="playground" element={IS_CHILD_PANEL ? <Navigate to="/" replace /> : <PlaygroundPage />} />
           <Route path="sewa-agen-ai" element={<SewaAgenAiPage />} />
           <Route path="overview" element={<ProtectedRoute><OverviewPage /></ProtectedRoute>} />

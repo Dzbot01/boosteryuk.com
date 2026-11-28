@@ -32,6 +32,7 @@ import {
   Users,
   Crown,
   Star,
+  Zap,
 } from 'lucide-react';
 import { useEffect } from 'react';
 
@@ -77,7 +78,8 @@ export type PageId =
   | 'overview'
   | 'sewa-agen'
   | 'plus'
-  | 'topup';
+  | 'topup'
+  | 'ppob';
 
 export const ROUTE_PATH: Record<PageId, string> = {
   home: '/',
@@ -91,6 +93,7 @@ export const ROUTE_PATH: Record<PageId, string> = {
   struk: '/struk',
   layanan: '/layanan',
   topup: '/topup',
+  ppob: '/ppob',
   ordervps: '/nexspace',
   overview: '/overview',
   'sewa-agen': '/sewa-agen-ai',
@@ -127,6 +130,7 @@ const baseMenu: {
   { id: 'overview', icon: LayoutGrid, label: 'Overview', desc: 'Ringkasan akun & statistik' },
   { id: 'layanan', icon: ShoppingCart, label: 'Buat Pesanan', desc: 'Katalog & order layanan' },
   { id: 'topup', icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital' },
+  { id: 'ppob', icon: Zap, label: 'PPOB', desc: 'Pulsa, paket data, e-money & bayar tagihan' },
   { id: 'ordervps', icon: Server, label: 'NexSpace', desc: 'Server Linux Started & Pro' },
   { id: 'sewa-agen', icon: Bot, label: 'Sewa Agen AI', desc: 'Agen AI WhatsApp, Telegram, dll' },
   { id: 'riwayat', icon: History, label: 'Riwayat Pesanan', desc: 'Tabel riwayat pesanan' },
@@ -160,6 +164,7 @@ export const ADMIN_MENU = [
   { id: 'topup' as const, icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital', path: '/topup' },
   { id: 'cek-status' as const, icon: PackageSearch, label: 'Cek Status Pesanan', desc: 'Lacak Status Pesanan', path: '/cek-status' },
   { id: 'event' as const, icon: Gift, label: 'Event', desc: 'Game & event yang berlangsung', path: '/event' },
+  { id: 'ppob' as const, icon: Zap, label: 'PPOB', desc: 'Pulsa, paket data, e-money & bayar tagihan', path: '/ppob' },
   { id: 'events' as const, icon: Gift, label: 'Kelola Event', desc: 'Jadwal & status event', path: '/admin/events' },
   { id: 'orders' as const, icon: ClipboardList, label: 'Data Pesanan', desc: 'Pesanan semua user', path: '/admin/orders' },
   { id: 'users' as const, icon: Users, label: 'Data User', desc: 'Saldo & data user', path: '/admin/users' },
@@ -174,7 +179,7 @@ export const ADMIN_MENU = [
 ];
 
 export function getUserMenuItems(signedIn: boolean, isAdmin: boolean, child: boolean) {
-  const AUTH_REQUIRED = ['event', 'layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'riwayat-deposit', 'nokos', 'plus', 'sewa-agen', 'overview'];
+  const AUTH_REQUIRED = ['event', 'layanan', 'pengaturan', 'riwayat', 'ordervps', 'deposit', 'riwayat-deposit', 'nokos', 'plus', 'sewa-agen', 'overview', 'ppob'];
 
   // Menu "Order Nomor" (OTP) tampil di ROOT DOMAIN maupun child panel, setelah "Buat Pesanan" —
   // UI halamannya sama (OrderOtpPage); pendapatan OTP root dicatat di My Profit admin.
@@ -182,8 +187,10 @@ export function getUserMenuItems(signedIn: boolean, isAdmin: boolean, child: boo
   // Urutan atas: Dashboard, Overview, Buat Pesanan, lalu PASANGAN layanan cepat
   // "Order Nomor" (OTP) + "TopUp All Game" — baru kemudian grup deposit dll, supaya
   // dua menu transaksi harian itu selalu berada di bagian atas side menu.
+  // base[3] = Order Nomor, base[4] = TopUp All Game, base[5] = PPOB: tiga menu transaksi
+  // harian itu berdampingan di atas, baru grup deposit dsb.
   const combined = signedIn
-   ? [base[0], base[1], base[2], base[3], base[4],...authMenu,...base.slice(5)]
+   ? [...base.slice(0, 6),...authMenu,...base.slice(6)]
     : base;
 
   // Dua menu riwayat harus BERDEKATAN: "Riwayat Pesanan" digeser tepat setelah "Riwayat Deposit"

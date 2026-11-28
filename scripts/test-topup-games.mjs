@@ -24,7 +24,7 @@ assert.match(app, /<Route path="topup" element=\{<TopupGamePage \/>} \/>/, 'rout
 assert.match(app, /<Route path="topup\/:slug" element=\{<TopupGameDetailPage \/>} \/>/, 'route detail /topup/:slug terdaftar');
 assert.match(app, /const TopupGamePage = lazy\(\(\) => import\('\.\/pages\/TopupGamePage'\)\);/, 'halaman dimuat malas (tidak membebani bundle awal)');
 const menu = read('src/components/SideMenu.tsx');
-assert.match(menu, /\| 'topup';/, 'PageId topup ada');
+assert.match(menu, /\| 'topup'\n  \| 'ppob';/, 'PageId topup (dan ppob) ada');
 assert.match(menu, /topup: '\/topup',/, 'ROUTE_PATH topup = /topup');
 assert.match(menu, /\{ id: 'topup', icon: Gamepad2, label: 'TopUp All Game', desc: 'Top up game & produk digital' \},/, 'menu "TopUp All Game" ada di SideMenu');
 assert.match(menu, /Gamepad2,/, 'ikon Gamepad2 diimpor');
