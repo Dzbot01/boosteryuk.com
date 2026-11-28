@@ -421,8 +421,12 @@ function tv_items_from_full($d) {
         $cat = $cats[(int)($p['kategori_id'] ?? -1)] ?? '';
         if ($cat !== '' && stripos($cat, 'topup') === false) continue;
         $jenisNama = $jn ? (string)($jn['nama'] ?? '') : '';
-        if (!tv_label_wilayah_ok($jenisNama)) continue;
-        if (!tv_kode_katalog_ok($kode)) continue;
+        // Wilayah luar/Promo TIDAK dibuang lagi: semuanya ikut sebagai pilihan chip
+        // wilayah di halaman detail (pricelist menyesuaikan pilihan). Hanya kode
+        // sampah (CEK…, voucher "V…") yang dibuang; untuk item non-ID token wilayah
+        // di kode diizinkan.
+        $wilayahOk = tv_label_wilayah_ok($jenisNama);
+        if (!tv_kode_katalog_ok($kode, !$wilayahOk)) continue;
         // Server ID HANYA berlaku untuk produk Mobile Legends. Game lain (termasuk
         // Free Fire) mengirim field server_id di format_form dengan label kosong =
         // tidak dipakai, jadi kolomnya tidak boleh muncul.
@@ -434,6 +438,7 @@ function tv_items_from_full($d) {
             'harga' => $harga,
             'game' => trim((string)($op['nama'] ?? '')),
             'jenis' => $jenisNama,
+            'wilayah_ok' => $wilayahOk,
             'logo' => (string)($op['logo'] ?? ''),
             'butuh_server' => $butuhServer,
         ];
@@ -446,9 +451,9 @@ function tv_provider_products() {
     $cache = is_file($cacheFile) ? json_decode((string)file_get_contents($cacheFile), true) : null;
     if (!is_array($cache)) $cache = [];
     $now = time();
-    if (isset($cache['__all_v2__']['items'], $cache['__all_v2__']['ts']) && ($now - (int)$cache['__all_v2__']['ts']) < 21600) {
-        $GLOBALS['tv_sumber_katalog'] = (string)($cache['__all_v2__']['sumber'] ?? 'cache');
-        return $cache['__all_v2__']['items'];
+    if (isset($cache['__all_v3__']['items'], $cache['__all_v3__']['ts']) && ($now - (int)$cache['__all_v3__']['ts']) < 21600) {
+        $GLOBALS['tv_sumber_katalog'] = (string)($cache['__all_v3__']['sumber'] ?? 'cache');
+        return $cache['__all_v3__']['items'];
     }
     $c = tv_cfg();
     if ($c['member_code'] === '' || $c['secret'] === '') return null;
@@ -458,7 +463,7 @@ function tv_provider_products() {
         $itemsFull = tv_items_from_full($full);
         if ($itemsFull) {
             $GLOBALS['tv_sumber_katalog'] = 'full';
-            $cache['__all_v2__'] = ['ts' => $now, 'items' => $itemsFull, 'sumber' => 'full'];
+            $cache['__all_v3__'] = ['ts' => $now, 'items' => $itemsFull, 'sumber' => 'full'];
             @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
             return $itemsFull;
         }
@@ -478,7 +483,7 @@ function tv_provider_products() {
         return null;
     }
     $GLOBALS['tv_sumber_katalog'] = 'produk/code';
-    $cache['__all_v2__'] = ['ts' => $now, 'items' => $items, 'sumber' => 'produk/code'];
+    $cache['__all_v3__'] = ['ts' => $now, 'items' => $items, 'sumber' => 'produk/code'];
     @file_put_contents($cacheFile, json_encode($cache, JSON_UNESCAPED_UNICODE));
     return $items;
 }
@@ -548,10 +553,12 @@ function tv_slugify($t) {
  * mis. VPUBGGCOIN500) — respons penyedia datar tanpa label kategori sehingga
  * penyaringan harus lewat kode.
  */
-function tv_kode_katalog_ok($kode) {
+function tv_kode_katalog_ok($kode, $izinkanWilayah = false) {
     $k = strtoupper((string)$kode);
     if ($k === '' || strpos($k, 'CEK') !== false) return false;
-    if (preg_match('/(RU|SG|MY|BR|PH|LATAM|GLOBAL)([0-9]|$)/', $k)) return false;
+    // Token wilayah di kode (FFSG…, MLBR…) hanya sampah untuk daftar ID; untuk chip
+    // wilayah (server luar) token itu justru penanda produknya — boleh lewat.
+    if (!$izinkanWilayah && preg_match('/(RU|SG|MY|BR|PH|LATAM|GLOBAL)([0-9]|$)/', $k)) return false;
     if (strpos($k, 'V') === 0 && tv_code_prefix_game(substr($k, 1)) !== '') return false;
     return true;
 }
@@ -793,10 +800,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     if ($action === 'katalog') {
-        // Grup game untuk grid "TopUp All Game": hanya kategori Topup game yang
-        // dikenali aliasnya DAN lolos filter wilayah (ID Indonesia, tanpa Promo).
+        // Grup game untuk grid "TopUp All Game": kartu game tetap ringkasan varian
+        // Indonesia saja (flag wilayah_ok dari /member/produk/full); varian wilayah
+        // luar/Promo tetap tersedia sebagai chip wilayah di halaman detail game.
         $all = tv_provider_products();
-        if (is_array($all)) $all = array_values(array_filter($all, function ($p) { return tv_label_wilayah_ok($p['game'] ?? '') && tv_kode_katalog_ok($p['kode']); }));
+        if (is_array($all)) $all = array_values(array_filter($all, function ($p) {
+            $okWilayah = array_key_exists('wilayah_ok', $p) ? (bool)$p['wilayah_ok'] : tv_label_wilayah_ok($p['jenis'] ?? '');
+            return $okWilayah && tv_label_wilayah_ok($p['game'] ?? '');
+        }));
         $groups = [];
         $labelsDilihat = [];
         foreach ((is_array($all) ? $all : []) as $p) {
@@ -850,15 +861,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $kode = strtoupper((string)($r['kode'] ?? ''));
                 $harga = (int)($r['harga'] ?? 0);
                 if ($kode === '' || $harga <= 0) continue;
-                $items[] = ['kode' => $kode, 'nama' => (string)($r['nama'] ?? $kode), 'harga' => $harga, 'butuh_server' => !empty($r['butuh_server'])];
+                $items[] = ['kode' => $kode, 'nama' => (string)($r['nama'] ?? $kode), 'harga' => $harga, 'butuh_server' => !empty($r['butuh_server']), 'jenis' => (string)($r['jenis'] ?? ''), 'wilayah_ok' => true];
             }
             if ($items) tv_out(['ok' => true, 'source' => 'override', 'game' => $game, 'items' => $items, 'updated_at' => date('Y-m-d H:i')]);
         }
-        // (2) Daftar produk live dari endpoint penyedia /produk/code.
+        // (2) Daftar produk live dari endpoint penyedia.
         $all = tv_provider_products();
-        // Buang kategori Promo & server luar di sumbernya: hanya ID (Indonesia);
-        // buang juga produk tes & kategori voucher game (respons penyedia datar).
-        if (is_array($all)) $all = array_values(array_filter($all, function ($p) { return tv_label_wilayah_ok($p['game'] ?? '') && tv_kode_katalog_ok($p['kode']); }));
+        // Sumber /member/produk/full membawa flag wilayah_ok: SEMUA wilayah disertakan
+        // supaya halaman detail bisa menyajikan chip wilayah (ID, SG, MY, Promo, …)
+        // dan pricelist menyesuaikan pilihan. Sumber datar /produk/code tidak membawa
+        // info wilayah → tetap difilter ID-saja + buang kode sampah.
+        if (is_array($all)) $all = array_values(array_filter($all, function ($p) {
+            if (array_key_exists('wilayah_ok', $p)) return tv_label_wilayah_ok($p['game'] ?? '');
+            return tv_label_wilayah_ok($p['game'] ?? '') && tv_kode_katalog_ok($p['kode']);
+        }));
         if (is_array($all) && $all) {
             if ($game === '') {
                 tv_out(['ok' => true, 'source' => 'provider', 'game' => '', 'items' => $all, 'updated_at' => date('Y-m-d H:i')]);
@@ -877,17 +893,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $rows = [];
             // (a) field game/kategori penyedia (cocok langsung maupun lewat alias);
             foreach ($all as $p) if ($p['game'] !== '' && ($norm($p['game']) === $gN || strpos($norm($p['game']), $gN) === 0 || strpos($gN, $norm($p['game'])) === 0 || $hitAlias($p['game']))) {
-                $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga'], 'butuh_server' => !empty($p['butuh_server'])];
+                $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga'], 'butuh_server' => !empty($p['butuh_server']), 'jenis' => (string)($p['jenis'] ?? ''), 'wilayah_ok' => !empty($p['wilayah_ok'])];
             }
             // (b) nama produk menyebut game tsb ("MOBILE LEGENDS 86 Diamond", "MLBB 86", dst);
             if (!$rows) foreach ($all as $p) if ($hitAlias($p['nama'])) {
-                $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga'], 'butuh_server' => !empty($p['butuh_server'])];
+                $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga'], 'butuh_server' => !empty($p['butuh_server']), 'jenis' => (string)($p['jenis'] ?? ''), 'wilayah_ok' => !empty($p['wilayah_ok'])];
             }
             // (c) prefiks kode produk (MFF…=Free Fire, ML…/AMLBB…=Mobile Legends, dst).
             if (!$rows) foreach ($all as $p) {
                 $g = tv_code_prefix_game($p['kode']);
                 if ($g !== '' && in_array($gN, array_map($norm, tv_game_aliases($g)), true)) {
-                    $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga'], 'butuh_server' => !empty($p['butuh_server'])];
+                    $rows[] = ['kode' => $p['kode'], 'nama' => $p['nama'], 'harga' => $p['harga'], 'butuh_server' => !empty($p['butuh_server']), 'jenis' => (string)($p['jenis'] ?? ''), 'wilayah_ok' => !empty($p['wilayah_ok'])];
                 }
             }
             // (d) tetap kosong padahal daftar produk ada: catat label asli penyedia supaya

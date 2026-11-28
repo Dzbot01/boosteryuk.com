@@ -119,13 +119,16 @@ assert.ok(!/md5\(/i.test(svc) && !/signature\s*=/.test(svc), 'signature tidak di
 const php = read('php-api/tokovoucher.php');
 assert.ok(php.includes('function tv_label_wilayah_ok'), 'proxy PHP punya filter kategori wilayah (hanya ID Indonesia)');
 assert.ok(php.includes("strpos($l, 'promo')"), 'kategori Promo dibuang di sumbernya');
-assert.ok(/array_filter\(\$all, function \(\$p\) \{ return tv_label_wilayah_ok/.test(php), 'pricelist menerapkan filter wilayah ke seluruh daftar produk penyedia');
+assert.ok(/array_key_exists\('wilayah_ok', \$p\)/.test(php), 'pricelist memakai flag wilayah_ok: semua wilayah ikut (chip), sumber datar tetap ID-saja');
+assert.ok(php.includes("'wilayah_ok' => \$wilayahOk"), 'item dari /member/produk/full membawa flag wilayah_ok per jenis');
+assert.ok(php.includes('function tv_kode_katalog_ok($kode, $izinkanWilayah = false)'), 'filter kode punya opsi izinkan token wilayah (produk chip server luar)');
+assert.ok(/\$okWilayah = array_key_exists\('wilayah_ok', \$p\)/.test(php), 'grid katalog tetap ringkasan varian Indonesia (wilayah_ok)');
 assert.ok(php.includes("action === 'katalog'"), 'proxy menyediakan action=katalog untuk grid game live di /topup');
 assert.ok(php.includes('function tv_kode_katalog_ok'), 'filter kode: produk tes, server luar, dan voucher game dibuang');
 assert.ok(php.includes('labels_dilihat'), 'katalog melaporkan label mentah penyedia untuk diagnostik');
 assert.ok(/tv_code_prefix_game\(\$p\['kode'\]\)/.test(php), 'katalog fallback pengelompokan lewat prefiks kode (respons datar)');
 assert.ok(php.includes('/member/produk/full'), 'sumber katalog utama: endpoint resmi /member/produk/full');
-assert.ok(php.includes('__all_v2__') && php.includes('__full_v2__'), 'kunci cache diversi ulang: cache lama skema datar tidak menutupi endpoint full');
+assert.ok(php.includes('__all_v3__') && php.includes('__full_v2__'), 'kunci cache diversi ulang lagi (item kini membawa wilayah_ok + varian luar): cache lama tidak menutupi');
 assert.ok(php.includes('sumber_katalog') && php.includes('tv_full_error'), 'katalog melaporkan sumber data & alasan gagal endpoint full untuk diagnostik');
 assert.ok(php.includes('function tv_provider_full'), 'fetcher + cache katalog full tersedia');
 assert.ok(php.includes('function tv_items_from_full'), 'normalisasi kategori/operator/jenis/produk (nama asli, status, format_form)');
@@ -295,6 +298,12 @@ for (const t of ['Membership Mingguan', 'Membership Bulanan', 'Level Up Pass', '
 assert.ok(dname.includes("'free-fire': { root: 'FF', kanalDepan: ['M'] }"), 'Free Fire dikunci ke kanal resmi M (daftar 122 kode MFF dari web penyedia)');
 assert.ok(!detail.includes('Katalog live dari pricelist penyedia'), 'teks log "Katalog live … diperbarui" dihapus dari halaman detail');
 assert.ok(detail.includes('rapihkanKatalog('), 'halaman detail merapikan katalog lewat rapihkanKatalog');
+assert.ok(detail.includes('const daftarJenis =') && detail.includes('role="tablist"'), 'halaman detail punya chip wilayah/server (tablist) dari jenis pricelist');
+assert.ok(detail.includes('setJenisAktif(j)') && detail.includes('aria-selected={jenisAktif === j}'), 'chip wilayah bisa dipilih & ditandai aktif');
+assert.ok(detail.includes('sumber = jenisAktif ? semua.filter((i) => i.jenis === jenisAktif) : semua'), 'pricelist menyesuaikan chip wilayah yang dipilih');
+assert.ok(detail.includes('semuaWilayah: !wilayahAktifOk'), 'chip wilayah luar memakai aturan kode longgar; chip ID tetap daftar resmi');
+assert.ok(dname.includes('semuaWilayah?: boolean'), 'rapihkanKatalog punya opsi semuaWilayah');
+assert.ok(dname.includes('if (!semuaWilayah && /(RU|SG|MY|BR|PH|LATAM|GLOBAL)'), 'kode server luar hanya dibuang pada daftar Indonesia (default)');
 assert.ok(detail.includes('Paket &amp; Membership'), 'halaman detail punya seksi Paket & Membership di atas list eceran');
 assert.ok(!detail.includes('>Eceran<'), 'judul seksi "Eceran" dihapus sesuai permintaan pemilik');
 assert.ok(detail.indexOf('1 · Data akun tujuan') < detail.indexOf('2 · Pilih produk'), 'input ID akun pindah ke atas, sebelum list produk');
@@ -397,6 +406,16 @@ const perilaku = execFileSync(
     if (RESMI_FF.length !== 122) throw new Error('daftar resmi FF harus 122 kode: ' + RESMI_FF.length);
     const ff2 = rapihkanKatalog('free-fire', RESMI_FF.map((k, i) => ({ kode: k, nama: k, harga: 1000 + i })));
     if (ff2.eceran.length !== 118 || ff2.paket.length !== 4) throw new Error('122 kode resmi FF => 118 eceran + 4 paket, dapat ' + ff2.eceran.length + '+' + ff2.paket.length);
+    // Chip wilayah luar: kode ber-token wilayah TIDAK dibuang & dinamai generik;
+    // daftar Indonesia (default) tetap membuang kode server luar.
+    const sg = rapihkanKatalog('free-fire', [
+      { kode: 'FFSG100', nama: 'FFSG100', harga: 18400 },
+      { kode: 'FFSG200', nama: 'FFSG200', harga: 36000 },
+    ], { semuaWilayah: true });
+    if (sg.eceran.length !== 2) throw new Error('chip wilayah SG harus menampilkan 2 produk, dapat ' + sg.eceran.length);
+    if (!sg.eceran[0].nama.includes('100')) throw new Error('nama generik chip SG salah: ' + sg.eceran[0].nama);
+    const sgBawaan = rapihkanKatalog('free-fire', [{ kode: 'FFSG100', nama: 'FFSG100', harga: 18400 }]);
+    if (sgBawaan.eceran.length !== 0) throw new Error('daftar Indonesia (default) tetap membuang kode server luar');
     console.log('OK');
   `],
   { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },

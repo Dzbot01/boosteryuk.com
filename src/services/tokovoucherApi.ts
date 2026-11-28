@@ -83,6 +83,10 @@ export interface TvPricelistItem {
   nama: string;
   harga: number;
   butuh_server?: boolean;
+  /** Varian/wilayah produk (mis. "Free Fire ID Fast", "Free Fire SG") untuk chip wilayah. */
+  jenis?: string;
+  /** true = varian Indonesia; false = server luar/Promo (chip tersendiri). */
+  wilayah_ok?: boolean;
 }
 
 export interface TvPricelist {

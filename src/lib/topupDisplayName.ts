@@ -138,7 +138,18 @@ export function namaTampilanTopup(slug: string, kode: string, namaPenyedia?: str
  *  - masing-masing kelompok urut menaik menurut harga.
  * Game tanpa aturan (belum ada daftar resmi) tampil apa adanya sebagai eceran.
  */
-export function rapihkanKatalog(slug: string, items: TopupItemBernama[]): KatalogRapih {
+export type OpsiRapihkan = {
+  /**
+   * true = daftar ini sudah discopE ke satu chip wilayah (mis. "Free Fire SG"),
+   * jadi kode ber-token wilayah TIDAK dibuang dan kode di luar daftar resmi game
+   * ber-aturan tetap ditampilkan lewat pola generik. false (default) = hanya varian
+   * Indonesia: kode server luar & kode di luar daftar resmi dibuang.
+   */
+  semuaWilayah?: boolean;
+};
+
+export function rapihkanKatalog(slug: string, items: TopupItemBernama[], opsi?: OpsiRapihkan): KatalogRapih {
+  const semuaWilayah = !!opsi?.semuaWilayah;
   const eceran = new Map<string, TopupItemBernama>();
   const paket = new Map<string, TopupItemBernama>();
   const berAturan = !!ATURAN_PER_SLUG[slug];
@@ -146,16 +157,18 @@ export function rapihkanKatalog(slug: string, items: TopupItemBernama[]): Katalo
     const k = (it.kode || '').toUpperCase().trim();
     if (!k || /^CEK/.test(k)) continue;
     // Server luar negeri (Rusia, Singapura, Malaysia, Brazil, Filipina, Latam,
-    // Global) tidak dijual di sini — hanya server ID (Indonesia), lintas game.
-    if (/(RU|SG|MY|BR|PH|LATAM|GLOBAL)(\d|$)/.test(k)) continue;
+    // Global) tidak dicampur ke daftar Indonesia; mereka tampil lewat chip wilayah
+    // tersendiri di halaman detail (semuaWilayah=true saat chip non-ID dipilih).
+    if (!semuaWilayah && /(RU|SG|MY|BR|PH|LATAM|GLOBAL)(\d|$)/.test(k)) continue;
     const n = (it.nama || '').trim();
     let nama: string;
     let jenis: 'eceran' | 'paket';
-    if (berAturan) {
-      const p = parseKodeResmi(slug, k);
-      if (!p) continue;
-      jenis = p.jenis;
-      nama = n && n.toUpperCase() !== k ? n : p.nama;
+    const resmi = berAturan ? parseKodeResmi(slug, k) : null;
+    if (resmi) {
+      jenis = resmi.jenis;
+      nama = n && n.toUpperCase() !== k ? n : resmi.nama;
+    } else if (berAturan && !semuaWilayah) {
+      continue; // chip Indonesia: kode di luar daftar resmi tidak ditampilkan sama sekali
     } else {
       // Game tanpa daftar resmi: pola sama seperti FF/ML — kode huruf+angka jadi
       // "N <satuan game>" (UC/CP/Diamond/…), token khusus jadi nama paket;

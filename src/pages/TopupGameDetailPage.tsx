@@ -63,16 +63,47 @@ export default function TopupGameDetailPage() {
     requestAnimationFrame(() => konfirmasiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
+  /**
+   * Chip wilayah/server: semua varian (jenis) dari pricelist live — termasuk
+   * server luar & Promo yang dulu tampak sebagai "kode aneh". Memilih chip
+   * mengganti seluruh pricelist yang ditampilkan (satu produk, banyak wilayah).
+   */
+  const daftarJenis = useMemo(() => {
+    const lihat: string[] = [];
+    for (const i of live?.items || []) {
+      const j = (i.jenis || '').trim();
+      if (j && !lihat.includes(j)) lihat.push(j);
+    }
+    return lihat;
+  }, [live]);
+  const [jenisAktif, setJenisAktif] = useState('');
+  useEffect(() => {
+    setJenisAktif('');
+  }, [slug]);
+  useEffect(() => {
+    if (jenisAktif && daftarJenis.includes(jenisAktif)) return;
+    const bawaan =
+      (live?.items || []).find((i) => i.jenis && i.wilayah_ok !== false)?.jenis || daftarJenis[0] || '';
+    setJenisAktif(bawaan);
+  }, [live, daftarJenis, jenisAktif]);
+  /** Wilayah chip aktif masih Indonesia atau bukan (menentukan aturan kode resmi). */
+  const wilayahAktifOk = useMemo(() => {
+    const it = (live?.items || []).find((i) => i.jenis === jenisAktif);
+    return it ? it.wilayah_ok !== false : true;
+  }, [live, jenisAktif]);
+
   /** Produk tampil: katalog ASLI dari server bila ada, selain itu snapshot repo. */
   const katalog = useMemo(() => {
-    const sumber = live?.items?.length
-      ? live.items.map((i) => ({ kode: i.kode, nama: i.nama, harga: i.harga, butuhServer: !!i.butuh_server }))
-      : game?.produk || [];
+    const semua = live?.items?.length
+      ? live.items.map((i) => ({ kode: i.kode, nama: i.nama, harga: i.harga, butuhServer: !!i.butuh_server, jenis: i.jenis || '' }))
+      : (game?.produk || []).map((pr) => ({ kode: pr.kode, nama: pr.nama, harga: pr.harga, butuhServer: false, jenis: '' }));
+    const sumber = jenisAktif ? semua.filter((i) => i.jenis === jenisAktif) : semua;
     // Hanya kode resmi penyedia yang lolos; nama kode ("MFF5", "MLA85") jadi nama
     // manusiawi; pass/membership dipisah ke `paket`, denominasi ke `eceran`;
     // produk kembar lintas kanal resmi digabung ke harga termurah, urut menaik.
-    return rapihkanKatalog(slug, sumber);
-  }, [live, game, slug]);
+    // Chip wilayah luar memakai pola generik (kode ber-token wilayah tidak dibuang).
+    return rapihkanKatalog(slug, sumber, { semuaWilayah: !wilayahAktifOk });
+  }, [live, game, slug, jenisAktif, wilayahAktifOk]);
   const produkList = useMemo(() => [...katalog.eceran, ...katalog.paket], [katalog]);
 
   const produk = useMemo(() => produkList.find((p) => p.kode === kode) || null, [produkList, kode]);
@@ -290,6 +321,30 @@ export default function TopupGameDetailPage() {
         {/* ============ PILIH PRODUK ============ */}
         <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm md:p-5">
           <h2 className="font-display text-[15px] font-extrabold text-slate-900">2 · Pilih produk</h2>
+          {daftarJenis.length > 1 && (
+            <div
+              className="mt-3 flex flex-wrap gap-1 rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800"
+              role="tablist"
+              aria-label="Pilih wilayah / server produk"
+            >
+              {daftarJenis.map((j) => (
+                <button
+                  key={j}
+                  type="button"
+                  role="tab"
+                  aria-selected={jenisAktif === j}
+                  onClick={() => setJenisAktif(j)}
+                  className={`rounded-xl px-3.5 py-2 text-[12.5px] font-bold transition active:scale-[0.97] ${
+                    jenisAktif === j
+                      ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {j}
+                </button>
+              ))}
+            </div>
+          )}
           {live?.source === 'override' && (
             <p className="mt-1 text-[11px] text-slate-500">Katalog dari file override server (pricelist manual).</p>
           )}
